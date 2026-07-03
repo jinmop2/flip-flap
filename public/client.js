@@ -52,11 +52,35 @@ const nickInput = document.getElementById('nickInput');
 if (nickInput) nickInput.addEventListener('input', () => { const v = nickInput.value.trim(); if (v) localStorage.setItem('ff_nick', v); });
 function getNick() { return (nickInput && nickInput.value.trim()) || localStorage.getItem('ff_nick') || '게스트'; }
 
+// ── 공개/비밀 방 토글 ───────────────────────────────────────
+let roomSecret = false;
+document.getElementById('visRow').addEventListener('click', e => {
+  const b = e.target.closest('.vis-btn'); if (!b) return;
+  document.querySelectorAll('.vis-btn').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  roomSecret = b.dataset.vis === 'secret';
+  document.getElementById('roomPwInput').style.display = roomSecret ? '' : 'none';
+});
+
 // ── 방 목록 ─────────────────────────────────────────────────
 let gameNicks = null;
 function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 function refreshRooms() { socket.emit('enter_lobby'); }
-function joinRoomById(id) { socket.emit('join_room', { roomId: id, pid: PID, nick: getNick() }); }
+function joinRoomById(id, secret) {
+  if (secret) {
+    const pw = prompt('🔒 비밀방입니다. 비밀번호를 입력하세요');
+    if (pw == null) return;
+    socket.emit('join_room', { roomId: id, pid: PID, nick: getNick(), password: pw });
+  } else {
+    socket.emit('join_room', { roomId: id, pid: PID, nick: getNick() });
+  }
+}
+// 코드 참가 등에서 비밀번호가 필요할 때
+socket.on('need_password', ({ roomId, wrong }) => {
+  const pw = prompt(wrong ? '❌ 비밀번호가 틀렸어요. 다시 입력하세요' : '🔒 비밀방입니다. 비밀번호를 입력하세요');
+  if (pw == null) return;
+  socket.emit('join_room', { roomId, pid: PID, nick: getNick(), password: pw });
+});
 socket.on('rooms', renderRoomList);
 function renderRoomList(list) {
   const el = document.getElementById('roomList'); if (!el) return;
@@ -64,9 +88,10 @@ function renderRoomList(list) {
   if (!list || !list.length) { el.innerHTML = '<div class="rl-empty">열린 방이 없어요. 방을 만들어보세요!</div>'; return; }
   list.forEach(r => {
     const item = document.createElement('div'); item.className = 'rl-item';
-    item.innerHTML = `<div class="rl-info"><div class="rl-name">${esc(r.name)}</div><div class="rl-host">👤 ${esc(r.host)}</div></div>`;
+    const lock = r.secret ? '<span class="rl-lock">🔒</span>' : '';
+    item.innerHTML = `<div class="rl-info"><div class="rl-name">${lock}${esc(r.name)}</div><div class="rl-host">👤 ${esc(r.host)}</div></div>`;
     const b = document.createElement('button'); b.className = 'btn btn-gold rl-join'; b.textContent = '참가';
-    b.onclick = () => joinRoomById(r.id);
+    b.onclick = () => joinRoomById(r.id, r.secret);
     item.appendChild(b); el.appendChild(item);
   });
 }
@@ -230,7 +255,13 @@ let prevMyAction = false;
 function createRoom(vsBot) {
   isVsBot = vsBot;
   const name = (document.getElementById('roomNameInput')?.value || '').trim();
-  socket.emit('create_room', { vsBot, difficulty, pid: PID, nick: getNick(), name });
+  let secret = false, password = '';
+  if (!vsBot && roomSecret) {
+    password = (document.getElementById('roomPwInput')?.value || '').trim();
+    if (!password) { alert('비밀방은 비밀번호를 입력해야 해요.'); return; }
+    secret = true;
+  }
+  socket.emit('create_room', { vsBot, difficulty, pid: PID, nick: getNick(), name, secret, password });
 }
 function joinRoom() {
   const id = document.getElementById('roomInput').value.trim().toUpperCase();

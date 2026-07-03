@@ -47,6 +47,11 @@
     #nickInput { flex:1; text-transform:none; letter-spacing:0; text-align:left; }
     .create-row { display:flex; gap:8px; }
     #roomNameInput { flex:1; text-transform:none; letter-spacing:0; text-align:left; }
+    .secret-row { display:flex; gap:6px; align-items:center; }
+    .vis-btn { padding:7px 12px; border-radius:9px; cursor:pointer; background:#1a1420; border:2px solid #2a2130; color:#7a6a80; font-family:'Fredoka'; font-size:.78rem; font-weight:600; transition:all .15s; white-space:nowrap; }
+    .vis-btn.active { border-color:var(--gold); color:var(--gold); background:#251a10; }
+    #roomPwInput { flex:1; text-transform:none; letter-spacing:0; text-align:left; padding:8px 12px; }
+    .rl-lock { color:#e0b84a; margin-right:3px; }
     #roomListWrap { background:#140f1a; border:1px solid #241a2e; border-radius:12px; padding:8px; }
     .rl-header { display:flex; justify-content:space-between; align-items:center; font-size:.74rem; color:#8a7a80; padding:2px 4px 6px; }
     .rl-refresh { background:none; border:none; color:#8a7a80; cursor:pointer; font-size:1rem; line-height:1; }
@@ -563,6 +568,11 @@
     <div class="create-row">
       <input id="roomNameInput" type="text" placeholder="방 이름 (예: 초보만)" maxlength="20">
       <button class="btn btn-gold btn-sm" onclick="createRoom(false)">방 만들기</button>
+    </div>
+    <div class="secret-row" id="visRow">
+      <button class="vis-btn active" data-vis="open">🌐 공개방</button>
+      <button class="vis-btn" data-vis="secret">🔒 비밀방</button>
+      <input id="roomPwInput" type="text" placeholder="비밀번호" maxlength="12" style="display:none">
     </div>
 
     <div id="roomListWrap">

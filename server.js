@@ -324,7 +324,7 @@ function openRoomList() {
   const list = [];
   for (const [id, r] of Object.entries(rooms)) {
     if (!r.vsBot && !r.game && r.players[0] && !r.players[1])
-      list.push({ id, name: r.name || '이름 없는 방', host: (r.nicks && r.nicks[0]) || '???' });
+      list.push({ id, name: r.name || '이름 없는 방', host: (r.nicks && r.nicks[0]) || '???', secret: !!r.secret });
   }
   return list.slice(-30).reverse();
 }
@@ -343,12 +343,16 @@ io.on('connection', (socket) => {
 
   socket.on('enter_lobby', () => { socket.join('lobby'); socket.emit('rooms', openRoomList()); });
 
-  socket.on('create_room', ({ vsBot = false, difficulty = 'hard', pid, name, nick } = {}) => {
+  socket.on('create_room', ({ vsBot = false, difficulty = 'hard', pid, name, nick, secret, password } = {}) => {
     leaveOldRoom();
     socket.leave('lobby');
     const roomId = makeRoomId();
     const hostNick = cleanNick(nick);
-    rooms[roomId] = { players: [socket.id, null], pids: [pid || null, null], nicks: [hostNick, null], name: String(name || '').trim().slice(0, 20), game: null, vsBot, difficulty };
+    rooms[roomId] = {
+      players: [socket.id, null], pids: [pid || null, null], nicks: [hostNick, null],
+      name: String(name || '').trim().slice(0, 20), game: null, vsBot, difficulty,
+      secret: !vsBot && !!secret, password: String(password || '').slice(0, 12),
+    };
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
     if (vsBot) {
       rooms[roomId].cpuIndex = 1;
@@ -364,10 +368,11 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('join_room', ({ roomId, pid, nick }) => {
+  socket.on('join_room', ({ roomId, pid, nick, password }) => {
     const room = rooms[roomId];
     if (!room) return socket.emit('error', '방을 찾을 수 없어요.');
     if (room.game || room.players.filter(Boolean).length >= 2) return socket.emit('error', '이미 시작했거나 꽉 찬 방이에요.');
+    if (room.secret && String(password || '') !== room.password) return socket.emit('need_password', { roomId, wrong: password != null });
     room.players[1] = socket.id; room.pids[1] = pid || null; room.nicks[1] = cleanNick(nick);
     socket.leave('lobby');
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 1; socket.pid = pid;
