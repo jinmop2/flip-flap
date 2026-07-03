@@ -2,6 +2,16 @@ const socket = io();
 let state = null, myIndex = null, selectedBidCard = null;
 let isVsBot = false, prevPhase = null, difficulty = 'hard';
 
+// ── 서버 연결 상태 표시 ─────────────────────────────────────
+function setConn(text, cls) {
+  const el = document.getElementById('connStatus');
+  if (!el) return;
+  el.textContent = text; el.className = cls || '';
+}
+socket.on('connect', () => { setConn('서버 연결됨', 'ok'); setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400); });
+socket.on('disconnect', () => setConn('연결 끊김 — 재접속 중…', 'bad'));
+socket.on('connect_error', (e) => { setConn('서버 연결 실패', 'bad'); console.error('socket connect_error:', e && e.message); });
+
 // ── 난이도 선택 ─────────────────────────────────────────────
 document.getElementById('diffRow').addEventListener('click', e => {
   const b = e.target.closest('.diff-btn'); if (!b) return;

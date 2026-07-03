@@ -65,6 +65,17 @@
     .divider-line { border:none; border-top:1px solid #2a2130; margin:2px 0; }
     #waitMsg { color:var(--gold); font-size:.85rem; text-align:center; min-height:20px; }
 
+    /* 서버 연결 상태 */
+    #connStatus {
+      position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:50;
+      font-family:'Fredoka'; font-size:.78rem; font-weight:600;
+      padding:5px 14px; border-radius:20px; transition:opacity .3s;
+      background:#3a2a10; color:#ffe9a8; border:1px solid rgba(200,160,0,.4);
+    }
+    #connStatus.ok  { background:#123a28; color:#5cd69c; border-color:rgba(51,204,153,.35); }
+    #connStatus.bad { background:#3a1212; color:#ff8a8a; border-color:rgba(255,96,96,.4); }
+    #connStatus.hide { opacity:0; pointer-events:none; }
+
     /* ─── 테이블 ─── */
     #game {
       display:none; position:relative;
@@ -316,9 +327,73 @@
     #goBox { background:#16101c; border-radius:22px; padding:38px 50px; text-align:center; border:1px solid #241a2e; animation:slideDown .4s cubic-bezier(.34,1.4,.64,1); }
     #goTitle { font-family:'Bangers'; font-size:2.8rem; margin-bottom:6px; letter-spacing:2px; }
     #goDesc { color:#6a5a70; margin-bottom:24px; }
+
+    /* ═══ 모바일 반응형 ═══ */
+    @media (max-width: 600px) {
+      #game {
+        height:100dvh; max-height:none; overflow-y:auto;
+        border-width:5px; outline-width:1px; border-radius:14px; padding:8px 10px; gap:6px;
+      }
+      #game::before { inset:8px; border-radius:10px; }
+
+      /* 카드 축소 */
+      .card { width:50px; height:70px; border-radius:8px; padding:4px 4px 3px; }
+      .card .c-num { font-size:2.1rem; }
+      .card .c-rank { font-size:.82rem; padding:1px 5px; min-width:17px; }
+      .card.back .bf.flip, .card.back .bf.flap { font-size:.8rem; }
+
+      /* 덱 스택: 화면 안쪽 왼쪽에 고정 (탭 가능하도록) */
+      #deckStack { left:8px; width:50px; height:70px; }
+      #deckStack .deck-count { font-size:.55rem; bottom:-17px; }
+
+      /* 경매 매트 */
+      #auctionMat { min-width:0; padding:10px 12px; gap:8px; width:78%; margin-left:auto; }
+      .auction-row { gap:8px; }
+      .a-label, .bid-lbl { font-size:.55rem; }
+      #actionArea .btn-sm { padding:8px 12px; font-size:.8rem; }
+
+      /* 배팅 자리 */
+      .bid-area { min-height:66px; margin:3px 0; }
+      .bid-empty { width:50px; height:70px; }
+      .v-divider { height:56px; }
+
+      /* 획득 더미 */
+      .pile { min-height:44px; gap:6px; }
+      .pile-group .card { width:42px; height:58px; margin-left:-24px; }
+      .pile-group .card .c-num { font-size:1.6rem; }
+      .pile-count { font-size:.55rem; }
+
+      /* 부채꼴 높이 */
+      .fan { min-height:82px; }
+      .fan.top { min-height:52px; }
+
+      /* HUD·라벨·타이머 */
+      #hud { padding:2px 4px; }
+      #statusBar { font-size:.76rem; }
+      #turnInfo { font-size:.66rem; }
+      .zone-label { font-size:.56rem; }
+      .timer { font-size:.82rem; padding:2px 8px; }
+      .type-badge { font-size:.55rem; padding:2px 7px; }
+
+      /* 컨트롤 버튼 */
+      #controls { top:10px; right:12px; gap:6px; }
+      .ctrl-btn { width:30px; height:30px; font-size:.85rem; }
+
+      /* 워터마크 로고 축소 */
+      #tableLogo .tl { font-size:3.2rem; letter-spacing:5px; }
+
+      /* 로비 */
+      .logo h1, .logo .flap { font-size:3.2rem; }
+      .lobby-btns { width:230px; }
+
+      /* 룰 모달 */
+      #rulesBox { padding:22px 20px; }
+    }
   </style>
 </head>
 <body>
+
+<div id="connStatus">서버 연결 중…</div>
 
 <div id="lobby">
   <div class="logo">
