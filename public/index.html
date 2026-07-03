@@ -171,6 +171,10 @@
     .rc-back .rc-num{ font-family:'Bangers'; font-size:.8rem; color:#7a6a9e; }
 
     #rulesBox .r-cards{ display:flex; gap:5px; align-items:center; flex-wrap:wrap; margin:8px 0 4px; }
+    .r-comp{ display:flex; flex-direction:column; gap:7px; margin:8px 0; }
+    .r-comp-row{ display:flex; align-items:center; gap:11px; font-size:.85rem; color:#c8bcc4; }
+    .r-comp-row b{ color:#ffe9a8; }
+    .r-comp-g{ color:#6a5a70; font-size:.76rem; }
     #rulesBox .r-arrow{ color:#8a7a80; font-size:1.1rem; font-weight:700; margin:0 2px; }
     #rulesBox .r-win{ color:#5cd69c; font-weight:700; font-size:.82rem; }
     #rulesBox .r-eq{ color:#ffe9a8; font-weight:700; }
@@ -589,6 +593,27 @@
     </div>
     <p style="font-size:.78rem">종류별 필요 장수: <b>2</b>→2장 · <b>3</b>→3장 · <b>4</b>→4장 · <b>6</b>→6장<br>
     ⚠️ 경매로 따서 <b>내 앞에 깐 카드만</b> 인정 (손에 든 카드는 X)</p>
+
+    <h3>🗂 카드 구성 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 총 24장</span></h3>
+    <div class="r-comp">
+      <div class="r-comp-row">
+        <div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
+        <span><b>2짜리</b> · 2장 <span class="r-comp-g">(등급 1–2)</span></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="3"><span class="rc-rank">1</span><span class="rc-num">3</span></div>
+        <span><b>3짜리</b> · 5장 <span class="r-comp-g">(등급 1–5)</span></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="4"><span class="rc-rank">1</span><span class="rc-num">4</span></div>
+        <span><b>4짜리</b> · 7장 <span class="r-comp-g">(등급 1–7)</span></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
+        <span><b>6짜리</b> · 10장 <span class="r-comp-g">(등급 1–10)</span></span>
+      </div>
+    </div>
+    <p style="font-size:.76rem;color:#8a7a80">덱 12장 + 각자 손패 6장으로 시작. <b style="color:#ffe9a8">숫자가 큰 카드일수록 많지만</b>, 그만큼 세트도 어려워요.</p>
 
     <h3>🔄 한 턴의 흐름</h3>
     <div class="r-flow">
