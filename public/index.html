@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FLIP FLAP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red:#c1272d; --red-d:#7a1a1e; --blue:#1a5276; --blue-d:#0f2e42;
+      --yel:#c9962c; --yel-d:#8a6f1f; --ink:#4a3728; --ink-d:#2e2118;
+      --gold:#c8a000; --paper:#f7f5f2;
+      --felt:#1f4a3c; --felt-d:#143026;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family:'Fredoka',system-ui,sans-serif;
+      background:#100b0a;
+      background-image:
+        radial-gradient(ellipse at 50% 40%, #2a1c14 0%, #140d0a 70%);
+      color:#e8e2d8; min-height:100vh;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      overflow-x:hidden;
+    }
+
+    /* ─── 로비 ─── */
+    #lobby { display:flex; flex-direction:column; align-items:center; gap:20px; }
+    .logo { text-align:center; line-height:.9; }
+    .logo h1 {
+      font-family:'Bangers',cursive; font-size:4.2rem; letter-spacing:6px;
+      background:linear-gradient(120deg,var(--red),var(--yel) 40%,var(--gold) 60%,var(--blue));
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      filter:drop-shadow(0 2px 8px rgba(200,160,0,.25));
+    }
+    .logo .flap {
+      font-family:'Bangers',cursive; font-size:4.2rem; letter-spacing:6px;
+      transform:rotate(180deg); display:inline-block; margin-top:-18px; opacity:.85;
+      background:linear-gradient(120deg,var(--blue),var(--gold) 40%,var(--yel) 60%,var(--red));
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .logo .sub { font-size:.72rem; letter-spacing:5px; color:#55474e; margin-top:6px; font-weight:500; }
+    .lobby-btns { display:flex; flex-direction:column; gap:12px; width:260px; }
+    .btn {
+      padding:13px 24px; border:none; border-radius:12px; font-family:'Fredoka';
+      font-size:1rem; font-weight:600; cursor:pointer; transition:transform .1s,opacity .15s; width:100%;
+    }
+    .btn:hover { opacity:.9; transform:translateY(-2px); }
+    .btn:active { transform:translateY(1px); }
+    .btn-gold { background:linear-gradient(135deg,var(--gold),var(--yel)); color:#1a1008; }
+    .btn-outline { background:transparent; border:2px solid var(--gold); color:var(--gold); }
+    .btn-ink { background:#241a2e; border:2px solid #6a5a8e; color:#b8a8de; }
+    .btn-sm { padding:9px 16px; font-size:.85rem; width:auto; }
+    .diff-row { display:flex; gap:6px; }
+    .diff-btn {
+      flex:1; padding:8px 4px; border-radius:9px; cursor:pointer; background:#1a1420;
+      border:2px solid #2a2130; color:#7a6a80; font-family:'Fredoka'; font-size:.78rem; font-weight:600; transition:all .15s;
+    }
+    .diff-btn.active { border-color:var(--gold); color:var(--gold); background:#251a10; }
+    .join-row { display:flex; gap:8px; }
+    input[type=text] {
+      flex:1; padding:12px 14px; border-radius:11px; border:2px solid #2a2130; background:#16101c;
+      color:#e8e2d8; font-family:'Fredoka'; font-size:.95rem; text-transform:uppercase; letter-spacing:3px; text-align:center;
+    }
+    input:focus { outline:none; border-color:var(--gold); }
+    .divider-line { border:none; border-top:1px solid #2a2130; margin:2px 0; }
+    #waitMsg { color:var(--gold); font-size:.85rem; text-align:center; min-height:20px; }
+
+    /* ─── 테이블 ─── */
+    #game {
+      display:none; position:relative;
+      width:100%; max-width:780px; height:100vh; max-height:920px;
+      padding:16px 20px;
+      flex-direction:column;
+      /* 펠트 테이블 */
+      background:
+        radial-gradient(ellipse 90% 70% at 50% 50%, var(--felt) 0%, var(--felt-d) 78%, #0d1e18 100%);
+      border-radius:28px;
+      box-shadow:
+        inset 0 0 80px rgba(0,0,0,.55),
+        inset 0 0 0 3px rgba(200,160,0,.18),
+        0 24px 60px rgba(0,0,0,.6);
+      border:10px solid #2a1c12;
+      outline:2px solid #3a281a;
+    }
+    /* 펠트 위 미세 무늬 */
+    #game::before {
+      content:''; position:absolute; inset:14px; border-radius:20px; pointer-events:none;
+      border:1px solid rgba(200,160,0,.12);
+      box-shadow:inset 0 0 40px rgba(0,0,0,.25);
+    }
+
+    /* 테이블 중앙 로고 워터마크 */
+    #tableLogo {
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      text-align:center; line-height:.78; pointer-events:none; z-index:1; opacity:.06;
+    }
+    #tableLogo .tl { font-family:'Bangers',cursive; font-size:5.5rem; letter-spacing:8px; color:#fff; display:block; }
+    #tableLogo .tl.flap { transform:rotate(180deg); margin-top:-10px; }
+
+    /* 인게임 컨트롤 (룰 / BGM) */
+    #controls { position:absolute; top:16px; right:20px; z-index:5; display:flex; gap:8px; }
+    .ctrl-btn {
+      width:34px; height:34px; border-radius:10px; cursor:pointer;
+      background:rgba(0,0,0,.3); border:1px solid rgba(200,160,0,.3); color:#ffe9a8;
+      font-family:'Fredoka'; font-size:.9rem; font-weight:700;
+      display:flex; align-items:center; justify-content:center; transition:all .15s;
+    }
+    .ctrl-btn:hover { background:rgba(200,160,0,.2); transform:translateY(-1px); }
+
+    /* 룰 모달 */
+    #rulesModal {
+      display:none; position:fixed; inset:0; background:rgba(5,3,8,.88); backdrop-filter:blur(6px);
+      z-index:40; align-items:center; justify-content:center; padding:20px; animation:fadeIn .3s;
+    }
+    #rulesBox {
+      background:#16101c; border:1px solid #2a1c30; border-radius:20px; padding:28px 30px;
+      max-width:480px; width:100%; max-height:86vh; overflow-y:auto; animation:slideDown .35s cubic-bezier(.34,1.4,.64,1);
+    }
+    #rulesBox h2 { font-family:'Bangers'; font-size:1.8rem; letter-spacing:2px; color:var(--gold); margin-bottom:4px; }
+    #rulesBox h3 { font-size:.95rem; color:#ffe9a8; margin:16px 0 6px; }
+    #rulesBox p, #rulesBox li { font-size:.84rem; line-height:1.6; color:#c8bcc4; }
+    #rulesBox ul { padding-left:18px; }
+    #rulesBox .r-tag { display:inline-block; padding:1px 7px; border-radius:5px; font-weight:600; font-size:.78rem; }
+    #rulesBox .close-x { float:right; cursor:pointer; color:#6a5a70; font-size:1.4rem; line-height:1; }
+    #rulesBox .close-x:hover { color:#fff; }
+
+    /* HUD (테이블 상단 얇은 바) */
+    #hud {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:4px 10px; margin-bottom:4px; position:relative; z-index:2;
+    }
+    #deckInfo,#turnInfo { font-size:.72rem; color:rgba(255,255,255,.4); font-weight:600; }
+    #statusBar {
+      font-size:.88rem; color:#ffe9a8; font-weight:600; text-align:center; flex:1;
+      transition:opacity .2s; text-shadow:0 1px 3px rgba(0,0,0,.6);
+    }
+
+    /* 존 공통 */
+    .zone { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; }
+    #oppZone { padding-top:2px; }
+    #centerZone { flex:1; justify-content:center; gap:10px; }
+    #myZone { justify-content:flex-end; }
+
+    .zone-label {
+      font-size:.6rem; letter-spacing:2px; text-transform:uppercase;
+      color:rgba(255,255,255,.35); margin-bottom:4px; display:flex; align-items:center; gap:7px;
+    }
+
+    /* ─── 카드 ─── */
+    .card {
+      width:64px; height:90px; border-radius:9px; flex-shrink:0;
+      display:inline-flex; flex-direction:column; justify-content:space-between;
+      padding:6px 6px 5px; position:relative; cursor:default; user-select:none;
+      border:2px solid transparent; overflow:hidden;
+      box-shadow:0 3px 8px rgba(0,0,0,.4);
+      transition:transform .16s cubic-bezier(.34,1.56,.64,1), box-shadow .16s, border-color .16s;
+    }
+    .card[data-kind="2"] { background:linear-gradient(160deg,var(--red-d),var(--red)); border-color:#e05055; }
+    .card[data-kind="3"] { background:linear-gradient(160deg,var(--blue-d),var(--blue)); border-color:#4a90c0; }
+    .card[data-kind="4"] { background:linear-gradient(160deg,var(--yel-d),var(--yel)); border-color:#e5c060; }
+    .card[data-kind="6"] { background:linear-gradient(160deg,var(--ink-d),var(--ink)); border-color:#7a6250; }
+    .card.special { border-color:var(--gold)!important; box-shadow:0 3px 8px rgba(0,0,0,.4), inset 0 0 12px rgba(200,160,0,.4); }
+
+    .card { justify-content:flex-start; }
+    .card .c-top { display:flex; justify-content:space-between; align-items:flex-start; position:relative; z-index:1; }
+    .card .c-rank {
+      font-family:'Fredoka'; font-weight:700; font-size:1.05rem; color:#fff; line-height:1;
+      background:rgba(0,0,0,.45); border-radius:7px; padding:2px 8px; min-width:24px; text-align:center;
+    }
+    .card.special .c-rank { background:var(--gold); color:#1a1008; }
+    .card .c-mark { font-size:.72rem; }
+    .card .c-num {
+      flex:1; display:flex; align-items:center; justify-content:center;
+      font-family:'Bangers',cursive; font-size:3.1rem; line-height:.8; color:#fff;
+      position:relative; z-index:1; text-shadow:0 2px 7px rgba(0,0,0,.5); padding-bottom:6px;
+    }
+
+    /* 뒷면 = FLIP FLAP 로고 */
+    .card.back {
+      background:
+        radial-gradient(ellipse at 50% 50%, #2a1f38 0%, #16101c 100%) !important;
+      border-color:#4a3a5e !important; align-items:center; justify-content:center; gap:0;
+    }
+    .card.back::before {
+      content:''; position:absolute; inset:5px; border-radius:6px;
+      border:1px solid rgba(200,160,0,.25);
+    }
+    .card.back .bf {
+      font-family:'Bangers',cursive; line-height:.82; letter-spacing:1px; z-index:1;
+      background:linear-gradient(120deg,var(--red),var(--yel) 45%,var(--gold) 60%,var(--blue));
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .card.back .bf.flip { font-size:1.05rem; }
+    .card.back .bf.flap { font-size:1.05rem; transform:rotate(180deg); margin-top:-2px; opacity:.8; }
+
+    .card.selectable { cursor:pointer; }
+    .card.selectable:hover { transform:translateY(-14px) scale(1.06); box-shadow:0 16px 30px rgba(0,0,0,.6); z-index:20!important; border-color:var(--gold); }
+    .card.selected { transform:translateY(-16px) scale(1.08); box-shadow:0 18px 34px rgba(200,160,0,.5); z-index:20!important; border-color:var(--gold); }
+
+    @keyframes dealIn { from{opacity:0; transform:translateY(-40px) scale(.7) rotate(8deg)} to{opacity:1; transform:none} }
+    @keyframes flipReveal { 0%{transform:rotateY(0)} 45%{transform:rotateY(90deg) scale(.9)} 55%{transform:rotateY(-90deg) scale(.9)} 100%{transform:rotateY(0)} }
+    @keyframes winBounce { 0%,100%{transform:none} 30%{transform:translateY(-16px) scale(1.1)} 60%{transform:translateY(-7px) scale(1.05)} }
+    @keyframes drawIn { from{opacity:0; transform:translateX(-150px) rotateY(80deg) scale(.85)} to{opacity:1; transform:none} }
+    .card.anim-deal { animation:dealIn .34s cubic-bezier(.34,1.4,.64,1) both; }
+    .card.anim-reveal { animation:flipReveal .55s ease-in-out both; }
+    .card.anim-win { animation:winBounce .6s ease-in-out both; }
+    .card.anim-draw { animation:drawIn .5s cubic-bezier(.34,1.4,.64,1) both; }
+    /* 세트 완성 특수효과 */
+    @keyframes setGlow {
+      0%,100% { box-shadow:0 3px 8px rgba(0,0,0,.4), 0 0 0 0 rgba(200,160,0,0); transform:translateY(0) scale(1); }
+      50%     { box-shadow:0 3px 8px rgba(0,0,0,.4), 0 0 26px 6px rgba(255,215,64,.9); transform:translateY(-8px) scale(1.1); }
+    }
+    .card.set-win { animation:setGlow .7s ease-in-out 3; border-color:var(--gold)!important; z-index:14; }
+
+    /* 체스 시계 타이머 */
+    .timer {
+      font-family:'Fredoka'; font-weight:700; font-size:.92rem; letter-spacing:1px;
+      padding:2px 10px; border-radius:8px; background:rgba(0,0,0,.35);
+      color:#bcb2c4; border:1px solid transparent; transition:all .2s; margin-left:4px;
+    }
+    .timer.active { color:#ffe9a8; border-color:var(--gold); box-shadow:0 0 12px rgba(200,160,0,.4); }
+    .timer.warn   { color:#ff6b6b; border-color:#ff6b6b; animation:timerFlash .8s ease-in-out infinite; }
+    @keyframes timerFlash { 0%,100%{box-shadow:0 0 0 0 rgba(255,80,80,0)} 50%{box-shadow:0 0 14px 3px rgba(255,80,80,.6)} }
+
+    /* ─── 중앙덱 스택 (중앙 살짝 왼쪽) ─── */
+    #deckStack {
+      position:absolute; left:calc(50% - 218px); top:50%; transform:translateY(-50%);
+      width:64px; height:90px; z-index:3; transition:transform .15s;
+    }
+    #deckStack .deck-layer { position:absolute; top:0; left:0; box-shadow:0 2px 6px rgba(0,0,0,.55); }
+    #deckStack .deck-count {
+      position:absolute; bottom:-24px; left:50%; transform:translateX(-50%);
+      font-size:.66rem; color:rgba(255,255,255,.55); font-weight:700; white-space:nowrap;
+    }
+    #deckStack.drawable { cursor:pointer; }
+    #deckStack.drawable:hover { transform:translateY(-56%); }
+    #deckStack.drawable::after {
+      content:''; position:absolute; inset:-4px; border-radius:13px; pointer-events:none;
+      animation:deckPulse 1.4s ease-in-out infinite;
+    }
+    #deckStack.drawable .deck-count { color:#ffe9a8; }
+    @keyframes deckPulse { 0%,100%{box-shadow:0 0 0 0 rgba(200,160,0,0)} 50%{box-shadow:0 0 22px 4px rgba(200,160,0,.55)} }
+
+    /* ─── 손패 부채꼴 ─── */
+    .fan { display:flex; justify-content:center; align-items:flex-end; min-height:104px; }
+    .fan.top { align-items:flex-start; min-height:72px; }
+    .fan-slot { transition:transform .18s cubic-bezier(.34,1.4,.64,1); }
+    .fan-slot:hover { z-index:40 !important; }
+
+    /* ─── 획득 더미 (종류별 겹침) ─── */
+    .pile { display:flex; gap:10px; min-height:56px; align-items:center; justify-content:center; flex-wrap:wrap; }
+    .pile-group { display:flex; }
+    .pile-group .card {
+      width:48px; height:66px; padding:4px 4px;
+      margin-left:-26px; box-shadow:0 2px 5px rgba(0,0,0,.45);
+    }
+    .pile-group .card:first-child { margin-left:0; }
+    .pile-group .card .c-num { font-size:2rem; padding-bottom:2px; }
+    .pile-group .card .c-rank { font-size:.78rem; padding:1px 5px; min-width:18px; }
+    .pile-group .card:hover { transform:translateY(-8px); z-index:15; box-shadow:0 10px 18px rgba(0,0,0,.55); }
+    .pile-empty { font-size:.72rem; color:rgba(255,255,255,.25); }
+    .pile-count {
+      align-self:flex-end; font-size:.58rem; color:rgba(255,255,255,.5); font-weight:700;
+      margin-left:2px; margin-bottom:2px;
+    }
+    .pile-count.done { color:#ffe9a8; }
+
+    /* ─── 경매 (테이블 중앙 매트) ─── */
+    #auctionMat {
+      display:flex; flex-direction:column; align-items:center; gap:12px;
+      padding:16px 26px; border-radius:20px;
+      background:radial-gradient(ellipse at 50% 40%, rgba(0,0,0,.28) 0%, rgba(0,0,0,.12) 70%, transparent 100%);
+      box-shadow:inset 0 0 0 1px rgba(200,160,0,.14);
+      min-width:280px;
+    }
+    .auction-row { display:flex; align-items:flex-end; gap:16px; justify-content:center; }
+    .a-slot { display:flex; flex-direction:column; align-items:center; gap:5px; }
+    .a-label { font-size:.6rem; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:1px; }
+    .vs-tag { align-self:center; font-family:'Bangers'; font-size:1.1rem; color:rgba(255,255,255,.4); padding:0 2px; }
+    #actionArea { min-height:30px; display:flex; justify-content:center; }
+
+    /* 배팅 카드 = 각자 앞에 놓임 */
+    .bid-area { min-height:78px; display:flex; justify-content:center; align-items:center; margin:6px 0; }
+    .bid-slot { display:flex; flex-direction:column; align-items:center; gap:4px; }
+    .bid-lbl { font-size:.6rem; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:1px; }
+    .bid-empty {
+      width:64px; height:90px; border-radius:9px; border:2px dashed rgba(255,255,255,.14);
+      background:rgba(0,0,0,.12);
+    }
+    .type-badge { font-size:.62rem; padding:2px 10px; border-radius:8px; font-weight:600; letter-spacing:1px; }
+    .type-badge.open { background:#1e3a2a; color:#5cd69c; }
+    .type-badge.closed { background:#2a1a3a; color:#b89cfe; }
+    .btn-row { display:flex; gap:8px; }
+    .hint-text { font-size:.74rem; color:rgba(255,255,255,.4); text-align:center; }
+
+    .cpu-tag { font-size:.58rem; padding:2px 7px; border-radius:6px; background:rgba(184,168,222,.18); color:#c8bcf0; letter-spacing:1px; }
+    .cpu-tag.diff { background:rgba(200,160,0,.18); color:#ffe9a8; }
+    @keyframes thinking { 0%,100%{opacity:.3} 50%{opacity:1} }
+    .thinking-dots span { animation:thinking 1.2s ease-in-out infinite; color:#ffe9a8; }
+    .thinking-dots span:nth-child(2){animation-delay:.2s} .thinking-dots span:nth-child(3){animation-delay:.4s}
+
+    /* 졸개의 배신 토스트 */
+    #specialToast {
+      display:none; position:fixed; top:30px; left:50%; transform:translateX(-50%);
+      background:linear-gradient(135deg,var(--gold),var(--yel)); color:#1a1008;
+      padding:12px 28px; border-radius:14px; font-weight:700; z-index:30;
+      box-shadow:0 8px 30px rgba(200,160,0,.5); font-size:1rem;
+      animation:toastIn .5s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(-20px) scale(.8)} to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)} }
+
+    /* 게임오버 */
+    #gameOver { display:none; position:fixed; inset:0; background:rgba(5,3,8,.9); backdrop-filter:blur(8px); flex-direction:column; align-items:center; justify-content:center; z-index:20; animation:fadeIn .4s; }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    @keyframes slideDown { from{opacity:0;transform:translateY(-30px)} to{opacity:1;transform:none} }
+    #goBox { background:#16101c; border-radius:22px; padding:38px 50px; text-align:center; border:1px solid #241a2e; animation:slideDown .4s cubic-bezier(.34,1.4,.64,1); }
+    #goTitle { font-family:'Bangers'; font-size:2.8rem; margin-bottom:6px; letter-spacing:2px; }
+    #goDesc { color:#6a5a70; margin-bottom:24px; }
+  </style>
+</head>
+<body>
+
+<div id="lobby">
+  <div class="logo">
+    <h1>FLIP</h1><div class="flap">FLAP</div>
+    <p class="sub">경매 · 블러핑 · 심리전</p>
+  </div>
+  <div class="lobby-btns">
+    <div class="diff-row" id="diffRow">
+      <button class="diff-btn" data-diff="easy">쉬움</button>
+      <button class="diff-btn" data-diff="normal">보통</button>
+      <button class="diff-btn active" data-diff="hard">어려움</button>
+      <button class="diff-btn" data-diff="expert">전문가</button>
+    </div>
+    <button class="btn btn-ink" onclick="createRoom(true)">혼자 하기 (vs AI)</button>
+    <hr class="divider-line">
+    <button class="btn btn-gold" onclick="createRoom(false)">방 만들기</button>
+    <div class="join-row">
+      <input id="roomInput" type="text" placeholder="XXXXX" maxlength="5">
+      <button class="btn btn-outline btn-sm" onclick="joinRoom()">참가</button>
+    </div>
+  </div>
+  <p id="waitMsg"></p>
+</div>
+
+<div id="game">
+  <div id="tableLogo">
+    <span class="tl">FLIP</span><span class="tl flap">FLAP</span>
+  </div>
+  <div id="controls">
+    <div class="ctrl-btn" id="bgmBtn" title="배경음악" onclick="toggleBGM()">♪</div>
+    <div class="ctrl-btn" id="rulesBtn" title="게임 설명" onclick="toggleRules(true)">?</div>
+  </div>
+
+  <div id="hud">
+    <span id="turnInfo">턴 -</span>
+    <span id="statusBar">-</span>
+    <span style="width:54px"></span>
+  </div>
+
+  <!-- 상대 (맞은편) -->
+  <div class="zone" id="oppZone">
+    <div class="zone-label">
+      상대 <span id="cpuTag" class="cpu-tag" style="display:none">AI</span>
+      <span id="cpuDiff" class="cpu-tag diff" style="display:none"></span>
+      <span id="oppHandLen"></span>
+      <span class="timer" id="oppTimer">7:00</span>
+    </div>
+    <div class="fan top" id="oppHand"></div>
+    <div class="pile" id="oppAcq"></div>
+    <div class="bid-area" id="oppBid"></div>
+  </div>
+
+  <!-- 중앙 경매 매트 -->
+  <div class="zone" id="centerZone">
+    <div id="deckStack" onclick="drawCard()"></div>
+    <div id="auctionMat">
+      <div class="type-badge" id="auctionTypeBadge" style="min-height:16px"></div>
+      <div class="auction-row" id="auctionItems"></div>
+      <div id="actionArea"></div>
+    </div>
+  </div>
+
+  <!-- 나 (내 자리) -->
+  <div class="zone" id="myZone">
+    <div class="bid-area" id="myBid"></div>
+    <div class="pile" id="myAcq"></div>
+    <div class="fan" id="myHand"></div>
+    <div class="zone-label" style="margin-top:2px">내 손패 <span class="timer" id="myTimer">7:00</span></div>
+  </div>
+</div>
+
+<div id="specialToast">⚔ 졸개의 배신! 6-10이 2-1을 잡았다</div>
+
+<!-- 게임 설명서 -->
+<div id="rulesModal" onclick="if(event.target===this)toggleRules(false)">
+  <div id="rulesBox">
+    <span class="close-x" onclick="toggleRules(false)">×</span>
+    <h2>FLIP FLAP</h2>
+    <p style="color:#8a7a80">경매로 카드를 모아 <b style="color:#ffe9a8">세트</b>를 먼저 완성하면 승리!</p>
+
+    <h3>🎯 목표 — 세트 완성</h3>
+    <p>내 앞에 획득해둔 카드로, 같은 종류를 <b>숫자만큼</b> 모으면 즉시 승리.</p>
+    <ul>
+      <li><span class="r-tag" style="background:#7a1a1e;color:#fff">2</span> 2장 · <span class="r-tag" style="background:#0f2e42;color:#fff">3</span> 3장 · <span class="r-tag" style="background:#8a6f1f;color:#fff">4</span> 4장 · <span class="r-tag" style="background:#2e2118;color:#fff">6</span> 6장</li>
+      <li>손패 카드는 세트로 안 침. 경매로 <b>획득</b>한 카드만 인정.</li>
+    </ul>
+
+    <h3>🔨 턴 진행</h3>
+    <ul>
+      <li>① 중앙덱 맨 위 카드 1장 공개</li>
+      <li>② 진행자가 손패에서 1장 추가 출품 (총 2장이 경매품)</li>
+      <li>③ 오픈/클로즈 경매 방식 선택</li>
+      <li>④ 양쪽 손패에서 배팅 카드 1장씩 제출 (한 번만!)</li>
+      <li>⑤ 공개 → 승자가 경매품 2장 획득</li>
+      <li>⑥ 배팅에 쓴 카드는 <b>서로 상대에게</b> 넘어감 (총량 유지)</li>
+    </ul>
+
+    <h3>🎭 경매 방식</h3>
+    <ul>
+      <li><b>오픈 경매</b> — 경매품 <b>공개</b>, 배팅은 <b>비공개</b>(뒤집어서)</li>
+      <li><b>클로즈 경매</b> — 경매품 <b>비공개</b>, 배팅은 <b>공개</b>(앞면으로)</li>
+    </ul>
+
+    <h3>⚔ 배팅 승패</h3>
+    <ul>
+      <li>1. 종류가 다르면 <b>작은 숫자 승리</b> (2 &gt; 3 &gt; 4 &gt; 6)</li>
+      <li>2. 같은 종류면 <b>등급(좌상단 번호) 낮은 쪽 승리</b></li>
+      <li>3. <b>특수룰 · 졸개의 배신</b> — <span style="color:var(--gold)">6-10</span>은 최강 카드 <span style="color:var(--gold)">2-1</span>을 이긴다!</li>
+    </ul>
+
+    <h3>📖 카드 보는 법</h3>
+    <p>가운데 큰 숫자 = <b>종류(세트 조건)</b> · 좌상단 = <b>등급 번호</b>(낮을수록 강함)</p>
+  </div>
+</div>
+
+<div id="gameOver">
+  <div id="goBox">
+    <div id="goTitle"></div>
+    <div id="goDesc"></div>
+    <button class="btn btn-gold" style="width:auto" onclick="location.reload()">다시 하기</button>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="client.js"></script>
+</body>
+</html>

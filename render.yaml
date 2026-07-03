@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: flip-flap
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 22.11.0

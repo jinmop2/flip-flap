@@ -1,0 +1,16 @@
+{
+  "name": "flip-flap",
+  "version": "1.0.0",
+  "description": "FLIP FLAP — 2인 경매·블러핑 보드게임 (실시간 멀티플레이)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  }
+}
