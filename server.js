@@ -188,6 +188,69 @@ function cpuChooseOffer(hand, acquired) {
   return [...pool].sort((a, b) => strength(b) - strength(a))[0];
 }
 
+// ══ 개선 전문가 AI (상대 견제 + 실현가능 목표 + 최소 승리 배팅) ══
+const TOTAL = { 2: 2, 3: 5, 4: 7, 6: 10 };
+const cnt = (acq, kind) => acq.reduce((n, c) => n + (c.kind === kind ? 1 : 0), 0);
+function feasibleTarget(myAcq, oppAcq) {
+  let best = null, bestScore = -1;
+  for (const [kind] of SPEC) {
+    const myC = cnt(myAcq, kind), oppC = cnt(oppAcq, kind);
+    if (TOTAL[kind] - oppC < kind) continue;   // 남은 카드로 완성 불가 → 포기
+    if (myC >= kind) continue;
+    const score = myC / kind + (kind <= 3 ? 0.04 : 0);
+    if (score > bestScore) { bestScore = score; best = kind; }
+  }
+  return best ?? 6;
+}
+function wantValue(prize, myAcq, target) {
+  let v = 0;
+  for (const c of prize) { if (!c) continue;
+    const need = c.kind - cnt(myAcq, c.kind);
+    let cv = need <= 0 ? 1 : 1 / need;
+    if (c.kind === target) cv = Math.max(cv, 0.75);
+    if (need === 1) cv = Math.max(cv, 0.97);   // 이걸로 내 세트 완성
+    v = Math.max(v, cv);
+  }
+  return v;
+}
+function denyValue(prize, oppAcq) {
+  let v = 0;
+  for (const c of prize) { if (!c) continue;
+    const need = c.kind - cnt(oppAcq, c.kind);
+    if (need === 1) v = Math.max(v, 0.88);     // 상대 완성 임박 → 뺏기
+    else if (need === 2) v = Math.max(v, 0.45);
+  }
+  return v;
+}
+function offerX(hand, myAcq, oppAcq) {
+  const target = feasibleTarget(myAcq, oppAcq);
+  let pool = hand.filter(c => c.kind !== target);
+  if (!pool.length) pool = hand.slice();
+  const safe = pool.filter(c => c.kind - cnt(oppAcq, c.kind) !== 1);  // 상대 완성시켜줄 카드 회피
+  const use = safe.length ? safe : pool;
+  return [...use].sort((a, b) => strength(b) - strength(a))[0];
+}
+function typeX(hand, prize, myAcq, oppAcq) {
+  const val = Math.max(wantValue(prize, myAcq, feasibleTarget(myAcq, oppAcq)), denyValue(prize, oppAcq));
+  return val >= 0.5 ? 'open' : 'closed';
+}
+// visOpp: 클로즈 후공일 때 보이는 진행자 배팅카드 (없으면 null)
+function decideBidX(hand, prize, myAcq, oppAcq, visOpp) {
+  const byStrong = [...hand].sort((a, b) => strength(a) - strength(b));
+  const target = feasibleTarget(myAcq, oppAcq);
+  const val = Math.max(wantValue(prize, myAcq, target), denyValue(prize, oppAcq));
+  if (visOpp) {   // 상대 배팅이 보이면 최소 승리 배팅으로 강카드 절약
+    if (val < 0.32) return byStrong[byStrong.length - 1];
+    const winners = hand.filter(c => aBeatsB(c, visOpp)).sort((a, b) => strength(b) - strength(a));
+    if (winners.length) return winners[0];
+    return byStrong[byStrong.length - 1];
+  }
+  if (val >= 0.8)  return byStrong[0];
+  if (val >= 0.55) return byStrong[Math.min(1, byStrong.length - 1)];
+  if (val >= 0.3)  return byStrong[Math.floor(byStrong.length / 2)];
+  return byStrong[byStrong.length - 1];
+}
+
 // AI가 행동할 차례인지 확인하고 실행
 function maybeCpuAct(roomId) {
   const room = rooms[roomId];
@@ -195,13 +258,15 @@ function maybeCpuAct(roomId) {
   const g = room.game, ci = room.cpuIndex;
 
   if (g.phase === 'draw' && g.auctioneer === ci + 1) {
-    delay(() => { drawCenter(g); broadcast(roomId); maybeCpuAct(roomId); }, 600, 500);
+    delay(() => { if (g.phase !== 'draw') return; drawCenter(g); broadcast(roomId); maybeCpuAct(roomId); }, 600, 500);
   }
   else if (g.phase === 'offer' && g.auctioneer === ci + 1) {
     delay(() => {
+      if (g.phase !== 'offer') return;
       const hand = ci === 0 ? g.p1Hand : g.p2Hand;
       const acq  = ci === 0 ? g.p1Acquired : g.p2Acquired;
-      const card = cpuChooseOffer(hand, acq);
+      const opp  = ci === 0 ? g.p2Acquired : g.p1Acquired;
+      const card = room.difficulty === 'expert' ? offerX(hand, acq, opp) : cpuChooseOffer(hand, acq);
       const idx = hand.findIndex(c => c.id === card.id);
       if (idx === -1) return;
       g.auction._offeredCard = hand.splice(idx, 1)[0];
@@ -212,10 +277,15 @@ function maybeCpuAct(roomId) {
   }
   else if (g.phase === 'choose_type' && g.auctioneer === ci + 1) {
     delay(() => {
+      if (g.phase !== 'choose_type') return;
       const hand = ci === 0 ? g.p1Hand : g.p2Hand;
       const acq  = ci === 0 ? g.p1Acquired : g.p2Acquired;
-      const type = cpuChooseType(hand, [g.auction.centerCard, g.auction._offeredCard], acq, room.difficulty);
-      g.auction.auctionType = type === 'close' ? 'closed' : 'open';
+      const opp  = ci === 0 ? g.p2Acquired : g.p1Acquired;
+      const prize = [g.auction.centerCard, g.auction._offeredCard];
+      const type = room.difficulty === 'expert'
+        ? typeX(hand, prize, acq, opp)
+        : cpuChooseType(hand, prize, acq, room.difficulty);
+      g.auction.auctionType = type === 'close' ? 'closed' : type;   // 'open'|'closed'
       g.phase = 'bidding';
       broadcast(roomId);
       maybeCpuAct(roomId);
@@ -225,14 +295,28 @@ function maybeCpuAct(roomId) {
     const submitted = ci === 0 ? g.auction.p1Submitted : g.auction.p2Submitted;
     if (submitted) return;
     // 진행자 먼저 배팅: CPU가 비진행자면 진행자(사람) 제출 후에만 배팅
-    if (g.auctioneer !== ci + 1) {
+    const isAuctioneer = g.auctioneer === ci + 1;
+    if (!isAuctioneer) {
       const aucBid = g.auctioneer === 1 ? g.auction.p1Submitted : g.auction.p2Submitted;
       if (!aucBid) return;
     }
     delay(() => {
+      if (g.phase !== 'bidding') return;
+      const already = ci === 0 ? g.auction.p1Submitted : g.auction.p2Submitted;
+      if (already) return;                 // 이미 배팅함(중복 방지)
       const hand = ci === 0 ? g.p1Hand : g.p2Hand;
       const acq  = ci === 0 ? g.p1Acquired : g.p2Acquired;
-      const bid = cpuDecideBid(hand, [g.auction.centerCard, g.auction._offeredCard], acq, room.difficulty);
+      const opp  = ci === 0 ? g.p2Acquired : g.p1Acquired;
+      const prize = [g.auction.centerCard, g.auction._offeredCard];
+      let bid;
+      if (room.difficulty === 'expert') {
+        // 클로즈 후공이면 진행자 배팅 카드가 보임 → 최소 승리 배팅
+        const visOpp = (!isAuctioneer && g.auction.auctionType === 'closed')
+          ? (g.auctioneer === 1 ? g.auction.p1Bid : g.auction.p2Bid) : null;
+        bid = decideBidX(hand, prize, acq, opp, visOpp);
+      } else {
+        bid = cpuDecideBid(hand, prize, acq, room.difficulty);
+      }
       const idx = hand.findIndex(c => c.id === bid.id);
       if (idx === -1) return;
       const card = hand.splice(idx, 1)[0];
@@ -519,6 +603,7 @@ function restartGame(roomId) {
 function resolveBidding(roomId) {
   const room = rooms[roomId]; if (!room?.game) return;
   const g = room.game;
+  if (g.phase !== 'bidding' || !g.auction) return;   // 이미 처리됨(이중 정산 방지)
   if (g.auction.p1Submitted && g.auction.p2Submitted) {
     g.phase = 'reveal';
     broadcast(roomId);

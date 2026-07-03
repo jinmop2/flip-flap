@@ -42,34 +42,104 @@ function cpuDecideBid(hand, prize, acq, d){
   return byStrong[byStrong.length-1];
 }
 
-// ── 한 판 시뮬 ──
+// ══ 개선 전문가 AI (expertx) ══
+const TOTAL = { 2:2, 3:5, 4:7, 6:10 };
+const cnt = (acq, kind) => acq.reduce((n,c)=>n+(c.kind===kind?1:0),0);
+// 실현 가능한 최선의 목표 세트 (상대가 이미 가져간 카드로 불가능한 종류는 제외)
+function feasibleTarget(myAcq, oppAcq) {
+  let best=null, bestScore=-1;
+  for (const [kind] of SPEC) {
+    const myC=cnt(myAcq,kind), oppC=cnt(oppAcq,kind);
+    if (TOTAL[kind]-oppC < kind) continue;          // 남은 카드로도 완성 불가 → 포기
+    if (myC>=kind) continue;
+    const score = myC/kind + (kind<=3?0.04:0);       // 근접도 + 쉬운 세트 약간 선호
+    if (score>bestScore){bestScore=score;best=kind;}
+  }
+  return best ?? 6;
+}
+// 이 경매품을 내가 얼마나 원하는가 (0~1)
+function wantValue(prize, myAcq, target) {
+  let v=0;
+  for (const c of prize){ if(!c)continue;
+    const need=c.kind-cnt(myAcq,c.kind);
+    let cv = need<=0?1: 1/need;
+    if (c.kind===target) cv=Math.max(cv,0.75);
+    if (need===1) cv=Math.max(cv,0.97);              // 이걸로 내 세트 완성!
+    v=Math.max(v,cv);
+  }
+  return v;
+}
+// 상대를 막아야 하는 정도 (상대 세트 완성 임박)
+function denyValue(prize, oppAcq) {
+  let v=0;
+  for (const c of prize){ if(!c)continue;
+    const need=c.kind-cnt(oppAcq,c.kind);
+    if (need===1) v=Math.max(v,0.88);                // 상대 완성 코앞 → 무조건 뺏기
+    else if (need===2) v=Math.max(v,0.45);
+  }
+  return v;
+}
+function offerX(hand, myAcq, oppAcq) {
+  const target=feasibleTarget(myAcq,oppAcq);
+  let pool=hand.filter(c=>c.kind!==target);
+  if(!pool.length) pool=hand.slice();
+  // 상대가 1장 남은 종류는 출품 회피(뺏기면 완성시켜줌)
+  const safe=pool.filter(c=>c.kind-cnt(oppAcq,c.kind)!==1);
+  const use=safe.length?safe:pool;
+  return [...use].sort((a,b)=>strength(b)-strength(a))[0];   // 배팅가치 가장 약한 카드 출품
+}
+function typeX(hand, prize, myAcq, oppAcq) {
+  const val=Math.max(wantValue(prize,myAcq,feasibleTarget(myAcq,oppAcq)), denyValue(prize,oppAcq));
+  return val>=0.5 ? 'open' : 'closed';               // 원하면 오픈(내 배팅 숨김), 버리면 클로즈
+}
+function decideBidX(hand, prize, myAcq, oppAcq, visOpp) {
+  const byStrong=[...hand].sort((a,b)=>strength(a)-strength(b));  // 강한 순
+  const target=feasibleTarget(myAcq,oppAcq);
+  const val=Math.max(wantValue(prize,myAcq,target), denyValue(prize,oppAcq));
+  if (visOpp) {                                       // 클로즈 후공: 상대 배팅 보임 → 최소 승리 배팅
+    if (val<0.32) return byStrong[byStrong.length-1];
+    const winners=hand.filter(c=>aBeatsB(c,visOpp)).sort((a,b)=>strength(b)-strength(a)); // 이기는 카드 중 가장 약한
+    if (winners.length) return winners[0];
+    return byStrong[byStrong.length-1];              // 못 이기면 최약 덤핑
+  }
+  if (val>=0.8)  return byStrong[0];
+  if (val>=0.55) return byStrong[Math.min(1,byStrong.length-1)];
+  if (val>=0.3)  return byStrong[Math.floor(byStrong.length/2)];
+  return byStrong[byStrong.length-1];
+}
+
+// ── AI 디스패처 ──
+function aiOffer(hand, myAcq, oppAcq, d){ return d==='expertx'?offerX(hand,myAcq,oppAcq):cpuChooseOffer(hand,myAcq); }
+function aiType(hand, prize, myAcq, oppAcq, d){ return d==='expertx'?typeX(hand,prize,myAcq,oppAcq):cpuChooseType(hand,prize,myAcq,d); }
+function aiBid(hand, prize, myAcq, oppAcq, type, visOpp, d){ return d==='expertx'?decideBidX(hand,prize,myAcq,oppAcq,visOpp):cpuDecideBid(hand,prize,myAcq,d); }
+
+// ── 한 판 시뮬 (순차 배팅: 진행자 먼저, 클로즈면 후공이 진행자 배팅 봄) ──
 function playGame(d1, d2) {
   const deck = initDeck();
   const g = {
     centerDeck: deck.slice(0,12), hands:[deck.slice(12,18), deck.slice(18,24)],
-    acq:[[],[]], auctioneer:0, time:[420,420], turns:0,
+    acq:[[],[]], auctioneer:0, turns:0,
   };
   const diff=[d1,d2];
   let guard=0;
   while (guard++ < 500) {
     if (g.centerDeck.length===0) return { winner:resolveEnd(g.acq[0],g.acq[1]), turns:g.turns };
     const auc=g.auctioneer, opp=1-auc;
-    // draw
     const center=g.centerDeck.shift();
-    // offer
     if(g.hands[auc].length===0) return { winner:resolveEnd(g.acq[0],g.acq[1]), turns:g.turns };
-    const offCard=cpuChooseOffer(g.hands[auc], g.acq[auc]);
+    const offCard=aiOffer(g.hands[auc], g.acq[auc], g.acq[opp], diff[auc]);
     g.hands[auc].splice(g.hands[auc].indexOf(offCard),1);
     const prize=[center, offCard];
-    // type
-    const type=cpuChooseType(g.hands[auc], prize, g.acq[auc], diff[auc]);
-    // bids (진행자 먼저지만 동시판정)
+    const type=aiType(g.hands[auc], prize, g.acq[auc], g.acq[opp], diff[auc]);
     if(g.hands[auc].length===0||g.hands[opp].length===0) return { winner:resolveEnd(g.acq[0],g.acq[1]), turns:g.turns };
-    const bidA=cpuDecideBid(g.hands[auc], prize, g.acq[auc], diff[auc]);
-    const bidO=cpuDecideBid(g.hands[opp], prize, g.acq[opp], diff[opp]);
+    // 진행자 먼저 배팅
+    const bidA=aiBid(g.hands[auc], prize, g.acq[auc], g.acq[opp], type, null, diff[auc]);
     g.hands[auc].splice(g.hands[auc].indexOf(bidA),1);
+    // 후공 배팅 (클로즈면 진행자 배팅 공개)
+    const visForOpp = type==='closed' ? bidA : null;
+    const bidO=aiBid(g.hands[opp], prize, g.acq[opp], g.acq[auc], type, visForOpp, diff[opp]);
     g.hands[opp].splice(g.hands[opp].indexOf(bidO),1);
-    // settle
+    // 정산
     const aucWins=aBeatsB(bidA,bidO);
     if(aucWins)g.acq[auc].push(center,offCard); else g.acq[opp].push(center,offCard);
     g.hands[opp].push(bidA); g.hands[auc].push(bidO);
