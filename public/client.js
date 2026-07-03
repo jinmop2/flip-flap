@@ -52,6 +52,12 @@ const nickInput = document.getElementById('nickInput');
 if (nickInput) nickInput.addEventListener('input', () => { const v = nickInput.value.trim(); if (v) localStorage.setItem('ff_nick', v); });
 function getNick() { return (nickInput && nickInput.value.trim()) || localStorage.getItem('ff_nick') || '게스트'; }
 
+// ── 로비 다이얼로그 ─────────────────────────────────────────
+function openCreate() { document.getElementById('createModal').classList.add('show'); document.getElementById('roomNameInput').focus(); }
+function closeCreate() { document.getElementById('createModal').classList.remove('show'); }
+function openCode()   { document.getElementById('codeModal').classList.add('show'); document.getElementById('roomInput').focus(); }
+function closeCode()  { document.getElementById('codeModal').classList.remove('show'); }
+
 // ── 공개/비밀 방 토글 ───────────────────────────────────────
 let roomSecret = false;
 document.getElementById('visRow').addEventListener('click', e => {
@@ -270,6 +276,7 @@ function joinRoom() {
 let sharedCode = '';
 socket.on('room_created', ({ roomId, name }) => {
   sharedCode = roomId;
+  closeCreate();
   document.getElementById('lobbyMain').style.display = 'none';
   document.getElementById('waitCard').style.display = 'flex';
   document.getElementById('waitCode').textContent = roomId;

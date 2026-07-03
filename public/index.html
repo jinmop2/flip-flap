@@ -40,30 +40,41 @@
     }
     .logo .sub { font-size:.72rem; letter-spacing:5px; color:#55474e; margin-top:6px; font-weight:500; }
     #lobbyStats { font-size:.76rem; color:#8a7a80; margin-top:8px; min-height:16px; }
-    .lobby-btns { display:flex; flex-direction:column; gap:12px; width:300px; }
-    /* 닉네임 / 방 만들기 / 방 목록 */
-    .nick-row { display:flex; align-items:center; gap:8px; }
-    .nick-label { font-size:.8rem; color:#8a7a80; white-space:nowrap; }
-    #nickInput { flex:1; text-transform:none; letter-spacing:0; text-align:left; }
-    .create-row { display:flex; gap:8px; }
-    #roomNameInput { flex:1; text-transform:none; letter-spacing:0; text-align:left; }
-    .secret-row { display:flex; gap:6px; align-items:center; }
-    .vis-btn { padding:7px 12px; border-radius:9px; cursor:pointer; background:#1a1420; border:2px solid #2a2130; color:#7a6a80; font-family:'Fredoka'; font-size:.78rem; font-weight:600; transition:all .15s; white-space:nowrap; }
-    .vis-btn.active { border-color:var(--gold); color:var(--gold); background:#251a10; }
-    #roomPwInput { flex:1; text-transform:none; letter-spacing:0; text-align:left; padding:8px 12px; }
-    .rl-lock { color:#e0b84a; margin-right:3px; }
-    #roomListWrap { background:#140f1a; border:1px solid #241a2e; border-radius:12px; padding:8px; }
-    .rl-header { display:flex; justify-content:space-between; align-items:center; font-size:.74rem; color:#8a7a80; padding:2px 4px 6px; }
-    .rl-refresh { background:none; border:none; color:#8a7a80; cursor:pointer; font-size:1rem; line-height:1; }
-    .rl-refresh:hover { color:var(--gold); }
-    #roomList { display:flex; flex-direction:column; gap:5px; max-height:170px; overflow-y:auto; }
-    .rl-empty { font-size:.76rem; color:#4a3a50; text-align:center; padding:14px 0; }
-    .rl-item { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#1c1424; border:1px solid #2a1c30; border-radius:9px; padding:8px 10px; animation:slideDown .2s ease; }
+    .lobby-btns { display:flex; flex-direction:column; gap:14px; width:320px; }
+    /* 닉네임 바 */
+    .nick-bar { display:flex; align-items:center; gap:10px; background:#16101c; border:1px solid #241a2e; border-radius:12px; padding:4px 14px; }
+    .nick-bar span { font-size:1rem; }
+    #nickInput { flex:1; border:none; background:transparent; padding:9px 0; text-transform:none; letter-spacing:0; text-align:left; }
+    #nickInput:focus { outline:none; }
+    /* 섹션 */
+    .lobby-sec { display:flex; flex-direction:column; gap:9px; }
+    .sec-title { display:flex; justify-content:space-between; align-items:center; font-size:.72rem; font-weight:600; color:#6a5a70; letter-spacing:1px; padding:0 2px; }
+    .online-actions { display:flex; gap:8px; }
+    .online-actions .btn { flex:1; }
+    /* 방 목록 */
+    #roomList { display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto; min-height:56px; }
+    .rl-empty { font-size:.76rem; color:#4a3a50; text-align:center; padding:18px 0; }
+    .rl-item { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#16101c; border:1px solid #241a2e; border-radius:11px; padding:9px 10px 9px 13px; animation:slideDown .2s ease; }
     .rl-info { flex:1; min-width:0; text-align:left; }
-    .rl-name { font-size:.86rem; color:#e8e2d8; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .rl-host { font-size:.68rem; color:#8a7a80; }
-    .rl-join { padding:6px 16px !important; font-size:.8rem; flex-shrink:0; width:auto !important; }
+    .rl-name { font-size:.88rem; color:#e8e2d8; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rl-host { font-size:.68rem; color:#8a7a80; margin-top:1px; }
+    .rl-join { padding:7px 18px !important; font-size:.82rem; flex-shrink:0; width:auto !important; }
+    .rl-lock { color:#e0b84a; margin-right:3px; }
+    .rl-refresh { background:none; border:none; color:#6a5a70; cursor:pointer; font-size:1rem; line-height:1; padding:0; }
+    .rl-refresh:hover { color:var(--gold); }
+    /* 공개/비밀 토글 */
+    .secret-row { display:flex; gap:8px; align-items:center; }
+    .vis-btn { flex:1; padding:9px 12px; border-radius:10px; cursor:pointer; background:#1a1420; border:2px solid #2a2130; color:#7a6a80; font-family:'Fredoka'; font-size:.85rem; font-weight:600; transition:all .15s; white-space:nowrap; }
+    .vis-btn.active { border-color:var(--gold); color:var(--gold); background:#251a10; }
+    #roomNameInput, #roomPwInput { text-transform:none; letter-spacing:0; text-align:left; }
     .wc-sub { font-size:.72rem; color:#6a5a70; margin-top:-4px; text-align:center; }
+    /* 로비 다이얼로그 */
+    .lb-modal { display:none; position:fixed; inset:0; background:rgba(5,3,8,.8); backdrop-filter:blur(6px); z-index:45; align-items:center; justify-content:center; padding:20px; animation:fadeIn .25s; }
+    .lb-modal.show { display:flex; }
+    .lb-box { background:#16101c; border:1px solid #2a1c30; border-radius:18px; padding:24px 22px; width:300px; display:flex; flex-direction:column; gap:12px; animation:slideDown .3s cubic-bezier(.34,1.4,.64,1); }
+    .lb-title { font-size:1.05rem; font-weight:700; color:#ffe9a8; }
+    .lb-btns { display:flex; gap:8px; margin-top:4px; }
+    .lb-btns .btn { flex:1; }
     .btn {
       padding:13px 24px; border:none; border-radius:12px; font-family:'Fredoka';
       font-size:1rem; font-weight:600; cursor:pointer; transition:transform .1s,opacity .15s; width:100%;
@@ -532,7 +543,7 @@
 
       /* 로비 */
       .logo h1, .logo .flap { font-size:3.2rem; }
-      .lobby-btns { width:230px; }
+      .lobby-btns { width:290px; }
 
       /* 룰 모달 */
       #rulesBox { padding:22px 20px; }
@@ -550,41 +561,38 @@
     <p id="lobbyStats"></p>
   </div>
   <div class="lobby-btns" id="lobbyMain">
-    <div class="nick-row">
-      <span class="nick-label">닉네임</span>
-      <input id="nickInput" type="text" placeholder="내 별명" maxlength="12">
+    <!-- 닉네임 -->
+    <div class="nick-bar">
+      <span>👤</span>
+      <input id="nickInput" type="text" placeholder="닉네임" maxlength="12">
     </div>
 
-    <div class="diff-row" id="diffRow">
-      <button class="diff-btn" data-diff="easy">쉬움</button>
-      <button class="diff-btn" data-diff="normal">보통</button>
-      <button class="diff-btn active" data-diff="hard">어려움</button>
-      <button class="diff-btn" data-diff="expert">전문가</button>
-    </div>
-    <button class="btn btn-ink" onclick="createRoom(true)">혼자 하기 (vs AI)</button>
-
-    <hr class="divider-line">
-
-    <div class="create-row">
-      <input id="roomNameInput" type="text" placeholder="방 이름 (예: 초보만)" maxlength="20">
-      <button class="btn btn-gold btn-sm" onclick="createRoom(false)">방 만들기</button>
-    </div>
-    <div class="secret-row" id="visRow">
-      <button class="vis-btn active" data-vis="open">🌐 공개방</button>
-      <button class="vis-btn" data-vis="secret">🔒 비밀방</button>
-      <input id="roomPwInput" type="text" placeholder="비밀번호" maxlength="12" style="display:none">
+    <!-- 혼자 연습 -->
+    <div class="lobby-sec">
+      <div class="sec-title">혼자 연습 · AI 난이도</div>
+      <div class="diff-row" id="diffRow">
+        <button class="diff-btn" data-diff="easy">쉬움</button>
+        <button class="diff-btn" data-diff="normal">보통</button>
+        <button class="diff-btn active" data-diff="hard">어려움</button>
+        <button class="diff-btn" data-diff="expert">전문가</button>
+      </div>
+      <button class="btn btn-ink" onclick="createRoom(true)">🤖 AI와 대전</button>
     </div>
 
-    <div id="roomListWrap">
-      <div class="rl-header"><span>🎮 열린 방</span><button class="rl-refresh" onclick="refreshRooms()">↻</button></div>
+    <!-- 온라인 대전 -->
+    <div class="lobby-sec">
+      <div class="sec-title">
+        <span>온라인 대전</span>
+        <button class="rl-refresh" onclick="refreshRooms()" title="새로고침">↻</button>
+      </div>
       <div id="roomList"><div class="rl-empty">열린 방이 없어요. 방을 만들어보세요!</div></div>
+      <div class="online-actions">
+        <button class="btn btn-gold btn-sm" onclick="openCreate()">➕ 방 만들기</button>
+        <button class="btn btn-outline btn-sm" onclick="openCode()"># 코드로 참가</button>
+      </div>
     </div>
 
-    <div class="join-row">
-      <input id="roomInput" type="text" placeholder="코드로 참가" maxlength="5">
-      <button class="btn btn-outline btn-sm" onclick="joinRoom()">참가</button>
-    </div>
-    <button class="lobby-rules-link" onclick="toggleRules(true)">📖 게임 방법 보기</button>
+    <button class="lobby-rules-link" onclick="toggleRules(true)">📖 게임 방법</button>
   </div>
 
   <!-- 방 만든 뒤 대기 카드 -->
@@ -598,6 +606,35 @@
     </div>
     <div class="wc-wait"><span class="thinking-dots">상대를 기다리는 중<span>.</span><span>.</span><span>.</span></span></div>
     <button class="lobby-rules-link" onclick="cancelWait()">← 취소</button>
+  </div>
+</div>
+
+<!-- 방 만들기 다이얼로그 -->
+<div class="lb-modal" id="createModal" onclick="if(event.target===this)closeCreate()">
+  <div class="lb-box">
+    <div class="lb-title">➕ 방 만들기</div>
+    <input id="roomNameInput" type="text" placeholder="방 이름 (예: 초보만 환영)" maxlength="20">
+    <div class="secret-row" id="visRow">
+      <button class="vis-btn active" data-vis="open">🌐 공개</button>
+      <button class="vis-btn" data-vis="secret">🔒 비밀</button>
+    </div>
+    <input id="roomPwInput" type="text" placeholder="비밀번호" maxlength="12" style="display:none">
+    <div class="lb-btns">
+      <button class="btn btn-gold" onclick="createRoom(false)">만들기</button>
+      <button class="btn btn-outline" onclick="closeCreate()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 코드로 참가 다이얼로그 -->
+<div class="lb-modal" id="codeModal" onclick="if(event.target===this)closeCode()">
+  <div class="lb-box">
+    <div class="lb-title"># 코드로 참가</div>
+    <input id="roomInput" type="text" placeholder="XXXXX" maxlength="5" style="text-align:center; letter-spacing:4px;">
+    <div class="lb-btns">
+      <button class="btn btn-gold" onclick="joinRoom()">참가</button>
+      <button class="btn btn-outline" onclick="closeCode()">취소</button>
+    </div>
   </div>
 </div>
 
