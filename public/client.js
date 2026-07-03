@@ -66,6 +66,8 @@ function playSound(n) {
     case 'bell':   [0,0.45].forEach(off => [1568,2093].forEach((f,i)=>tone(f,'sine',.2,1.2, off+i*.02))); break;
     case 'tick':   tone(1400,'square',.06,.05); break;
     case 'setwin': [523,659,784,1047,1319,1568].forEach((f,i)=>tone(f,'triangle',.16,.4,i*.07)); break;
+    case 'ping':   tone(1046,'sine',.16,.16); tone(1568,'sine',.12,.22,.09); break;
+    case 'emote':  tone(760,'sine',.1,.12); break;
   }
 }
 
@@ -134,6 +136,66 @@ function toggleRules(show) {
   document.getElementById('rulesModal').style.display = show ? 'flex' : 'none';
 }
 
+// ── 이모트 ──────────────────────────────────────────────────
+function toggleEmotes(force) {
+  const p = document.getElementById('emotePicker');
+  const show = force === undefined ? !p.classList.contains('show') : force;
+  p.classList.toggle('show', show);
+}
+function sendEmote(emoji) {
+  socket.emit('emote', { emoji });
+  showEmote(emoji, 'me');
+  toggleEmotes(false);
+}
+socket.on('emote', ({ emoji }) => showEmote(emoji, 'opp'));
+function showEmote(emoji, side) {
+  playSound('emote');
+  const anchor = document.getElementById(side === 'me' ? 'myHand' : 'oppHand');
+  const b = document.createElement('div');
+  b.className = 'emote-bubble'; b.textContent = emoji;
+  let x = window.innerWidth / 2, y = side === 'me' ? window.innerHeight - 160 : 120;
+  if (anchor) { const r = anchor.getBoundingClientRect(); if (r.width) { x = r.left + r.width / 2; y = side === 'me' ? r.top - 20 : r.bottom + 10; } }
+  b.style.left = (x - 20) + 'px'; b.style.top = y + 'px';
+  document.body.appendChild(b);
+  setTimeout(() => b.remove(), 1900);
+}
+
+// ── 나가기 / 재대결 ─────────────────────────────────────────
+function goLobby() { clearSession(); location.href = location.origin + location.pathname; }
+function exitGame() {
+  if (!confirm('게임에서 나갈까요?')) return;
+  socket.emit('leave_room');
+  goLobby();
+}
+function rematch(btn) {
+  socket.emit('rematch');
+  if (!isVsBot && btn) {
+    btn.disabled = true; btn.style.opacity = '.5';
+    document.getElementById('rematchNote').textContent = '상대에게 재대결 신청 — 대기 중…';
+  }
+}
+socket.on('rematch_wanted', () => {
+  document.getElementById('rematchNote').innerHTML = '💬 상대가 <b>재대결</b>을 원해요! 재대결 버튼을 누르세요';
+});
+
+// ── 내 차례 알림 (탭 제목 깜빡임 + 소리) ───────────────────
+let titleBlink = null;
+const BASE_TITLE = 'FLIP FLAP';
+function startTitleBlink() {
+  if (titleBlink) return;
+  let on = false;
+  titleBlink = setInterval(() => { document.title = (on = !on) ? '🔔 내 차례! — FLIP FLAP' : BASE_TITLE; }, 800);
+}
+function stopTitleBlink() { if (titleBlink) { clearInterval(titleBlink); titleBlink = null; } document.title = BASE_TITLE; }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) stopTitleBlink(); });
+function isMyAction(s) {
+  if (!s) return false;
+  if (['draw', 'offer', 'choose_type'].includes(s.phase)) return s.auctioneer === s.myIndex;
+  if (s.phase === 'bidding') return s.auction && !s.auction.myBid && (s.auctioneer === s.myIndex || s.auction.oppBidSubmitted);
+  return false;
+}
+let prevMyAction = false;
+
 // ── 방 ──────────────────────────────────────────────────────
 function createRoom(vsBot) { isVsBot = vsBot; socket.emit('create_room', { vsBot, difficulty, pid: PID }); }
 function joinRoom() {
@@ -160,6 +222,11 @@ socket.on('error', msg => alert(msg));
 socket.on('game_start', ({ vsBot, difficulty: diff, roomId }) => {
   isVsBot = vsBot;
   if (roomId) saveSession(roomId);
+  // 재대결 대비 초기화
+  document.getElementById('gameOver').style.display = 'none';
+  document.getElementById('rematchNote').textContent = '';
+  const rb = document.getElementById('rematchBtn'); if (rb) { rb.disabled = false; rb.style.opacity = '1'; }
+  prevPhase = null; selectedBidCard = null; prevMyAction = false; stopTitleBlink();
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('game').style.display = 'flex';
   if (vsBot) {
@@ -180,6 +247,11 @@ socket.on('state_update', s => {
   render(changed);
   if (changed && s.phase === 'reveal') playSound('reveal');
   if (drewNow) playSound('deal');
+  // 내 차례 알림 (탭이 숨겨져 있을 때)
+  const mine = isMyAction(s);
+  if (mine && !prevMyAction && document.hidden) { startTitleBlink(); playSound('ping'); }
+  if (!mine) stopTitleBlink();
+  prevMyAction = mine;
 });
 socket.on('special', () => {
   playSound('special');
@@ -188,25 +260,30 @@ socket.on('special', () => {
   t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
   setTimeout(() => { t.style.display = 'none'; }, 2600);
 });
-socket.on('game_over', ({ winner, setKind, timeout, myIndex: mi }) => {
-  clearSession();
+socket.on('game_over', ({ winner, setKind, timeout, byProgress, myIndex: mi }) => {
+  clearSession(); stopTitleBlink();
   const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
   let delay = 500;
   if (winner === 0) {
-    title.textContent = '무승부'; title.style.color = '#888'; desc.textContent = '덱이 소진됐어요.';
+    title.textContent = '무승부'; title.style.color = '#888';
+    desc.textContent = '세트 근접도가 완전히 같아요!';
   } else if (winner === mi) {
     title.textContent = '🏆 승리!'; title.style.color = '#c8a000';
-    desc.textContent = timeout ? '상대 시간 초과!' : `${setKind}짜리 세트 완성!`;
+    desc.textContent = timeout ? '상대 시간 초과!'
+      : byProgress ? `세트 근접 승리! (${setKind}짜리에 가장 가까웠어요)`
+      : `${setKind}짜리 세트 완성!`;
     playSound('victory');
-    if (setKind) { celebrateSet('myAcq', setKind); playSound('setwin'); delay = 1400; }
+    if (setKind && !byProgress) { celebrateSet('myAcq', setKind); playSound('setwin'); delay = 1400; }
     else animateWinCards();
   } else {
     title.textContent = '패배...'; title.style.color = '#6a5a70';
-    desc.textContent = timeout ? '시간 초과...' : `상대가 ${setKind}짜리 세트를 완성했어요.`;
+    desc.textContent = timeout ? '시간 초과...'
+      : byProgress ? '상대가 세트에 더 가까웠어요.'
+      : `상대가 ${setKind}짜리 세트를 완성했어요.`;
     playSound('defeat');
-    if (setKind) { celebrateSet('oppAcq', setKind); delay = 1400; }
+    if (setKind && !byProgress) { celebrateSet('oppAcq', setKind); delay = 1400; }
   }
-  renderGameOverStats(winner, setKind, mi);
+  renderGameOverStats(winner, byProgress ? null : setKind, mi);
   setTimeout(() => document.getElementById('gameOver').style.display = 'flex', delay);
 });
 

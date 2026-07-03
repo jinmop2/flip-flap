@@ -45,6 +45,24 @@ function checkSet(acquired) {
     if ((counts[kind] || 0) >= kind) return kind;
   return null;
 }
+// 세트 진행도 [최고 근접비율, 총 획득수] — 덱 소진 시 판정용
+function progress(acquired) {
+  const counts = {};
+  for (const c of acquired) counts[c.kind] = (counts[c.kind] || 0) + 1;
+  let best = 0, bestKind = null;
+  for (const [kind] of SPEC) {
+    const r = (counts[kind] || 0) / kind;
+    if (r > best) { best = r; bestKind = kind; }
+  }
+  return { ratio: best, total: acquired.length, kind: bestKind };
+}
+// 반환: 1(P1승) | 2(P2승) | 0(무승부)
+function resolveByProgress(acq1, acq2) {
+  const a = progress(acq1), b = progress(acq2);
+  if (a.ratio !== b.ratio) return a.ratio > b.ratio ? 1 : 2;
+  if (a.total !== b.total) return a.total > b.total ? 1 : 2;
+  return 0;
+}
 
 // ── 게임 상태 ──────────────────────────────────────────────
 
@@ -128,12 +146,16 @@ function bluffRate(diff) {
 function cpuDecideBid(hand, prize, acquired, diff) {
   // 강한→약한 순 (strength 오름차순 = 강한 순)
   const byStrong = [...hand].sort((a, b) => strength(a) - strength(b));
-  const val = prizeValue(prize, acquired, hand);
+  let val = prizeValue(prize, acquired, hand);
 
   // easy: 대충 무작위 편향
   if (diff === 'easy') {
     return byStrong[Math.floor(Math.random() * byStrong.length)];
   }
+
+  // 목표 세트 커밋: 경매품에 내 목표 종류가 있으면 적극적으로 노림 (어려운 세트도 끝까지)
+  const target = cpuTarget(acquired, hand);
+  if (prize.some(c => c && c.kind === target)) val = Math.max(val, 0.72);
 
   // expert 졸개의 배신: 가치 낮은 경매품엔 6-10을 덤핑해 2-1 저격 세팅
   const has610 = hand.find(is610);
@@ -407,6 +429,35 @@ io.on('connection', (socket) => {
     resolveBidding(socket.roomId);
   });
 
+  // 이모트 전달
+  socket.on('emote', ({ emoji } = {}) => {
+    const room = rooms[socket.roomId]; if (!room) return;
+    room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('emote', { emoji }); });
+  });
+
+  // 재대결 (같은 방에서 새 게임)
+  socket.on('rematch', () => {
+    const room = rooms[socket.roomId];
+    if (!room) return socket.emit('opponent_left');
+    if (room.vsBot) return restartGame(socket.roomId);
+    room.rematch = room.rematch || [false, false];
+    room.rematch[socket.playerIndex] = true;
+    room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('rematch_wanted'); });
+    if (room.rematch[0] && room.rematch[1]) restartGame(socket.roomId);
+  });
+
+  // 게임 나가기
+  socket.on('leave_room', () => {
+    const roomId = socket.roomId;
+    const room = roomId && rooms[roomId];
+    if (!room) return;
+    if (room.graceTimer) clearTimeout(room.graceTimer);
+    endClock(room);
+    room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('opponent_left'); });
+    delete rooms[roomId];
+    socket.roomId = null;
+  });
+
   socket.on('disconnect', () => {
     const roomId = socket.roomId;
     const room = roomId && rooms[roomId];
@@ -425,6 +476,17 @@ io.on('connection', (socket) => {
     }, 60000);  // 60초 안에 재접속하면 이어서
   });
 });
+
+// 같은 방 새 게임 시작
+function restartGame(roomId) {
+  const room = rooms[roomId]; if (!room) return;
+  room.game = createGame();
+  room.rematch = [false, false];
+  room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId }); });
+  broadcast(roomId);
+  startClock(roomId);
+  if (room.cpuIndex !== undefined) setTimeout(() => maybeCpuAct(roomId), 600);
+}
 
 function resolveBidding(roomId) {
   const room = rooms[roomId]; if (!room?.game) return;
@@ -458,6 +520,16 @@ function settle(roomId) {
   g.p2Hand.push(p1Bid); g.p1Hand.push(p2Bid);
   g.auction = null;
 
+  // AI가 경매를 이기면 가끔 이모트로 도발
+  if (room.cpuIndex !== undefined) {
+    const cpuWon = (room.cpuIndex === 0) ? p1Wins : !p1Wins;
+    const human = room.players[room.cpuIndex === 0 ? 1 : 0];
+    if (human && ((special) || (cpuWon && Math.random() < 0.28))) {
+      const set = special ? ['😎', '🔥', '⚔'] : ['😆', '👍', '😏', '🔥'];
+      io.to(human).emit('emote', { emoji: set[Math.floor(Math.random() * set.length)] });
+    }
+  }
+
   const p1Set = checkSet(g.p1Acquired), p2Set = checkSet(g.p2Acquired);
   if (p1Set || p2Set) {
     g.phase = 'game_over';
@@ -466,11 +538,13 @@ function settle(roomId) {
     room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_over', { winner, setKind: p1Set || p2Set, myIndex: i + 1 }); });
     return;
   }
-  // 더 뽑을 카드가 없거나 양쪽 손패 소진 → 종료
+  // 더 뽑을 카드가 없거나 양쪽 손패 소진 → 세트 근접도로 판정 (무승부 최소화)
   if (g.centerDeck.length === 0 || (g.p1Hand.length === 0 && g.p2Hand.length === 0)) {
     g.phase = 'game_over';
     endClock(room);
-    room.players.forEach(sid => { if (sid) io.to(sid).emit('game_over', { winner: 0 }); });
+    const winner = resolveByProgress(g.p1Acquired, g.p2Acquired);
+    const setKind = winner ? progress(winner === 1 ? g.p1Acquired : g.p2Acquired).kind : null;
+    room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_over', { winner, setKind, byProgress: true, myIndex: i + 1 }); });
     return;
   }
   g.turn++;

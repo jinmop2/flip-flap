@@ -133,6 +133,36 @@
       display:flex; align-items:center; justify-content:center; transition:all .15s;
     }
     .ctrl-btn:hover { background:rgba(200,160,0,.2); transform:translateY(-1px); }
+    #exitBtn { border-color:rgba(255,96,96,.35); color:#ff9a9a; }
+    #exitBtn:hover { background:rgba(255,96,96,.18); }
+
+    /* 이모트 피커 */
+    #emotePicker {
+      display:none; position:absolute; top:56px; right:20px; z-index:6;
+      background:#1c1424; border:1px solid #2a1c30; border-radius:14px; padding:8px;
+      grid-template-columns:repeat(4,1fr); gap:4px; box-shadow:0 8px 24px rgba(0,0,0,.5);
+      animation:slideDown .2s ease;
+    }
+    #emotePicker.show { display:grid; }
+    #emotePicker button {
+      width:38px; height:38px; border:none; border-radius:10px; background:transparent;
+      font-size:1.35rem; cursor:pointer; transition:transform .1s, background .1s;
+    }
+    #emotePicker button:hover { background:rgba(200,160,0,.15); transform:scale(1.15); }
+
+    /* 날아가는 이모트 버블 */
+    .emote-bubble {
+      position:fixed; z-index:35; font-size:2.6rem; pointer-events:none;
+      animation:emoteFloat 1.8s ease-out forwards;
+    }
+    @keyframes emoteFloat {
+      0%   { opacity:0; transform:translateY(0) scale(.4); }
+      18%  { opacity:1; transform:translateY(-18px) scale(1.25); }
+      35%  { transform:translateY(-30px) scale(1); }
+      100% { opacity:0; transform:translateY(-90px) scale(.9); }
+    }
+
+    #rematchNote { color:#ffe9a8; font-size:.82rem; min-height:18px; margin-bottom:10px; }
 
     /* 룰 모달 */
     #rulesModal {
@@ -520,8 +550,20 @@
     <span class="tl">FLIP</span><span class="tl flap">FLAP</span>
   </div>
   <div id="controls">
+    <div class="ctrl-btn" id="emoteBtn" title="이모트" onclick="toggleEmotes()">😀</div>
     <div class="ctrl-btn" id="bgmBtn" title="소리 끄기" onclick="toggleBGM()">🔊</div>
     <div class="ctrl-btn" id="rulesBtn" title="게임 설명" onclick="toggleRules(true)">?</div>
+    <div class="ctrl-btn" id="exitBtn" title="나가기" onclick="exitGame()">🚪</div>
+  </div>
+  <div id="emotePicker">
+    <button onclick="sendEmote('👍')">👍</button>
+    <button onclick="sendEmote('😆')">😆</button>
+    <button onclick="sendEmote('😮')">😮</button>
+    <button onclick="sendEmote('😱')">😱</button>
+    <button onclick="sendEmote('🔥')">🔥</button>
+    <button onclick="sendEmote('🤔')">🤔</button>
+    <button onclick="sendEmote('😏')">😏</button>
+    <button onclick="sendEmote('😭')">😭</button>
   </div>
 
   <div id="hud">
@@ -592,7 +634,8 @@
       <span class="r-arrow">→</span><span class="r-win">🏆 승리!</span>
     </div>
     <p style="font-size:.78rem">종류별 필요 장수: <b>2</b>→2장 · <b>3</b>→3장 · <b>4</b>→4장 · <b>6</b>→6장<br>
-    ⚠️ 경매로 따서 <b>내 앞에 깐 카드만</b> 인정 (손에 든 카드는 X)</p>
+    ⚠️ 경매로 따서 <b>내 앞에 깐 카드만</b> 인정 (손에 든 카드는 X)<br>
+    🏁 덱이 다 떨어지면 <b>세트에 가장 근접한 사람</b>이 승리</p>
 
     <h3>🗂 카드 구성 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 총 24장</span></h3>
     <div class="r-comp">
@@ -676,7 +719,11 @@
     <div id="goTitle"></div>
     <div id="goDesc"></div>
     <div id="goStats"></div>
-    <button class="btn btn-gold" style="width:auto" onclick="location.reload()">다시 하기</button>
+    <div id="rematchNote"></div>
+    <div style="display:flex; gap:8px; justify-content:center;">
+      <button class="btn btn-gold" id="rematchBtn" style="width:auto" onclick="rematch(this)">🔄 재대결</button>
+      <button class="btn btn-outline" style="width:auto" onclick="goLobby()">로비로</button>
+    </div>
   </div>
 </div>
 
