@@ -21,11 +21,12 @@ function setConn(text, cls) {
 socket.on('connect', () => {
   setConn('서버 연결됨', 'ok');
   setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400);
-  // 재접속 or 초대 링크 처리
+  // 재접속 or 초대 링크 or 로비 목록
   const sess = localStorage.getItem('ff_sess');
   const urlRoom = new URLSearchParams(location.search).get('room');
   if (sess)          socket.emit('rejoin', { roomId: sess, pid: PID });
-  else if (urlRoom)  socket.emit('join_room', { roomId: urlRoom.toUpperCase(), pid: PID });
+  else if (urlRoom)  socket.emit('join_room', { roomId: urlRoom.toUpperCase(), pid: PID, nick: getNick() });
+  else               socket.emit('enter_lobby');
 });
 socket.on('disconnect', () => setConn('연결 끊김 — 재접속 중…', 'bad'));
 socket.on('connect_error', (e) => { setConn('서버 연결 실패', 'bad'); console.error('socket connect_error:', e && e.message); });
@@ -40,6 +41,35 @@ document.getElementById('diffRow').addEventListener('click', e => {
   b.classList.add('active');
   difficulty = b.dataset.diff;
 });
+
+// ── 닉네임 ──────────────────────────────────────────────────
+const nickInput = document.getElementById('nickInput');
+(function initNick() {
+  let n = localStorage.getItem('ff_nick');
+  if (!n) { n = '게스트' + Math.floor(1000 + Math.random() * 9000); localStorage.setItem('ff_nick', n); }
+  if (nickInput) nickInput.value = n;
+})();
+if (nickInput) nickInput.addEventListener('input', () => { const v = nickInput.value.trim(); if (v) localStorage.setItem('ff_nick', v); });
+function getNick() { return (nickInput && nickInput.value.trim()) || localStorage.getItem('ff_nick') || '게스트'; }
+
+// ── 방 목록 ─────────────────────────────────────────────────
+let gameNicks = null;
+function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+function refreshRooms() { socket.emit('enter_lobby'); }
+function joinRoomById(id) { socket.emit('join_room', { roomId: id, pid: PID, nick: getNick() }); }
+socket.on('rooms', renderRoomList);
+function renderRoomList(list) {
+  const el = document.getElementById('roomList'); if (!el) return;
+  el.innerHTML = '';
+  if (!list || !list.length) { el.innerHTML = '<div class="rl-empty">열린 방이 없어요. 방을 만들어보세요!</div>'; return; }
+  list.forEach(r => {
+    const item = document.createElement('div'); item.className = 'rl-item';
+    item.innerHTML = `<div class="rl-info"><div class="rl-name">${esc(r.name)}</div><div class="rl-host">👤 ${esc(r.host)}</div></div>`;
+    const b = document.createElement('button'); b.className = 'btn btn-gold rl-join'; b.textContent = '참가';
+    b.onclick = () => joinRoomById(r.id);
+    item.appendChild(b); el.appendChild(item);
+  });
+}
 
 // ── 사운드 (Web Audio) ──────────────────────────────────────
 const AC = new (window.AudioContext || window.webkitAudioContext)();
@@ -197,17 +227,22 @@ function isMyAction(s) {
 let prevMyAction = false;
 
 // ── 방 ──────────────────────────────────────────────────────
-function createRoom(vsBot) { isVsBot = vsBot; socket.emit('create_room', { vsBot, difficulty, pid: PID }); }
+function createRoom(vsBot) {
+  isVsBot = vsBot;
+  const name = (document.getElementById('roomNameInput')?.value || '').trim();
+  socket.emit('create_room', { vsBot, difficulty, pid: PID, nick: getNick(), name });
+}
 function joinRoom() {
   const id = document.getElementById('roomInput').value.trim().toUpperCase();
-  if (id) socket.emit('join_room', { roomId: id, pid: PID });
+  if (id) socket.emit('join_room', { roomId: id, pid: PID, nick: getNick() });
 }
 let sharedCode = '';
-socket.on('room_created', ({ roomId }) => {
+socket.on('room_created', ({ roomId, name }) => {
   sharedCode = roomId;
   document.getElementById('lobbyMain').style.display = 'none';
   document.getElementById('waitCard').style.display = 'flex';
   document.getElementById('waitCode').textContent = roomId;
+  document.getElementById('waitRoomName').textContent = name || '내 방';
 });
 function copyText(text, btn) {
   const done = () => { const o = btn.textContent; btn.textContent = '✓ 복사됨'; setTimeout(() => btn.textContent = o, 1400); };
@@ -219,8 +254,9 @@ function copyLink(btn) { copyText(`${location.origin}${location.pathname}?room=$
 function cancelWait() { clearSession(); location.href = location.origin + location.pathname; }
 
 socket.on('error', msg => alert(msg));
-socket.on('game_start', ({ vsBot, difficulty: diff, roomId }) => {
+socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks }) => {
   isVsBot = vsBot;
+  gameNicks = nicks || null;
   if (roomId) saveSession(roomId);
   // 재대결 대비 초기화
   document.getElementById('gameOver').style.display = 'none';
@@ -230,12 +266,11 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId }) => {
   seenAcq.myAcq = new Set(); seenAcq.oppAcq = new Set(); boardCelebrated = false;
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('game').style.display = 'flex';
-  if (vsBot) {
-    document.getElementById('cpuTag').style.display = '';
-    const dl = { easy:'쉬움', normal:'보통', hard:'어려움', expert:'전문가' }[diff] || diff;
-    const de = document.getElementById('cpuDiff');
-    de.style.display = ''; de.textContent = dl;
-  }
+  // 상대 태그: AI면 난이도, 사람이면 숨김
+  document.getElementById('cpuTag').style.display = 'none';
+  const de = document.getElementById('cpuDiff');
+  if (vsBot) { de.style.display = ''; de.textContent = { easy:'쉬움', normal:'보통', hard:'어려움', expert:'전문가' }[diff] || diff; }
+  else de.style.display = 'none';
   playSound('deal');
   startBGM();
 });
@@ -443,6 +478,12 @@ function render(changed = false) {
   const s = state, mine = s.auctioneer === s.myIndex, a = s.auction;
   document.getElementById('turnInfo').textContent = `턴 ${s.turn}`;
   if (s.time) updateClocks(s.time[1], s.time[2], s.active);
+  // 닉네임 표시
+  if (gameNicks) {
+    const oppN = gameNicks[s.myIndex === 1 ? 1 : 0], myN = gameNicks[s.myIndex === 1 ? 0 : 1];
+    const oel = document.getElementById('oppNickLabel'); if (oel && oppN) oel.textContent = oppN;
+    const mel = document.getElementById('myNickLabel'); if (mel && myN) mel.textContent = myN;
+  }
 
   // 배팅 순서: 진행자 먼저 → 내가 배팅할 차례인지
   const myTurnToBid = s.phase === 'bidding' && a && !a.myBid && (mine || a.oppBidSubmitted);

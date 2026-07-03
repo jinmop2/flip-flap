@@ -319,42 +319,63 @@ function endClock(room) {
   if (room?.clock) { clearInterval(room.clock); room.clock = null; }
 }
 
+// ── 공개 방 목록 ────────────────────────────────────────────
+function openRoomList() {
+  const list = [];
+  for (const [id, r] of Object.entries(rooms)) {
+    if (!r.vsBot && !r.game && r.players[0] && !r.players[1])
+      list.push({ id, name: r.name || '이름 없는 방', host: (r.nicks && r.nicks[0]) || '???' });
+  }
+  return list.slice(-30).reverse();
+}
+function broadcastRooms() { io.to('lobby').emit('rooms', openRoomList()); }
+const cleanNick = n => (String(n || '').trim().slice(0, 12)) || '게스트';
+
 // ── 소켓 ───────────────────────────────────────────────────
 
 io.on('connection', (socket) => {
+  socket.join('lobby');
 
   function leaveOldRoom() {
     const old = socket.roomId && rooms[socket.roomId];
-    if (old) { endClock(old); delete rooms[socket.roomId]; socket.roomId = null; }
+    if (old) { endClock(old); delete rooms[socket.roomId]; socket.roomId = null; broadcastRooms(); }
   }
 
-  socket.on('create_room', ({ vsBot = false, difficulty = 'hard', pid } = {}) => {
+  socket.on('enter_lobby', () => { socket.join('lobby'); socket.emit('rooms', openRoomList()); });
+
+  socket.on('create_room', ({ vsBot = false, difficulty = 'hard', pid, name, nick } = {}) => {
     leaveOldRoom();
+    socket.leave('lobby');
     const roomId = makeRoomId();
-    rooms[roomId] = { players: [socket.id, null], pids: [pid || null, null], game: null, vsBot, difficulty };
+    const hostNick = cleanNick(nick);
+    rooms[roomId] = { players: [socket.id, null], pids: [pid || null, null], nicks: [hostNick, null], name: String(name || '').trim().slice(0, 20), game: null, vsBot, difficulty };
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
     if (vsBot) {
       rooms[roomId].cpuIndex = 1;
+      rooms[roomId].nicks[1] = 'AI';
       rooms[roomId].game = createGame();
-      socket.emit('game_start', { vsBot: true, difficulty, roomId });
+      socket.emit('game_start', { vsBot: true, difficulty, roomId, nicks: rooms[roomId].nicks });
       broadcast(roomId);
       startClock(roomId);
       setTimeout(() => maybeCpuAct(roomId), 600);
     } else {
-      socket.emit('room_created', { roomId });
+      socket.emit('room_created', { roomId, name: rooms[roomId].name });
+      broadcastRooms();
     }
   });
 
-  socket.on('join_room', ({ roomId, pid }) => {
+  socket.on('join_room', ({ roomId, pid, nick }) => {
     const room = rooms[roomId];
     if (!room) return socket.emit('error', '방을 찾을 수 없어요.');
-    if (room.players.filter(Boolean).length >= 2) return socket.emit('error', '방이 꽉 찼어요.');
-    room.players[1] = socket.id; room.pids[1] = pid || null;
+    if (room.game || room.players.filter(Boolean).length >= 2) return socket.emit('error', '이미 시작했거나 꽉 찬 방이에요.');
+    room.players[1] = socket.id; room.pids[1] = pid || null; room.nicks[1] = cleanNick(nick);
+    socket.leave('lobby');
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 1; socket.pid = pid;
     room.game = createGame();
-    io.to(roomId).emit('game_start', { vsBot: false, roomId });
+    io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: room.nicks });
     broadcast(roomId);
     startClock(roomId);
+    broadcastRooms();
   });
 
   // 새로고침/끊김 후 재접속
@@ -364,10 +385,11 @@ io.on('connection', (socket) => {
     const slot = room.pids.indexOf(pid);
     if (slot === -1) return socket.emit('rejoin_failed');
     room.players[slot] = socket.id;
+    socket.leave('lobby');
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = slot; socket.pid = pid;
     if (room.graceTimer) { clearTimeout(room.graceTimer); room.graceTimer = null; }
     if (!room.clock) startClock(roomId);                 // 멈췄던 시계 재개
-    socket.emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId });
+    socket.emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks });
     broadcast(roomId);
     room.players.forEach(s => { if (s) io.to(s).emit('opp_reconnected'); });
     setTimeout(() => maybeCpuAct(roomId), 300);
@@ -456,6 +478,7 @@ io.on('connection', (socket) => {
     room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('opponent_left'); });
     delete rooms[roomId];
     socket.roomId = null;
+    socket.join('lobby'); broadcastRooms();
   });
 
   socket.on('disconnect', () => {
@@ -465,14 +488,14 @@ io.on('connection', (socket) => {
     const slot = room.players.indexOf(socket.id);
     if (slot !== -1) room.players[slot] = null;
     // 게임 종료 상태면 즉시 정리
-    if (!room.game || room.game.phase === 'game_over') { endClock(room); delete rooms[roomId]; return; }
+    if (!room.game || room.game.phase === 'game_over') { endClock(room); delete rooms[roomId]; broadcastRooms(); return; }
     // 진행 중이면 시계 멈추고 유예시간 부여 (재접속 대기)
     endClock(room);
     room.players.forEach(s => { if (s) io.to(s).emit('opp_disconnected'); });
     if (room.graceTimer) clearTimeout(room.graceTimer);
     room.graceTimer = setTimeout(() => {
       room.players.forEach(s => { if (s) io.to(s).emit('opponent_left'); });
-      endClock(room); delete rooms[roomId];
+      endClock(room); delete rooms[roomId]; broadcastRooms();
     }, 60000);  // 60초 안에 재접속하면 이어서
   });
 });
@@ -482,7 +505,7 @@ function restartGame(roomId) {
   const room = rooms[roomId]; if (!room) return;
   room.game = createGame();
   room.rematch = [false, false];
-  room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId }); });
+  room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks }); });
   broadcast(roomId);
   startClock(roomId);
   if (room.cpuIndex !== undefined) setTimeout(() => maybeCpuAct(roomId), 600);

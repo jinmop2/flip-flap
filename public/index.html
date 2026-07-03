@@ -40,7 +40,25 @@
     }
     .logo .sub { font-size:.72rem; letter-spacing:5px; color:#55474e; margin-top:6px; font-weight:500; }
     #lobbyStats { font-size:.76rem; color:#8a7a80; margin-top:8px; min-height:16px; }
-    .lobby-btns { display:flex; flex-direction:column; gap:12px; width:260px; }
+    .lobby-btns { display:flex; flex-direction:column; gap:12px; width:300px; }
+    /* 닉네임 / 방 만들기 / 방 목록 */
+    .nick-row { display:flex; align-items:center; gap:8px; }
+    .nick-label { font-size:.8rem; color:#8a7a80; white-space:nowrap; }
+    #nickInput { flex:1; text-transform:none; letter-spacing:0; text-align:left; }
+    .create-row { display:flex; gap:8px; }
+    #roomNameInput { flex:1; text-transform:none; letter-spacing:0; text-align:left; }
+    #roomListWrap { background:#140f1a; border:1px solid #241a2e; border-radius:12px; padding:8px; }
+    .rl-header { display:flex; justify-content:space-between; align-items:center; font-size:.74rem; color:#8a7a80; padding:2px 4px 6px; }
+    .rl-refresh { background:none; border:none; color:#8a7a80; cursor:pointer; font-size:1rem; line-height:1; }
+    .rl-refresh:hover { color:var(--gold); }
+    #roomList { display:flex; flex-direction:column; gap:5px; max-height:170px; overflow-y:auto; }
+    .rl-empty { font-size:.76rem; color:#4a3a50; text-align:center; padding:14px 0; }
+    .rl-item { display:flex; align-items:center; justify-content:space-between; gap:8px; background:#1c1424; border:1px solid #2a1c30; border-radius:9px; padding:8px 10px; animation:slideDown .2s ease; }
+    .rl-info { flex:1; min-width:0; text-align:left; }
+    .rl-name { font-size:.86rem; color:#e8e2d8; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rl-host { font-size:.68rem; color:#8a7a80; }
+    .rl-join { padding:6px 16px !important; font-size:.8rem; flex-shrink:0; width:auto !important; }
+    .wc-sub { font-size:.72rem; color:#6a5a70; margin-top:-4px; text-align:center; }
     .btn {
       padding:13px 24px; border:none; border-radius:12px; font-family:'Fredoka';
       font-size:1rem; font-weight:600; cursor:pointer; transition:transform .1s,opacity .15s; width:100%;
@@ -527,6 +545,11 @@
     <p id="lobbyStats"></p>
   </div>
   <div class="lobby-btns" id="lobbyMain">
+    <div class="nick-row">
+      <span class="nick-label">닉네임</span>
+      <input id="nickInput" type="text" placeholder="내 별명" maxlength="12">
+    </div>
+
     <div class="diff-row" id="diffRow">
       <button class="diff-btn" data-diff="easy">쉬움</button>
       <button class="diff-btn" data-diff="normal">보통</button>
@@ -534,10 +557,21 @@
       <button class="diff-btn" data-diff="expert">전문가</button>
     </div>
     <button class="btn btn-ink" onclick="createRoom(true)">혼자 하기 (vs AI)</button>
+
     <hr class="divider-line">
-    <button class="btn btn-gold" onclick="createRoom(false)">방 만들기</button>
+
+    <div class="create-row">
+      <input id="roomNameInput" type="text" placeholder="방 이름 (예: 초보만)" maxlength="20">
+      <button class="btn btn-gold btn-sm" onclick="createRoom(false)">방 만들기</button>
+    </div>
+
+    <div id="roomListWrap">
+      <div class="rl-header"><span>🎮 열린 방</span><button class="rl-refresh" onclick="refreshRooms()">↻</button></div>
+      <div id="roomList"><div class="rl-empty">열린 방이 없어요. 방을 만들어보세요!</div></div>
+    </div>
+
     <div class="join-row">
-      <input id="roomInput" type="text" placeholder="XXXXX" maxlength="5">
+      <input id="roomInput" type="text" placeholder="코드로 참가" maxlength="5">
       <button class="btn btn-outline btn-sm" onclick="joinRoom()">참가</button>
     </div>
     <button class="lobby-rules-link" onclick="toggleRules(true)">📖 게임 방법 보기</button>
@@ -545,7 +579,8 @@
 
   <!-- 방 만든 뒤 대기 카드 -->
   <div id="waitCard">
-    <div class="wc-label">친구에게 코드를 공유하세요</div>
+    <div class="wc-label"><b id="waitRoomName"></b> · 상대를 기다려요</div>
+    <div class="wc-sub">친구에겐 코드/링크 공유, 또는 로비 목록에서 참가</div>
     <div class="wc-code" id="waitCode">-----</div>
     <div class="wc-btns">
       <button class="btn btn-gold btn-sm" onclick="copyCode(this)">코드 복사</button>
@@ -586,7 +621,7 @@
   <!-- 상대 (맞은편) -->
   <div class="zone" id="oppZone">
     <div class="zone-label">
-      상대 <span id="cpuTag" class="cpu-tag" style="display:none">AI</span>
+      <span id="oppNickLabel">상대</span> <span id="cpuTag" class="cpu-tag" style="display:none">AI</span>
       <span id="cpuDiff" class="cpu-tag diff" style="display:none"></span>
       <span id="oppHandLen"></span>
       <span class="timer" id="oppTimer">7:00</span>
@@ -611,7 +646,7 @@
     <div class="bid-area" id="myBid"></div>
     <div class="pile" id="myAcq"></div>
     <div class="fan" id="myHand"></div>
-    <div class="zone-label" style="margin-top:2px">내 손패 <span class="timer" id="myTimer">7:00</span></div>
+    <div class="zone-label" style="margin-top:2px"><span id="myNickLabel">나</span> · 손패 <span class="timer" id="myTimer">7:00</span></div>
   </div>
 </div>
 
