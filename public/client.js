@@ -1,6 +1,16 @@
 const socket = io();
 let state = null, myIndex = null, selectedBidCard = null;
 let isVsBot = false, prevPhase = null, difficulty = 'hard';
+let myRoomId = null;
+
+// 영구 플레이어 ID (재접속 식별용)
+const PID = (() => {
+  let v = localStorage.getItem('ff_pid');
+  if (!v) { v = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('ff_pid', v); }
+  return v;
+})();
+const saveSession = (roomId) => { myRoomId = roomId; if (roomId) localStorage.setItem('ff_sess', roomId); };
+const clearSession = () => { myRoomId = null; localStorage.removeItem('ff_sess'); };
 
 // ── 서버 연결 상태 표시 ─────────────────────────────────────
 function setConn(text, cls) {
@@ -8,9 +18,20 @@ function setConn(text, cls) {
   if (!el) return;
   el.textContent = text; el.className = cls || '';
 }
-socket.on('connect', () => { setConn('서버 연결됨', 'ok'); setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400); });
+socket.on('connect', () => {
+  setConn('서버 연결됨', 'ok');
+  setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400);
+  // 재접속 or 초대 링크 처리
+  const sess = localStorage.getItem('ff_sess');
+  const urlRoom = new URLSearchParams(location.search).get('room');
+  if (sess)          socket.emit('rejoin', { roomId: sess, pid: PID });
+  else if (urlRoom)  socket.emit('join_room', { roomId: urlRoom.toUpperCase(), pid: PID });
+});
 socket.on('disconnect', () => setConn('연결 끊김 — 재접속 중…', 'bad'));
 socket.on('connect_error', (e) => { setConn('서버 연결 실패', 'bad'); console.error('socket connect_error:', e && e.message); });
+socket.on('rejoin_failed', () => { clearSession(); });
+socket.on('opp_disconnected', () => setConn('상대 연결 끊김 — 재접속 대기 중…', 'bad'));
+socket.on('opp_reconnected', () => { setConn('상대 재접속됨', 'ok'); setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400); });
 
 // ── 난이도 선택 ─────────────────────────────────────────────
 document.getElementById('diffRow').addEventListener('click', e => {
@@ -29,7 +50,9 @@ function tone(freq, type, vol, dur, delay = 0) {
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
   o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur);
 }
+let soundOff = false;   // 마스터 음소거 (BGM + 효과음)
 function playSound(n) {
+  if (soundOff) return;
   try { AC.resume(); } catch(_) {}
   switch (n) {
     case 'select': tone(900,'sine',.06,.08); break;
@@ -47,7 +70,7 @@ function playSound(n) {
 }
 
 // ── 배경음악 (게임풍 시퀀서: 베이스 + 아르페지오 + 반짝임) ──
-let bgmMaster = null, bgmOn = false, bgmMuted = false;
+let bgmMaster = null, bgmOn = false;
 let bgmSched = null, bgmStep = 0, bgmNextT = 0;
 const BGM_VOL = 0.13;
 const STEP = 0.15;                 // 8분음표 길이(초) ≈ 100bpm
@@ -86,7 +109,7 @@ function startBGM() {
   try { AC.resume(); } catch (_) {}
   bgmOn = true;
   bgmMaster = AC.createGain();
-  bgmMaster.gain.value = bgmMuted ? 0 : BGM_VOL;
+  bgmMaster.gain.value = soundOff ? 0 : BGM_VOL;
   const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
   bgmMaster.connect(lp); lp.connect(AC.destination);
   bgmStep = 0; bgmNextT = AC.currentTime + 0.1;
@@ -97,12 +120,13 @@ function startBGM() {
     }
   }, 25);
 }
-function toggleBGM() {
-  bgmMuted = !bgmMuted;
-  if (bgmMaster) bgmMaster.gain.linearRampToValueAtTime(bgmMuted ? 0 : BGM_VOL, AC.currentTime + 0.25);
+function toggleBGM() {   // 마스터 음소거 토글 (BGM + 효과음 전체)
+  soundOff = !soundOff;
+  if (bgmMaster) bgmMaster.gain.linearRampToValueAtTime(soundOff ? 0 : BGM_VOL, AC.currentTime + 0.25);
   const b = document.getElementById('bgmBtn');
-  b.textContent = bgmMuted ? '♪̸' : '♪';
-  b.style.opacity = bgmMuted ? '.45' : '1';
+  b.textContent = soundOff ? '🔇' : '🔊';
+  b.title = soundOff ? '소리 켜기' : '소리 끄기';
+  b.style.opacity = soundOff ? '.55' : '1';
 }
 
 // ── 게임 설명서 ─────────────────────────────────────────────
@@ -111,17 +135,31 @@ function toggleRules(show) {
 }
 
 // ── 방 ──────────────────────────────────────────────────────
-function createRoom(vsBot) { isVsBot = vsBot; socket.emit('create_room', { vsBot, difficulty }); }
+function createRoom(vsBot) { isVsBot = vsBot; socket.emit('create_room', { vsBot, difficulty, pid: PID }); }
 function joinRoom() {
   const id = document.getElementById('roomInput').value.trim().toUpperCase();
-  if (id) socket.emit('join_room', { roomId: id });
+  if (id) socket.emit('join_room', { roomId: id, pid: PID });
 }
+let sharedCode = '';
 socket.on('room_created', ({ roomId }) => {
-  document.getElementById('waitMsg').textContent = `방 코드: ${roomId}  —  상대를 기다리는 중...`;
+  sharedCode = roomId;
+  document.getElementById('lobbyMain').style.display = 'none';
+  document.getElementById('waitCard').style.display = 'flex';
+  document.getElementById('waitCode').textContent = roomId;
 });
+function copyText(text, btn) {
+  const done = () => { const o = btn.textContent; btn.textContent = '✓ 복사됨'; setTimeout(() => btn.textContent = o, 1400); };
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done).catch(() => prompt('복사하세요:', text));
+  else prompt('복사하세요:', text);
+}
+function copyCode(btn) { copyText(sharedCode, btn); }
+function copyLink(btn) { copyText(`${location.origin}${location.pathname}?room=${sharedCode}`, btn); }
+function cancelWait() { clearSession(); location.href = location.origin + location.pathname; }
+
 socket.on('error', msg => alert(msg));
-socket.on('game_start', ({ vsBot, difficulty: diff }) => {
+socket.on('game_start', ({ vsBot, difficulty: diff, roomId }) => {
   isVsBot = vsBot;
+  if (roomId) saveSession(roomId);
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('game').style.display = 'flex';
   if (vsBot) {
@@ -151,6 +189,7 @@ socket.on('special', () => {
   setTimeout(() => { t.style.display = 'none'; }, 2600);
 });
 socket.on('game_over', ({ winner, setKind, timeout, myIndex: mi }) => {
+  clearSession();
   const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
   let delay = 500;
   if (winner === 0) {
@@ -167,9 +206,32 @@ socket.on('game_over', ({ winner, setKind, timeout, myIndex: mi }) => {
     playSound('defeat');
     if (setKind) { celebrateSet('oppAcq', setKind); delay = 1400; }
   }
+  renderGameOverStats(winner, setKind, mi);
   setTimeout(() => document.getElementById('gameOver').style.display = 'flex', delay);
 });
-socket.on('opponent_left', () => { alert('상대가 나갔어요.'); location.reload(); });
+
+// 승리/패배 화면 통계 (완성 세트 + 획득 수)
+function renderGameOverStats(winner, setKind, mi) {
+  const box = document.getElementById('goStats');
+  if (!box || !state) { if (box) box.innerHTML = ''; return; }
+  box.innerHTML = '';
+  if (winner !== 0 && setKind) {
+    const winnerAcq = (winner === mi) ? state.myAcq : state.oppAcq;
+    const setCards = (winnerAcq || []).filter(c => c.kind === setKind).sort((a, b) => a.grade - b.grade);
+    const row = document.createElement('div'); row.className = 'go-set';
+    setCards.forEach(c => {
+      const rc = document.createElement('div'); rc.className = 'rc'; rc.dataset.kind = c.kind;
+      rc.innerHTML = `<span class="rc-rank">${c.grade}</span><span class="rc-num">${c.kind}</span>`;
+      row.appendChild(rc);
+    });
+    box.appendChild(row);
+  }
+  const myN = (state.myAcq || []).length, opN = (state.oppAcq || []).length;
+  const line = document.createElement('div'); line.className = 'go-count';
+  line.innerHTML = `획득 카드 — 나 <b>${myN}</b>장 · 상대 <b>${opN}</b>장`;
+  box.appendChild(line);
+}
+socket.on('opponent_left', () => { clearSession(); alert('상대가 나갔어요.'); location.href = location.origin + location.pathname; });
 
 // 세트 완성 카드 특수효과
 function celebrateSet(containerId, kind) {
@@ -205,6 +267,18 @@ socket.on('time_warning', ({ player }) => {
 // ── 카드 ────────────────────────────────────────────────────
 const is21  = c => c && c.kind === 2 && c.grade === 1;
 const is610 = c => c && c.kind === 6 && c.grade === 10;
+
+// 배팅 승패(클라 판정, 서버와 동일 로직) — 결과 안내용
+function myBidWins(my, opp) {
+  if (is610(my) && is21(opp)) return true;
+  if (is610(opp) && is21(my)) return false;
+  return (my.kind * 100 + my.grade) < (opp.kind * 100 + opp.grade);
+}
+function resultReason(my, opp) {
+  if ((is610(my) && is21(opp)) || (is610(opp) && is21(my))) return '⚔ 졸개의 배신!';
+  if (my.kind !== opp.kind) return `종류 ${my.kind} vs ${opp.kind} → 작은 쪽 승리`;
+  return `등급 ${my.grade} vs ${opp.grade} → 낮은 쪽 승리`;
+}
 
 function makeCard(card, opts = {}) {
   const el = document.createElement('div');
@@ -336,12 +410,16 @@ function renderPile(id, cards) {
   for (const kind of [2,3,4,6]) {
     const g = groups[kind]; if (!g) continue;
     g.sort((a,b) => a.grade - b.grade);
-    const wrap = document.createElement('div'); wrap.className = 'pile-group'; wrap.dataset.kind = kind;
+    const req = SET_REQ[kind];
+    const done = g.length >= req;
+    const reach = g.length === req - 1;   // 세트 1장 전 = 리치
+    const wrap = document.createElement('div');
+    wrap.className = 'pile-group' + (reach ? ' reach' : '');
+    wrap.dataset.kind = kind;
     g.forEach(c => wrap.appendChild(makeCard(c)));
     const cnt = document.createElement('span');
-    const done = g.length >= SET_REQ[kind];
-    cnt.className = 'pile-count' + (done ? ' done' : '');
-    cnt.textContent = `${g.length}/${SET_REQ[kind]}`;
+    cnt.className = 'pile-count' + (done ? ' done' : reach ? ' reach' : '');
+    cnt.textContent = reach ? `${g.length}/${req} 리치!` : `${g.length}/${req}`;
     wrap.appendChild(cnt);
     el.appendChild(wrap);
   }
@@ -421,6 +499,15 @@ function renderAuction(changed) {
     const h = document.createElement('p'); h.className = 'hint-text';
     h.textContent = '진행자가 먼저 배팅합니다 — 잠시 대기';
     action.appendChild(h);
+  }
+
+  // reveal: 경매 결과 안내 (낙찰/패배 + 이유)
+  if (isReveal && a.myBid && a.oppBid) {
+    const win = myBidWins(a.myBid, a.oppBid);
+    const rb = document.createElement('div');
+    rb.className = 'result-banner ' + (win ? 'win' : 'lose');
+    rb.innerHTML = `<b>${win ? '낙찰! 🏆' : '패배'}</b> <span>${resultReason(a.myBid, a.oppBid)}</span>`;
+    action.appendChild(rb);
   }
 }
 // 배팅 카드를 각자 앞에 배치

@@ -63,7 +63,23 @@
     }
     input:focus { outline:none; border-color:var(--gold); }
     .divider-line { border:none; border-top:1px solid #2a2130; margin:2px 0; }
-    #waitMsg { color:var(--gold); font-size:.85rem; text-align:center; min-height:20px; }
+    .lobby-rules-link { background:none; border:none; color:#6a5a70; font-family:'Fredoka'; font-size:.82rem; cursor:pointer; padding:6px; margin-top:2px; }
+    .lobby-rules-link:hover { color:var(--gold); }
+
+    /* 방 대기 카드 (코드 공유) */
+    #waitCard {
+      display:none; flex-direction:column; align-items:center; gap:12px; width:280px;
+      background:#16101c; border:1px solid #2a1c30; border-radius:16px; padding:22px 20px;
+      animation:slideDown .35s cubic-bezier(.34,1.4,.64,1);
+    }
+    .wc-label { font-size:.8rem; color:#8a7a80; }
+    .wc-code {
+      font-family:'Bangers',cursive; font-size:2.6rem; letter-spacing:8px; color:var(--gold);
+      background:rgba(200,160,0,.1); border:1px dashed rgba(200,160,0,.4); border-radius:12px;
+      padding:6px 18px 4px; text-indent:8px;
+    }
+    .wc-btns { display:flex; gap:8px; }
+    .wc-wait { font-size:.82rem; color:#8a7a80; }
 
     /* 서버 연결 상태 */
     #connStatus {
@@ -350,6 +366,21 @@
     .btn-row { display:flex; gap:8px; }
     .hint-text { font-size:.74rem; color:rgba(255,255,255,.4); text-align:center; }
 
+    /* 경매 결과 배너 */
+    .result-banner {
+      margin-top:8px; padding:6px 16px; border-radius:10px; text-align:center;
+      font-size:.82rem; animation:slideDown .3s ease;
+    }
+    .result-banner b { font-size:.95rem; }
+    .result-banner span { display:block; font-size:.72rem; opacity:.8; margin-top:2px; }
+    .result-banner.win  { background:rgba(51,204,153,.16); color:#5cd69c; border:1px solid rgba(51,204,153,.35); }
+    .result-banner.lose { background:rgba(255,96,96,.12); color:#ff8a8a; border:1px solid rgba(255,96,96,.3); }
+
+    /* 리치(세트 1장 전) 강조 */
+    @keyframes reachGlow { 0%,100%{ box-shadow:0 2px 5px rgba(0,0,0,.45); } 50%{ box-shadow:0 2px 5px rgba(0,0,0,.45), 0 0 14px 2px rgba(255,154,60,.7); } }
+    .pile-group.reach .card { animation:reachGlow 1.3s ease-in-out infinite; border-color:#ff9a3c !important; }
+    .pile-count.reach { color:#ff9a3c !important; font-weight:700; }
+
     .cpu-tag { font-size:.58rem; padding:2px 7px; border-radius:6px; background:rgba(184,168,222,.18); color:#c8bcf0; letter-spacing:1px; }
     .cpu-tag.diff { background:rgba(200,160,0,.18); color:#ffe9a8; }
     @keyframes thinking { 0%,100%{opacity:.3} 50%{opacity:1} }
@@ -372,7 +403,11 @@
     @keyframes slideDown { from{opacity:0;transform:translateY(-30px)} to{opacity:1;transform:none} }
     #goBox { background:#16101c; border-radius:22px; padding:38px 50px; text-align:center; border:1px solid #241a2e; animation:slideDown .4s cubic-bezier(.34,1.4,.64,1); }
     #goTitle { font-family:'Bangers'; font-size:2.8rem; margin-bottom:6px; letter-spacing:2px; }
-    #goDesc { color:#6a5a70; margin-bottom:24px; }
+    #goDesc { color:#6a5a70; margin-bottom:16px; }
+    #goStats { margin-bottom:22px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+    #goStats .go-set { display:flex; gap:5px; justify-content:center; }
+    #goStats .go-count { font-size:.82rem; color:#8a7a80; }
+    #goStats .go-count b { color:#ffe9a8; }
 
     /* ═══ 모바일 반응형 ═══ */
     @media (max-width: 600px) {
@@ -446,7 +481,7 @@
     <h1>FLIP</h1><div class="flap">FLAP</div>
     <p class="sub">경매 · 블러핑 · 심리전</p>
   </div>
-  <div class="lobby-btns">
+  <div class="lobby-btns" id="lobbyMain">
     <div class="diff-row" id="diffRow">
       <button class="diff-btn" data-diff="easy">쉬움</button>
       <button class="diff-btn" data-diff="normal">보통</button>
@@ -460,8 +495,20 @@
       <input id="roomInput" type="text" placeholder="XXXXX" maxlength="5">
       <button class="btn btn-outline btn-sm" onclick="joinRoom()">참가</button>
     </div>
+    <button class="lobby-rules-link" onclick="toggleRules(true)">📖 게임 방법 보기</button>
   </div>
-  <p id="waitMsg"></p>
+
+  <!-- 방 만든 뒤 대기 카드 -->
+  <div id="waitCard">
+    <div class="wc-label">친구에게 코드를 공유하세요</div>
+    <div class="wc-code" id="waitCode">-----</div>
+    <div class="wc-btns">
+      <button class="btn btn-gold btn-sm" onclick="copyCode(this)">코드 복사</button>
+      <button class="btn btn-outline btn-sm" onclick="copyLink(this)">초대 링크 복사</button>
+    </div>
+    <div class="wc-wait"><span class="thinking-dots">상대를 기다리는 중<span>.</span><span>.</span><span>.</span></span></div>
+    <button class="lobby-rules-link" onclick="cancelWait()">← 취소</button>
+  </div>
 </div>
 
 <div id="game">
@@ -469,7 +516,7 @@
     <span class="tl">FLIP</span><span class="tl flap">FLAP</span>
   </div>
   <div id="controls">
-    <div class="ctrl-btn" id="bgmBtn" title="배경음악" onclick="toggleBGM()">♪</div>
+    <div class="ctrl-btn" id="bgmBtn" title="소리 끄기" onclick="toggleBGM()">🔊</div>
     <div class="ctrl-btn" id="rulesBtn" title="게임 설명" onclick="toggleRules(true)">?</div>
   </div>
 
@@ -603,6 +650,7 @@
   <div id="goBox">
     <div id="goTitle"></div>
     <div id="goDesc"></div>
+    <div id="goStats"></div>
     <button class="btn btn-gold" style="width:auto" onclick="location.reload()">다시 하기</button>
   </div>
 </div>

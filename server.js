@@ -306,15 +306,15 @@ io.on('connection', (socket) => {
     if (old) { endClock(old); delete rooms[socket.roomId]; socket.roomId = null; }
   }
 
-  socket.on('create_room', ({ vsBot = false, difficulty = 'hard' } = {}) => {
+  socket.on('create_room', ({ vsBot = false, difficulty = 'hard', pid } = {}) => {
     leaveOldRoom();
     const roomId = makeRoomId();
-    rooms[roomId] = { players: [socket.id, null], game: null, vsBot, difficulty };
-    socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0;
+    rooms[roomId] = { players: [socket.id, null], pids: [pid || null, null], game: null, vsBot, difficulty };
+    socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
     if (vsBot) {
       rooms[roomId].cpuIndex = 1;
       rooms[roomId].game = createGame();
-      socket.emit('game_start', { vsBot: true, difficulty });
+      socket.emit('game_start', { vsBot: true, difficulty, roomId });
       broadcast(roomId);
       startClock(roomId);
       setTimeout(() => maybeCpuAct(roomId), 600);
@@ -323,16 +323,32 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('join_room', ({ roomId }) => {
+  socket.on('join_room', ({ roomId, pid }) => {
     const room = rooms[roomId];
     if (!room) return socket.emit('error', '방을 찾을 수 없어요.');
     if (room.players.filter(Boolean).length >= 2) return socket.emit('error', '방이 꽉 찼어요.');
-    room.players[1] = socket.id;
-    socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 1;
+    room.players[1] = socket.id; room.pids[1] = pid || null;
+    socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 1; socket.pid = pid;
     room.game = createGame();
-    io.to(roomId).emit('game_start', { vsBot: false });
+    io.to(roomId).emit('game_start', { vsBot: false, roomId });
     broadcast(roomId);
     startClock(roomId);
+  });
+
+  // 새로고침/끊김 후 재접속
+  socket.on('rejoin', ({ roomId, pid } = {}) => {
+    const room = rooms[roomId];
+    if (!room || !room.game || room.game.phase === 'game_over') return socket.emit('rejoin_failed');
+    const slot = room.pids.indexOf(pid);
+    if (slot === -1) return socket.emit('rejoin_failed');
+    room.players[slot] = socket.id;
+    socket.join(roomId); socket.roomId = roomId; socket.playerIndex = slot; socket.pid = pid;
+    if (room.graceTimer) { clearTimeout(room.graceTimer); room.graceTimer = null; }
+    if (!room.clock) startClock(roomId);                 // 멈췄던 시계 재개
+    socket.emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId });
+    broadcast(roomId);
+    room.players.forEach(s => { if (s) io.to(s).emit('opp_reconnected'); });
+    setTimeout(() => maybeCpuAct(roomId), 300);
   });
 
   socket.on('draw_card', () => {
@@ -393,10 +409,20 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     const roomId = socket.roomId;
-    if (!roomId || !rooms[roomId]) return;
-    endClock(rooms[roomId]);
-    if (!rooms[roomId].vsBot) io.to(roomId).emit('opponent_left');
-    delete rooms[roomId];
+    const room = roomId && rooms[roomId];
+    if (!room) return;
+    const slot = room.players.indexOf(socket.id);
+    if (slot !== -1) room.players[slot] = null;
+    // 게임 종료 상태면 즉시 정리
+    if (!room.game || room.game.phase === 'game_over') { endClock(room); delete rooms[roomId]; return; }
+    // 진행 중이면 시계 멈추고 유예시간 부여 (재접속 대기)
+    endClock(room);
+    room.players.forEach(s => { if (s) io.to(s).emit('opp_disconnected'); });
+    if (room.graceTimer) clearTimeout(room.graceTimer);
+    room.graceTimer = setTimeout(() => {
+      room.players.forEach(s => { if (s) io.to(s).emit('opponent_left'); });
+      endClock(room); delete rooms[roomId];
+    }, 60000);  // 60초 안에 재접속하면 이어서
   });
 });
 
