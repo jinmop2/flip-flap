@@ -39,6 +39,7 @@
       -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
     }
     .logo .sub { font-size:.72rem; letter-spacing:5px; color:#55474e; margin-top:6px; font-weight:500; }
+    #lobbyStats { font-size:.76rem; color:#8a7a80; margin-top:8px; min-height:16px; }
     .lobby-btns { display:flex; flex-direction:column; gap:12px; width:260px; }
     .btn {
       padding:13px 24px; border:none; border-radius:12px; font-family:'Fredoka';
@@ -415,6 +416,15 @@
     .pile-group.reach .card { animation:reachGlow 1.3s ease-in-out infinite; border-color:#ff9a3c !important; }
     .pile-count.reach { color:#ff9a3c !important; font-weight:700; }
 
+    /* 세트 완성 강조 */
+    @keyframes completeGlow { 0%,100%{ box-shadow:0 2px 5px rgba(0,0,0,.45); } 50%{ box-shadow:0 2px 5px rgba(0,0,0,.45), 0 0 18px 4px rgba(255,215,64,.9); } }
+    .pile-group.complete .card { animation:completeGlow 1s ease-in-out infinite; border-color:var(--gold) !important; }
+    .pile-count.complete { color:#ffe9a8 !important; font-weight:700; text-shadow:0 0 8px rgba(255,215,64,.6); }
+
+    /* 카드 획득 시 날아드는 연출 */
+    @keyframes acquireIn { 0%{ opacity:0; transform:translateY(-40px) scale(1.3) rotate(-6deg); } 60%{ opacity:1; transform:translateY(4px) scale(1.05); } 100%{ transform:none; } }
+    .card.anim-acquire { animation:acquireIn .42s cubic-bezier(.34,1.4,.64,1) both; }
+
     .cpu-tag { font-size:.58rem; padding:2px 7px; border-radius:6px; background:rgba(184,168,222,.18); color:#c8bcf0; letter-spacing:1px; }
     .cpu-tag.diff { background:rgba(200,160,0,.18); color:#ffe9a8; }
     @keyframes thinking { 0%,100%{opacity:.3} 50%{opacity:1} }
@@ -514,6 +524,7 @@
   <div class="logo">
     <h1>FLIP</h1><div class="flap">FLAP</div>
     <p class="sub">경매 · 블러핑 · 심리전</p>
+    <p id="lobbyStats"></p>
   </div>
   <div class="lobby-btns" id="lobbyMain">
     <div class="diff-row" id="diffRow">

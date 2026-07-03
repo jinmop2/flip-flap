@@ -227,6 +227,7 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId }) => {
   document.getElementById('rematchNote').textContent = '';
   const rb = document.getElementById('rematchBtn'); if (rb) { rb.disabled = false; rb.style.opacity = '1'; }
   prevPhase = null; selectedBidCard = null; prevMyAction = false; stopTitleBlink();
+  seenAcq.myAcq = new Set(); seenAcq.oppAcq = new Set(); boardCelebrated = false;
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('game').style.display = 'flex';
   if (vsBot) {
@@ -247,12 +248,43 @@ socket.on('state_update', s => {
   render(changed);
   if (changed && s.phase === 'reveal') playSound('reveal');
   if (drewNow) playSound('deal');
+  // 세트 완성이 보드에 나타나는 순간 강조 (결과창은 서버가 잠시 뒤 띄움)
+  if (s.phase === 'game_over' && !boardCelebrated) {
+    const mySet = localSet(s.myAcq), oppSet = localSet(s.oppAcq);
+    if (mySet || oppSet) {
+      boardCelebrated = true;
+      playSound('setwin');
+      celebrateSet(mySet ? 'myAcq' : 'oppAcq', mySet || oppSet);
+    }
+  }
   // 내 차례 알림 (탭이 숨겨져 있을 때)
   const mine = isMyAction(s);
   if (mine && !prevMyAction && document.hidden) { startTitleBlink(); playSound('ping'); }
   if (!mine) stopTitleBlink();
   prevMyAction = mine;
 });
+let boardCelebrated = false;
+function localSet(acq) {
+  if (!acq) return null;
+  const c = {}; for (const x of acq) c[x.kind] = (c[x.kind] || 0) + 1;
+  for (const k of [2, 3, 4, 6]) if ((c[k] || 0) >= k) return k;
+  return null;
+}
+
+// ── 전적 (localStorage) ─────────────────────────────────────
+function getStats() { try { return JSON.parse(localStorage.getItem('ff_stats')) || { win:0, loss:0, draw:0 }; } catch (_) { return { win:0, loss:0, draw:0 }; } }
+function recordResult(winner, mi) {
+  const s = getStats();
+  if (winner === 0) s.draw++; else if (winner === mi) s.win++; else s.loss++;
+  localStorage.setItem('ff_stats', JSON.stringify(s));
+  renderLobbyStats();
+}
+function renderLobbyStats() {
+  const el = document.getElementById('lobbyStats'); if (!el) return;
+  const s = getStats(), total = s.win + s.loss + s.draw;
+  el.textContent = total > 0 ? `전적 ${s.win}승 ${s.loss}패${s.draw ? ` ${s.draw}무` : ''}  ·  승률 ${Math.round(s.win / total * 100)}%` : '';
+}
+renderLobbyStats();
 socket.on('special', () => {
   playSound('special');
   const t = document.getElementById('specialToast');
@@ -261,7 +293,7 @@ socket.on('special', () => {
   setTimeout(() => { t.style.display = 'none'; }, 2600);
 });
 socket.on('game_over', ({ winner, setKind, timeout, byProgress, myIndex: mi }) => {
-  clearSession(); stopTitleBlink();
+  clearSession(); stopTitleBlink(); recordResult(winner, mi);
   const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
   let delay = 500;
   if (winner === 0) {
@@ -389,6 +421,7 @@ function makeCard(card, opts = {}) {
   el.appendChild(top); el.appendChild(num);
 
   if (opts.draw)          el.classList.add('anim-draw');
+  else if (opts.acquire)  el.classList.add('anim-acquire');
   else if (opts.animate)  el.classList.add('anim-deal');
   if (opts.reveal)   el.classList.add('anim-reveal');
   if (opts.selected) el.classList.add('selected');
@@ -479,8 +512,10 @@ function renderOppHand(n) {
 
 // 획득 카드 = 종류별로 겹쳐 쌓은 더미 (세트 진행도 표시)
 const SET_REQ = { 2:2, 3:3, 4:4, 6:6 };
+const seenAcq = { myAcq: new Set(), oppAcq: new Set() };  // 획득 애니메이션용
 function renderPile(id, cards) {
   const el = document.getElementById(id); el.innerHTML = '';
+  const seen = seenAcq[id] || (seenAcq[id] = new Set());
   if (!cards?.length) { el.innerHTML = '<span class="pile-empty">획득 없음</span>'; return; }
   const groups = {};
   for (const c of cards) (groups[c.kind] ||= []).push(c);
@@ -491,12 +526,16 @@ function renderPile(id, cards) {
     const done = g.length >= req;
     const reach = g.length === req - 1;   // 세트 1장 전 = 리치
     const wrap = document.createElement('div');
-    wrap.className = 'pile-group' + (reach ? ' reach' : '');
+    wrap.className = 'pile-group' + (done ? ' complete' : reach ? ' reach' : '');
     wrap.dataset.kind = kind;
-    g.forEach(c => wrap.appendChild(makeCard(c)));
+    g.forEach(c => {
+      const isNew = c.id != null && !seen.has(c.id);
+      if (c.id != null) seen.add(c.id);
+      wrap.appendChild(makeCard(c, { acquire: isNew }));   // 새 카드는 날아드는 연출
+    });
     const cnt = document.createElement('span');
-    cnt.className = 'pile-count' + (done ? ' done' : reach ? ' reach' : '');
-    cnt.textContent = reach ? `${g.length}/${req} 리치!` : `${g.length}/${req}`;
+    cnt.className = 'pile-count' + (done ? ' complete' : reach ? ' reach' : '');
+    cnt.textContent = done ? `완성! ✓` : reach ? `${g.length}/${req} 리치!` : `${g.length}/${req}`;
     wrap.appendChild(cnt);
     el.appendChild(wrap);
   }

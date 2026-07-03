@@ -535,7 +535,12 @@ function settle(roomId) {
     g.phase = 'game_over';
     const winner = p1Set ? 1 : 2;
     endClock(room);
-    room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_over', { winner, setKind: p1Set || p2Set, myIndex: i + 1 }); });
+    // 완성된 세트가 보드에 먼저 보이도록 상태 갱신 → 잠깐 뒤 결과창
+    broadcast(roomId);
+    setTimeout(() => {
+      if (!rooms[roomId]) return;
+      room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_over', { winner, setKind: p1Set || p2Set, myIndex: i + 1 }); });
+    }, 1700);
     return;
   }
   // 더 뽑을 카드가 없거나 양쪽 손패 소진 → 세트 근접도로 판정 (무승부 최소화)
