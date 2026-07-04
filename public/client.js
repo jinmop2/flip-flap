@@ -34,9 +34,14 @@ socket.on('auth_ok', ({ profile }) => { myAccount = profile; renderAccount(); })
 socket.on('disconnect', () => setConn('연결 끊김 — 재접속 중…', 'bad'));
 socket.on('connect_error', (e) => { setConn('서버 연결 실패', 'bad'); console.error('socket connect_error:', e && e.message); });
 socket.on('rejoin_failed', () => { clearSession(); });
-socket.on('opp_disconnected', ({ left } = {}) => setConn(`상대 연결 끊김 — ${left ?? 60}초 안에 재접속 못 하면 몰수승!`, 'bad'));
-socket.on('grace_tick', ({ left } = {}) => setConn(`상대 연결 끊김 — ${left}초 안에 재접속 못 하면 몰수승!`, 'bad'));
-socket.on('opp_reconnected', () => { setConn('상대 재접속됨', 'ok'); setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400); });
+function showGrace(left) {
+  document.getElementById('graceCount').textContent = Math.max(0, left ?? 60);
+  document.getElementById('graceOverlay').classList.add('show');
+}
+function hideGrace() { document.getElementById('graceOverlay').classList.remove('show'); }
+socket.on('opp_disconnected', ({ left } = {}) => showGrace(left));
+socket.on('grace_tick', ({ left } = {}) => showGrace(left));
+socket.on('opp_reconnected', () => { hideGrace(); setConn('상대 재접속됨', 'ok'); setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400); });
 
 // ── 난이도 선택 ─────────────────────────────────────────────
 document.getElementById('diffRow').addEventListener('click', e => {
@@ -437,9 +442,10 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles }) =
   gameNicks = nicks || null;
   gameProfiles = profiles || null;
   if (roomId) saveSession(roomId);
-  // 재대결/매칭 대비 초기화
+  // 재대결/매칭/재접속 대비 초기화
   document.getElementById('gameOver').style.display = 'none';
   document.getElementById('matchModal').classList.remove('show');
+  hideGrace();
   document.getElementById('rematchNote').textContent = '';
   const rb = document.getElementById('rematchBtn'); if (rb) { rb.disabled = false; rb.style.opacity = '1'; }
   prevPhase = null; selectedBidCard = null; prevMyAction = false; stopTitleBlink();
@@ -509,7 +515,7 @@ socket.on('special', () => {
   setTimeout(() => { t.style.display = 'none'; }, 2600);
 });
 socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex: mi }) => {
-  clearSession(); stopTitleBlink(); recordResult(winner, mi);
+  clearSession(); stopTitleBlink(); hideGrace(); recordResult(winner, mi);
   const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
   let delay = 500;
   if (winner === 0) {

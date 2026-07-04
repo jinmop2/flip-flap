@@ -578,7 +578,8 @@ io.on('connection', (socket) => {
     if (!room.clockOn) startClock(roomId);               // 멈췄던 시계 재개
     socket.emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks, profiles: room.profiles });
     broadcast(roomId);
-    room.players.forEach(s => { if (s) io.to(s).emit('opp_reconnected'); });
+    const other = room.players[1 - slot];               // 재접속 알림은 상대에게만
+    if (other) io.to(other).emit('opp_reconnected');
     setTimeout(() => maybeCpuAct(roomId), 300);
   });
 
@@ -697,23 +698,22 @@ io.on('connection', (socket) => {
     if (room.rematch[0] && room.rematch[1]) restartGame(socket.roomId);
   });
 
-  // 게임 나가기 — 진행 중이면 나간 사람 패배 (몰수패)
+  // 게임 나가기 — 진행 중이면 나간 사람 몰수패 (상대에게만 몰수승 전송)
   socket.on('leave_room', () => {
     const roomId = socket.roomId;
     const room = roomId && rooms[roomId];
     if (!room) return;
     if (room.graceTimer) { clearInterval(room.graceTimer); room.graceTimer = null; }
     endClock(room);
+    const slot = room.players.indexOf(socket.id);
     const g = room.game;
-    const activeGame = g && g.phase !== 'game_over' && !room.vsBot;
-    if (activeGame) {
-      // 나간 사람 = 패배 (전적 반영 + 상대에게 몰수승 화면)
-      const winner = socket.playerIndex === 0 ? 2 : 1;
+    if (g && g.phase !== 'game_over' && !room.vsBot && slot !== -1) {
+      const winner = slot === 0 ? 2 : 1;
       g.phase = 'game_over';
       finishStats(room, winner);
-      room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
+      room.players.forEach((s, i) => { if (s && i !== slot) io.to(s).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
     } else {
-      room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('opponent_left'); });
+      room.players.forEach((s, i) => { if (s && i !== slot) io.to(s).emit('opponent_left'); });
     }
     delete rooms[roomId];
     socket.roomId = null;
@@ -728,30 +728,43 @@ io.on('connection', (socket) => {
     const room = roomId && rooms[roomId];
     if (!room) return;
     const slot = room.players.indexOf(socket.id);
-    if (slot !== -1) room.players[slot] = null;
-    // 게임 종료 상태면 즉시 정리
-    if (!room.game || room.game.phase === 'game_over') { endClock(room); delete rooms[roomId]; broadcastRooms(); return; }
-    // 진행 중이면 시계 멈추고 유예 카운트다운 (누적 60초 — 재접속해도 남은 시간 유지)
+    if (slot === -1) return;   // 이미 교체된 옛 소켓 → 무시 (양쪽 오알림 방지)
+    room.players[slot] = null;
+    // 게임 종료 상태거나 둘 다 끊김 → 즉시 정리
+    if (!room.game || room.game.phase === 'game_over' || (!room.players[0] && !room.players[1])) {
+      if (room.graceTimer) { clearInterval(room.graceTimer); room.graceTimer = null; }
+      endClock(room); delete rooms[roomId]; broadcastRooms(); return;
+    }
+    // 튕김 횟수 누적 — 3회 이상이면 즉시 몰수패
+    room.dcCount = room.dcCount || [0, 0];
+    room.dcCount[slot]++;
+    if (room.dcCount[slot] >= 3) return forfeitPlayer(roomId, slot);
+    // 유예 카운트다운 (누적 60초 — 재접속하면 정지, 또 끊기면 남은 시간부터)
     endClock(room);
     room.graceLeft = room.graceLeft || [60, 60];
-    room.players.forEach(s => { if (s) io.to(s).emit('opp_disconnected', { left: room.graceLeft[slot] }); });
+    const opp = () => room.players[1 - slot];
+    if (opp()) io.to(opp()).emit('opp_disconnected', { left: room.graceLeft[slot], strikes: room.dcCount[slot] });
     if (room.graceTimer) clearInterval(room.graceTimer);
     room.graceTimer = setInterval(() => {
       if (!rooms[roomId]) { clearInterval(room.graceTimer); return; }
       room.graceLeft[slot]--;
-      room.players.forEach(s => { if (s) io.to(s).emit('grace_tick', { left: room.graceLeft[slot] }); });
-      if (room.graceLeft[slot] <= 0) {
-        clearInterval(room.graceTimer); room.graceTimer = null;
-        // 유예 소진 → 튕긴 사람 패배
-        const winner = slot === 0 ? 2 : 1;
-        if (room.game) room.game.phase = 'game_over';
-        finishStats(room, winner);
-        room.players.forEach((s, i) => { if (s) io.to(s).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
-        endClock(room); delete rooms[roomId]; broadcastRooms();
-      }
+      if (opp()) io.to(opp()).emit('grace_tick', { left: room.graceLeft[slot] });
+      if (room.graceLeft[slot] <= 0) forfeitPlayer(roomId, slot);
     }, 1000);
   });
 });
+
+// slot 플레이어 몰수패 처리 (상대 승리 + 전적 반영 + 방 정리)
+function forfeitPlayer(roomId, slot) {
+  const room = rooms[roomId]; if (!room) return;
+  if (room.graceTimer) { clearInterval(room.graceTimer); room.graceTimer = null; }
+  endClock(room);
+  const winner = slot === 0 ? 2 : 1;
+  if (room.game) room.game.phase = 'game_over';
+  finishStats(room, winner);
+  room.players.forEach((s, i) => { if (s && i !== slot) io.to(s).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
+  delete rooms[roomId]; broadcastRooms();
+}
 
 // 같은 방 새 게임 시작
 function restartGame(roomId) {

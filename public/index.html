@@ -40,6 +40,10 @@
     }
     .logo .sub { font-size:.72rem; letter-spacing:5px; color:#55474e; margin-top:6px; font-weight:500; }
     #lobbyStats { font-size:.76rem; color:#8a7a80; margin-top:8px; min-height:16px; }
+    .made-by { text-align:center; font-size:.68rem; color:#4a3a50; line-height:1.7; margin-top:4px; }
+    .made-by b { color:#6a5a70; }
+    .made-by a { color:#8a7a80; text-decoration:none; }
+    .made-by a:hover { color:var(--gold); }
     .lobby-btns { display:flex; flex-direction:column; gap:14px; width:320px; }
     /* 닉네임 바 */
     .nick-bar { display:flex; align-items:center; gap:10px; background:#16101c; border:1px solid #241a2e; border-radius:12px; padding:4px 14px; }
@@ -124,6 +128,13 @@
       padding:5px 14px; border-radius:20px; transition:opacity .3s;
       background:#3a2a10; color:#ffe9a8; border:1px solid rgba(200,160,0,.4);
     }
+    /* 상대 끊김 카운트다운 오버레이 */
+    #graceOverlay { display:none; position:fixed; inset:0; background:rgba(5,3,8,.72); z-index:38; align-items:center; justify-content:center; }
+    #graceOverlay.show { display:flex; }
+    .grace-box { text-align:center; background:#1a1018; border:1px solid rgba(255,96,96,.35); border-radius:20px; padding:28px 40px; }
+    .grace-title { font-size:1rem; color:#ff9a9a; font-weight:700; margin-bottom:8px; }
+    .grace-count { font-family:'Bangers',cursive; font-size:4rem; color:#ff6b6b; line-height:1; text-shadow:0 0 20px rgba(255,80,80,.5); }
+    .grace-sub { font-size:.82rem; color:#8a7a80; margin-top:8px; }
     #connStatus.ok  { background:#123a28; color:#5cd69c; border-color:rgba(51,204,153,.35); }
     #connStatus.bad { background:#3a1212; color:#ff8a8a; border-color:rgba(255,96,96,.4); }
     #connStatus.hide { opacity:0; pointer-events:none; }
@@ -670,6 +681,11 @@
     <button class="lobby-rules-link" onclick="toggleRules(true)">📖 게임 방법</button>
   </div>
 
+  <div class="made-by">
+    made by <b>Mongdung Games</b><br>
+    contact us · <a href="mailto:jinmo9@yonsei.ac.kr">jinmo9@yonsei.ac.kr</a>
+  </div>
+
   <!-- 방 만든 뒤 대기 카드 -->
   <div id="waitCard">
     <div class="wc-label"><b id="waitRoomName"></b> · 상대를 기다려요</div>
@@ -820,6 +836,15 @@
 </div>
 
 <div id="specialToast">⚔ 졸개의 배신! 6-10이 2-1을 잡았다</div>
+
+<!-- 상대 연결 끊김 카운트다운 -->
+<div id="graceOverlay">
+  <div class="grace-box">
+    <div class="grace-title">⚠️ 상대 연결 끊김</div>
+    <div class="grace-count" id="graceCount">60</div>
+    <div class="grace-sub">재접속 안 하면 몰수승!</div>
+  </div>
+</div>
 
 <!-- 게임 설명서 -->
 <div id="rulesModal" onclick="if(event.target===this)toggleRules(false)">
