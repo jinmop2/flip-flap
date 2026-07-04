@@ -159,6 +159,11 @@ function renderGameProfile(elId, p) {
   }
 }
 function toggleStats(el) { el.classList.toggle('show-stats'); }
+// 바깥 클릭 시 프로필 전적 / 이모트 피커 자동 닫기
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.game-pcard')) document.querySelectorAll('.game-pcard.show-stats').forEach(c => c.classList.remove('show-stats'));
+  if (!e.target.closest('#emoteWrap')) { const p = document.getElementById('emotePicker'); if (p) p.classList.remove('show'); }
+});
 function refreshRooms() { socket.emit('enter_lobby'); }
 function joinRoomById(id, secret) {
   if (secret) {
