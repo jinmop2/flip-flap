@@ -241,13 +241,17 @@ function typeX(hand, prize, myAcq, oppAcq) {
   const val = Math.max(wantValue(prize, myAcq, feasibleTarget(myAcq, oppAcq)), denyValue(prize, oppAcq));
   return val >= 0.5 ? 'open' : 'closed';
 }
-// visOpp: 클로즈 후공일 때 보이는 진행자 배팅카드 (없으면 null)
-function decideBidX(hand, prize, myAcq, oppAcq, visOpp) {
+// visOpp: 클로즈 후공일 때 보이는 진행자 배팅카드 · deckLeft: 남은 덱
+function decideBidX(hand, prize, myAcq, oppAcq, visOpp, deckLeft) {
   const byStrong = [...hand].sort((a, b) => strength(a) - strength(b));
   const target = feasibleTarget(myAcq, oppAcq);
-  const val = Math.max(wantValue(prize, myAcq, target), denyValue(prize, oppAcq));
+  let val = Math.max(wantValue(prize, myAcq, target), denyValue(prize, oppAcq));
+  // 경매 승리 자체가 진행도(획득 2장)에 유리 → 카드 열세거나 종반이면 싸게라도 경합
+  const behind = myAcq.length <= oppAcq.length;
+  const late = (deckLeft ?? 12) <= 5;
+  if (behind || late) val = Math.max(val, late ? 0.5 : 0.42);
   if (visOpp) {   // 상대 배팅이 보이면 최소 승리 배팅으로 강카드 절약
-    if (val < 0.32) return byStrong[byStrong.length - 1];
+    if (val < 0.3) return byStrong[byStrong.length - 1];
     const winners = hand.filter(c => aBeatsB(c, visOpp)).sort((a, b) => strength(b) - strength(a));
     if (winners.length) return winners[0];
     return byStrong[byStrong.length - 1];
@@ -320,7 +324,7 @@ function maybeCpuAct(roomId) {
         // 클로즈 후공이면 진행자 배팅 카드가 보임 → 최소 승리 배팅
         const visOpp = (!isAuctioneer && g.auction.auctionType === 'closed')
           ? (g.auctioneer === 1 ? g.auction.p1Bid : g.auction.p2Bid) : null;
-        bid = decideBidX(hand, prize, acq, opp, visOpp);
+        bid = decideBidX(hand, prize, acq, opp, visOpp, g.centerDeck.length);
       } else {
         bid = cpuDecideBid(hand, prize, acq, room.difficulty);
       }

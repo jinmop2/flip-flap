@@ -108,10 +108,35 @@ function decideBidX(hand, prize, myAcq, oppAcq, visOpp) {
   return byStrong[byStrong.length-1];
 }
 
+// ── expertx2: 진행도 인식 추가 (열세면 싸게라도 경매 이겨 카드 축적) ──
+function decideBidX2(hand, prize, myAcq, oppAcq, visOpp, deckLeft) {
+  const byStrong=[...hand].sort((a,b)=>strength(a)-strength(b));
+  const target=feasibleTarget(myAcq,oppAcq);
+  let val=Math.max(wantValue(prize,myAcq,target), denyValue(prize,oppAcq));
+  // 경매 승리 자체가 진행도(획득 2장)에 유리 → 카드가 뒤지거나 종반이면 적극 경합
+  const behind = myAcq.length <= oppAcq.length;
+  const late = deckLeft <= 5;
+  if (behind || late) val = Math.max(val, late ? 0.5 : 0.42);
+  if (visOpp) {
+    if (val<0.3) return byStrong[byStrong.length-1];
+    const winners=hand.filter(c=>aBeatsB(c,visOpp)).sort((a,b)=>strength(b)-strength(a));
+    if (winners.length) return winners[0];
+    return byStrong[byStrong.length-1];
+  }
+  if (val>=0.8)  return byStrong[0];
+  if (val>=0.55) return byStrong[Math.min(1,byStrong.length-1)];
+  if (val>=0.3)  return byStrong[Math.floor(byStrong.length/2)];
+  return byStrong[byStrong.length-1];
+}
+
 // ── AI 디스패처 ──
-function aiOffer(hand, myAcq, oppAcq, d){ return d==='expertx'?offerX(hand,myAcq,oppAcq):cpuChooseOffer(hand,myAcq); }
-function aiType(hand, prize, myAcq, oppAcq, d){ return d==='expertx'?typeX(hand,prize,myAcq,oppAcq):cpuChooseType(hand,prize,myAcq,d); }
-function aiBid(hand, prize, myAcq, oppAcq, type, visOpp, d){ return d==='expertx'?decideBidX(hand,prize,myAcq,oppAcq,visOpp):cpuDecideBid(hand,prize,myAcq,d); }
+function aiOffer(hand, myAcq, oppAcq, d){ return (d==='expertx'||d==='expertx2')?offerX(hand,myAcq,oppAcq):cpuChooseOffer(hand,myAcq); }
+function aiType(hand, prize, myAcq, oppAcq, d){ return (d==='expertx'||d==='expertx2')?typeX(hand,prize,myAcq,oppAcq):cpuChooseType(hand,prize,myAcq,d); }
+function aiBid(hand, prize, myAcq, oppAcq, type, visOpp, d, deckLeft){
+  if (d==='expertx2') return decideBidX2(hand,prize,myAcq,oppAcq,visOpp,deckLeft);
+  if (d==='expertx')  return decideBidX(hand,prize,myAcq,oppAcq,visOpp);
+  return cpuDecideBid(hand,prize,myAcq,d);
+}
 
 // ── 한 판 시뮬 (순차 배팅: 진행자 먼저, 클로즈면 후공이 진행자 배팅 봄) ──
 function playGame(d1, d2) {
@@ -132,12 +157,13 @@ function playGame(d1, d2) {
     const prize=[center, offCard];
     const type=aiType(g.hands[auc], prize, g.acq[auc], g.acq[opp], diff[auc]);
     if(g.hands[auc].length===0||g.hands[opp].length===0) return { winner:resolveEnd(g.acq[0],g.acq[1]), turns:g.turns };
+    const dl = g.centerDeck.length;
     // 진행자 먼저 배팅
-    const bidA=aiBid(g.hands[auc], prize, g.acq[auc], g.acq[opp], type, null, diff[auc]);
+    const bidA=aiBid(g.hands[auc], prize, g.acq[auc], g.acq[opp], type, null, diff[auc], dl);
     g.hands[auc].splice(g.hands[auc].indexOf(bidA),1);
     // 후공 배팅 (클로즈면 진행자 배팅 공개)
     const visForOpp = type==='closed' ? bidA : null;
-    const bidO=aiBid(g.hands[opp], prize, g.acq[opp], g.acq[auc], type, visForOpp, diff[opp]);
+    const bidO=aiBid(g.hands[opp], prize, g.acq[opp], g.acq[auc], type, visForOpp, diff[opp], dl);
     g.hands[opp].splice(g.hands[opp].indexOf(bidO),1);
     // 정산
     const aucWins=aBeatsB(bidA,bidO);
@@ -147,6 +173,7 @@ function playGame(d1, d2) {
     const s0=checkSet(g.acq[0]), s1=checkSet(g.acq[1]);
     if(s0)return{winner:0,turns:g.turns,setKind:s0};
     if(s1)return{winner:1,turns:g.turns,setKind:s1};
+    g.auctioneer = 1 - g.auctioneer;   // 실제 게임처럼 진행자 매 턴 교대
   }
   return { winner:-1, turns:g.turns };
 }
