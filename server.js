@@ -109,16 +109,28 @@ function startTurn(game) {
 
 function createGame() {
   const deck = initDeck();
+  // 선공 뽑기용 카드 2장 (덱과 별개 컨셉 카드)
+  const all = initDeck();
+  const pickCards = [all[0], all.find(c => c.id !== all[0].id)];
   const game = {
     centerDeck: deck.slice(0, 12),
     p1Hand: deck.slice(12, 18),
     p2Hand: deck.slice(18, 24),
     p1Acquired: [], p2Acquired: [],
-    turn: 1, phase: 'draw', auctioneer: 1, auction: null,
+    turn: 1, phase: 'pick', auctioneer: 1, auction: null,
     time: { 1: 420, 2: 420 },   // 체스 시계: 각 7분(초)
+    pick: { cards: pickCards, choices: [null, null], revealed: false },  // 선공 결정
   };
-  startTurn(game);
   return game;
+}
+
+// 선공 뽑기 완료 → 강한 카드 뽑은 사람이 선공
+function resolvePick(game) {
+  const p = game.pick;
+  const c1 = p.cards[p.choices[0]], c2 = p.cards[p.choices[1]];
+  game.auctioneer = aBeatsB(c1, c2) ? 1 : 2;
+  p.revealed = true;
+  game.phase = 'pick_reveal';
 }
 
 // 현재 시간이 흐르는(행동해야 하는) 플레이어. 없으면 0
@@ -130,7 +142,7 @@ function activePlayer(g) {
       const aucBid = g.auctioneer === 1 ? g.auction.p1Submitted : g.auction.p2Submitted;
       return aucBid ? (g.auctioneer === 1 ? 2 : 1) : g.auctioneer;  // 진행자 먼저
     }
-    default: return 0;  // reveal, game_over
+    default: return 0;  // pick, reveal, game_over
   }
 }
 
@@ -393,6 +405,15 @@ function stateFor(game, pi) {
       oppBid: showOpp ? oppBidCard : null,
     };
   }
+  // 선공 뽑기 정보 (공개 전엔 카드 내용 숨김)
+  let pick = null;
+  if (game.pick && (game.phase === 'pick' || game.phase === 'pick_reveal')) {
+    pick = {
+      myChoice:  game.pick.choices[pi],
+      oppChoice: game.pick.choices[1 - pi],
+      cards: game.pick.revealed ? game.pick.cards : [null, null],
+    };
+  }
   return {
     phase: game.phase, turn: game.turn, auctioneer: game.auctioneer,
     centerDeckSize: game.centerDeck.length,
@@ -400,7 +421,7 @@ function stateFor(game, pi) {
     oppHandLen: isP1 ? game.p2Hand.length : game.p1Hand.length,
     myAcq:  isP1 ? game.p1Acquired : game.p2Acquired,
     oppAcq: isP1 ? game.p2Acquired : game.p1Acquired,
-    auction, myIndex: pi + 1,
+    auction, pick, myIndex: pi + 1,
     time: game.time, active: activePlayer(game),
   };
 }
@@ -553,7 +574,7 @@ io.on('connection', (socket) => {
     room.players[slot] = socket.id;
     socket.leave('lobby');
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = slot; socket.pid = pid;
-    if (room.graceTimer) { clearTimeout(room.graceTimer); room.graceTimer = null; }
+    if (room.graceTimer) { clearInterval(room.graceTimer); room.graceTimer = null; }  // 유예 정지(남은 시간 유지)
     if (!room.clockOn) startClock(roomId);               // 멈췄던 시계 재개
     socket.emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks, profiles: room.profiles });
     broadcast(roomId);
@@ -572,6 +593,35 @@ io.on('connection', (socket) => {
     else { matchQueue.push(me); socket.emit('queued'); }
   });
   socket.on('cancel_match', () => { matchQueue = matchQueue.filter(q => q.sid !== socket.id); socket.emit('unqueued'); });
+
+  // 선공 뽑기: 중앙 카드 2장 중 하나 선택
+  socket.on('pick_card', ({ slot } = {}) => {
+    const room = rooms[socket.roomId]; if (!room?.game) return;
+    const g = room.game;
+    if (g.phase !== 'pick' || !g.pick) return;
+    if (slot !== 0 && slot !== 1) return;
+    const pi = socket.playerIndex;
+    if (g.pick.choices[pi] !== null) return;                       // 이미 골랐음
+    if (g.pick.choices[1 - pi] === slot) return;                   // 상대가 고른 카드
+    g.pick.choices[pi] = slot;
+    // AI 상대면 남은 카드 자동 선택
+    if (room.cpuIndex !== undefined && g.pick.choices[room.cpuIndex] === null) {
+      g.pick.choices[room.cpuIndex] = 1 - slot;
+    }
+    if (g.pick.choices[0] !== null && g.pick.choices[1] !== null) {
+      resolvePick(g);
+      broadcast(socket.roomId);
+      // 2.2초 공개 후 게임 시작
+      setTimeout(() => {
+        if (!rooms[socket.roomId] || g.phase !== 'pick_reveal') return;
+        startTurn(g);
+        broadcast(socket.roomId);
+        setTimeout(() => maybeCpuAct(socket.roomId), 400);
+      }, 2200);
+    } else {
+      broadcast(socket.roomId);
+    }
+  });
 
   socket.on('draw_card', () => {
     const room = rooms[socket.roomId]; if (!room?.game) return;
@@ -647,14 +697,24 @@ io.on('connection', (socket) => {
     if (room.rematch[0] && room.rematch[1]) restartGame(socket.roomId);
   });
 
-  // 게임 나가기
+  // 게임 나가기 — 진행 중이면 나간 사람 패배 (몰수패)
   socket.on('leave_room', () => {
     const roomId = socket.roomId;
     const room = roomId && rooms[roomId];
     if (!room) return;
-    if (room.graceTimer) clearTimeout(room.graceTimer);
+    if (room.graceTimer) { clearInterval(room.graceTimer); room.graceTimer = null; }
     endClock(room);
-    room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('opponent_left'); });
+    const g = room.game;
+    const activeGame = g && g.phase !== 'game_over' && !room.vsBot;
+    if (activeGame) {
+      // 나간 사람 = 패배 (전적 반영 + 상대에게 몰수승 화면)
+      const winner = socket.playerIndex === 0 ? 2 : 1;
+      g.phase = 'game_over';
+      finishStats(room, winner);
+      room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
+    } else {
+      room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('opponent_left'); });
+    }
     delete rooms[roomId];
     socket.roomId = null;
     socket.join('lobby'); broadcastRooms();
@@ -671,14 +731,25 @@ io.on('connection', (socket) => {
     if (slot !== -1) room.players[slot] = null;
     // 게임 종료 상태면 즉시 정리
     if (!room.game || room.game.phase === 'game_over') { endClock(room); delete rooms[roomId]; broadcastRooms(); return; }
-    // 진행 중이면 시계 멈추고 유예시간 부여 (재접속 대기)
+    // 진행 중이면 시계 멈추고 유예 카운트다운 (누적 60초 — 재접속해도 남은 시간 유지)
     endClock(room);
-    room.players.forEach(s => { if (s) io.to(s).emit('opp_disconnected'); });
-    if (room.graceTimer) clearTimeout(room.graceTimer);
-    room.graceTimer = setTimeout(() => {
-      room.players.forEach(s => { if (s) io.to(s).emit('opponent_left'); });
-      endClock(room); delete rooms[roomId]; broadcastRooms();
-    }, 60000);  // 60초 안에 재접속하면 이어서
+    room.graceLeft = room.graceLeft || [60, 60];
+    room.players.forEach(s => { if (s) io.to(s).emit('opp_disconnected', { left: room.graceLeft[slot] }); });
+    if (room.graceTimer) clearInterval(room.graceTimer);
+    room.graceTimer = setInterval(() => {
+      if (!rooms[roomId]) { clearInterval(room.graceTimer); return; }
+      room.graceLeft[slot]--;
+      room.players.forEach(s => { if (s) io.to(s).emit('grace_tick', { left: room.graceLeft[slot] }); });
+      if (room.graceLeft[slot] <= 0) {
+        clearInterval(room.graceTimer); room.graceTimer = null;
+        // 유예 소진 → 튕긴 사람 패배
+        const winner = slot === 0 ? 2 : 1;
+        if (room.game) room.game.phase = 'game_over';
+        finishStats(room, winner);
+        room.players.forEach((s, i) => { if (s) io.to(s).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
+        endClock(room); delete rooms[roomId]; broadcastRooms();
+      }
+    }, 1000);
   });
 });
 

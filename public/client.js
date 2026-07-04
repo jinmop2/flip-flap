@@ -34,7 +34,8 @@ socket.on('auth_ok', ({ profile }) => { myAccount = profile; renderAccount(); })
 socket.on('disconnect', () => setConn('연결 끊김 — 재접속 중…', 'bad'));
 socket.on('connect_error', (e) => { setConn('서버 연결 실패', 'bad'); console.error('socket connect_error:', e && e.message); });
 socket.on('rejoin_failed', () => { clearSession(); });
-socket.on('opp_disconnected', () => setConn('상대 연결 끊김 — 재접속 대기 중…', 'bad'));
+socket.on('opp_disconnected', ({ left } = {}) => setConn(`상대 연결 끊김 — ${left ?? 60}초 안에 재접속 못 하면 몰수승!`, 'bad'));
+socket.on('grace_tick', ({ left } = {}) => setConn(`상대 연결 끊김 — ${left}초 안에 재접속 못 하면 몰수승!`, 'bad'));
 socket.on('opp_reconnected', () => { setConn('상대 재접속됨', 'ok'); setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400); });
 
 // ── 난이도 선택 ─────────────────────────────────────────────
@@ -62,7 +63,14 @@ async function apiPost(url, body) {
   try { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
   catch (_) { return { error: '서버 연결 실패' }; }
 }
-function openAuth(mode) { authMode = mode || 'login'; setAuthMode(authMode); document.getElementById('authErr').textContent = ''; document.getElementById('authModal').classList.add('show'); }
+function openAuth(mode) {
+  authMode = mode || 'login'; setAuthMode(authMode);
+  document.getElementById('authErr').textContent = '';
+  // 마지막 로그인 아이디 기억
+  const last = localStorage.getItem('ff_lastid');
+  if (last && !document.getElementById('authId').value) document.getElementById('authId').value = last;
+  document.getElementById('authModal').classList.add('show');
+}
 function closeAuth() { document.getElementById('authModal').classList.remove('show'); }
 function setAuthMode(m) {
   authMode = m;
@@ -81,6 +89,7 @@ async function submitAuth() {
     : await apiPost('/api/login', { id, password });
   if (res.error) { err.textContent = '⚠️ ' + res.error; return; }
   localStorage.setItem('ff_auth', res.token);
+  localStorage.setItem('ff_lastid', id);   // 아이디 기억
   myAccount = res.profile;
   socket.emit('auth', { token: res.token });
   closeAuth(); renderAccount();
@@ -113,7 +122,7 @@ function renderAccount() {
 function profileChipHTML(p) {
   return `<div class="pc-rank" style="color:${p.rankColor}">${p.rankIcon}</div>
     <div class="pc-mid"><div class="pc-nick">${esc(p.nick)}</div>
-    <div class="pc-sub">Lv.${p.level} · <span style="color:${p.rankColor}">${esc(p.rank)}</span> · ${p.wins}승 ${p.losses}패</div></div>`;
+    <div class="pc-sub">Lv.${p.level} · <span style="color:${p.rankColor}">${esc(p.rank)}</span> · ${p.wins}승 ${p.losses}패 · <b style="color:#ffe9a8">${p.rp} RP</b></div></div>`;
 }
 // 로그인 프로필이 게임 종료 등으로 갱신됨
 socket.on('profile', ({ profile, result }) => {
@@ -381,6 +390,7 @@ function stopTitleBlink() { if (titleBlink) { clearInterval(titleBlink); titleBl
 document.addEventListener('visibilitychange', () => { if (!document.hidden) stopTitleBlink(); });
 function isMyAction(s) {
   if (!s) return false;
+  if (s.phase === 'pick') return s.pick && s.pick.myChoice == null;
   if (['draw', 'offer', 'choose_type'].includes(s.phase)) return s.auctioneer === s.myIndex;
   if (s.phase === 'bidding') return s.auction && !s.auction.myBid && (s.auctioneer === s.myIndex || s.auction.oppBidSubmitted);
   return false;
@@ -486,8 +496,9 @@ function recordResult(winner, mi) {
 }
 function renderLobbyStats() {
   const el = document.getElementById('lobbyStats'); if (!el) return;
-  const s = getStats(), total = s.win + s.loss + s.draw;
-  el.textContent = total > 0 ? `전적 ${s.win}승 ${s.loss}패${s.draw ? ` ${s.draw}무` : ''}  ·  승률 ${Math.round(s.win / total * 100)}%` : '';
+  // 전적은 로그인 계정에만 표시 (게스트는 기록 없음)
+  if (!myAccount) { el.textContent = ''; return; }
+  el.textContent = '';   // 계정 전적은 프로필 칩에 표시되므로 중복 제거
 }
 renderLobbyStats();
 socket.on('special', () => {
@@ -497,7 +508,7 @@ socket.on('special', () => {
   t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
   setTimeout(() => { t.style.display = 'none'; }, 2600);
 });
-socket.on('game_over', ({ winner, setKind, timeout, byProgress, myIndex: mi }) => {
+socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex: mi }) => {
   clearSession(); stopTitleBlink(); recordResult(winner, mi);
   const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
   let delay = 500;
@@ -506,21 +517,26 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, myIndex: mi }) =
     desc.textContent = '세트 근접도가 완전히 같아요!';
   } else if (winner === mi) {
     title.textContent = '🏆 승리!'; title.style.color = '#c8a000';
-    desc.textContent = timeout ? '상대 시간 초과!'
+    desc.textContent = forfeit ? '상대가 게임을 떠났어요 — 몰수승!'
+      : timeout ? '상대 시간 초과!'
       : byProgress ? `세트 근접 승리! (${setKind}짜리에 가장 가까웠어요)`
       : `${setKind}짜리 세트 완성!`;
     playSound('victory');
-    if (setKind && !byProgress) { celebrateSet('myAcq', setKind); playSound('setwin'); delay = 1400; }
+    if (setKind && !byProgress && !forfeit) { celebrateSet('myAcq', setKind); playSound('setwin'); delay = 1400; }
     else animateWinCards();
   } else {
     title.textContent = '패배...'; title.style.color = '#6a5a70';
-    desc.textContent = timeout ? '시간 초과...'
+    desc.textContent = forfeit ? '접속이 끊겨 몰수패 처리됐어요.'
+      : timeout ? '시간 초과...'
       : byProgress ? '상대가 세트에 더 가까웠어요.'
       : `상대가 ${setKind}짜리 세트를 완성했어요.`;
     playSound('defeat');
-    if (setKind && !byProgress) { celebrateSet('oppAcq', setKind); delay = 1400; }
+    if (setKind && !byProgress && !forfeit) { celebrateSet('oppAcq', setKind); delay = 1400; }
   }
   renderGameOverStats(winner, byProgress ? null : setKind, mi);
+  // 몰수 게임은 방이 사라져서 재대결 불가
+  const rb = document.getElementById('rematchBtn');
+  if (rb) rb.style.display = (forfeit && !isVsBot) ? 'none' : '';
   setTimeout(() => document.getElementById('gameOver').style.display = 'flex', delay);
 });
 
@@ -668,7 +684,10 @@ function render(changed = false) {
     if (myTurnToBid) return '배팅 카드를 손패에서 선택하세요';
     return isVsBot ? think('진행자(AI) 먼저 배팅 중') : '진행자가 먼저 배팅합니다 — 대기 중';
   };
+  const firstNick = () => (gameNicks && gameNicks[s.auctioneer - 1]) || (s.auctioneer === s.myIndex ? '나' : '상대');
   const msgs = {
+    pick:        s.pick && s.pick.myChoice != null ? (isVsBot ? '' : '상대가 고르는 중...') : '🃏 카드를 골라 선공을 정하세요!',
+    pick_reveal: `⚡ ${firstNick()} 선공!`,
     draw:        mine ? '🂠 중앙덱을 클릭해 카드를 뽑으세요' : (isVsBot ? think('AI가 뽑는 중') : '상대가 카드를 뽑는 중...'),
     offer:       mine ? '중앙 카드 공개 — 출품할 카드를 선택하세요' : (isVsBot ? think('AI 생각 중') : '상대가 출품 중...'),
     choose_type: mine ? '경매 방식 선택 — 출품카드는 다른 손패 클릭 시 교체돼요' : (isVsBot ? think('AI 생각 중') : '상대가 방식 선택 중...'),
@@ -787,6 +806,32 @@ function renderAuction(changed) {
   const action = document.getElementById('actionArea'), badge = document.getElementById('auctionTypeBadge');
   items.innerHTML = ''; action.innerHTML = '';
   renderBids();
+
+  // ── 선공 뽑기 단계 ──
+  if ((s.phase === 'pick' || s.phase === 'pick_reveal') && s.pick) {
+    badge.textContent = '선공 결정'; badge.className = 'type-badge open';
+    const p = s.pick;
+    [0, 1].forEach(slot => {
+      const revealed = s.phase === 'pick_reveal' && p.cards[slot];
+      const isMine = p.myChoice === slot, isOpp = p.oppChoice === slot;
+      const label = revealed
+        ? (isMine ? '나' : isOpp ? '상대' : '')
+        : (isMine ? '내 선택 ✓' : isOpp ? '상대 선택' : '');
+      const wrap = document.createElement('div'); wrap.className = 'a-slot';
+      const lbl = document.createElement('div'); lbl.className = 'a-label'; lbl.textContent = label || '?';
+      wrap.appendChild(lbl);
+      const cardEl = makeCard(revealed ? p.cards[slot] : null, { reveal: !!revealed });
+      if (s.phase === 'pick' && p.myChoice == null && !isOpp) {
+        cardEl.classList.add('selectable', 'pickable');
+        cardEl.addEventListener('click', () => { playSound('flip'); socket.emit('pick_card', { slot }); });
+      }
+      if (isMine) cardEl.style.outline = '2px solid var(--gold)';
+      wrap.appendChild(cardEl);
+      items.appendChild(wrap);
+    });
+    return;
+  }
+
   if (!s.auction) { badge.textContent = ''; badge.className = ''; return; }
 
   const a = s.auction, mine = s.auctioneer === s.myIndex, atype = a.auctionType, isReveal = s.phase === 'reveal';

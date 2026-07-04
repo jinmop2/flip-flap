@@ -92,10 +92,11 @@
     }
     .diff-btn.active { border-color:var(--gold); color:var(--gold); background:#251a10; }
     .join-row { display:flex; gap:8px; }
-    input[type=text] {
+    input[type=text], input[type=password] {
       flex:1; padding:12px 14px; border-radius:11px; border:2px solid #2a2130; background:#16101c;
       color:#e8e2d8; font-family:'Fredoka'; font-size:.95rem; text-transform:uppercase; letter-spacing:3px; text-align:center;
     }
+    input[type=password] { text-transform:none; letter-spacing:2px; text-align:left; }
     input:focus { outline:none; border-color:var(--gold); }
     .divider-line { border:none; border-top:1px solid #2a2130; margin:2px 0; }
     .lobby-rules-link { background:none; border:none; color:#6a5a70; font-family:'Fredoka'; font-size:.82rem; cursor:pointer; padding:6px; margin-top:2px; }
@@ -498,6 +499,11 @@
     @keyframes reachGlow { 0%,100%{ box-shadow:0 2px 5px rgba(0,0,0,.45); } 50%{ box-shadow:0 2px 5px rgba(0,0,0,.45), 0 0 14px 2px rgba(255,154,60,.7); } }
     .pile-group.reach .card { animation:reachGlow 1.3s ease-in-out infinite; border-color:#ff9a3c !important; }
     .pile-count.reach { color:#ff9a3c !important; font-weight:700; }
+
+    /* 선공 뽑기 카드 발광 */
+    @keyframes pickPulse { 0%,100%{ box-shadow:0 3px 8px rgba(0,0,0,.4); } 50%{ box-shadow:0 3px 8px rgba(0,0,0,.4), 0 0 20px 4px rgba(200,160,0,.6); } }
+    .card.pickable { animation:pickPulse 1.2s ease-in-out infinite; cursor:pointer; }
+    .card.pickable:hover { transform:translateY(-10px) scale(1.08); }
 
     /* 세트 완성 강조 */
     @keyframes completeGlow { 0%,100%{ box-shadow:0 2px 5px rgba(0,0,0,.45); } 50%{ box-shadow:0 2px 5px rgba(0,0,0,.45), 0 0 18px 4px rgba(255,215,64,.9); } }
