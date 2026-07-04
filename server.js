@@ -3,8 +3,15 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const path = require('path');
+const accounts = require('./accounts');
 
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ── 인증 API ───────────────────────────────────────────────
+app.post('/api/signup', (req, res) => { const { id, password, nick } = req.body || {}; res.json(accounts.signup(id, password, nick)); });
+app.post('/api/login',  (req, res) => { const { id, password } = req.body || {}; res.json(accounts.login(id, password)); });
+app.post('/api/me',     (req, res) => { const { token } = req.body || {}; res.json(accounts.meByToken(token)); });
 
 // ── 카드 모델 ──────────────────────────────────────────────
 // card = { kind: 2|3|4|6, grade: n, id: kind*100+grade }
@@ -391,6 +398,7 @@ function startClock(roomId) {
       if (g.time[ap] <= 0) {
         g.phase = 'game_over';
         const winner = ap === 1 ? 2 : 1;
+        finishStats(room, winner);
         room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_over', { winner, timeout: true, myIndex: i + 1 }); });
         endClock(room);
         return;
@@ -425,15 +433,28 @@ io.on('connection', (socket) => {
     if (old) { endClock(old); delete rooms[socket.roomId]; socket.roomId = null; broadcastRooms(); }
   }
 
+  // 로그인 토큰 연결 (계정 프로필)
+  socket.on('auth', ({ token } = {}) => {
+    const u = token && accounts.byToken(token);
+    if (u) { socket.token = token; socket.emit('auth_ok', { profile: accounts.profileOf(u) }); }
+    else { socket.token = null; }
+  });
+  // 이 소켓 플레이어의 프로필 (로그인=계정, 아니면 게스트)
+  function myProfile(nick) {
+    if (socket.token) { const u = accounts.byToken(socket.token); if (u) return accounts.profileOf(u); }
+    return { nick: cleanNick(nick), guest: true };
+  }
+
   socket.on('enter_lobby', () => { socket.join('lobby'); socket.emit('rooms', openRoomList()); });
 
   socket.on('create_room', ({ vsBot = false, difficulty = 'hard', pid, name, nick, secret, password } = {}) => {
     leaveOldRoom();
     socket.leave('lobby');
     const roomId = makeRoomId();
-    const hostNick = cleanNick(nick);
+    const prof = myProfile(nick);
     rooms[roomId] = {
-      players: [socket.id, null], pids: [pid || null, null], nicks: [hostNick, null],
+      players: [socket.id, null], pids: [pid || null, null], nicks: [prof.nick, null],
+      profiles: [prof, null], tokens: [socket.token || null, null],
       name: String(name || '').trim().slice(0, 20), game: null, vsBot, difficulty,
       secret: !vsBot && !!secret, password: String(password || '').slice(0, 12),
     };
@@ -441,8 +462,9 @@ io.on('connection', (socket) => {
     if (vsBot) {
       rooms[roomId].cpuIndex = 1;
       rooms[roomId].nicks[1] = 'AI';
+      rooms[roomId].profiles[1] = { nick: 'AI', guest: true, bot: true };
       rooms[roomId].game = createGame();
-      socket.emit('game_start', { vsBot: true, difficulty, roomId, nicks: rooms[roomId].nicks });
+      socket.emit('game_start', { vsBot: true, difficulty, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles });
       broadcast(roomId);
       startClock(roomId);
       setTimeout(() => maybeCpuAct(roomId), 600);
@@ -457,11 +479,13 @@ io.on('connection', (socket) => {
     if (!room) return socket.emit('error', '방을 찾을 수 없어요.');
     if (room.game || room.players.filter(Boolean).length >= 2) return socket.emit('error', '이미 시작했거나 꽉 찬 방이에요.');
     if (room.secret && String(password || '') !== room.password) return socket.emit('need_password', { roomId, wrong: password != null });
-    room.players[1] = socket.id; room.pids[1] = pid || null; room.nicks[1] = cleanNick(nick);
+    const prof = myProfile(nick);
+    room.players[1] = socket.id; room.pids[1] = pid || null; room.nicks[1] = prof.nick;
+    room.profiles[1] = prof; room.tokens[1] = socket.token || null;
     socket.leave('lobby');
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 1; socket.pid = pid;
     room.game = createGame();
-    io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: room.nicks });
+    io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: room.nicks, profiles: room.profiles });
     broadcast(roomId);
     startClock(roomId);
     broadcastRooms();
@@ -478,7 +502,7 @@ io.on('connection', (socket) => {
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = slot; socket.pid = pid;
     if (room.graceTimer) { clearTimeout(room.graceTimer); room.graceTimer = null; }
     if (!room.clock) startClock(roomId);                 // 멈췄던 시계 재개
-    socket.emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks });
+    socket.emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks, profiles: room.profiles });
     broadcast(roomId);
     room.players.forEach(s => { if (s) io.to(s).emit('opp_reconnected'); });
     setTimeout(() => maybeCpuAct(roomId), 300);
@@ -594,7 +618,7 @@ function restartGame(roomId) {
   const room = rooms[roomId]; if (!room) return;
   room.game = createGame();
   room.rematch = [false, false];
-  room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks }); });
+  room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks, profiles: room.profiles }); });
   broadcast(roomId);
   startClock(roomId);
   if (room.cpuIndex !== undefined) setTimeout(() => maybeCpuAct(roomId), 600);
@@ -652,6 +676,7 @@ function settle(roomId) {
     broadcast(roomId);
     setTimeout(() => {
       if (!rooms[roomId]) return;
+      finishStats(room, winner);
       room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_over', { winner, setKind: p1Set || p2Set, myIndex: i + 1 }); });
     }, 1700);
     return;
@@ -662,6 +687,7 @@ function settle(roomId) {
     endClock(room);
     const winner = resolveByProgress(g.p1Acquired, g.p2Acquired);
     const setKind = winner ? progress(winner === 1 ? g.p1Acquired : g.p2Acquired).kind : null;
+    finishStats(room, winner);
     room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_over', { winner, setKind, byProgress: true, myIndex: i + 1 }); });
     return;
   }
@@ -670,6 +696,17 @@ function settle(roomId) {
   startTurn(g);
   broadcast(roomId);
   setTimeout(() => maybeCpuAct(roomId), 400);
+}
+
+// 로그인 유저의 전적/랭크/레벨 반영 + 갱신된 프로필 전송
+function finishStats(room, winner) {
+  if (!room.tokens) return;
+  room.tokens.forEach((tok, i) => {
+    if (!tok) return;
+    const result = winner === 0 ? 'draw' : (winner === i + 1 ? 'win' : 'loss');
+    const prof = accounts.recordResult(tok, result);
+    if (prof && room.players[i]) io.to(room.players[i]).emit('profile', { profile: prof, result });
+  });
 }
 
 const PORT = process.env.PORT || 3000;

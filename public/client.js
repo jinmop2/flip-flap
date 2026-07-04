@@ -21,6 +21,8 @@ function setConn(text, cls) {
 socket.on('connect', () => {
   setConn('서버 연결됨', 'ok');
   setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400);
+  const tk = localStorage.getItem('ff_auth');
+  if (tk) socket.emit('auth', { token: tk });   // 로그인 세션 연결
   // 재접속 or 초대 링크 or 로비 목록
   const sess = localStorage.getItem('ff_sess');
   const urlRoom = new URLSearchParams(location.search).get('room');
@@ -28,6 +30,7 @@ socket.on('connect', () => {
   else if (urlRoom)  socket.emit('join_room', { roomId: urlRoom.toUpperCase(), pid: PID, nick: getNick() });
   else               socket.emit('enter_lobby');
 });
+socket.on('auth_ok', ({ profile }) => { myAccount = profile; renderAccount(); });
 socket.on('disconnect', () => setConn('연결 끊김 — 재접속 중…', 'bad'));
 socket.on('connect_error', (e) => { setConn('서버 연결 실패', 'bad'); console.error('socket connect_error:', e && e.message); });
 socket.on('rejoin_failed', () => { clearSession(); });
@@ -42,7 +45,7 @@ document.getElementById('diffRow').addEventListener('click', e => {
   difficulty = b.dataset.diff;
 });
 
-// ── 닉네임 ──────────────────────────────────────────────────
+// ── 닉네임 (게스트) ─────────────────────────────────────────
 const nickInput = document.getElementById('nickInput');
 (function initNick() {
   let n = localStorage.getItem('ff_nick');
@@ -50,7 +53,73 @@ const nickInput = document.getElementById('nickInput');
   if (nickInput) nickInput.value = n;
 })();
 if (nickInput) nickInput.addEventListener('input', () => { const v = nickInput.value.trim(); if (v) localStorage.setItem('ff_nick', v); });
-function getNick() { return (nickInput && nickInput.value.trim()) || localStorage.getItem('ff_nick') || '게스트'; }
+function getNick() { return myAccount ? myAccount.nick : ((nickInput && nickInput.value.trim()) || localStorage.getItem('ff_nick') || '게스트'); }
+
+// ── 회원 계정 ────────────────────────────────────────────────
+let myAccount = null;   // 로그인 프로필 (null=게스트)
+let authMode = 'login';
+async function apiPost(url, body) {
+  try { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
+  catch (_) { return { error: '서버 연결 실패' }; }
+}
+function openAuth(mode) { authMode = mode || 'login'; setAuthMode(authMode); document.getElementById('authErr').textContent = ''; document.getElementById('authModal').classList.add('show'); }
+function closeAuth() { document.getElementById('authModal').classList.remove('show'); }
+function setAuthMode(m) {
+  authMode = m;
+  document.getElementById('authTabLogin').classList.toggle('active', m === 'login');
+  document.getElementById('authTabSignup').classList.toggle('active', m === 'signup');
+  document.getElementById('authNick').style.display = m === 'signup' ? '' : 'none';
+  document.getElementById('authSubmit').textContent = m === 'signup' ? '회원가입' : '로그인';
+}
+async function submitAuth() {
+  const id = document.getElementById('authId').value.trim();
+  const password = document.getElementById('authPw').value;
+  const nick = document.getElementById('authNick').value.trim();
+  const err = document.getElementById('authErr');
+  const res = authMode === 'signup'
+    ? await apiPost('/api/signup', { id, password, nick })
+    : await apiPost('/api/login', { id, password });
+  if (res.error) { err.textContent = '⚠️ ' + res.error; return; }
+  localStorage.setItem('ff_auth', res.token);
+  myAccount = res.profile;
+  socket.emit('auth', { token: res.token });
+  closeAuth(); renderAccount();
+}
+function logout() {
+  localStorage.removeItem('ff_auth'); myAccount = null;
+  socket.emit('auth', { token: null }); renderAccount();
+}
+async function restoreSession() {
+  const tk = localStorage.getItem('ff_auth'); if (!tk) return;
+  const r = await apiPost('/api/me', { token: tk });
+  if (r.ok) { myAccount = r.profile; renderAccount(); }
+  else localStorage.removeItem('ff_auth');
+}
+function renderAccount() {
+  const chip = document.getElementById('profileChip');
+  const guest = document.getElementById('guestNick');
+  const authBtn = document.getElementById('authBtn');
+  if (myAccount) {
+    guest.style.display = 'none';
+    chip.style.display = 'flex';
+    chip.innerHTML = profileChipHTML(myAccount);
+    authBtn.textContent = '로그아웃'; authBtn.onclick = logout;
+  } else {
+    guest.style.display = 'flex';
+    chip.style.display = 'none';
+    authBtn.textContent = '로그인 / 회원가입'; authBtn.onclick = () => openAuth('login');
+  }
+}
+function profileChipHTML(p) {
+  return `<div class="pc-rank" style="color:${p.rankColor}">${p.rankIcon}</div>
+    <div class="pc-mid"><div class="pc-nick">${esc(p.nick)}</div>
+    <div class="pc-sub">Lv.${p.level} · <span style="color:${p.rankColor}">${esc(p.rank)}</span> · ${p.wins}승 ${p.losses}패</div></div>`;
+}
+// 로그인 프로필이 게임 종료 등으로 갱신됨
+socket.on('profile', ({ profile, result }) => {
+  myAccount = profile; renderAccount();
+});
+restoreSession();
 
 // ── 로비 다이얼로그 ─────────────────────────────────────────
 function openCreate() { document.getElementById('createModal').classList.add('show'); document.getElementById('roomNameInput').focus(); }
@@ -69,8 +138,22 @@ document.getElementById('visRow').addEventListener('click', e => {
 });
 
 // ── 방 목록 ─────────────────────────────────────────────────
-let gameNicks = null;
+let gameNicks = null, gameProfiles = null;
 function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+// 인게임 프로필 카드 렌더
+function renderGameProfile(elId, p, isMe) {
+  const wrap = document.getElementById(elId); if (!wrap) return;
+  const body = wrap.querySelector('.pc-body'); if (!body) return;
+  if (!p) { body.innerHTML = ''; return; }
+  if (p.bot) {
+    body.innerHTML = `<span class="gp-rank">🤖</span><div class="gp-txt"><div class="gp-nick">AI</div><div class="gp-meta">컴퓨터</div></div>`;
+  } else if (p.guest) {
+    body.innerHTML = `<span class="gp-rank">👤</span><div class="gp-txt"><div class="gp-nick">${esc(p.nick)}</div><div class="gp-meta">게스트</div></div>`;
+  } else {
+    body.innerHTML = `<span class="gp-rank" style="color:${p.rankColor}">${p.rankIcon}</span><div class="gp-txt"><div class="gp-nick">${esc(p.nick)}</div><div class="gp-meta">Lv.${p.level} · <span style="color:${p.rankColor}">${esc(p.rank)}</span> · ${p.wins}승 ${p.losses}패</div></div>`;
+  }
+}
 function refreshRooms() { socket.emit('enter_lobby'); }
 function joinRoomById(id, secret) {
   if (secret) {
@@ -218,7 +301,7 @@ function showEmote(emoji, side) {
   if (anchor) { const r = anchor.getBoundingClientRect(); if (r.width) { x = r.left + r.width / 2; y = side === 'me' ? r.top - 20 : r.bottom + 10; } }
   b.style.left = (x - 20) + 'px'; b.style.top = y + 'px';
   document.body.appendChild(b);
-  setTimeout(() => b.remove(), 1900);
+  setTimeout(() => b.remove(), 3100);
 }
 
 // ── 나가기 / 재대결 ─────────────────────────────────────────
@@ -292,9 +375,10 @@ function copyLink(btn) { copyText(`${location.origin}${location.pathname}?room=$
 function cancelWait() { clearSession(); location.href = location.origin + location.pathname; }
 
 socket.on('error', msg => alert(msg));
-socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks }) => {
+socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles }) => {
   isVsBot = vsBot;
   gameNicks = nicks || null;
+  gameProfiles = profiles || null;
   if (roomId) saveSession(roomId);
   // 재대결 대비 초기화
   document.getElementById('gameOver').style.display = 'none';
@@ -516,11 +600,15 @@ function render(changed = false) {
   const s = state, mine = s.auctioneer === s.myIndex, a = s.auction;
   document.getElementById('turnInfo').textContent = `턴 ${s.turn}`;
   if (s.time) updateClocks(s.time[1], s.time[2], s.active);
-  // 닉네임 표시
+  // 닉네임 + 프로필 표시
   if (gameNicks) {
     const oppN = gameNicks[s.myIndex === 1 ? 1 : 0], myN = gameNicks[s.myIndex === 1 ? 0 : 1];
     const oel = document.getElementById('oppNickLabel'); if (oel && oppN) oel.textContent = oppN;
     const mel = document.getElementById('myNickLabel'); if (mel && myN) mel.textContent = myN;
+  }
+  if (gameProfiles) {
+    renderGameProfile('oppProfile', gameProfiles[s.myIndex === 1 ? 1 : 0]);
+    renderGameProfile('myProfile',  gameProfiles[s.myIndex === 1 ? 0 : 1], true);
   }
 
   // 배팅 순서: 진행자 먼저 → 내가 배팅할 차례인지

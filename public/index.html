@@ -171,9 +171,30 @@
     #exitBtn { border-color:rgba(255,96,96,.35); color:#ff9a9a; }
     #exitBtn:hover { background:rgba(255,96,96,.18); }
 
-    /* 이모트 피커 */
+    /* ── 인게임 프로필 카드 ── */
+    .game-pcard {
+      position:absolute; z-index:5; display:flex; align-items:center; gap:8px;
+      background:rgba(0,0,0,.34); border:1px solid rgba(200,160,0,.22); border-radius:12px;
+      padding:6px 11px; backdrop-filter:blur(3px); max-width:180px;
+    }
+    #oppProfile { top:44px; left:16px; }
+    #myProfile  { bottom:14px; left:16px; }
+    .pc-body { display:flex; align-items:center; gap:8px; min-width:0; }
+    .pc-body .gp-rank { font-size:1.35rem; line-height:1; flex-shrink:0; }
+    .pc-body .gp-txt { min-width:0; }
+    .pc-body .gp-nick { font-size:.86rem; font-weight:700; color:#f0ead8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pc-body .gp-meta { font-size:.64rem; color:#9a8fa0; white-space:nowrap; }
+
+    /* 이모트 버튼(프로필 위) + 피커 */
+    .emote-wrap { position:relative; }
+    .emote-fab {
+      width:34px; height:34px; border-radius:50%; cursor:pointer; flex-shrink:0;
+      background:linear-gradient(135deg,#3a2a48,#241a2e); border:1px solid rgba(200,160,0,.35);
+      font-size:1.05rem; transition:transform .12s; line-height:1;
+    }
+    .emote-fab:hover { transform:scale(1.12) translateY(-1px); }
     #emotePicker {
-      display:none; position:absolute; top:56px; right:20px; z-index:6;
+      display:none; position:absolute; bottom:44px; left:-6px; z-index:8;
       background:#1c1424; border:1px solid #2a1c30; border-radius:14px; padding:8px;
       grid-template-columns:repeat(4,1fr); gap:4px; box-shadow:0 8px 24px rgba(0,0,0,.5);
       animation:slideDown .2s ease;
@@ -185,17 +206,32 @@
     }
     #emotePicker button:hover { background:rgba(200,160,0,.15); transform:scale(1.15); }
 
-    /* 날아가는 이모트 버블 */
+    /* 날아가는 이모트 버블 (뜨고 조금 머물다 사라짐) */
     .emote-bubble {
-      position:fixed; z-index:35; font-size:2.6rem; pointer-events:none;
-      animation:emoteFloat 1.8s ease-out forwards;
+      position:fixed; z-index:35; font-size:2.7rem; pointer-events:none;
+      animation:emoteFloat 3s ease-out forwards;
+      filter:drop-shadow(0 3px 8px rgba(0,0,0,.5));
     }
     @keyframes emoteFloat {
-      0%   { opacity:0; transform:translateY(0) scale(.4); }
-      18%  { opacity:1; transform:translateY(-18px) scale(1.25); }
-      35%  { transform:translateY(-30px) scale(1); }
-      100% { opacity:0; transform:translateY(-90px) scale(.9); }
+      0%   { opacity:0; transform:translateY(12px) scale(.4); }
+      10%  { opacity:1; transform:translateY(-12px) scale(1.35); }
+      20%  { transform:translateY(-22px) scale(1); }
+      80%  { opacity:1; transform:translateY(-28px) scale(1); }   /* 잠시 머묾 */
+      100% { opacity:0; transform:translateY(-48px) scale(.92); }
     }
+
+    /* 로비 프로필 칩 / 인증 */
+    .profile-chip { display:flex; align-items:center; gap:10px; background:#16101c; border:1px solid #2a1c30; border-radius:12px; padding:8px 14px; }
+    .profile-chip .pc-rank { font-size:1.6rem; }
+    .profile-chip .pc-mid { text-align:left; min-width:0; }
+    .profile-chip .pc-nick { font-size:.95rem; font-weight:700; color:#f0ead8; }
+    .profile-chip .pc-sub { font-size:.72rem; color:#9a8fa0; }
+    .auth-tabs { display:flex; gap:0; border-bottom:1px solid #2a1c30; margin-bottom:4px; }
+    .auth-tab { flex:1; background:none; border:none; padding:9px; cursor:pointer; font-family:'Fredoka'; font-size:.9rem; font-weight:600; color:#6a5a70; border-bottom:2px solid transparent; }
+    .auth-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+    #authModal input { text-transform:none; letter-spacing:0; text-align:left; }
+    .auth-err { color:#ff8a8a; font-size:.78rem; min-height:16px; }
+    .auth-hint { font-size:.7rem; color:#6a5a70; text-align:center; line-height:1.5; margin-top:2px; }
 
     #rematchNote { color:#ffe9a8; font-size:.82rem; min-height:18px; margin-bottom:10px; }
 
@@ -561,11 +597,13 @@
     <p id="lobbyStats"></p>
   </div>
   <div class="lobby-btns" id="lobbyMain">
-    <!-- 닉네임 -->
-    <div class="nick-bar">
+    <!-- 계정 / 닉네임 -->
+    <div id="profileChip" class="profile-chip" style="display:none"></div>
+    <div class="nick-bar" id="guestNick">
       <span>👤</span>
-      <input id="nickInput" type="text" placeholder="닉네임" maxlength="12">
+      <input id="nickInput" type="text" placeholder="게스트 닉네임" maxlength="12">
     </div>
+    <button class="lobby-rules-link" id="authBtn" onclick="openAuth('login')">로그인 / 회원가입</button>
 
     <!-- 혼자 연습 -->
     <div class="lobby-sec">
@@ -609,6 +647,25 @@
   </div>
 </div>
 
+<!-- 로그인 / 회원가입 다이얼로그 -->
+<div class="lb-modal" id="authModal" onclick="if(event.target===this)closeAuth()">
+  <div class="lb-box">
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="authTabLogin" onclick="setAuthMode('login')">로그인</button>
+      <button class="auth-tab" id="authTabSignup" onclick="setAuthMode('signup')">회원가입</button>
+    </div>
+    <input id="authId" type="text" placeholder="아이디 (영문/숫자 3~16자)" maxlength="16" autocomplete="username">
+    <input id="authPw" type="password" placeholder="비밀번호 (4자 이상)" autocomplete="current-password">
+    <input id="authNick" type="text" placeholder="닉네임 (중복 불가)" maxlength="12" style="display:none">
+    <div id="authErr" class="auth-err"></div>
+    <div class="lb-btns">
+      <button class="btn btn-gold" id="authSubmit" onclick="submitAuth()">로그인</button>
+      <button class="btn btn-outline" onclick="closeAuth()">취소</button>
+    </div>
+    <p class="auth-hint">회원가입하면 랭크·레벨·전적이 기록돼요. 가입 없이도 게스트로 플레이 가능!</p>
+  </div>
+</div>
+
 <!-- 방 만들기 다이얼로그 -->
 <div class="lb-modal" id="createModal" onclick="if(event.target===this)closeCreate()">
   <div class="lb-box">
@@ -643,20 +700,29 @@
     <span class="tl">FLIP</span><span class="tl flap">FLAP</span>
   </div>
   <div id="controls">
-    <div class="ctrl-btn" id="emoteBtn" title="이모트" onclick="toggleEmotes()">😀</div>
     <div class="ctrl-btn" id="bgmBtn" title="소리 끄기" onclick="toggleBGM()">🔊</div>
     <div class="ctrl-btn" id="rulesBtn" title="게임 설명" onclick="toggleRules(true)">?</div>
     <div class="ctrl-btn" id="exitBtn" title="나가기" onclick="exitGame()">🚪</div>
   </div>
-  <div id="emotePicker">
-    <button onclick="sendEmote('👍')">👍</button>
-    <button onclick="sendEmote('😆')">😆</button>
-    <button onclick="sendEmote('😮')">😮</button>
-    <button onclick="sendEmote('😱')">😱</button>
-    <button onclick="sendEmote('🔥')">🔥</button>
-    <button onclick="sendEmote('🤔')">🤔</button>
-    <button onclick="sendEmote('😏')">😏</button>
-    <button onclick="sendEmote('😭')">😭</button>
+
+  <!-- 상대 프로필 -->
+  <div class="game-pcard" id="oppProfile"><div class="pc-body"></div></div>
+  <!-- 내 프로필 (이모트 버튼 포함) -->
+  <div class="game-pcard" id="myProfile">
+    <div class="pc-body"></div>
+    <div class="emote-wrap">
+      <button class="emote-fab" id="emoteBtn" title="이모트" onclick="toggleEmotes()">😀</button>
+      <div id="emotePicker">
+        <button onclick="sendEmote('👍')">👍</button>
+        <button onclick="sendEmote('😆')">😆</button>
+        <button onclick="sendEmote('😮')">😮</button>
+        <button onclick="sendEmote('😱')">😱</button>
+        <button onclick="sendEmote('🔥')">🔥</button>
+        <button onclick="sendEmote('🤔')">🤔</button>
+        <button onclick="sendEmote('😏')">😏</button>
+        <button onclick="sendEmote('😭')">😭</button>
+      </div>
+    </div>
   </div>
 
   <div id="hud">
