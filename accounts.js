@@ -94,17 +94,18 @@ function profileOf(u) {
 function validId(id)   { return /^[A-Za-z0-9_]{3,16}$/.test(id || ''); }
 function validNick(n)  { const s = String(n || '').trim(); return s.length >= 1 && s.length <= 12; }
 
+const TOKEN_TTL = 30 * 24 * 3600 * 1000;   // 토큰 30일 만료
 function signup(id, pw, nick) {
   id = String(id || '').trim(); nick = String(nick || '').trim();
   if (!validId(id)) return { error: '아이디는 영문/숫자 3~16자예요.' };
-  if (String(pw || '').length < 4) return { error: '비밀번호는 4자 이상이어야 해요.' };
+  if (String(pw || '').length < 6) return { error: '비밀번호는 6자 이상이어야 해요.' };
   if (!validNick(nick)) return { error: '닉네임은 1~12자예요.' };
   const idl = id.toLowerCase(), nickl = nick.toLowerCase();
   if (db.users[idl]) return { error: '이미 있는 아이디예요.' };
   if (db.nickTaken[nickl]) return { error: '이미 사용 중인 닉네임이에요.' };
   const salt = crypto.randomBytes(12).toString('hex');
   const token = makeToken();
-  const u = { id, nick, salt, hash: hashPw(pw, salt), token, wins: 0, losses: 0, xp: 0, rp: 0, createdAt: Date.now() };
+  const u = { id, nick, salt, hash: hashPw(pw, salt), token, tokenExp: Date.now() + TOKEN_TTL, wins: 0, losses: 0, xp: 0, rp: 0, createdAt: Date.now() };
   db.users[idl] = u; db.nickTaken[nickl] = idl; tokenIndex[token] = idl; persist(idl);
   return { ok: true, token, profile: profileOf(u) };
 }
@@ -112,11 +113,27 @@ function login(id, pw) {
   const idl = String(id || '').trim().toLowerCase();
   const u = db.users[idl];
   if (!u || u.hash !== hashPw(pw, u.salt)) return { error: '아이디 또는 비밀번호가 틀렸어요.' };
-  if (!u.token) { u.token = makeToken(); tokenIndex[u.token] = idl; persist(idl); }
+  // 로그인마다 토큰 갱신·만료 연장
+  if (u.token) delete tokenIndex[u.token];
+  u.token = makeToken(); u.tokenExp = Date.now() + TOKEN_TTL;
+  tokenIndex[u.token] = idl; persist(idl);
   return { ok: true, token: u.token, profile: profileOf(u) };
 }
-function byToken(token) { const idl = tokenIndex[token]; return idl ? db.users[idl] : null; }
+function byToken(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return null;
+  if (u.tokenExp && Date.now() > u.tokenExp) { delete tokenIndex[token]; return null; }  // 만료
+  return u;
+}
 function meByToken(token) { const u = byToken(token); return u ? { ok: true, profile: profileOf(u) } : { error: '세션 만료' }; }
+
+// 랭킹 (RP 상위)
+function topPlayers(limit = 20) {
+  return Object.values(db.users)
+    .sort((a, b) => (b.rp - a.rp) || (b.wins - a.wins))
+    .slice(0, Math.min(limit, 50))
+    .map((u, i) => { const p = profileOf(u); return { no: i + 1, nick: p.nick, level: p.level, rank: p.rank, rankIcon: p.rankIcon, rankColor: p.rankColor, rp: p.rp, wins: p.wins, losses: p.losses }; });
+}
 
 // 결과 반영 (result: 'win'|'loss'|'draw')
 function recordResult(token, result) {
@@ -128,4 +145,4 @@ function recordResult(token, result) {
   return profileOf(u);
 }
 
-module.exports = { signup, login, byToken, meByToken, recordResult, profileOf };
+module.exports = { signup, login, byToken, meByToken, recordResult, profileOf, topPlayers };

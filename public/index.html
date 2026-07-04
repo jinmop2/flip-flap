@@ -235,6 +235,16 @@
     #authModal input { text-transform:none; letter-spacing:0; text-align:left; }
     .auth-err { color:#ff8a8a; font-size:.78rem; min-height:16px; }
     .auth-hint { font-size:.7rem; color:#6a5a70; text-align:center; line-height:1.5; margin-top:2px; }
+    /* 랭킹 행 */
+    .lb-row { display:flex; align-items:center; gap:8px; background:#1c1424; border:1px solid #2a1c30; border-radius:9px; padding:7px 10px; }
+    .lb-row.me { border-color:var(--gold); }
+    .lb-no { font-size:.8rem; font-weight:700; color:#8a7a80; width:22px; text-align:center; flex-shrink:0; }
+    .lb-no.top { color:var(--gold); }
+    .lb-nick { flex:1; font-size:.85rem; font-weight:600; color:#f0ead8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .lb-rank { font-size:.7rem; }
+    .lb-rp { font-size:.75rem; color:#ffe9a8; font-weight:700; flex-shrink:0; }
+    .lb-wl { font-size:.66rem; color:#8a7a80; flex-shrink:0; }
+    .lb-empty { font-size:.78rem; color:#6a5a70; text-align:center; padding:16px 0; }
 
     #rematchNote { color:#ffe9a8; font-size:.82rem; min-height:18px; margin-bottom:10px; }
 
@@ -641,11 +651,12 @@
     <div class="lobby-sec">
       <div class="sec-title">
         <span>온라인 대전</span>
-        <button class="rl-refresh" onclick="refreshRooms()" title="새로고침">↻</button>
+        <span><button class="rl-refresh" onclick="openLeaderboard()" title="랭킹" style="margin-right:8px">🏆</button><button class="rl-refresh" onclick="refreshRooms()" title="새로고침">↻</button></span>
       </div>
+      <button class="btn btn-gold" onclick="quickMatch()">⚡ 빠른 대전 (자동 매칭)</button>
       <div id="roomList"><div class="rl-empty">열린 방이 없어요. 방을 만들어보세요!</div></div>
       <div class="online-actions">
-        <button class="btn btn-gold btn-sm" onclick="openCreate()">➕ 방 만들기</button>
+        <button class="btn btn-outline btn-sm" onclick="openCreate()">➕ 방 만들기</button>
         <button class="btn btn-outline btn-sm" onclick="openCode()"># 코드로 참가</button>
       </div>
     </div>
@@ -664,6 +675,23 @@
     </div>
     <div class="wc-wait"><span class="thinking-dots">상대를 기다리는 중<span>.</span><span>.</span><span>.</span></span></div>
     <button class="lobby-rules-link" onclick="cancelWait()">← 취소</button>
+  </div>
+</div>
+
+<!-- 빠른 대전 매칭 중 -->
+<div class="lb-modal" id="matchModal">
+  <div class="lb-box" style="align-items:center; text-align:center;">
+    <div class="lb-title">⚡ 빠른 대전</div>
+    <div class="thinking-dots" style="font-size:.9rem; color:#8a7a80;">상대를 찾는 중<span>.</span><span>.</span><span>.</span></div>
+    <button class="btn btn-outline" onclick="cancelMatch()">취소</button>
+  </div>
+</div>
+
+<!-- 랭킹 -->
+<div class="lb-modal" id="lbModal" onclick="if(event.target===this)closeLb()">
+  <div class="lb-box" style="width:340px;">
+    <div class="lb-title">🏆 랭킹 <span class="close-x" style="float:right; cursor:pointer; color:#6a5a70;" onclick="closeLb()">×</span></div>
+    <div id="lbList" style="display:flex; flex-direction:column; gap:4px; max-height:60vh; overflow-y:auto;"></div>
   </div>
 </div>
 

@@ -121,6 +121,42 @@ socket.on('profile', ({ profile, result }) => {
 });
 restoreSession();
 
+// ── 빠른 대전 (자동 매칭) ───────────────────────────────────
+function quickMatch() {
+  socket.emit('quick_match', { pid: PID, nick: getNick() });
+  document.getElementById('matchModal').classList.add('show');
+}
+function cancelMatch() {
+  socket.emit('cancel_match');
+  document.getElementById('matchModal').classList.remove('show');
+}
+socket.on('queued', () => document.getElementById('matchModal').classList.add('show'));
+socket.on('unqueued', () => document.getElementById('matchModal').classList.remove('show'));
+
+// ── 랭킹 ────────────────────────────────────────────────────
+async function openLeaderboard() {
+  const modal = document.getElementById('lbModal'), list = document.getElementById('lbList');
+  list.innerHTML = '<div class="lb-empty">불러오는 중…</div>';
+  modal.classList.add('show');
+  try {
+    const r = await fetch('/api/leaderboard').then(x => x.json());
+    if (!r.ok || !r.players.length) { list.innerHTML = '<div class="lb-empty">아직 랭킹이 없어요. 첫 플레이어가 되어보세요!</div>'; return; }
+    const myNick = myAccount && myAccount.nick;
+    list.innerHTML = '';
+    r.players.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'lb-row' + (myNick && p.nick === myNick ? ' me' : '');
+      row.innerHTML = `<span class="lb-no${p.no <= 3 ? ' top' : ''}">${p.no <= 3 ? ['🥇','🥈','🥉'][p.no-1] : p.no}</span>
+        <span class="lb-rank" style="color:${p.rankColor}">${p.rankIcon}</span>
+        <span class="lb-nick">${esc(p.nick)}</span>
+        <span class="lb-wl">${p.wins}승 ${p.losses}패</span>
+        <span class="lb-rp">${p.rp} RP</span>`;
+      list.appendChild(row);
+    });
+  } catch (_) { list.innerHTML = '<div class="lb-empty">불러오기 실패</div>'; }
+}
+function closeLb() { document.getElementById('lbModal').classList.remove('show'); }
+
 // ── 로비 다이얼로그 ─────────────────────────────────────────
 function openCreate() { document.getElementById('createModal').classList.add('show'); document.getElementById('roomNameInput').focus(); }
 function closeCreate() { document.getElementById('createModal').classList.remove('show'); }
@@ -139,6 +175,7 @@ document.getElementById('visRow').addEventListener('click', e => {
 
 // ── 방 목록 ─────────────────────────────────────────────────
 let gameNicks = null, gameProfiles = null;
+let lastSig = {};   // 섹션별 변경 감지(불필요한 DOM 재생성 방지 → 렉↓)
 function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 
 // 인게임 프로필 카드 (컴팩트 — 클릭하면 전적 펼침)
@@ -390,12 +427,13 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles }) =
   gameNicks = nicks || null;
   gameProfiles = profiles || null;
   if (roomId) saveSession(roomId);
-  // 재대결 대비 초기화
+  // 재대결/매칭 대비 초기화
   document.getElementById('gameOver').style.display = 'none';
+  document.getElementById('matchModal').classList.remove('show');
   document.getElementById('rematchNote').textContent = '';
   const rb = document.getElementById('rematchBtn'); if (rb) { rb.disabled = false; rb.style.opacity = '1'; }
   prevPhase = null; selectedBidCard = null; prevMyAction = false; stopTitleBlink();
-  seenAcq.myAcq = new Set(); seenAcq.oppAcq = new Set(); boardCelebrated = false;
+  seenAcq.myAcq = new Set(); seenAcq.oppAcq = new Set(); boardCelebrated = false; lastSig = {};
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('game').style.display = 'flex';
   // 상대 태그: AI면 난이도, 사람이면 숨김
@@ -660,6 +698,9 @@ function drawCard() {
 function renderDeck() {
   const s = state, el = document.getElementById('deckStack');
   const n = s.centerDeckSize;
+  const drawable = s.phase === 'draw' && s.auctioneer === s.myIndex;
+  const sig = n + '|' + drawable;
+  if (lastSig.deck === sig) return; lastSig.deck = sig;   // 변경 없으면 재생성 안 함
   el.innerHTML = '';
   if (n <= 0) { el.style.display = 'none'; return; }
   el.style.display = 'block';
@@ -678,6 +719,7 @@ function renderDeck() {
 
 // 상대 손패 = 뒷면 카드 부채꼴
 function renderOppHand(n) {
+  if (lastSig.oppHand === n) return; lastSig.oppHand = n;   // 장수 그대로면 스킵
   const el = document.getElementById('oppHand'); el.innerHTML = '';
   for (let i = 0; i < n; i++) {
     const slot = document.createElement('div'); slot.className = 'fan-slot';
@@ -691,6 +733,8 @@ function renderOppHand(n) {
 const SET_REQ = { 2:2, 3:3, 4:4, 6:6 };
 const seenAcq = { myAcq: new Set(), oppAcq: new Set() };  // 획득 애니메이션용
 function renderPile(id, cards) {
+  const sig = (cards || []).map(c => c.id).join(',');
+  if (lastSig[id] === sig) return; lastSig[id] = sig;   // 획득 카드 그대로면 스킵
   const el = document.getElementById(id); el.innerHTML = '';
   const seen = seenAcq[id] || (seenAcq[id] = new Set());
   if (!cards?.length) { el.innerHTML = '<span class="pile-empty">획득 없음</span>'; return; }
@@ -831,7 +875,7 @@ function renderBids() {
 }
 
 function renderHand() {
-  const s = state, a = s.auction, el = document.getElementById('myHand'); el.innerHTML = '';
+  const s = state, a = s.auction, el = document.getElementById('myHand');
   const mine = s.auctioneer === s.myIndex;
   // 방식 선택 전(offer/choose_type)이면 손패 클릭으로 출품카드 교체 가능
   const offer = (s.phase === 'offer' || s.phase === 'choose_type') && mine;
@@ -839,6 +883,10 @@ function renderHand() {
   const bidding = s.phase === 'bidding' && a && !a.myBid && (mine || a.oppBidSubmitted);
   // 등급순 정렬로 손에 든 느낌
   const hand = [...s.myHand].sort((a, b) => a.kind - b.kind || a.grade - b.grade);
+  // 손패·상호작용·선택 상태 그대로면 재생성 스킵
+  const sig = hand.map(c => c.id).join(',') + '|' + (offer ? 'o' : '') + (bidding ? 'b' : '') + '|' + (selectedBidCard ? selectedBidCard.id : '');
+  if (lastSig.hand === sig) return; lastSig.hand = sig;
+  el.innerHTML = '';
   hand.forEach(card => {
     let cardEl;
     if (offer)
