@@ -586,6 +586,23 @@
 
       /* 룰 모달 */
       #rulesBox { padding:22px 20px; }
+
+      /* ── 모바일 프로필: 카드 안 가리게 축소·이동 ── */
+      .game-pcard { padding:3px 8px; max-width:132px; }
+      .pc-body .gp-rank { font-size:1rem; }
+      .pc-body .gp-nick { font-size:.72rem; }
+      .pc-body .gp-lv { display:none; }               /* 폭 절약 */
+      #oppProfile { top:26px; left:8px; }             /* 라벨 왼쪽·부채꼴 위 빈 공간 */
+      #myProfile  { bottom:6px; left:8px; }
+      #emoteWrap  { bottom:46px; left:8px; }
+      /* 라벨의 중복 닉 숨김 (프로필이 대신 표시) */
+      #oppNickLabel, #myNickLabel { display:none; }
+
+      /* ── 모바일 성능: 그림자·연출 단순화 ── */
+      .card { box-shadow:0 1px 3px rgba(0,0,0,.4); }
+      .card[data-kind] { box-shadow:0 1px 3px rgba(0,0,0,.4); }
+      .emote-bubble { filter:none; }
+      #tableLogo { opacity:.04; }
     }
   </style>
 </head>
