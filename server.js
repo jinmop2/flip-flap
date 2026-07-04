@@ -5,13 +5,27 @@ const io = require('socket.io')(http);
 const path = require('path');
 const accounts = require('./accounts');
 
-app.use(express.json());
+app.use(express.json({ limit: '4kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 간단 rate limit (IP당 분당 N회) — 무차별 대입 방지
+const rlMap = new Map();
+function rateLimit(max) {
+  return (req, res, next) => {
+    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'x').split(',')[0];
+    const now = Date.now();
+    let e = rlMap.get(ip);
+    if (!e || now - e.ts > 60000) { e = { count: 0, ts: now }; rlMap.set(ip, e); }
+    if (++e.count > max) return res.status(429).json({ error: '요청이 너무 많아요. 잠시 후 다시 시도하세요.' });
+    next();
+  };
+}
+setInterval(() => { const now = Date.now(); for (const [k, e] of rlMap) if (now - e.ts > 120000) rlMap.delete(k); }, 120000);
+
 // ── 인증 API ───────────────────────────────────────────────
-app.post('/api/signup', (req, res) => { const { id, password, nick } = req.body || {}; res.json(accounts.signup(id, password, nick)); });
-app.post('/api/login',  (req, res) => { const { id, password } = req.body || {}; res.json(accounts.login(id, password)); });
-app.post('/api/me',     (req, res) => { const { token } = req.body || {}; res.json(accounts.meByToken(token)); });
+app.post('/api/signup', rateLimit(20), (req, res) => { const { id, password, nick } = req.body || {}; res.json(accounts.signup(id, password, nick)); });
+app.post('/api/login',  rateLimit(30), (req, res) => { const { id, password } = req.body || {}; res.json(accounts.login(id, password)); });
+app.post('/api/me',     rateLimit(90), (req, res) => { const { token } = req.body || {}; res.json(accounts.meByToken(token)); });
 
 // ── 카드 모델 ──────────────────────────────────────────────
 // card = { kind: 2|3|4|6, grade: n, id: kind*100+grade }
@@ -568,10 +582,11 @@ io.on('connection', (socket) => {
     resolveBidding(socket.roomId);
   });
 
-  // 이모트 전달
+  // 이모트 전달 (입력 제한)
   socket.on('emote', ({ emoji } = {}) => {
     const room = rooms[socket.roomId]; if (!room) return;
-    room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('emote', { emoji }); });
+    const e = String(emoji || '').slice(0, 8); if (!e) return;
+    room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('emote', { emoji: e }); });
   });
 
   // 재대결 (같은 방에서 새 게임)

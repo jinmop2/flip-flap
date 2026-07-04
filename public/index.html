@@ -69,7 +69,7 @@
     #roomNameInput, #roomPwInput { text-transform:none; letter-spacing:0; text-align:left; }
     .wc-sub { font-size:.72rem; color:#6a5a70; margin-top:-4px; text-align:center; }
     /* 로비 다이얼로그 */
-    .lb-modal { display:none; position:fixed; inset:0; background:rgba(5,3,8,.8); backdrop-filter:blur(6px); z-index:45; align-items:center; justify-content:center; padding:20px; animation:fadeIn .25s; }
+    .lb-modal { display:none; position:fixed; inset:0; background:rgba(5,3,8,.8); z-index:45; align-items:center; justify-content:center; padding:20px; animation:fadeIn .25s; }
     .lb-modal.show { display:flex; }
     .lb-box { background:#16101c; border:1px solid #2a1c30; border-radius:18px; padding:24px 22px; width:300px; display:flex; flex-direction:column; gap:12px; animation:slideDown .3s cubic-bezier(.34,1.4,.64,1); }
     .lb-title { font-size:1.05rem; font-weight:700; color:#ffe9a8; }
@@ -171,30 +171,33 @@
     #exitBtn { border-color:rgba(255,96,96,.35); color:#ff9a9a; }
     #exitBtn:hover { background:rgba(255,96,96,.18); }
 
-    /* ── 인게임 프로필 카드 ── */
+    /* ── 인게임 프로필 카드 (컴팩트, 클릭하면 전적) ── */
     .game-pcard {
-      position:absolute; z-index:5; display:flex; align-items:center; gap:8px;
-      background:rgba(0,0,0,.34); border:1px solid rgba(200,160,0,.22); border-radius:12px;
-      padding:6px 11px; backdrop-filter:blur(3px); max-width:180px;
+      position:absolute; z-index:6; cursor:pointer;
+      background:rgba(0,0,0,.4); border:1px solid rgba(200,160,0,.22); border-radius:11px;
+      padding:5px 10px; max-width:170px; transition:border-color .15s;
     }
-    #oppProfile { top:44px; left:16px; }
-    #myProfile  { bottom:14px; left:16px; }
-    .pc-body { display:flex; align-items:center; gap:8px; min-width:0; }
-    .pc-body .gp-rank { font-size:1.35rem; line-height:1; flex-shrink:0; }
-    .pc-body .gp-txt { min-width:0; }
-    .pc-body .gp-nick { font-size:.86rem; font-weight:700; color:#f0ead8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .pc-body .gp-meta { font-size:.64rem; color:#9a8fa0; white-space:nowrap; }
+    .game-pcard:hover { border-color:rgba(200,160,0,.5); }
+    #oppProfile { top:40px; left:12px; }
+    #myProfile  { bottom:12px; left:12px; }
+    .pc-body { display:flex; align-items:center; gap:6px; min-width:0; }
+    .pc-body .gp-rank { font-size:1.1rem; line-height:1; flex-shrink:0; }
+    .pc-body .gp-nick { font-size:.82rem; font-weight:700; color:#f0ead8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pc-body .gp-lv { font-size:.62rem; color:#9a8fa0; background:rgba(255,255,255,.08); border-radius:5px; padding:1px 5px; flex-shrink:0; }
+    .pc-stats { font-size:.7rem; color:#c8bcc4; margin-top:0; max-height:0; overflow:hidden; opacity:0; transition:max-height .2s, opacity .2s, margin-top .2s; white-space:nowrap; }
+    .pc-stats b { color:#ffe9a8; }
+    .game-pcard.show-stats .pc-stats { max-height:20px; opacity:1; margin-top:4px; }
 
-    /* 이모트 버튼(프로필 위) + 피커 */
-    .emote-wrap { position:relative; }
+    /* 이모트 버튼 — 내 프로필 위 */
+    #emoteWrap { position:absolute; bottom:52px; left:12px; z-index:7; }
     .emote-fab {
-      width:34px; height:34px; border-radius:50%; cursor:pointer; flex-shrink:0;
-      background:linear-gradient(135deg,#3a2a48,#241a2e); border:1px solid rgba(200,160,0,.35);
-      font-size:1.05rem; transition:transform .12s; line-height:1;
+      width:36px; height:36px; border-radius:50%; cursor:pointer;
+      background:linear-gradient(135deg,#3a2a48,#241a2e); border:1px solid rgba(200,160,0,.4);
+      font-size:1.1rem; transition:transform .12s; line-height:1;
     }
     .emote-fab:hover { transform:scale(1.12) translateY(-1px); }
     #emotePicker {
-      display:none; position:absolute; bottom:44px; left:-6px; z-index:8;
+      display:none; position:absolute; bottom:46px; left:0; z-index:9;
       background:#1c1424; border:1px solid #2a1c30; border-radius:14px; padding:8px;
       grid-template-columns:repeat(4,1fr); gap:4px; box-shadow:0 8px 24px rgba(0,0,0,.5);
       animation:slideDown .2s ease;
@@ -237,7 +240,7 @@
 
     /* 룰 모달 */
     #rulesModal {
-      display:none; position:fixed; inset:0; background:rgba(5,3,8,.88); backdrop-filter:blur(6px);
+      display:none; position:fixed; inset:0; background:rgba(5,3,8,.88);
       z-index:40; align-items:center; justify-content:center; padding:20px; animation:fadeIn .3s;
     }
     #rulesBox {
@@ -512,7 +515,7 @@
     @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(-20px) scale(.8)} to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)} }
 
     /* 게임오버 */
-    #gameOver { display:none; position:fixed; inset:0; background:rgba(5,3,8,.9); backdrop-filter:blur(8px); flex-direction:column; align-items:center; justify-content:center; z-index:20; animation:fadeIn .4s; }
+    #gameOver { display:none; position:fixed; inset:0; background:rgba(5,3,8,.9); flex-direction:column; align-items:center; justify-content:center; z-index:20; animation:fadeIn .4s; }
     @keyframes fadeIn { from{opacity:0} to{opacity:1} }
     @keyframes slideDown { from{opacity:0;transform:translateY(-30px)} to{opacity:1;transform:none} }
     #goBox { background:#16101c; border-radius:22px; padding:38px 50px; text-align:center; border:1px solid #241a2e; animation:slideDown .4s cubic-bezier(.34,1.4,.64,1); }
@@ -705,24 +708,26 @@
     <div class="ctrl-btn" id="exitBtn" title="나가기" onclick="exitGame()">🚪</div>
   </div>
 
-  <!-- 상대 프로필 -->
-  <div class="game-pcard" id="oppProfile"><div class="pc-body"></div></div>
-  <!-- 내 프로필 (이모트 버튼 포함) -->
-  <div class="game-pcard" id="myProfile">
-    <div class="pc-body"></div>
-    <div class="emote-wrap">
-      <button class="emote-fab" id="emoteBtn" title="이모트" onclick="toggleEmotes()">😀</button>
-      <div id="emotePicker">
-        <button onclick="sendEmote('👍')">👍</button>
-        <button onclick="sendEmote('😆')">😆</button>
-        <button onclick="sendEmote('😮')">😮</button>
-        <button onclick="sendEmote('😱')">😱</button>
-        <button onclick="sendEmote('🔥')">🔥</button>
-        <button onclick="sendEmote('🤔')">🤔</button>
-        <button onclick="sendEmote('😏')">😏</button>
-        <button onclick="sendEmote('😭')">😭</button>
-      </div>
+  <!-- 상대 프로필 (클릭하면 전적) -->
+  <div class="game-pcard" id="oppProfile" onclick="toggleStats(this)">
+    <div class="pc-body"></div><div class="pc-stats"></div>
+  </div>
+  <!-- 내 프로필 (클릭하면 전적) + 이모트 버튼(프로필 위) -->
+  <div class="emote-wrap" id="emoteWrap">
+    <button class="emote-fab" id="emoteBtn" title="이모트" onclick="toggleEmotes()">😀</button>
+    <div id="emotePicker">
+      <button onclick="sendEmote('👍')">👍</button>
+      <button onclick="sendEmote('😆')">😆</button>
+      <button onclick="sendEmote('😮')">😮</button>
+      <button onclick="sendEmote('😱')">😱</button>
+      <button onclick="sendEmote('🔥')">🔥</button>
+      <button onclick="sendEmote('🤔')">🤔</button>
+      <button onclick="sendEmote('😏')">😏</button>
+      <button onclick="sendEmote('😭')">😭</button>
     </div>
+  </div>
+  <div class="game-pcard" id="myProfile" onclick="toggleStats(this)">
+    <div class="pc-body"></div><div class="pc-stats"></div>
   </div>
 
   <div id="hud">

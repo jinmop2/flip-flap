@@ -141,19 +141,24 @@ document.getElementById('visRow').addEventListener('click', e => {
 let gameNicks = null, gameProfiles = null;
 function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 
-// 인게임 프로필 카드 렌더
-function renderGameProfile(elId, p, isMe) {
+// 인게임 프로필 카드 (컴팩트 — 클릭하면 전적 펼침)
+function renderGameProfile(elId, p) {
   const wrap = document.getElementById(elId); if (!wrap) return;
-  const body = wrap.querySelector('.pc-body'); if (!body) return;
-  if (!p) { body.innerHTML = ''; return; }
+  const body = wrap.querySelector('.pc-body'), stats = wrap.querySelector('.pc-stats');
+  if (!body) return;
+  if (!p) { body.innerHTML = ''; if (stats) stats.innerHTML = ''; return; }
   if (p.bot) {
-    body.innerHTML = `<span class="gp-rank">🤖</span><div class="gp-txt"><div class="gp-nick">AI</div><div class="gp-meta">컴퓨터</div></div>`;
+    body.innerHTML = `<span class="gp-rank">🤖</span><span class="gp-nick">AI</span>`;
+    if (stats) stats.innerHTML = `컴퓨터`;
   } else if (p.guest) {
-    body.innerHTML = `<span class="gp-rank">👤</span><div class="gp-txt"><div class="gp-nick">${esc(p.nick)}</div><div class="gp-meta">게스트</div></div>`;
+    body.innerHTML = `<span class="gp-rank">👤</span><span class="gp-nick">${esc(p.nick)}</span>`;
+    if (stats) stats.innerHTML = `게스트 (기록 없음)`;
   } else {
-    body.innerHTML = `<span class="gp-rank" style="color:${p.rankColor}">${p.rankIcon}</span><div class="gp-txt"><div class="gp-nick">${esc(p.nick)}</div><div class="gp-meta">Lv.${p.level} · <span style="color:${p.rankColor}">${esc(p.rank)}</span> · ${p.wins}승 ${p.losses}패</div></div>`;
+    body.innerHTML = `<span class="gp-rank" style="color:${p.rankColor}">${p.rankIcon}</span><span class="gp-nick">${esc(p.nick)}</span><span class="gp-lv">Lv.${p.level}</span>`;
+    if (stats) stats.innerHTML = `<span style="color:${p.rankColor}">${esc(p.rank)}</span> · <b>${p.wins}승 ${p.losses}패</b> · 승률 ${p.winRate}%`;
   }
 }
+function toggleStats(el) { el.classList.toggle('show-stats'); }
 function refreshRooms() { socket.emit('enter_lobby'); }
 function joinRoomById(id, secret) {
   if (secret) {
