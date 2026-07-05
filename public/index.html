@@ -139,7 +139,12 @@
       transition:opacity .5s;
     }
     #splash.hide { opacity:0; pointer-events:none; }
-    .sp-mid { display:flex; flex-direction:column; align-items:center; gap:20px; }
+    .sp-mid { display:flex; flex-direction:column; align-items:center; gap:16px; }
+    .sp-logo { width:min(300px, 72vw); height:auto; filter:drop-shadow(0 4px 16px rgba(0,0,0,.6)); }
+    .sp-mid .sp-credit {
+      position:static; text-align:center; font-size:.82rem; color:#c8bcc4; line-height:1.9; margin-top:-4px;
+    }
+    .sp-mid .sp-credit b { color:#fff; letter-spacing:1px; }
     .sp-spinner {
       width:30px; height:30px; border-radius:50%; border:3px solid rgba(200,160,0,.2);
       border-top-color:var(--gold); animation:spSpin .9s linear infinite;
@@ -966,16 +971,25 @@
 <!-- 로딩 스플래시 (접속되면 사라짐) -->
 <div id="splash">
   <div class="sp-mid">
-    <div class="logo">
-      <h1>FLIP</h1><div class="flap">FLAP</div>
-      <p class="sub">경매 · 블러핑 · 심리전</p>
+    <!-- 몽둥게임즈 로고: public/mongdung-logo.png 가 있으면 그걸로, 없으면 아래 SVG 재현 -->
+    <img id="mdLogoImg" class="sp-logo" src="/mongdung-logo.png" alt="Mongdung Games"
+         onerror="this.style.display='none';document.getElementById('mdLogoSvg').style.display='block';">
+    <svg id="mdLogoSvg" class="sp-logo" viewBox="0 0 380 190" style="display:none" xmlns="http://www.w3.org/2000/svg">
+      <g fill="#fff" transform="rotate(-22 78 58)">
+        <!-- 망치 머리 -->
+        <rect x="28" y="20" width="104" height="54" rx="11"/>
+        <!-- 손잡이 -->
+        <rect x="72" y="72" width="15" height="80" rx="7"/>
+      </g>
+      <text x="150" y="104" fill="#fff" font-family="Bangers,cursive" font-size="52" letter-spacing="1" text-anchor="start">MONGDUNG</text>
+      <text x="158" y="160" fill="#fff" font-family="Bangers,cursive" font-size="52" letter-spacing="1" text-anchor="start">GAMES</text>
+    </svg>
+    <div class="sp-credit">
+      made by <b>Mongdung Games</b><br>
+      contact us · jinmo9@yonsei.ac.kr
     </div>
     <div class="sp-spinner"></div>
     <div class="sp-loading">접속 중…</div>
-  </div>
-  <div class="sp-credit">
-    made by <b>Mongdung Games</b><br>
-    contact us · jinmo9@yonsei.ac.kr
   </div>
 </div>
 
