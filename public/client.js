@@ -916,6 +916,19 @@ function shareKakao(btn) {
     });
   } catch (e) { console.warn('카카오 공유 실패:', e); shareInvite(btn); }
 }
+// 로비 친구 초대 — 카톡(우선)/공유 시트로 사이트 링크 보내기
+function inviteFriend() {
+  const url = `${location.origin}${location.pathname}`;
+  const text = '🃏 FLIP FLAP 같이 한 판 하자!\n경매·블러핑 심리전 카드 보드게임 🎴';
+  if (window.Kakao && Kakao.isInitialized()) {
+    try { Kakao.Share.sendDefault({ objectType: 'text', text, link: { mobileWebUrl: url, webUrl: url }, buttonTitle: '게임 하러 가기' }); return; }
+    catch (e) { /* 폴백 */ }
+  }
+  if (navigator.share) navigator.share({ title: 'FLIP FLAP', text, url }).catch(() => {});
+  else if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(url); alert('링크를 복사했어요! 친구에게 붙여넣어 보내세요.'); }
+  else prompt('복사하세요:', url);
+}
+
 // 게임 종료 후 도전장 — 사이트 링크를 카톡/공유 시트로
 function challengeFriend() {
   const url = `${location.origin}${location.pathname}`;
@@ -960,6 +973,7 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles }) =
   seenAcq.myAcq = new Set(); seenAcq.oppAcq = new Set(); boardCelebrated = false; lastSig = {};
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('game').style.display = 'flex';
+  document.body.classList.add('ingame');   // 게임 중 화면 스크롤 잠금
   // AI면 프로필 아래 난이도 배지, 사람이면 숨김
   const de = document.getElementById('cpuDiff');
   if (vsBot) { de.style.display = ''; de.textContent = { easy:'쉬움', normal:'보통', hard:'어려움', expert:'전문가' }[diff] || diff; }
