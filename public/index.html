@@ -48,7 +48,18 @@
       -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
     }
     .logo .sub { font-size:.72rem; letter-spacing:5px; color:#55474e; margin-top:6px; font-weight:500; }
-    #lobbyStats { font-size:.76rem; color:#8a7a80; margin-top:8px; min-height:16px; }
+    /* 로고 아래: 랭킹 버튼 + 접속 인원 */
+    .logo-actions { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:2px; }
+    .rank-btn {
+      background:linear-gradient(135deg,rgba(200,160,0,.18),rgba(200,160,0,.08));
+      border:1px solid rgba(200,160,0,.4); color:#ffe9a8; border-radius:20px;
+      padding:7px 16px; font-family:'Fredoka'; font-size:.82rem; font-weight:700; cursor:pointer; transition:.15s;
+    }
+    .rank-btn:hover { background:rgba(200,160,0,.28); transform:translateY(-1px); }
+    .online-badge { display:inline-flex; align-items:center; gap:5px; font-size:.74rem; color:#9a8fa0; font-weight:600; }
+    .online-badge b { color:#7dd87d; }
+    .online-dot { width:7px; height:7px; border-radius:50%; background:#5cd66c; box-shadow:0 0 6px #5cd66c; animation:onlinePulse 2s ease-in-out infinite; }
+    @keyframes onlinePulse { 0%,100%{opacity:1} 50%{opacity:.4} }
     .made-by { text-align:center; font-size:.68rem; color:#4a3a50; line-height:1.7; margin-top:4px; }
     .made-by b { color:#6a5a70; }
     .made-by a { color:#8a7a80; text-decoration:none; }
@@ -64,13 +75,18 @@
     .sec-title { display:flex; justify-content:space-between; align-items:center; font-size:.72rem; font-weight:600; color:#6a5a70; letter-spacing:1px; padding:0 2px; }
     .online-actions { display:flex; gap:8px; }
     .online-actions .btn { flex:1; }
-    /* 게임 방법 · 튜토리얼 (프로필 아래) */
-    .lobby-top { display:flex; gap:10px; width:100%; }
+    /* 게임 방법 · 튜토리얼 · 상점 (한 줄 고정) */
+    .lobby-top { display:flex; gap:7px; width:100%; }
     .top-link {
-      flex:1; background:#16101c; border:1px solid #2a1c30; color:#c8bcc4; border-radius:12px;
-      padding:10px 12px; font-family:'Fredoka'; font-size:.84rem; font-weight:600; cursor:pointer; transition:.15s;
+      flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px;
+      background:#16101c; border:1px solid #2a1c30; color:#c8bcc4; border-radius:12px;
+      padding:9px 4px; font-family:'Fredoka'; font-size:.74rem; font-weight:600; cursor:pointer;
+      transition:.15s; white-space:nowrap;
     }
+    .top-link .tl-ico { font-size:1.15rem; line-height:1; }
     .top-link:hover { border-color:var(--gold); color:var(--gold); }
+    .top-link.shop-link { border-color:rgba(200,160,0,.4); color:#ffe9a8; }
+    .top-link.shop-link:hover { background:rgba(200,160,0,.14); }
     /* ── 닉네임 염색 ── */
     .nc-red    { color:#ff6b6b !important; }
     .nc-blue   { color:#6bb8ff !important; }
@@ -402,11 +418,16 @@
     }
 
     /* 로비 프로필 칩 / 인증 */
-    .profile-chip { display:flex; align-items:center; gap:10px; background:#16101c; border:1px solid #2a1c30; border-radius:12px; padding:8px 14px; }
-    .profile-chip .pc-rank { font-size:1.6rem; }
-    .profile-chip .pc-mid { text-align:left; min-width:0; }
-    .profile-chip .pc-nick { font-size:.95rem; font-weight:700; color:#f0ead8; }
-    .profile-chip .pc-sub { font-size:.72rem; color:#9a8fa0; }
+    .profile-chip { display:flex; align-items:center; gap:10px; background:#16101c; border:1px solid #2a1c30; border-radius:12px; padding:9px 12px; }
+    .profile-chip .pc-rank { font-size:1.7rem; flex-shrink:0; }
+    .profile-chip .pc-mid { text-align:left; min-width:0; flex:1; }
+    .profile-chip .pc-nick { font-size:.95rem; font-weight:700; color:#f0ead8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .profile-chip .pc-sub { font-size:.7rem; color:#9a8fa0; margin-top:1px; }
+    /* RP·코인 2열 */
+    .profile-chip .pc-econ { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:5px; }
+    .profile-chip .pc-econ span { font-size:.72rem; font-weight:700; padding:2px 7px; border-radius:6px; text-align:center; white-space:nowrap; }
+    .profile-chip .pc-rp   { color:#ffe9a8; background:rgba(200,160,0,.13); }
+    .profile-chip .pc-coin { color:#ffd94a; background:rgba(255,215,80,.1); }
     .auth-tabs { display:flex; gap:0; border-bottom:1px solid #2a1c30; margin-bottom:4px; }
     .auth-tab { flex:1; background:none; border:none; padding:9px; cursor:pointer; font-family:'Fredoka'; font-size:.9rem; font-weight:600; color:#6a5a70; border-bottom:2px solid transparent; }
     .auth-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
@@ -819,7 +840,10 @@
   <div class="logo">
     <h1>FLIP</h1><div class="flap">FLAP</div>
     <p class="sub">경매 · 블러핑 · 심리전</p>
-    <p id="lobbyStats"></p>
+  </div>
+  <div class="logo-actions">
+    <button class="rank-btn" onclick="openLeaderboard()">🏆 랭킹</button>
+    <span class="online-badge" id="onlineBadge"><span class="online-dot"></span><b id="onlineCount">–</b> 접속 중</span>
   </div>
   <div class="lobby-btns" id="lobbyMain">
     <!-- 계정 / 닉네임 -->
@@ -833,9 +857,9 @@
 
     <!-- 게임 방법 · 튜토리얼 · 상점 -->
     <div class="lobby-top">
-      <button class="top-link" onclick="toggleRules(true)">📖 게임 방법</button>
-      <button class="top-link" onclick="startTutorial()">🎓 튜토리얼</button>
-      <button class="top-link shop-link" onclick="openShop()">🛒 상점</button>
+      <button class="top-link" onclick="toggleRules(true)"><span class="tl-ico">📖</span>게임방법</button>
+      <button class="top-link" onclick="startTutorial()"><span class="tl-ico">🎓</span>튜토리얼</button>
+      <button class="top-link shop-link" onclick="openShop()"><span class="tl-ico">🛒</span>상점</button>
     </div>
 
     <!-- 솔로 / 멀티 -->
@@ -865,7 +889,7 @@
       </div>
       <div class="sec-title">
         <span>열린 방</span>
-        <span><button class="rl-refresh" onclick="openLeaderboard()" title="랭킹" style="margin-right:8px">🏆</button><button class="rl-refresh" onclick="refreshRooms()" title="새로고침">↻</button></span>
+        <button class="rl-refresh" onclick="refreshRooms()" title="새로고침">↻</button>
       </div>
       <div id="roomList"><div class="rl-empty">열린 방이 없어요. 방을 만들어보세요!</div></div>
     </div>

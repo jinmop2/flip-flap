@@ -518,6 +518,9 @@ function broadcastRooms() {
   roomsBcTimer = setTimeout(() => { roomsBcTimer = null; io.to('lobby').emit('rooms', openRoomList()); }, 400);
 }
 const cleanNick = n => (String(n || '').trim().slice(0, 12)) || '게스트';
+// 현재 접속 인원 브로드캐스트 (5초 주기 + 접속/해제 시)
+function broadcastOnline() { io.emit('online', io.engine.clientsCount); }
+setInterval(broadcastOnline, 5000);
 const MAX_ROOMS = 800;               // 서버 전체 방 상한
 const MAX_CONN_PER_IP = 8;           // IP당 소켓 연결 상한
 const connByIp = new Map();
@@ -530,6 +533,7 @@ io.on('connection', (socket) => {
   const ip = (socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || 'x').split(',')[0].trim();
   const n = (connByIp.get(ip) || 0) + 1; connByIp.set(ip, n);
   if (n > MAX_CONN_PER_IP) { socket.emit('error', '연결이 너무 많아요.'); socket.disconnect(true); return; }
+  socket.emit('online', io.engine.clientsCount); broadcastOnline();
 
   // 소켓 이벤트 rate limit (초당 30건 초과 시 드롭 — 스팸/브루트포스 방지)
   socket.use((packet, next) => {

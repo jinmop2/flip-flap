@@ -125,8 +125,11 @@ function renderAccount() {
 const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
 function profileChipHTML(p) {
   return `<div class="pc-rank" style="color:${p.rankColor}">${p.rankIcon}</div>
-    <div class="pc-mid"><div class="pc-nick${ncClass(p.nickColor)}">${esc(p.nick)}</div>
-    <div class="pc-sub">Lv.${p.level} · <span style="color:${p.rankColor}">${esc(p.rank)}</span> · ${p.wins}승 ${p.losses}패 · <b style="color:#ffe9a8">${p.rp} RP</b> · <b style="color:#ffd94a">🪙 ${p.coins || 0}</b></div></div>`;
+    <div class="pc-mid">
+      <div class="pc-nick${ncClass(p.nickColor)}">${esc(p.nick)}</div>
+      <div class="pc-sub">Lv.${p.level} · <span style="color:${p.rankColor}">${esc(p.rank)}</span> · ${p.wins}승 ${p.losses}패</div>
+      <div class="pc-econ"><span class="pc-rp">🏆 ${p.rp} RP</span><span class="pc-coin">🪙 ${p.coins || 0}</span></div>
+    </div>`;
 }
 // 로그인 프로필이 게임 종료 등으로 갱신됨 + 보상 표시
 socket.on('profile', ({ profile, result, rewards }) => {
@@ -339,6 +342,7 @@ socket.on('need_password', ({ roomId, wrong }) => {
   socket.emit('join_room', { roomId, pid: PID, nick: getNick(), password: pw });
 });
 socket.on('rooms', renderRoomList);
+socket.on('online', n => { const el = document.getElementById('onlineCount'); if (el) el.textContent = n; });
 function renderRoomList(list) {
   const el = document.getElementById('roomList'); if (!el) return;
   el.innerHTML = '';
