@@ -18,10 +18,14 @@ function setConn(text, cls) {
   if (!el) return;
   el.textContent = text; el.className = cls || '';
 }
-// 로딩 스플래시 — 접속되면 부드럽게 사라짐 (실패해도 8초 후엔 숨김)
+// 로딩 스플래시 — 최소 1.8초는 로고를 보여준 뒤 부드럽게 사라짐 (실패해도 8초 후 숨김)
+const SPLASH_START = Date.now(), SPLASH_MIN = 1800;
+let splashHidden = false;
 function hideSplash() {
-  const s = document.getElementById('splash');
-  if (s && !s.classList.contains('hide')) setTimeout(() => s.classList.add('hide'), 350);
+  if (splashHidden) return; splashHidden = true;
+  const s = document.getElementById('splash'); if (!s) return;
+  const wait = Math.max(0, SPLASH_MIN - (Date.now() - SPLASH_START));
+  setTimeout(() => s.classList.add('hide'), wait);
 }
 setTimeout(hideSplash, 8000);
 
