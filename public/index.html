@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>FLIP FLAP</title>
   <!-- PWA — 홈 화면 설치 -->
   <link rel="manifest" href="/manifest.webmanifest">
@@ -21,7 +21,7 @@
       --gold:#c8a000; --paper:#f7f5f2;
       --felt:#1f4a3c; --felt-d:#143026;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }   /* 더블탭 확대 방지 */
     body {
       font-family:'Fredoka',system-ui,sans-serif;
       background:#100b0a;
@@ -1020,28 +1020,6 @@
       </button>
     </div>
 
-    <div class="mode-panel" id="soloPanel">
-      <div class="sec-title">난이도를 고르면 바로 시작!</div>
-      <div class="solo-diffs">
-        <button class="btn btn-outline" onclick="soloPlay('easy')">🌱 쉬움</button>
-        <button class="btn btn-outline" onclick="soloPlay('hard')">🔥 보통</button>
-        <button class="btn btn-outline" onclick="soloPlay('expert')">👑 전문가</button>
-      </div>
-    </div>
-
-    <div class="mode-panel" id="multiPanel">
-      <button class="btn btn-gold" onclick="quickMatch()">⚡ 빠른 대전 (자동 매칭)</button>
-      <div class="online-actions">
-        <button class="btn btn-outline btn-sm" onclick="openCreate()">➕ 방 만들기</button>
-        <button class="btn btn-outline btn-sm" onclick="openCode()"># 코드로 참가</button>
-      </div>
-      <div class="sec-title">
-        <span>열린 방</span>
-        <button class="rl-refresh" onclick="refreshRooms()" title="새로고침">↻</button>
-      </div>
-      <div id="roomList"><div class="rl-empty">열린 방이 없어요. 방을 만들어보세요!</div></div>
-    </div>
-
     <!-- 앱 설치 (설치 가능할 때만 표시) -->
     <button class="install-btn" id="installBtn" style="display:none" onclick="installApp()">📲 홈 화면에 앱으로 추가</button>
   </div>
@@ -1063,6 +1041,38 @@
     </div>
     <div class="wc-wait"><span class="thinking-dots">상대를 기다리는 중<span>.</span><span>.</span><span>.</span></span></div>
     <button class="lobby-rules-link" onclick="cancelWait()">← 취소</button>
+  </div>
+</div>
+
+<!-- 솔로플레이 팝업 (난이도 선택) -->
+<div class="lb-modal" id="soloModal" onclick="if(event.target===this)closeModePanels()">
+  <div class="lb-box">
+    <div class="lb-title">🤖 솔로플레이</div>
+    <div class="sec-title" style="justify-content:center">난이도를 고르면 바로 시작!</div>
+    <div class="solo-diffs">
+      <button class="btn btn-outline" onclick="soloPlay('easy')">🌱 쉬움</button>
+      <button class="btn btn-outline" onclick="soloPlay('hard')">🔥 보통</button>
+      <button class="btn btn-outline" onclick="soloPlay('expert')">👑 전문가</button>
+    </div>
+    <button class="btn btn-outline" onclick="closeModePanels()">닫기</button>
+  </div>
+</div>
+
+<!-- 멀티플레이 팝업 -->
+<div class="lb-modal" id="multiModal" onclick="if(event.target===this)closeModePanels()">
+  <div class="lb-box">
+    <div class="lb-title">⚔️ 멀티플레이</div>
+    <button class="btn btn-gold" onclick="quickMatch()">⚡ 빠른 대전 (자동 매칭)</button>
+    <div class="online-actions">
+      <button class="btn btn-outline btn-sm" onclick="openCreate()">➕ 방 만들기</button>
+      <button class="btn btn-outline btn-sm" onclick="openCode()"># 코드로 참가</button>
+    </div>
+    <div class="sec-title">
+      <span>열린 방</span>
+      <button class="rl-refresh" onclick="refreshRooms()" title="새로고침">↻</button>
+    </div>
+    <div id="roomList"><div class="rl-empty">열린 방이 없어요. 방을 만들어보세요!</div></div>
+    <button class="btn btn-outline" onclick="closeModePanels()">닫기</button>
   </div>
 </div>
 

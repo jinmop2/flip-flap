@@ -19,8 +19,14 @@ function setConn(text, cls) {
   el.textContent = text; el.className = cls || '';
 }
 // 로딩 스플래시 — 최소 1.8초는 로고를 보여준 뒤 부드럽게 사라짐 (실패해도 8초 후 숨김)
+// 단, 게임 나가기 등 내부 이동으로 돌아온 경우엔 즉시 스킵
 const SPLASH_START = Date.now(), SPLASH_MIN = 1800;
 let splashHidden = false;
+if (sessionStorage.getItem('ff_skipsplash')) {
+  sessionStorage.removeItem('ff_skipsplash');
+  splashHidden = true;
+  const s = document.getElementById('splash'); if (s) s.style.display = 'none';
+}
 function hideSplash() {
   if (splashHidden) return; splashHidden = true;
   const s = document.getElementById('splash'); if (!s) return;
@@ -28,6 +34,11 @@ function hideSplash() {
   setTimeout(() => s.classList.add('hide'), wait);
 }
 setTimeout(hideSplash, 8000);
+// 내부 이동용 새로고침 (스플래시 없이)
+function fastReload() {
+  sessionStorage.setItem('ff_skipsplash', '1');
+  location.href = location.origin + location.pathname;
+}
 
 socket.on('connect', () => {
   hideSplash();
@@ -301,6 +312,7 @@ fetch('/api/kakao-enabled').then(r => r.json()).then(d => {
 
 // ── 빠른 대전 (자동 매칭) ───────────────────────────────────
 function quickMatch() {
+  closeModePanels();
   socket.emit('quick_match', { pid: PID, nick: getNick() });
   document.getElementById('matchModal').classList.add('show');
 }
@@ -491,9 +503,9 @@ function refreshEmotes() {
 }
 
 // ── 로비 다이얼로그 ─────────────────────────────────────────
-function openCreate() { document.getElementById('createModal').classList.add('show'); document.getElementById('roomNameInput').focus(); }
+function openCreate() { closeModePanels(); document.getElementById('createModal').classList.add('show'); document.getElementById('roomNameInput').focus(); }
 function closeCreate() { document.getElementById('createModal').classList.remove('show'); }
-function openCode()   { document.getElementById('codeModal').classList.add('show'); document.getElementById('roomInput').focus(); }
+function openCode()   { closeModePanels(); document.getElementById('codeModal').classList.add('show'); document.getElementById('roomInput').focus(); }
 function closeCode()  { document.getElementById('codeModal').classList.remove('show'); }
 
 // ── 공개/비밀 방 토글 ───────────────────────────────────────
@@ -691,7 +703,7 @@ function showEmote(emoji, side) {
 }
 
 // ── 나가기 / 재대결 ─────────────────────────────────────────
-function goLobby() { clearSession(); location.href = location.origin + location.pathname; }
+function goLobby() { clearSession(); fastReload(); }
 function exitGame() {
   if (!confirm('게임에서 나갈까요?')) return;
   socket.emit('leave_room');
@@ -727,16 +739,15 @@ function isMyAction(s) {
 }
 let prevMyAction = false;
 
-// ── 로비 모드 선택 (솔로/멀티) ──────────────────────────────
+// ── 로비 모드 선택 (솔로/멀티) — 카드 위 팝업으로 표시 ──────
 function openMode(m) {
-  const solo = document.getElementById('soloPanel'), multi = document.getElementById('multiPanel');
-  const already = (m === 'solo' ? solo : multi).classList.contains('show');
-  solo.classList.toggle('show', m === 'solo' && !already);
-  multi.classList.toggle('show', m === 'multi' && !already);
-  document.getElementById('modeSolo').classList.toggle('active', m === 'solo' && !already);
-  document.getElementById('modeMulti').classList.toggle('active', m === 'multi' && !already);
+  document.getElementById(m === 'solo' ? 'soloModal' : 'multiModal').classList.add('show');
 }
-function soloPlay(d) { difficulty = d; createRoom(true); }
+function closeModePanels() {
+  document.getElementById('soloModal').classList.remove('show');
+  document.getElementById('multiModal').classList.remove('show');
+}
+function soloPlay(d) { closeModePanels(); difficulty = d; createRoom(true); }
 
 // ── 튜토리얼 — 쉬움 AI와 실전 + 단계별 코치 ─────────────────
 // 원칙: 한 번에 한 가지만, 짧게, "지금 뭘 클릭할지"를 반짝임으로 표시
@@ -930,7 +941,7 @@ function shareInvite(btn) {
     setTimeout(() => alert('공유를 지원하지 않는 브라우저예요. 링크를 복사했으니 카톡에 붙여넣어 보내세요!'), 100);
   }
 }
-function cancelWait() { clearSession(); location.href = location.origin + location.pathname; }
+function cancelWait() { clearSession(); fastReload(); }
 
 socket.on('error', msg => alert(msg));
 socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles }) => {
@@ -1074,7 +1085,7 @@ function renderGameOverStats(winner, setKind, mi) {
   line.innerHTML = `획득 카드 — 나 <b>${myN}</b>장 · 상대 <b>${opN}</b>장`;
   box.appendChild(line);
 }
-socket.on('opponent_left', () => { clearSession(); alert('상대가 나갔어요.'); location.href = location.origin + location.pathname; });
+socket.on('opponent_left', () => { clearSession(); alert('상대가 나갔어요.'); fastReload(); });
 
 // 세트 완성 카드 특수효과
 function celebrateSet(containerId, kind) {
