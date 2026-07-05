@@ -39,6 +39,7 @@ app.get('/api/leaderboard', rateLimit(60), (req, res) => res.json({ ok: true, pl
 
 // ── 카카오 간편로그인 (REST 키는 환경변수 KAKAO_REST_KEY) ──
 const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY || '';
+const KAKAO_CLIENT_SECRET = process.env.KAKAO_CLIENT_SECRET || '';   // 콘솔 [카카오 로그인>고급]의 Client Secret
 function baseURL(req) { return `${req.protocol}://${req.get('host')}`; }
 app.get('/api/kakao-enabled', (req, res) => res.json({ enabled: !!KAKAO_REST_KEY }));
 app.get('/auth/kakao', rateLimit(30), (req, res) => {
@@ -53,7 +54,7 @@ app.get('/auth/kakao/callback', rateLimit(30), async (req, res) => {
     // 인가 코드 → 액세스 토큰
     const tr = await fetch('https://kauth.kakao.com/oauth/token', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ grant_type: 'authorization_code', client_id: KAKAO_REST_KEY, redirect_uri: baseURL(req) + '/auth/kakao/callback', code }),
+      body: new URLSearchParams({ grant_type: 'authorization_code', client_id: KAKAO_REST_KEY, redirect_uri: baseURL(req) + '/auth/kakao/callback', code, ...(KAKAO_CLIENT_SECRET ? { client_secret: KAKAO_CLIENT_SECRET } : {}) }),
     });
     const tok = await tr.json();
     if (!tok.access_token) { console.error('카카오 토큰 실패:', JSON.stringify(tok)); return res.redirect('/#kerr=' + encodeURIComponent('카카오 인증에 실패했어요')); }
