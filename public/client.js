@@ -116,7 +116,7 @@ function renderAccount() {
   if (myAccount) {
     guest.style.display = 'none';
     chip.style.display = 'flex';
-    chip.innerHTML = profileChipHTML(myAccount) + '<button class="pc-edit" onclick="openNickModal()" title="닉네임 변경">✏️</button>';
+    chip.innerHTML = profileChipHTML(myAccount) + (myAccount.nickLocked ? '' : '<button class="pc-edit" onclick="openNickModal()" title="닉네임 정하기 (한 번만!)">✏️</button>');
     authBtn.textContent = '로그아웃'; authBtn.onclick = logout;
   } else {
     guest.style.display = 'flex';

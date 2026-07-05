@@ -83,6 +83,7 @@ function profileOf(u) {
   const total = u.wins + u.losses;
   return {
     id: u.id, nick: u.nick, guest: false,
+    nickLocked: !(u.provider === 'kakao' && !u.nickSet),   // false면 아직 닉 설정 기회 남음
     level: levelOf(u.xp), xp: u.xp, xpInLevel: xpInLevel(u.xp),
     rp: u.rp, rank: rank.name, rankIcon: rank.icon, rankColor: rank.color,
     wins: u.wins, losses: u.losses,
@@ -106,7 +107,7 @@ function signup(id, pw, nick) {
   if (db.nickTaken[nickl]) return { error: '이미 사용 중인 닉네임이에요.' };
   const salt = crypto.randomBytes(12).toString('hex');
   const token = makeToken();
-  const u = { id, nick, salt, hash: hashPw(pw, salt), token, tokenExp: Date.now() + TOKEN_TTL, wins: 0, losses: 0, xp: 0, rp: 0, createdAt: Date.now() };
+  const u = { id, nick, nickSet: true, salt, hash: hashPw(pw, salt), token, tokenExp: Date.now() + TOKEN_TTL, wins: 0, losses: 0, xp: 0, rp: 0, createdAt: Date.now() };   // 일반 가입은 폼에서 닉 확정
   db.users[idl] = u; db.nickTaken[nickl] = idl; tokenIndex[token] = idl; persist(idl);
   return { ok: true, token, profile: profileOf(u) };
 }
@@ -128,16 +129,17 @@ function byToken(token) {
 }
 function meByToken(token) { const u = byToken(token); return u ? { ok: true, profile: profileOf(u) } : { error: '세션 만료' }; }
 
-// 닉네임 변경 (본인 확인은 토큰으로)
+// 닉네임 설정 — 카카오 가입자가 아직 안 정한 경우에 한해 딱 한 번
 function setNick(token, nick) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '세션이 만료됐어요. 다시 로그인해주세요.' };
+  if (!(u.provider === 'kakao' && !u.nickSet)) return { error: '닉네임은 가입할 때 한 번만 정할 수 있어요.' };
   nick = String(nick || '').trim();
   if (!validNick(nick)) return { error: '닉네임은 1~12자예요.' };
   const nl = nick.toLowerCase();
   if (db.nickTaken[nl] && db.nickTaken[nl] !== idl) return { error: '이미 사용 중인 닉네임이에요.' };
   if (u.nick) delete db.nickTaken[u.nick.toLowerCase()];
-  u.nick = nick; db.nickTaken[nl] = idl; persist(idl);
+  u.nick = nick; u.nickSet = true; db.nickTaken[nl] = idl; persist(idl);   // 이후 변경 불가
   return { ok: true, profile: profileOf(u) };
 }
 
@@ -158,7 +160,7 @@ function kakaoLogin(kakaoId, kNick) {
   let u = db.users[idl];
   if (!u) {
     const nick = uniqueNick(kNick);
-    u = { id: idl, nick, provider: 'kakao', token: makeToken(), tokenExp: Date.now() + TOKEN_TTL, wins: 0, losses: 0, xp: 0, rp: 0, createdAt: Date.now() };
+    u = { id: idl, nick, nickSet: false, provider: 'kakao', token: makeToken(), tokenExp: Date.now() + TOKEN_TTL, wins: 0, losses: 0, xp: 0, rp: 0, createdAt: Date.now() };   // 닉은 첫 로그인 모달에서 확정
     db.users[idl] = u; db.nickTaken[nick.toLowerCase()] = idl; tokenIndex[u.token] = idl; persist(idl);
     return { ok: true, token: u.token, profile: profileOf(u), isNew: true };
   }
