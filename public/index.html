@@ -71,6 +71,13 @@
       padding:10px 12px; font-family:'Fredoka'; font-size:.84rem; font-weight:600; cursor:pointer; transition:.15s;
     }
     .top-link:hover { border-color:var(--gold); color:var(--gold); }
+    /* 앱 설치 버튼 */
+    .install-btn {
+      width:100%; background:rgba(200,160,0,.1); border:1.5px dashed rgba(200,160,0,.5); color:#ffe9a8;
+      border-radius:12px; padding:11px 12px; font-family:'Fredoka'; font-size:.86rem; font-weight:700;
+      cursor:pointer; transition:.15s; animation:slideDown .3s ease;
+    }
+    .install-btn:hover { background:rgba(200,160,0,.2); border-style:solid; }
     /* 프로필 칩 안 로그아웃 */
     .profile-chip { width:100%; }
     .pc-logout {
@@ -817,6 +824,9 @@
       </div>
       <div id="roomList"><div class="rl-empty">열린 방이 없어요. 방을 만들어보세요!</div></div>
     </div>
+
+    <!-- 앱 설치 (설치 가능할 때만 표시) -->
+    <button class="install-btn" id="installBtn" style="display:none" onclick="installApp()">📲 홈 화면에 앱으로 추가</button>
   </div>
 
   <div class="made-by">

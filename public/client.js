@@ -1147,3 +1147,35 @@ function animateWinCards() {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }
+
+// ── 앱 설치 버튼 ──
+// 안드로이드 크롬: beforeinstallprompt를 잡아뒀다가 버튼 클릭 시 네이티브 설치창 표시
+// 아이폰: 프로그래밍 설치 불가(애플 정책) → 버튼 누르면 방법 안내
+let deferredInstall = null;
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  if (!isStandalone()) { const b = document.getElementById('installBtn'); if (b) b.style.display = ''; }
+});
+(function initInstallBtn() {   // iOS는 이벤트가 안 오므로 직접 노출
+  if (isIOS() && !isStandalone()) { const b = document.getElementById('installBtn'); if (b) b.style.display = ''; }
+})();
+async function installApp() {
+  const b = document.getElementById('installBtn');
+  if (deferredInstall) {
+    deferredInstall.prompt();
+    const { outcome } = await deferredInstall.userChoice;
+    deferredInstall = null;
+    if (outcome === 'accepted' && b) b.style.display = 'none';
+  } else if (isIOS()) {
+    alert('아이폰 설치 방법 📲\n\n1. Safari 하단의 공유 버튼(⬆️)을 누르고\n2. "홈 화면에 추가"를 선택하세요!\n\n홈 화면에 FLIP FLAP 앱이 생겨요.');
+  } else {
+    alert('브라우저 메뉴(⋮)에서 "앱 설치"를 눌러 설치할 수 있어요!');
+  }
+}
+window.addEventListener('appinstalled', () => {
+  deferredInstall = null;
+  const b = document.getElementById('installBtn'); if (b) b.style.display = 'none';
+});
