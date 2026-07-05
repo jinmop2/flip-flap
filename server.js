@@ -43,6 +43,10 @@ app.post('/api/login',  rateLimit(30), (req, res) => { const { id, password } = 
 app.post('/api/me',     rateLimit(90), (req, res) => { const { token } = req.body || {}; res.json(accounts.meByToken(token)); });
 app.post('/api/nick',   rateLimit(20), (req, res) => { const { token, nick } = req.body || {}; res.json(accounts.setNick(token, nick)); });
 app.get('/api/leaderboard', rateLimit(60), (req, res) => res.json({ ok: true, players: accounts.topPlayers(20) }));
+// ── 상점 ──
+app.get('/api/shop', rateLimit(60), (req, res) => res.json({ ok: true, items: accounts.shopList() }));
+app.post('/api/buy',   rateLimit(30), (req, res) => { const { token, itemId } = req.body || {}; res.json(accounts.buyItem(token, itemId)); });
+app.post('/api/equip', rateLimit(30), (req, res) => { const { token, itemId } = req.body || {}; res.json(accounts.equipItem(token, itemId)); });
 
 // ── 카카오 간편로그인 (REST 키는 환경변수 KAKAO_REST_KEY) ──
 const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY || '';
@@ -911,14 +915,14 @@ function settle(roomId) {
   setTimeout(() => maybeCpuAct(roomId), 400);
 }
 
-// 로그인 유저의 전적/랭크/레벨 반영 + 갱신된 프로필 전송
+// 로그인 유저의 전적/랭크/레벨/코인 반영 + 갱신된 프로필·보상 전송
 function finishStats(room, winner) {
   if (!room.tokens) return;
   room.tokens.forEach((tok, i) => {
     if (!tok) return;
     const result = winner === 0 ? 'draw' : (winner === i + 1 ? 'win' : 'loss');
-    const prof = accounts.recordResult(tok, result);
-    if (prof && room.players[i]) io.to(room.players[i]).emit('profile', { profile: prof, result });
+    const out = accounts.recordResult(tok, result, { vsBot: room.vsBot, difficulty: room.difficulty });
+    if (out && room.players[i]) io.to(room.players[i]).emit('profile', { profile: out.profile, result, rewards: out.rewards });
   });
 }
 

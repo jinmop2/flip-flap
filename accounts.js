@@ -69,11 +69,11 @@ function levelOf(xp) { return 1 + Math.floor(xp / 100); }
 function xpInLevel(xp) { return xp % 100; }              // 0~99 (다음 레벨까지 100)
 const RANKS = [
   { rp: 0,    name: '브론즈',   icon: '🥉', color: '#b08d57' },
-  { rp: 120,  name: '실버',     icon: '🥈', color: '#b8c0cc' },
-  { rp: 300,  name: '골드',     icon: '🥇', color: '#e0b84a' },
-  { rp: 600,  name: '플래티넘', icon: '💠', color: '#4ec3c0' },
-  { rp: 1000, name: '다이아',   icon: '💎', color: '#7ab8ff' },
-  { rp: 1600, name: '마스터',   icon: '👑', color: '#c88bff' },
+  { rp: 100,  name: '실버',     icon: '🥈', color: '#b8c0cc' },
+  { rp: 250,  name: '골드',     icon: '🥇', color: '#e0b84a' },
+  { rp: 500,  name: '플래티넘', icon: '💠', color: '#4ec3c0' },
+  { rp: 900,  name: '다이아',   icon: '💎', color: '#7ab8ff' },
+  { rp: 1500, name: '마스터',   icon: '👑', color: '#c88bff' },
 ];
 function rankOf(rp) { let r = RANKS[0]; for (const t of RANKS) if (rp >= t.rp) r = t; return r; }
 
@@ -88,6 +88,10 @@ function profileOf(u) {
     rp: u.rp, rank: rank.name, rankIcon: rank.icon, rankColor: rank.color,
     wins: u.wins, losses: u.losses,
     winRate: total ? Math.round(u.wins / total * 100) : 0,
+    coins: u.coins || 0,
+    nickColor: u.nickColor || null,          // 염색약 결과 (색 키)
+    cardBack: u.cardBack || null,            // 장착 중인 카드백
+    items: u.items || {},                    // 보유 아이템 { id: 개수 or true }
   };
 }
 
@@ -129,17 +133,76 @@ function byToken(token) {
 }
 function meByToken(token) { const u = byToken(token); return u ? { ok: true, profile: profileOf(u) } : { error: '세션 만료' }; }
 
-// 닉네임 설정 — 카카오 가입자가 아직 안 정한 경우에 한해 딱 한 번
+// 닉네임 설정 — 카카오 첫 설정은 무료 1회, 이후엔 닉네임 변경권 소모
 function setNick(token, nick) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '세션이 만료됐어요. 다시 로그인해주세요.' };
-  if (!(u.provider === 'kakao' && !u.nickSet)) return { error: '닉네임은 가입할 때 한 번만 정할 수 있어요.' };
+  const freeSet = u.provider === 'kakao' && !u.nickSet;
+  const hasTicket = ((u.items || {}).nick_change || 0) > 0;
+  if (!freeSet && !hasTicket) return { error: '닉네임 변경권이 필요해요. (상점에서 구매)' };
   nick = String(nick || '').trim();
   if (!validNick(nick)) return { error: '닉네임은 1~12자예요.' };
   const nl = nick.toLowerCase();
   if (db.nickTaken[nl] && db.nickTaken[nl] !== idl) return { error: '이미 사용 중인 닉네임이에요.' };
   if (u.nick) delete db.nickTaken[u.nick.toLowerCase()];
-  u.nick = nick; u.nickSet = true; db.nickTaken[nl] = idl; persist(idl);   // 이후 변경 불가
+  if (!freeSet) u.items.nick_change--;                     // 변경권 1장 소모
+  u.nick = nick; u.nickSet = true; db.nickTaken[nl] = idl; persist(idl);
+  return { ok: true, profile: profileOf(u) };
+}
+
+// ── 상점 ──
+const SHOP = {
+  dye_random:  { name: '랜덤 닉네임 염색약', icon: '🎨', price: 300,  type: 'dye',
+                 desc: '닉네임 색을 랜덤으로! 골드 8%·무지개 2%' },
+  nick_change: { name: '닉네임 변경권',       icon: '✏️', price: 500,  type: 'ticket',
+                 desc: '닉네임을 한 번 바꿀 수 있어요' },
+  back_night:  { name: '미드나잇 카드백',     icon: '🌙', price: 500,  type: 'cardback',
+                 desc: '깊은 밤하늘 카드 뒷면 (상대에게도 보여요)' },
+  back_gold:   { name: '황금 카드백',         icon: '🏆', price: 800,  type: 'cardback',
+                 desc: '번쩍이는 황금 카드 뒷면' },
+  back_obang:  { name: '오방색 카드백',       icon: '🎏', price: 1200, type: 'cardback',
+                 desc: '전통 오방색 카드 뒷면' },
+  emote_party: { name: '파티 이모트 팩',      icon: '🎉', price: 400,  type: 'emotes',
+                 desc: '이모트 8종 추가: 🤡😈💀🎉👑🍀💢🫠' },
+};
+// 염색약 뽑기 풀 (weight 비율)
+const DYE_POOL = [
+  { key: 'red',     w: 12 }, { key: 'blue',   w: 12 }, { key: 'green', w: 12 },
+  { key: 'orange',  w: 12 }, { key: 'purple', w: 12 },
+  { key: 'cyan',    w: 10 }, { key: 'pink',   w: 10 }, { key: 'lime',  w: 10 },
+  { key: 'gold',    w: 8 },
+  { key: 'rainbow', w: 2 },
+];
+function rollDye() {
+  const total = DYE_POOL.reduce((s, d) => s + d.w, 0);
+  let x = Math.random() * total;
+  for (const d of DYE_POOL) { x -= d.w; if (x <= 0) return d.key; }
+  return 'red';
+}
+function shopList() {
+  return Object.entries(SHOP).map(([id, it]) => ({ id, ...it }));
+}
+function buyItem(token, itemId) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const it = SHOP[itemId]; if (!it) return { error: '없는 상품이에요.' };
+  u.items = u.items || {}; u.coins = u.coins || 0;
+  if ((it.type === 'cardback' || it.type === 'emotes') && u.items[itemId]) return { error: '이미 보유한 아이템이에요.' };
+  if (u.coins < it.price) return { error: `코인이 부족해요. (보유 ${u.coins} / 필요 ${it.price})` };
+  u.coins -= it.price;
+  let dye = null;
+  if (it.type === 'dye') { dye = rollDye(); u.nickColor = dye; }                 // 즉시 발라짐
+  else if (it.type === 'ticket') u.items[itemId] = (u.items[itemId] || 0) + 1;   // 소모권 적립
+  else { u.items[itemId] = true; if (it.type === 'cardback') u.cardBack = itemId; }  // 사면 바로 장착
+  persist(idl);
+  return { ok: true, profile: profileOf(u), dye };
+}
+function equipItem(token, itemId) {   // 카드백 장착/해제 (itemId=null이면 기본으로)
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  if (itemId && (!SHOP[itemId] || SHOP[itemId].type !== 'cardback' || !(u.items || {})[itemId])) return { error: '보유하지 않은 카드백이에요.' };
+  u.cardBack = itemId || null;
+  persist(idl);
   return { ok: true, profile: profileOf(u) };
 }
 
@@ -175,17 +238,35 @@ function topPlayers(limit = 20) {
   return Object.values(db.users)
     .sort((a, b) => (b.rp - a.rp) || (b.wins - a.wins))
     .slice(0, Math.min(limit, 50))
-    .map((u, i) => { const p = profileOf(u); return { no: i + 1, nick: p.nick, level: p.level, rank: p.rank, rankIcon: p.rankIcon, rankColor: p.rankColor, rp: p.rp, wins: p.wins, losses: p.losses }; });
+    .map((u, i) => { const p = profileOf(u); return { no: i + 1, nick: p.nick, nickColor: p.nickColor, level: p.level, rank: p.rank, rankIcon: p.rankIcon, rankColor: p.rankColor, rp: p.rp, wins: p.wins, losses: p.losses }; });
 }
 
-// 결과 반영 (result: 'win'|'loss'|'draw')
-function recordResult(token, result) {
+// ── 보상 테이블 ──
+// 코인: 전문가 AI가 압도적 / RP: 멀티 전용 (AI 농사 방지) / XP: 난이도 차등
+const REWARDS = {
+  ai_easy:   { win: { coins: 10,  xp: 10 }, loss: { coins: 0,  xp: 5 },  draw: { coins: 5,  xp: 8 } },
+  ai_hard:   { win: { coins: 30,  xp: 20 }, loss: { coins: 5,  xp: 5 },  draw: { coins: 15, xp: 10 } },
+  ai_expert: { win: { coins: 150, xp: 40 }, loss: { coins: 25, xp: 8 },  draw: { coins: 75, xp: 20 } },
+  multi:     { win: { coins: 50,  xp: 30, rp: 25 }, loss: { coins: 10, xp: 10, rp: -13 }, draw: { coins: 25, xp: 15, rp: 0 } },
+};
+function rewardKey(vsBot, difficulty) {
+  if (!vsBot) return 'multi';
+  if (difficulty === 'expert') return 'ai_expert';
+  if (difficulty === 'easy') return 'ai_easy';
+  return 'ai_hard';   // normal/hard 둘 다 중간 취급
+}
+
+// 결과 반영 (result: 'win'|'loss'|'draw') → { profile, rewards }
+function recordResult(token, result, opts = {}) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null; if (!u) return null;
-  if (result === 'win')  { u.wins++;   u.xp += 20; u.rp += 25; }
-  else if (result === 'loss') { u.losses++; u.xp += 8;  u.rp = Math.max(0, u.rp - 12); }
-  else { u.xp += 10; }   // 무승부
+  const r = (REWARDS[rewardKey(opts.vsBot, opts.difficulty)] || REWARDS.multi)[result] || { coins: 0, xp: 0 };
+  if (result === 'win') u.wins++;
+  else if (result === 'loss') u.losses++;
+  u.xp += r.xp || 0;
+  u.coins = (u.coins || 0) + (r.coins || 0);
+  if (r.rp) u.rp = Math.max(0, u.rp + r.rp);
   persist(idl);
-  return profileOf(u);
+  return { profile: profileOf(u), rewards: { coins: r.coins || 0, xp: r.xp || 0, rp: r.rp || 0 } };
 }
 
-module.exports = { signup, login, kakaoLogin, setNick, byToken, meByToken, recordResult, profileOf, topPlayers };
+module.exports = { signup, login, kakaoLogin, setNick, byToken, meByToken, recordResult, profileOf, topPlayers, shopList, buyItem, equipItem };

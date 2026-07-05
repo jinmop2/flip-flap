@@ -71,6 +71,50 @@
       padding:10px 12px; font-family:'Fredoka'; font-size:.84rem; font-weight:600; cursor:pointer; transition:.15s;
     }
     .top-link:hover { border-color:var(--gold); color:var(--gold); }
+    /* ── 닉네임 염색 ── */
+    .nc-red    { color:#ff6b6b !important; }
+    .nc-blue   { color:#6bb8ff !important; }
+    .nc-green  { color:#7dd87d !important; }
+    .nc-orange { color:#ffab5e !important; }
+    .nc-purple { color:#c39bff !important; }
+    .nc-cyan   { color:#5ee0d8 !important; }
+    .nc-pink   { color:#ff8ecf !important; }
+    .nc-lime   { color:#c8f05a !important; }
+    .nc-gold   { color:#ffd94a !important; text-shadow:0 0 9px rgba(255,215,80,.55); }
+    .nc-rainbow {
+      background:linear-gradient(90deg,#ff6b6b,#ffd94a,#7dd87d,#6bb8ff,#c39bff,#ff6b6b);
+      background-size:200% 100%;
+      -webkit-background-clip:text; background-clip:text;
+      -webkit-text-fill-color:transparent; color:transparent !important;
+      animation:ncRainbow 3s linear infinite;
+    }
+    @keyframes ncRainbow { to { background-position:200% 0; } }
+    /* ── 카드백 스킨 ── */
+    .card.back.cb-night { background:linear-gradient(160deg,#0c1030,#243060); border-color:#4a5aaa; }
+    .card.back.cb-night .bf { color:#9ab0e8; }
+    .card.back.cb-gold { background:linear-gradient(160deg,#4a3808,#9a7a18); border-color:#ffd94a; box-shadow:0 3px 10px rgba(200,160,0,.35); }
+    .card.back.cb-gold .bf { color:#ffe9a8; }
+    .card.back.cb-obang {
+      background:linear-gradient(150deg,var(--red) 0 22%,var(--yel) 22% 42%,#f0e8d8 42% 58%,var(--blue) 58% 78%,#2e2118 78% 100%);
+      border-color:#f0e8d8;
+    }
+    .card.back.cb-obang .bf { color:#fff; text-shadow:0 1px 4px rgba(0,0,0,.7); }
+    /* ── 상점 ── */
+    .shop-box { max-width:380px; }
+    .shop-coins { font-size:.95rem; font-weight:800; color:#ffd94a; background:rgba(200,160,0,.12); border:1px solid rgba(200,160,0,.35); border-radius:9px; padding:3px 11px; letter-spacing:0; }
+    .shop-msg { min-height:18px; font-size:.78rem; text-align:center; color:#ffd94a; margin:2px 0 6px; }
+    .shop-list { display:flex; flex-direction:column; gap:8px; max-height:52vh; overflow-y:auto; margin-bottom:10px; }
+    .shop-item { display:flex; align-items:center; gap:10px; background:#1c1424; border:1px solid #2a1c30; border-radius:12px; padding:10px 12px; text-align:left; }
+    .shop-ico { font-size:1.5rem; flex-shrink:0; }
+    .shop-info { flex:1; min-width:0; }
+    .shop-name { font-size:.86rem; font-weight:700; color:#f0ead8; }
+    .shop-desc { font-size:.68rem; color:#8a7a80; margin-top:1px; line-height:1.4; }
+    .shop-buy { flex-shrink:0; border:1.5px solid var(--gold); background:rgba(200,160,0,.12); color:#ffe9a8; border-radius:9px; padding:7px 12px; font-family:'Fredoka'; font-size:.76rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+    .shop-buy:hover { background:rgba(200,160,0,.25); }
+    .shop-buy.owned { border-color:#3a4a3a; background:none; color:#7a8a7a; }
+    .shop-buy:disabled { opacity:.45; cursor:default; }
+    /* 결과 보상 */
+    #goRewards { display:none; font-size:.95rem; font-weight:700; color:#ffd94a; margin:4px 0 2px; letter-spacing:.5px; }
     /* 앱 설치 버튼 */
     .install-btn {
       width:100%; background:rgba(200,160,0,.1); border:1.5px dashed rgba(200,160,0,.5); color:#ffe9a8;
@@ -787,10 +831,11 @@
     </div>
     <button class="lobby-rules-link" id="authBtn" onclick="openAuth('login')">로그인 / 회원가입</button>
 
-    <!-- 게임 방법 · 튜토리얼 -->
+    <!-- 게임 방법 · 튜토리얼 · 상점 -->
     <div class="lobby-top">
       <button class="top-link" onclick="toggleRules(true)">📖 게임 방법</button>
       <button class="top-link" onclick="startTutorial()">🎓 튜토리얼</button>
+      <button class="top-link shop-link" onclick="openShop()">🛒 상점</button>
     </div>
 
     <!-- 솔로 / 멀티 -->
@@ -1111,6 +1156,18 @@
   </div>
 </div>
 
+<!-- 상점 -->
+<div class="lb-modal" id="shopModal" onclick="if(event.target===this)closeShop()">
+  <div class="lb-box shop-box">
+    <div class="lb-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>🛒 상점</span><span class="shop-coins" id="shopCoins">🪙 0</span>
+    </div>
+    <div id="shopMsg" class="shop-msg"></div>
+    <div id="shopList" class="shop-list"></div>
+    <button class="btn btn-outline" onclick="closeShop()">닫기</button>
+  </div>
+</div>
+
 <!-- 튜토리얼 코치 -->
 <div id="tutBox">
   <div class="tut-tag">🎓 튜토리얼</div>
@@ -1125,6 +1182,7 @@
   <div id="goBox">
     <div id="goTitle"></div>
     <div id="goDesc"></div>
+    <div id="goRewards"></div>
     <div id="goStats"></div>
     <div id="rematchNote"></div>
     <div style="display:flex; gap:8px; justify-content:center;">

@@ -110,8 +110,9 @@ function renderAccount() {
   if (myAccount) {
     guest.style.display = 'none';
     chip.style.display = 'flex';
+    const canNick = !myAccount.nickLocked || ((myAccount.items || {}).nick_change || 0) > 0;   // 첫 설정 or 변경권 보유
     chip.innerHTML = profileChipHTML(myAccount)
-      + (myAccount.nickLocked ? '' : '<button class="pc-edit" onclick="openNickModal()" title="닉네임 정하기 (한 번만!)">✏️</button>')
+      + (canNick ? '<button class="pc-edit" onclick="openNickModal()" title="닉네임 바꾸기">✏️</button>' : '')
       + '<button class="pc-logout" onclick="logout()">로그아웃</button>';
     authBtn.style.display = 'none';
   } else {
@@ -121,14 +122,23 @@ function renderAccount() {
     authBtn.textContent = '로그인 / 회원가입'; authBtn.onclick = () => openAuth('login');
   }
 }
+const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
 function profileChipHTML(p) {
   return `<div class="pc-rank" style="color:${p.rankColor}">${p.rankIcon}</div>
-    <div class="pc-mid"><div class="pc-nick">${esc(p.nick)}</div>
-    <div class="pc-sub">Lv.${p.level} · <span style="color:${p.rankColor}">${esc(p.rank)}</span> · ${p.wins}승 ${p.losses}패 · <b style="color:#ffe9a8">${p.rp} RP</b></div></div>`;
+    <div class="pc-mid"><div class="pc-nick${ncClass(p.nickColor)}">${esc(p.nick)}</div>
+    <div class="pc-sub">Lv.${p.level} · <span style="color:${p.rankColor}">${esc(p.rank)}</span> · ${p.wins}승 ${p.losses}패 · <b style="color:#ffe9a8">${p.rp} RP</b> · <b style="color:#ffd94a">🪙 ${p.coins || 0}</b></div></div>`;
 }
-// 로그인 프로필이 게임 종료 등으로 갱신됨
-socket.on('profile', ({ profile, result }) => {
-  myAccount = profile; renderAccount();
+// 로그인 프로필이 게임 종료 등으로 갱신됨 + 보상 표시
+socket.on('profile', ({ profile, result, rewards }) => {
+  myAccount = profile; renderAccount(); refreshEmotes();
+  if (rewards && (rewards.coins || rewards.xp || rewards.rp)) {
+    const parts = [];
+    if (rewards.coins) parts.push(`🪙 +${rewards.coins}`);
+    if (rewards.xp) parts.push(`XP +${rewards.xp}`);
+    if (rewards.rp) parts.push(`RP ${rewards.rp > 0 ? '+' : ''}${rewards.rp}`);
+    const el = document.getElementById('goRewards');
+    if (el) { el.textContent = parts.join(' · '); el.style.display = 'block'; }
+  }
 });
 // ── 닉네임 설정 모달 ──
 function openNickModal() {
@@ -197,7 +207,7 @@ async function openLeaderboard() {
       row.className = 'lb-row' + (myNick && p.nick === myNick ? ' me' : '');
       row.innerHTML = `<span class="lb-no${p.no <= 3 ? ' top' : ''}">${p.no <= 3 ? ['🥇','🥈','🥉'][p.no-1] : p.no}</span>
         <span class="lb-rank" style="color:${p.rankColor}">${p.rankIcon}</span>
-        <span class="lb-nick">${esc(p.nick)}</span>
+        <span class="lb-nick${ncClass(p.nickColor)}">${esc(p.nick)}</span>
         <span class="lb-wl">${p.wins}승 ${p.losses}패</span>
         <span class="lb-rp">${p.rp} RP</span>`;
       list.appendChild(row);
@@ -205,6 +215,68 @@ async function openLeaderboard() {
   } catch (_) { list.innerHTML = '<div class="lb-empty">불러오기 실패</div>'; }
 }
 function closeLb() { document.getElementById('lbModal').classList.remove('show'); }
+
+// ── 상점 ────────────────────────────────────────────────────
+const DYE_NAMES = { red:'빨강', blue:'파랑', green:'초록', orange:'주황', purple:'보라', cyan:'청록', pink:'핑크', lime:'라임', gold:'✨골드✨', rainbow:'🌈무지개🌈' };
+let shopItems = null;
+async function openShop() {
+  if (!myAccount) { alert('상점은 로그인하면 이용할 수 있어요!\n게임에서 이기면 🪙 코인을 모을 수 있어요.'); openAuth('login'); return; }
+  document.getElementById('shopMsg').textContent = '';
+  document.getElementById('shopModal').classList.add('show');
+  if (!shopItems) {
+    try { shopItems = (await fetch('/api/shop').then(r => r.json())).items; } catch (_) { shopItems = null; }
+  }
+  renderShop();
+}
+function closeShop() { document.getElementById('shopModal').classList.remove('show'); }
+function renderShop() {
+  document.getElementById('shopCoins').textContent = `🪙 ${myAccount ? myAccount.coins : 0}`;
+  const list = document.getElementById('shopList');
+  if (!shopItems) { list.innerHTML = '<div class="lb-empty">상점을 불러오지 못했어요</div>'; return; }
+  list.innerHTML = '';
+  shopItems.forEach(it => {
+    const owned = myAccount.items && myAccount.items[it.id];
+    const row = document.createElement('div'); row.className = 'shop-item';
+    let btnHtml;
+    if (it.type === 'cardback' && owned) {
+      const on = myAccount.cardBack === it.id;
+      btnHtml = `<button class="shop-buy${on ? '' : ' owned'}" onclick="equipBack('${it.id}', ${on})">${on ? '장착 중 ✓' : '장착'}</button>`;
+    } else if (it.type === 'emotes' && owned) {
+      btnHtml = `<button class="shop-buy owned" disabled>보유 중 ✓</button>`;
+    } else {
+      const cnt = it.type === 'ticket' && owned ? ` (보유 ${owned})` : '';
+      btnHtml = `<button class="shop-buy" onclick="buyShopItem('${it.id}')">🪙 ${it.price}${cnt}</button>`;
+    }
+    row.innerHTML = `<span class="shop-ico">${it.icon}</span>
+      <div class="shop-info"><div class="shop-name">${it.name}</div><div class="shop-desc">${it.desc}</div></div>${btnHtml}`;
+    list.appendChild(row);
+  });
+}
+async function buyShopItem(itemId) {
+  const msg = document.getElementById('shopMsg');
+  const r = await apiPost('/api/buy', { token: localStorage.getItem('ff_auth'), itemId });
+  if (r.error) { msg.textContent = '⚠️ ' + r.error; return; }
+  myAccount = r.profile; renderAccount(); renderShop(); refreshEmotes();
+  if (r.dye) msg.innerHTML = `🎨 <b class="${'nc-' + r.dye}">${DYE_NAMES[r.dye] || r.dye}</b> 색이 나왔어요! 닉네임에 바로 적용!`;
+  else msg.textContent = '✅ 구매 완료!';
+  playSound && playSound('setwin');
+}
+async function equipBack(itemId, isOn) {
+  const r = await apiPost('/api/equip', { token: localStorage.getItem('ff_auth'), itemId: isOn ? null : itemId });
+  if (r.error) { document.getElementById('shopMsg').textContent = '⚠️ ' + r.error; return; }
+  myAccount = r.profile; renderShop();
+}
+// 파티 이모트 팩 — 보유 시 피커에 추가
+function refreshEmotes() {
+  const picker = document.getElementById('emotePicker'); if (!picker) return;
+  picker.querySelectorAll('.emote-extra').forEach(b => b.remove());
+  if (myAccount && myAccount.items && myAccount.items.emote_party) {
+    ['🤡','😈','💀','🎉','👑','🍀','💢','🫠'].forEach(e => {
+      const b = document.createElement('button'); b.className = 'emote-extra'; b.textContent = e;
+      b.onclick = () => sendEmote(e); picker.appendChild(b);
+    });
+  }
+}
 
 // ── 로비 다이얼로그 ─────────────────────────────────────────
 function openCreate() { document.getElementById('createModal').classList.add('show'); document.getElementById('roomNameInput').focus(); }
@@ -240,7 +312,7 @@ function renderGameProfile(elId, p) {
     body.innerHTML = `<span class="gp-rank">👤</span><span class="gp-nick">${esc(p.nick)}</span>`;
     if (stats) stats.innerHTML = `게스트 (기록 없음)`;
   } else {
-    body.innerHTML = `<span class="gp-rank" style="color:${p.rankColor}">${p.rankIcon}</span><span class="gp-nick">${esc(p.nick)}</span><span class="gp-lv">Lv.${p.level}</span>`;
+    body.innerHTML = `<span class="gp-rank" style="color:${p.rankColor}">${p.rankIcon}</span><span class="gp-nick${ncClass(p.nickColor)}">${esc(p.nick)}</span><span class="gp-lv">Lv.${p.level}</span>`;
     if (stats) stats.innerHTML = `<span style="color:${p.rankColor}">${esc(p.rank)}</span> · <b>${p.wins}승 ${p.losses}패</b> · 승률 ${p.winRate}%`;
   }
 }
@@ -621,6 +693,7 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles }) =
   document.getElementById('matchModal').classList.remove('show');
   hideGrace();
   document.getElementById('rematchNote').textContent = '';
+  const gr = document.getElementById('goRewards'); if (gr) { gr.textContent = ''; gr.style.display = 'none'; }
   const rb = document.getElementById('rematchBtn'); if (rb) { rb.disabled = false; rb.style.opacity = '1'; }
   prevPhase = null; selectedBidCard = null; prevMyAction = false; stopTitleBlink();
   seenAcq.myAcq = new Set(); seenAcq.oppAcq = new Set(); boardCelebrated = false; lastSig = {};
@@ -924,13 +997,25 @@ function renderDeck() {
   el.classList.toggle('drawable', s.phase === 'draw' && s.auctioneer === s.myIndex);
 }
 
+// 상대의 카드백 스킨 (프로필에 장착 정보가 실려옴)
+const CB_CLASS = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang' };
+function oppBackClass() {
+  const p = gameProfiles && gameProfiles[myIndex === 1 ? 1 : 0];
+  return (p && CB_CLASS[p.cardBack]) || null;
+}
+function makeOppBack() {
+  const c = makeCard(null);
+  const cls = oppBackClass(); if (cls) c.classList.add(cls);
+  return c;
+}
+
 // 상대 손패 = 뒷면 카드 부채꼴 (내 패보다 작게)
 function renderOppHand(n) {
   if (lastSig.oppHand === n) return; lastSig.oppHand = n;   // 장수 그대로면 스킵
   const el = document.getElementById('oppHand'); el.innerHTML = '';
   for (let i = 0; i < n; i++) {
     const slot = document.createElement('div'); slot.className = 'fan-slot';
-    slot.appendChild(makeCard(null));
+    slot.appendChild(makeOppBack());
     el.appendChild(slot);
   }
   fanRow(el, true);
@@ -1090,7 +1175,7 @@ function bidSlot(label, card, { back = false, reveal = false } = {}) {
   const l = document.createElement('div'); l.className = 'bid-lbl'; l.textContent = label;
   w.appendChild(l);
   if (card)       w.appendChild(makeCard(card, { reveal }));
-  else if (back)  w.appendChild(makeCard(null));
+  else if (back)  w.appendChild(makeOppBack());   // 상대의 비공개 배팅 — 상대 카드백 스킨 적용
   else { const e = document.createElement('div'); e.className = 'bid-empty'; w.appendChild(e); }
   return w;
 }
