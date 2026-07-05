@@ -25,10 +25,14 @@ socket.on('connect', () => {
   if (tk) socket.emit('auth', { token: tk });   // 로그인 세션 연결
   // 재접속 or 초대 링크 or 로비 목록
   const sess = localStorage.getItem('ff_sess');
-  const urlRoom = new URLSearchParams(location.search).get('room');
-  if (sess)          socket.emit('rejoin', { roomId: sess, pid: PID });
-  else if (urlRoom)  socket.emit('join_room', { roomId: urlRoom.toUpperCase(), pid: PID, nick: getNick() });
-  else               socket.emit('enter_lobby');
+  const urlRoom = (new URLSearchParams(location.search).get('room') || '').toUpperCase();
+  // 초대 링크가 옛 세션과 다른 방이면 초대가 우선 (안 그러면 초대 링크가 무시됨)
+  if (urlRoom && urlRoom !== sess) {
+    localStorage.removeItem('ff_sess');
+    socket.emit('join_room', { roomId: urlRoom, pid: PID, nick: getNick() });
+  }
+  else if (sess) socket.emit('rejoin', { roomId: sess, pid: PID });
+  else           socket.emit('enter_lobby');
 });
 socket.on('auth_ok', ({ profile }) => { myAccount = profile; renderAccount(); });
 socket.on('disconnect', () => setConn('연결 끊김 — 재접속 중…', 'bad'));
@@ -470,7 +474,13 @@ function copyText(text, btn) {
   if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done).catch(() => prompt('복사하세요:', text));
   else prompt('복사하세요:', text);
 }
-function copyCode(btn) { copyText(sharedCode, btn); }
+// 코드 옆 ⧉ 아이콘 — 누르면 코드 복사, 잠깐 ✓ 표시
+function copyCodeIcon(btn) {
+  const orig = btn.innerHTML;
+  const done = () => { btn.innerHTML = '✓'; btn.classList.add('copied'); setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 1200); };
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(sharedCode).then(done).catch(() => prompt('복사하세요:', sharedCode));
+  else prompt('복사하세요:', sharedCode);
+}
 function inviteURL() { return `${location.origin}${location.pathname}?room=${sharedCode}`; }
 
 // ── 카카오 SDK (JS 키는 공개용 — 도메인 등록으로 보호됨) ──

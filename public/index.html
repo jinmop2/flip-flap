@@ -114,10 +114,18 @@
     }
     .wc-label { font-size:.8rem; color:#8a7a80; }
     .wc-code {
+      display:flex; align-items:center; gap:10px;
       font-family:'Bangers',cursive; font-size:2.6rem; letter-spacing:8px; color:var(--gold);
       background:rgba(200,160,0,.1); border:1px dashed rgba(200,160,0,.4); border-radius:12px;
       padding:6px 18px 4px; text-indent:8px;
     }
+    .code-copy {
+      background:none; border:none; cursor:pointer; color:var(--gold); opacity:.65;
+      padding:4px; display:flex; align-items:center; letter-spacing:0; text-indent:0;
+      font-size:1.1rem; line-height:1;
+    }
+    .code-copy:hover { opacity:1; }
+    .code-copy.copied { color:#7dd87d; opacity:1; }
     .wc-btns { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
     .btn-kakao { background:#FEE500; color:#191919; border:1.5px solid #FEE500; font-weight:800; }
     .btn-kakao:hover { background:#ffd900; }
@@ -697,12 +705,10 @@
   <div id="waitCard">
     <div class="wc-label"><b id="waitRoomName"></b> · 상대를 기다려요</div>
     <div class="wc-sub">친구에겐 코드/링크 공유, 또는 로비 목록에서 참가</div>
-    <div class="wc-code" id="waitCode">-----</div>
+    <div class="wc-code"><span id="waitCode">-----</span><button class="code-copy" onclick="copyCodeIcon(this)" title="코드 복사"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>
     <div class="wc-btns">
       <button class="btn btn-kakao btn-sm" onclick="shareKakao(this)">💬 카톡 공유</button>
-      <button class="btn btn-gold btn-sm" onclick="shareInvite(this)">📤 공유</button>
       <button class="btn btn-outline btn-sm" onclick="copyLink(this)">링크 복사</button>
-      <button class="btn btn-outline btn-sm" onclick="copyCode(this)">코드 복사</button>
     </div>
     <div class="wc-wait"><span class="thinking-dots">상대를 기다리는 중<span>.</span><span>.</span><span>.</span></span></div>
     <button class="lobby-rules-link" onclick="cancelWait()">← 취소</button>
