@@ -110,6 +110,25 @@
     .tut-actions .btn { width:auto; padding:6px 16px; font-size:.8rem; }
     .tut-quit { background:none; border:none; color:#6a5a70; font-family:'Fredoka'; font-size:.72rem; cursor:pointer; }
     .tut-quit:hover { color:#c8bcc4; }
+    /* 튜토리얼 미니 카드 (졸개의 배신 시연) */
+    .tut-cards { display:flex; align-items:center; gap:9px; justify-content:center; margin-top:9px; }
+    .tcard {
+      position:relative; width:34px; height:47px; border-radius:6px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-family:'Bangers',cursive; font-size:1.35rem; color:#fff; border:1.5px solid var(--gold);
+      box-shadow:0 2px 6px rgba(0,0,0,.5);
+    }
+    .tcard i { position:absolute; top:1px; left:4px; font-size:.55rem; font-style:normal; opacity:.95; font-family:'Fredoka'; font-weight:700; }
+    .tcard.k6 { background:linear-gradient(160deg,var(--ink-d),var(--ink)); }
+    .tcard.k2 { background:linear-gradient(160deg,var(--red-d),var(--red)); }
+    .tvs { color:#ffd94a; font-weight:800; }
+    .twin { color:#7dd87d; font-weight:800; font-size:.82rem; }
+    /* AI 난이도 — 프로필 카드 아래 */
+    .pc-diff {
+      margin-top:3px; font-size:.62rem; font-weight:700; color:#ffd94a;
+      background:rgba(200,160,0,.14); border:1px solid rgba(200,160,0,.35);
+      border-radius:6px; padding:1px 7px; text-align:center; width:fit-content;
+    }
     /* 지금 클릭할 곳 강조 */
     .tut-glow { border-radius:14px; animation:tutGlow 1.3s ease-in-out infinite; }
     @keyframes tutGlow {
@@ -532,7 +551,8 @@
 
     /* ─── 손패 부채꼴 ─── */
     .fan { display:flex; justify-content:center; align-items:flex-end; min-height:104px; }
-    .fan.top { align-items:flex-start; min-height:72px; }
+    .fan.top { align-items:flex-start; min-height:64px; }
+    .fan.top .card { width:42px; height:59px; padding:3px; }   /* 상대 패는 내 패보다 작게 */
     .fan-slot { transition:transform .18s cubic-bezier(.34,1.4,.64,1); }
     .fan-slot:hover { z-index:40 !important; }
 
@@ -676,6 +696,8 @@
 
       /* 부채꼴 높이 */
       .fan { min-height:82px; }
+      .fan.top { min-height:46px; }
+      .fan.top .card { width:33px; height:46px; }
 
       /* 라벨·타이머 */
       #statusBar { font-size:.78rem; }
@@ -888,9 +910,10 @@
     <div class="ctrl-btn" id="exitBtn" title="게임 나가기" onclick="exitGame()"><span class="ci">🚪</span><span class="cl">나가기</span></div>
   </div>
 
-  <!-- 상대 프로필 (클릭하면 전적) -->
+  <!-- 상대 프로필 (클릭하면 전적) · AI면 난이도 표시 -->
   <div class="game-pcard" id="oppProfile" onclick="toggleStats(this)">
     <div class="pc-body"></div><div class="pc-stats"></div>
+    <div class="pc-diff" id="cpuDiff" style="display:none"></div>
   </div>
   <!-- 내 프로필 (클릭하면 전적) + 이모트 버튼(프로필 위) -->
   <div class="emote-wrap" id="emoteWrap">
@@ -914,9 +937,9 @@
   <div class="zone" id="oppZone">
     <div class="zone-label">
       <span id="oppNickLabel">상대</span> <span id="cpuTag" class="cpu-tag" style="display:none">AI</span>
-      <span id="cpuDiff" class="cpu-tag diff" style="display:none"></span>
       <span class="timer" id="oppTimer">7:00</span>
     </div>
+    <div class="fan top" id="oppHand"></div>
     <div class="pile" id="oppAcq"></div>
     <div class="bid-area" id="oppBid"></div>
   </div>

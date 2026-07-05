@@ -392,7 +392,7 @@ function sendEmote(emoji) {
 socket.on('emote', ({ emoji }) => showEmote(emoji, 'opp'));
 function showEmote(emoji, side) {
   playSound('emote');
-  const anchor = document.getElementById(side === 'me' ? 'myHand' : 'oppAcq');
+  const anchor = document.getElementById(side === 'me' ? 'myHand' : 'oppHand');
   const b = document.createElement('div');
   b.className = 'emote-bubble'; b.textContent = emoji;
   let x = window.innerWidth / 2, y = side === 'me' ? window.innerHeight - 160 : 120;
@@ -483,32 +483,48 @@ const TUT_STEPS = [
   { id: 'draw_opp', when: s => s.phase === 'draw' && s.auctioneer !== s.myIndex,
     pos: 'bot',
     text: '이번 턴 진행자는 <b>상대</b> — 진행자는 매 턴 번갈아요. 상대가 상품을 걸면 곧 배팅 차례가 와요. 잠깐 기다려요 ☕' },
-  { id: 'betray', when: s => s.phase === 'bidding' && s.auction && !s.auction.myBid && tutSeen.bid_me && tutSeen.reveal,
+  { id: 'betray',   // 실제로 6-10이나 2-1이 내 손에 들어온 순간에만 시연
+    when: s => tutSeen.bid_me && (s.myHand || []).some(c => (c.kind === 6 && c.grade === 10) || (c.kind === 2 && c.grade === 1)),
     pos: 'top',
-    text: '💡 비밀 무기: 가장 약한 <b>6-10</b>이 가장 강한 <b>2-1</b>만은 이겨요 — <b>졸개의 배신!</b> 상대의 에이스를 저격할 수 있죠.' },
+    text: (s => (s.myHand || []).some(c => c.kind === 6 && c.grade === 10)
+      ? '👀 지금 손에 있는 <b>6-10</b> — 최약체지만 최강 <b>2-1</b>만은 이겨요. <b>졸개의 배신!</b> 상대가 에이스를 낼 타이밍에 노려보세요.'
+      : '👀 지금 손에 있는 <b>2-1</b>은 최강 카드지만 단 하나, 최약체 <b>6-10</b>한테만 져요 — <b>졸개의 배신</b>을 조심!')
+      , cards: '<div class="tut-cards"><span class="tcard k6"><i>10</i>6</span><span class="tvs">⚔</span><span class="tcard k2"><i>1</i>2</span><span class="tvs">→</span><span class="twin">6-10 승!</span></div>' },
 ];
 function startTutorial() {
   tutorial = true; tutSeen = {};
   difficulty = 'easy';
   createRoom(true);
 }
+// 읽는 도중 다음 설명이 밀고 들어오지 않게 — 열려 있으면 큐에 쌓고, '알겠어요' 후 표시
+let tutQueue = [], tutOpen = false;
 function tutTick() {
   if (!tutorial || !state) return;
   for (const st of TUT_STEPS) {
     if (tutSeen[st.id]) continue;
-    if (st.when(state)) { tutSeen[st.id] = true; tutShow(st); return; }
+    if (st.when(state)) {
+      tutSeen[st.id] = true;
+      if (tutOpen) { tutQueue.push(st); tutGlowFor(st); }   // 글씨는 기다리되, 반짝임은 바로 (막히지 않게)
+      else tutShow(st);
+      return;
+    }
   }
-  // 활성 스텝의 하이라이트 대상이 사라졌으면 정리 (예: 덱 클릭 후)
-  if (tutTarget && !document.contains(tutTarget)) tutClearGlow();
 }
 function tutShow(st) {
   const box = document.getElementById('tutBox');
-  document.getElementById('tutText').innerHTML = st.text + (st.act ? `<div class="tut-do">👉 ${st.act}</div>` : '');
+  const text = typeof st.text === 'function' ? st.text(state) : st.text;
+  document.getElementById('tutText').innerHTML = text
+    + (st.cards || '')
+    + (st.act ? `<div class="tut-do">👉 ${st.act}</div>` : '');
   box.classList.remove('pos-top', 'pos-bot', 'pop');
   box.classList.add('pos-' + (st.pos || 'top'));
   box.style.display = 'block';
   void box.offsetWidth;           // 애니메이션 재시작
   box.classList.add('pop');
+  tutOpen = true;
+  tutGlowFor(st);
+}
+function tutGlowFor(st) {
   tutClearGlow();
   if (st.target) {
     tutTarget = document.querySelector(st.target);
@@ -518,8 +534,12 @@ function tutShow(st) {
 function tutClearGlow() {
   if (tutTarget) { tutTarget.classList.remove('tut-glow'); tutTarget = null; }
 }
-function tutConfirm() { document.getElementById('tutBox').style.display = 'none'; }   // 반짝임은 유지 — 뭘 누를지 계속 보이게
-function endTutorial() { tutorial = false; tutConfirm(); tutClearGlow(); }
+function tutConfirm() {
+  tutOpen = false;
+  if (tutQueue.length) return tutShow(tutQueue.shift());   // 밀린 설명이 있으면 이어서
+  document.getElementById('tutBox').style.display = 'none';
+}
+function endTutorial() { tutorial = false; tutQueue = []; tutOpen = false; document.getElementById('tutBox').style.display = 'none'; tutClearGlow(); }
 
 // ── 방 ──────────────────────────────────────────────────────
 function createRoom(vsBot) {
@@ -674,8 +694,9 @@ socket.on('special', () => {
 socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex: mi }) => {
   clearSession(); stopTitleBlink(); hideGrace(); recordResult(winner, mi);
   if (tutorial) {   // 튜토리얼 마무리 인사
-    tutorial = false;
-    tutShow('🎓 <b>튜토리얼 완료!</b> 이제 규칙을 다 배웠어요. 💡 마지막 팁: 덱이 다 떨어지면 <b>세트에 가장 가까운 사람</b>이 이겨요. 실전에서 친구와 붙어보세요!');
+    tutorial = false; tutQueue = []; tutOpen = false; tutClearGlow();
+    tutShow({ pos: 'top', text: '🎓 <b>튜토리얼 완료!</b> 이제 규칙을 다 배웠어요. 💡 마지막 팁: 덱이 다 떨어지면 <b>세트에 가장 가까운 사람</b>이 이겨요. 실전에서 친구와 붙어보세요!' });
+    tutOpen = false;   // 완료 인사는 '알겠어요'로 닫히게
   }
   const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
   let delay = 500;
@@ -870,6 +891,7 @@ function render(changed = false) {
   }
 
   renderDeck();
+  renderOppHand(s.oppHandLen);
   renderPile('oppAcq', s.oppAcq);
   renderPile('myAcq', s.myAcq);
   renderAuction(changed);
@@ -903,6 +925,18 @@ function renderDeck() {
   cnt.className = 'deck-count'; cnt.textContent = `덱 ${n}장`;
   el.appendChild(cnt);
   el.classList.toggle('drawable', s.phase === 'draw' && s.auctioneer === s.myIndex);
+}
+
+// 상대 손패 = 뒷면 카드 부채꼴 (내 패보다 작게)
+function renderOppHand(n) {
+  if (lastSig.oppHand === n) return; lastSig.oppHand = n;   // 장수 그대로면 스킵
+  const el = document.getElementById('oppHand'); el.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const slot = document.createElement('div'); slot.className = 'fan-slot';
+    slot.appendChild(makeCard(null));
+    el.appendChild(slot);
+  }
+  fanRow(el, true);
 }
 
 // 획득 카드 = 종류별로 겹쳐 쌓은 더미 (세트 진행도 표시)
