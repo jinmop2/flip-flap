@@ -350,10 +350,10 @@ function maybeCpuAct(roomId) {
   const g = room.game, ci = room.cpuIndex;
 
   if (g.phase === 'draw' && g.auctioneer === ci + 1) {
-    delay(() => { if (g.phase !== 'draw') return; drawCenter(g); broadcast(roomId); maybeCpuAct(roomId); }, 600, 500);
+    delay(roomId, () => { if (g.phase !== 'draw') return; drawCenter(g); broadcast(roomId); maybeCpuAct(roomId); }, 600, 500);
   }
   else if (g.phase === 'offer' && g.auctioneer === ci + 1) {
-    delay(() => {
+    delay(roomId, () => {
       if (g.phase !== 'offer') return;
       const hand = ci === 0 ? g.p1Hand : g.p2Hand;
       const acq  = ci === 0 ? g.p1Acquired : g.p2Acquired;
@@ -368,7 +368,7 @@ function maybeCpuAct(roomId) {
     }, 700, 800);
   }
   else if (g.phase === 'choose_type' && g.auctioneer === ci + 1) {
-    delay(() => {
+    delay(roomId, () => {
       if (g.phase !== 'choose_type') return;
       const hand = ci === 0 ? g.p1Hand : g.p2Hand;
       const acq  = ci === 0 ? g.p1Acquired : g.p2Acquired;
@@ -392,7 +392,7 @@ function maybeCpuAct(roomId) {
       const aucBid = g.auctioneer === 1 ? g.auction.p1Submitted : g.auction.p2Submitted;
       if (!aucBid) return;
     }
-    delay(() => {
+    delay(roomId, () => {
       if (g.phase !== 'bidding') return;
       const already = ci === 0 ? g.auction.p1Submitted : g.auction.p2Submitted;
       if (already) return;                 // 이미 배팅함(중복 방지)
@@ -419,8 +419,15 @@ function maybeCpuAct(roomId) {
   }
 }
 
-function delay(fn, base, rand) {
-  setTimeout(fn, base + Math.random() * rand);
+// 튜토리얼 방이면 클라이언트가 '알겠어요'를 누를 때까지 다음 진행을 보류
+function tutGate(roomId, fn) {
+  const room = rooms[roomId];
+  if (!room) return;                       // 방이 사라졌으면 중단
+  if (!room.tutHold) return fn();
+  setTimeout(() => tutGate(roomId, fn), 250);
+}
+function delay(roomId, fn, base, rand) {
+  setTimeout(() => tutGate(roomId, fn), base + Math.random() * rand);
 }
 
 // ── 방 관리 ────────────────────────────────────────────────
@@ -478,7 +485,7 @@ function broadcast(roomId) {
 }
 
 // ── 체스 시계 (전역 틱 1개로 모든 방 처리 — 방마다 타이머 안 만듦) ──
-function startClock(roomId) { const r = rooms[roomId]; if (r) r.clockOn = true; }
+function startClock(roomId) { const r = rooms[roomId]; if (r && !r.tutorial) r.clockOn = true; }   // 튜토리얼은 시간 무제한
 function endClock(room) { if (room) room.clockOn = false; }
 setInterval(() => {
   for (const roomId in rooms) {
@@ -567,7 +574,11 @@ io.on('connection', (socket) => {
 
   socket.on('enter_lobby', () => { socket.join('lobby'); socket.emit('rooms', openRoomList()); });
 
-  socket.on('create_room', ({ vsBot = false, difficulty = 'hard', pid, name, nick, secret, password } = {}) => {
+  // 튜토리얼 체크포인트 — 설명 창이 떠 있는 동안 게임 진행 보류
+  socket.on('tut_hold',    () => { const r = rooms[socket.roomId]; if (r && r.tutorial) r.tutHold = true; });
+  socket.on('tut_release', () => { const r = rooms[socket.roomId]; if (r) r.tutHold = false; });
+
+  socket.on('create_room', ({ vsBot = false, difficulty = 'hard', pid, name, nick, secret, password, tutorial } = {}) => {
     if (Object.keys(rooms).length >= MAX_ROOMS) return socket.emit('error', '서버가 혼잡해요. 잠시 후 시도하세요.');
     leaveOldRoom();
     socket.leave('lobby');
@@ -578,6 +589,7 @@ io.on('connection', (socket) => {
       profiles: [prof, null], tokens: [socket.token || null, null],
       name: String(name || '').trim().slice(0, 20), game: null, vsBot, difficulty,
       secret: !vsBot && !!secret, password: String(password || '').slice(0, 12),
+      tutorial: vsBot && !!tutorial,   // 튜토리얼 모드: 확인 누를 때까지 진행 보류 + 시계 없음
     };
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
     if (vsBot) {
@@ -662,13 +674,14 @@ io.on('connection', (socket) => {
     if (g.pick.choices[0] !== null && g.pick.choices[1] !== null) {
       resolvePick(g);
       broadcast(socket.roomId);
-      // 2.2초 공개 후 게임 시작
-      setTimeout(() => {
-        if (!rooms[socket.roomId] || g.phase !== 'pick_reveal') return;
+      // 2.2초 공개 후 게임 시작 (튜토리얼이면 확인 누를 때까지 대기)
+      const rid = socket.roomId;
+      setTimeout(() => tutGate(rid, () => {
+        if (!rooms[rid] || g.phase !== 'pick_reveal') return;
         startTurn(g);
-        broadcast(socket.roomId);
-        setTimeout(() => maybeCpuAct(socket.roomId), 400);
-      }, 2200);
+        broadcast(rid);
+        setTimeout(() => maybeCpuAct(rid), 400);
+      }), 2200);
     } else {
       broadcast(socket.roomId);
     }
@@ -855,7 +868,7 @@ function resolveBidding(roomId) {
   if (g.auction.p1Submitted && g.auction.p2Submitted) {
     g.phase = 'reveal';
     broadcast(roomId);
-    setTimeout(() => settle(roomId), 2200);
+    setTimeout(() => tutGate(roomId, () => settle(roomId)), 2200);
   } else {
     broadcast(roomId);
     setTimeout(() => maybeCpuAct(roomId), 200);

@@ -811,6 +811,19 @@ function tutShow(st) {
   box.classList.add('pop');
   tutOpen = true;
   tutGlowFor(st);
+  // 체크포인트: 확인 누를 때까지 서버 진행 보류 + 게임 입력 차단
+  socket.emit('tut_hold');
+  tutBlock(true);
+}
+// 설명 읽는 동안 게임판 클릭 방지 (박스의 버튼은 눌림)
+function tutBlock(on) {
+  let b = document.getElementById('tutBlocker');
+  if (!b) {
+    b = document.createElement('div'); b.id = 'tutBlocker';
+    b.style.cssText = 'position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.15)';
+    document.body.appendChild(b);
+  }
+  b.style.display = on ? 'block' : 'none';
 }
 function tutGlowFor(st) {
   tutClearGlow();
@@ -824,10 +837,17 @@ function tutClearGlow() {
 }
 function tutConfirm() {
   tutOpen = false;
-  if (tutQueue.length) return tutShow(tutQueue.shift());   // 밀린 설명이 있으면 이어서
+  if (tutQueue.length) return tutShow(tutQueue.shift());   // 밀린 설명이 있으면 이어서 (보류 유지)
   document.getElementById('tutBox').style.display = 'none';
+  tutBlock(false);
+  socket.emit('tut_release');   // 체크포인트 통과 → 게임 진행 재개
 }
-function endTutorial() { tutorial = false; tutQueue = []; tutOpen = false; document.getElementById('tutBox').style.display = 'none'; tutClearGlow(); }
+function endTutorial() {
+  tutorial = false; tutQueue = []; tutOpen = false;
+  document.getElementById('tutBox').style.display = 'none';
+  tutClearGlow(); tutBlock(false);
+  socket.emit('tut_release');
+}
 
 // ── 방 ──────────────────────────────────────────────────────
 function createRoom(vsBot) {
@@ -839,7 +859,7 @@ function createRoom(vsBot) {
     if (!password) { alert('비밀방은 비밀번호를 입력해야 해요.'); return; }
     secret = true;
   }
-  socket.emit('create_room', { vsBot, difficulty, pid: PID, nick: getNick(), name, secret, password });
+  socket.emit('create_room', { vsBot, difficulty, pid: PID, nick: getNick(), name, secret, password, tutorial });
 }
 function joinRoom() {
   const id = document.getElementById('roomInput').value.trim().toUpperCase();
