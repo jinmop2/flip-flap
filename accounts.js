@@ -98,6 +98,7 @@ const TOKEN_TTL = 30 * 24 * 3600 * 1000;   // 토큰 30일 만료
 function signup(id, pw, nick) {
   id = String(id || '').trim(); nick = String(nick || '').trim();
   if (!validId(id)) return { error: '아이디는 영문/숫자 3~16자예요.' };
+  if (/^kakao_/i.test(id)) return { error: '사용할 수 없는 아이디예요.' };   // 카카오 계정 키와 충돌 방지
   if (String(pw || '').length < 6) return { error: '비밀번호는 6자 이상이어야 해요.' };
   if (!validNick(nick)) return { error: '닉네임은 1~12자예요.' };
   const idl = id.toLowerCase(), nickl = nick.toLowerCase();
@@ -112,7 +113,7 @@ function signup(id, pw, nick) {
 function login(id, pw) {
   const idl = String(id || '').trim().toLowerCase();
   const u = db.users[idl];
-  if (!u || u.hash !== hashPw(pw, u.salt)) return { error: '아이디 또는 비밀번호가 틀렸어요.' };
+  if (!u || !u.hash || u.hash !== hashPw(pw, u.salt)) return { error: '아이디 또는 비밀번호가 틀렸어요.' };   // 카카오 계정은 비번 없음
   // 로그인마다 토큰 갱신·만료 연장
   if (u.token) delete tokenIndex[u.token];
   u.token = makeToken(); u.tokenExp = Date.now() + TOKEN_TTL;
@@ -126,6 +127,33 @@ function byToken(token) {
   return u;
 }
 function meByToken(token) { const u = byToken(token); return u ? { ok: true, profile: profileOf(u) } : { error: '세션 만료' }; }
+
+// ── 카카오 간편로그인 ──
+// 겹치지 않는 닉네임 만들기 (카카오 닉 그대로 → 겹치면 #2, #3…)
+function uniqueNick(base) {
+  let nick = String(base || '플레이어').trim().slice(0, 12) || '플레이어';
+  if (!db.nickTaken[nick.toLowerCase()]) return nick;
+  for (let i = 2; i < 1000; i++) {
+    const n = nick.slice(0, 9) + '#' + i;
+    if (!db.nickTaken[n.toLowerCase()]) return n;
+  }
+  return 'P' + (Date.now() % 1000000);
+}
+// kakaoId(카카오 회원번호)로 계정 찾기 — 없으면 자동 가입
+function kakaoLogin(kakaoId, kNick) {
+  const idl = 'kakao_' + String(kakaoId);
+  let u = db.users[idl];
+  if (!u) {
+    const nick = uniqueNick(kNick);
+    u = { id: idl, nick, provider: 'kakao', token: makeToken(), tokenExp: Date.now() + TOKEN_TTL, wins: 0, losses: 0, xp: 0, rp: 0, createdAt: Date.now() };
+    db.users[idl] = u; db.nickTaken[nick.toLowerCase()] = idl; tokenIndex[u.token] = idl; persist(idl);
+    return { ok: true, token: u.token, profile: profileOf(u), isNew: true };
+  }
+  if (u.token) delete tokenIndex[u.token];
+  u.token = makeToken(); u.tokenExp = Date.now() + TOKEN_TTL;
+  tokenIndex[u.token] = idl; persist(idl);
+  return { ok: true, token: u.token, profile: profileOf(u) };
+}
 
 // 랭킹 (RP 상위)
 function topPlayers(limit = 20) {
@@ -145,4 +173,4 @@ function recordResult(token, result) {
   return profileOf(u);
 }
 
-module.exports = { signup, login, byToken, meByToken, recordResult, profileOf, topPlayers };
+module.exports = { signup, login, kakaoLogin, byToken, meByToken, recordResult, profileOf, topPlayers };

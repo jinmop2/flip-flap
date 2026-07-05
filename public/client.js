@@ -133,7 +133,23 @@ function profileChipHTML(p) {
 socket.on('profile', ({ profile, result }) => {
   myAccount = profile; renderAccount();
 });
+// ── 카카오 로그인 콜백 처리 (#ktoken=… / #kerr=…) ──
+(function handleKakaoReturn() {
+  const h = location.hash || '';
+  if (h.startsWith('#ktoken=')) {
+    localStorage.setItem('ff_auth', decodeURIComponent(h.slice(8)));
+    history.replaceState(null, '', location.pathname + location.search);   // 토큰 흔적 제거
+  } else if (h.startsWith('#kerr=')) {
+    const msg = decodeURIComponent(h.slice(6));
+    history.replaceState(null, '', location.pathname + location.search);
+    setTimeout(() => alert('⚠️ ' + msg), 300);
+  }
+})();
 restoreSession();
+// 서버에 카카오 로그인이 설정 안 됐으면 버튼 숨김
+fetch('/api/kakao-enabled').then(r => r.json()).then(d => {
+  if (!d.enabled) { const b = document.getElementById('kakaoLoginBtn'); if (b) { b.style.display = 'none'; const o = document.querySelector('.auth-or'); if (o) o.style.display = 'none'; } }
+}).catch(() => {});
 
 // ── 빠른 대전 (자동 매칭) ───────────────────────────────────
 function quickMatch() {

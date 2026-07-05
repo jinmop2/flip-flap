@@ -121,6 +121,9 @@
     .wc-btns { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
     .btn-kakao { background:#FEE500; color:#191919; border:1.5px solid #FEE500; font-weight:800; }
     .btn-kakao:hover { background:#ffd900; }
+    .auth-kakao { width:100%; margin-bottom:4px; }
+    .auth-or { display:flex; align-items:center; gap:10px; margin:6px 0 10px; color:#8b8598; font-size:12px; }
+    .auth-or::before, .auth-or::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.12); }
     .wc-wait { font-size:.82rem; color:#8a7a80; }
 
     /* 서버 연결 상태 */
@@ -724,6 +727,8 @@
 <!-- 로그인 / 회원가입 다이얼로그 -->
 <div class="lb-modal" id="authModal" onclick="if(event.target===this)closeAuth()">
   <div class="lb-box">
+    <button class="btn btn-kakao auth-kakao" id="kakaoLoginBtn" onclick="location.href='/auth/kakao'">💬 카카오로 3초만에 시작</button>
+    <div class="auth-or"><span>또는 아이디로</span></div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="authTabLogin" onclick="setAuthMode('login')">로그인</button>
       <button class="auth-tab" id="authTabSignup" onclick="setAuthMode('signup')">회원가입</button>

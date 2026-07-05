@@ -37,6 +37,37 @@ app.post('/api/login',  rateLimit(30), (req, res) => { const { id, password } = 
 app.post('/api/me',     rateLimit(90), (req, res) => { const { token } = req.body || {}; res.json(accounts.meByToken(token)); });
 app.get('/api/leaderboard', rateLimit(60), (req, res) => res.json({ ok: true, players: accounts.topPlayers(20) }));
 
+// ── 카카오 간편로그인 (REST 키는 환경변수 KAKAO_REST_KEY) ──
+const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY || '';
+function baseURL(req) { return `${req.protocol}://${req.get('host')}`; }
+app.get('/api/kakao-enabled', (req, res) => res.json({ enabled: !!KAKAO_REST_KEY }));
+app.get('/auth/kakao', rateLimit(30), (req, res) => {
+  if (!KAKAO_REST_KEY) return res.redirect('/#kerr=' + encodeURIComponent('카카오 로그인이 아직 설정되지 않았어요'));
+  const redirect = encodeURIComponent(baseURL(req) + '/auth/kakao/callback');
+  res.redirect(`https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_REST_KEY}&redirect_uri=${redirect}&response_type=code`);
+});
+app.get('/auth/kakao/callback', rateLimit(30), async (req, res) => {
+  try {
+    const code = String(req.query.code || '');
+    if (!code || !KAKAO_REST_KEY) return res.redirect('/#kerr=' + encodeURIComponent('카카오 인증이 취소됐어요'));
+    // 인가 코드 → 액세스 토큰
+    const tr = await fetch('https://kauth.kakao.com/oauth/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'authorization_code', client_id: KAKAO_REST_KEY, redirect_uri: baseURL(req) + '/auth/kakao/callback', code }),
+    });
+    const tok = await tr.json();
+    if (!tok.access_token) { console.error('카카오 토큰 실패:', JSON.stringify(tok)); return res.redirect('/#kerr=' + encodeURIComponent('카카오 인증에 실패했어요')); }
+    // 회원번호·닉네임 조회
+    const ur = await fetch('https://kapi.kakao.com/v2/user/me', { headers: { Authorization: 'Bearer ' + tok.access_token } });
+    const ku = await ur.json();
+    if (!ku.id) { console.error('카카오 유저 조회 실패:', JSON.stringify(ku)); return res.redirect('/#kerr=' + encodeURIComponent('카카오 정보를 가져오지 못했어요')); }
+    const nick = (ku.kakao_account && ku.kakao_account.profile && ku.kakao_account.profile.nickname) || (ku.properties && ku.properties.nickname) || '플레이어';
+    const out = accounts.kakaoLogin(ku.id, nick);
+    // 토큰은 URL 프래그먼트로 전달 (서버 로그·리퍼러에 안 남음) — 클라가 저장 후 지움
+    res.redirect('/#ktoken=' + out.token);
+  } catch (e) { console.error('카카오 콜백 오류:', e.message); res.redirect('/#kerr=' + encodeURIComponent('카카오 로그인 중 오류가 났어요')); }
+});
+
 // ── 카드 모델 ──────────────────────────────────────────────
 // card = { kind: 2|3|4|6, grade: n, id: kind*100+grade }
 // 세트 조건 = kind (2짜리 2장, 3짜리 3장, 4짜리 4장, 6짜리 6장)
