@@ -433,7 +433,20 @@ function copyText(text, btn) {
   else prompt('복사하세요:', text);
 }
 function copyCode(btn) { copyText(sharedCode, btn); }
-function copyLink(btn) { copyText(`${location.origin}${location.pathname}?room=${sharedCode}`, btn); }
+function inviteURL() { return `${location.origin}${location.pathname}?room=${sharedCode}`; }
+function copyLink(btn) { copyText(inviteURL(), btn); }
+// 폰에서 누르면 카톡·문자·라인 등 설치된 앱 공유 시트가 뜸 (Web Share API)
+function shareInvite(btn) {
+  const url = inviteURL();
+  const data = { title: 'FLIP FLAP 초대', text: `FLIP FLAP 한 판 할래? 방 코드: ${sharedCode}`, url };
+  if (navigator.share) {
+    navigator.share(data).catch(() => {});   // 사용자가 취소하면 조용히 무시
+  } else {
+    // 공유 미지원(주로 데스크톱) → 링크 복사로 대체
+    copyText(url, btn);
+    setTimeout(() => alert('공유를 지원하지 않는 브라우저예요. 링크를 복사했으니 카톡에 붙여넣어 보내세요!'), 100);
+  }
+}
 function cancelWait() { clearSession(); location.href = location.origin + location.pathname; }
 
 socket.on('error', msg => alert(msg));
