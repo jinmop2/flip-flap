@@ -42,6 +42,8 @@ app.post('/api/signup', rateLimit(20), (req, res) => { const { id, password, nic
 app.post('/api/login',  rateLimit(30), (req, res) => { const { id, password } = req.body || {}; res.json(accounts.login(id, password)); });
 app.post('/api/me',     rateLimit(90), (req, res) => { const { token } = req.body || {}; res.json(accounts.meByToken(token)); });
 app.post('/api/nick',   rateLimit(20), (req, res) => { const { token, nick } = req.body || {}; res.json(accounts.setNick(token, nick)); });
+app.post('/api/daily',  rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.claimDaily(token) || { error: '로그인이 필요해요.' }); });
+app.post('/api/myrank', rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json({ ok: true, me: accounts.myRank(token) }); });
 app.get('/api/leaderboard', rateLimit(60), (req, res) => res.json({ ok: true, players: accounts.topPlayers(20) }));
 // ── 상점 ──
 app.get('/api/shop', rateLimit(60), (req, res) => res.json({ ok: true, items: accounts.shopList() }));
@@ -531,6 +533,7 @@ let matchQueue = [];                  // 빠른 대전 대기열
 io.on('connection', (socket) => {
   // IP당 연결 수 제한 (DoS 방지)
   const ip = (socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || 'x').split(',')[0].trim();
+  socket.clientIp = ip;   // 같은 IP 대전(코인 파밍) 감지용
   const n = (connByIp.get(ip) || 0) + 1; connByIp.set(ip, n);
   if (n > MAX_CONN_PER_IP) { socket.emit('error', '연결이 너무 많아요.'); socket.disconnect(true); return; }
   socket.emit('online', io.engine.clientsCount); broadcastOnline();
@@ -922,10 +925,17 @@ function settle(roomId) {
 // 로그인 유저의 전적/랭크/레벨/코인 반영 + 갱신된 프로필·보상 전송
 function finishStats(room, winner) {
   if (!room.tokens) return;
+  // 같은 IP 멀티 대전 감지 (자기 계정끼리 코인 파밍 방지)
+  let sameIp = false;
+  if (!room.vsBot && room.players[0] && room.players[1]) {
+    const s0 = io.sockets.sockets.get(room.players[0]), s1 = io.sockets.sockets.get(room.players[1]);
+    if (s0 && s1 && s0.clientIp && s0.clientIp === s1.clientIp) sameIp = true;
+  }
   room.tokens.forEach((tok, i) => {
     if (!tok) return;
     const result = winner === 0 ? 'draw' : (winner === i + 1 ? 'win' : 'loss');
-    const out = accounts.recordResult(tok, result, { vsBot: room.vsBot, difficulty: room.difficulty });
+    const oppLabel = room.vsBot ? 'AI' : (room.nicks ? room.nicks[1 - i] : '상대');
+    const out = accounts.recordResult(tok, result, { vsBot: room.vsBot, difficulty: room.difficulty, sameIp, oppLabel });
     if (out && room.players[i]) io.to(room.players[i]).emit('profile', { profile: out.profile, result, rewards: out.rewards });
   });
 }

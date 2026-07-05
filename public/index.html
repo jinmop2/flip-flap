@@ -131,6 +131,53 @@
     .shop-buy:disabled { opacity:.45; cursor:default; }
     /* 결과 보상 */
     #goRewards { display:none; font-size:.95rem; font-weight:700; color:#ffd94a; margin:4px 0 2px; letter-spacing:.5px; }
+    /* ── 범용 토스트 ── */
+    #ffToast {
+      position:fixed; top:14px; left:50%; transform:translateX(-50%) translateY(-16px);
+      background:rgba(22,14,28,.97); border:1px solid rgba(200,160,0,.5); color:#f0ead8;
+      border-radius:12px; padding:11px 18px; font-size:.84rem; font-weight:600; text-align:center; line-height:1.5;
+      z-index:80; opacity:0; pointer-events:none; transition:opacity .3s, transform .3s;
+      box-shadow:0 8px 28px rgba(0,0,0,.6); max-width:calc(100vw - 28px);
+    }
+    #ffToast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    /* ── 프로필 칩 버튼 묶음 ── */
+    .pc-btns { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+    .pc-icon { background:none; border:1px solid #3a2a40; color:#c8bcc4; border-radius:7px; padding:3px 7px; font-size:.8rem; cursor:pointer; line-height:1; }
+    .pc-icon:hover { border-color:var(--gold); }
+    /* ── 결과창 보상 연출 ── */
+    #goRewards { display:none; margin:6px 0 2px; }
+    .rw-row { display:flex; gap:10px; justify-content:center; align-items:center; font-weight:800; font-size:1rem; }
+    .rw-coin { color:#ffd94a; } .rw-xp { color:#9ad0ff; } .rw-rp { color:#ffe9a8; }
+    .rw-badges { display:flex; flex-direction:column; gap:4px; margin-top:7px; align-items:center; }
+    .rw-badge { font-size:.82rem; font-weight:700; padding:4px 12px; border-radius:20px; opacity:0; animation:rwPop .4s ease forwards; }
+    @keyframes rwPop { from { opacity:0; transform:scale(.7) translateY(6px); } to { opacity:1; transform:scale(1) translateY(0); } }
+    .bd-first  { background:rgba(120,216,120,.16); color:#8ee88e; border:1px solid rgba(120,216,120,.4); }
+    .bd-streak { background:rgba(255,120,60,.16); color:#ffab5e; border:1px solid rgba(255,120,60,.4); }
+    .bd-level  { background:rgba(120,180,255,.16); color:#9ad0ff; border:1px solid rgba(120,180,255,.4); }
+    .bd-rank   { background:rgba(200,139,255,.16); color:#d8b0ff; border:1px solid rgba(200,139,255,.45); }
+    .bd-warn   { background:rgba(255,120,120,.14); color:#ff9a9a; border:1px solid rgba(255,120,120,.35); font-size:.74rem; }
+    /* ── 염색약 뽑기 연출 ── */
+    #dyeRoll { display:none; position:fixed; inset:0; z-index:90; background:rgba(5,3,8,.82); align-items:center; justify-content:center; }
+    #dyeRoll.show { display:flex; animation:fadeIn .2s; }
+    .dye-box { text-align:center; }
+    .dye-title { font-family:'Fredoka'; font-size:1.1rem; font-weight:700; color:#ffe9a8; margin-bottom:14px; }
+    .dye-spin { font-family:'Bangers',cursive; font-size:3.4rem; letter-spacing:3px; min-height:64px; }
+    .dye-spin .dye-pop { animation:dyePop .5s cubic-bezier(.34,1.7,.5,1); display:inline-block; }
+    @keyframes dyePop { 0%{transform:scale(.4)} 60%{transform:scale(1.35)} 100%{transform:scale(1)} }
+    .dye-sub { margin-top:12px; font-size:.9rem; color:#c8bcc4; }
+    /* ── 상점 카드백 미리보기 ── */
+    .shop-cbprev { width:38px; height:53px; flex-shrink:0; padding:4px !important; position:static !important; }
+    .shop-cbprev .bf { font-size:.62rem !important; }
+    /* ── 최근 전적 ── */
+    .hist-list { display:flex; flex-direction:column; gap:6px; max-height:52vh; overflow-y:auto; margin-bottom:10px; }
+    .hist-row { display:flex; align-items:center; gap:10px; background:#1c1424; border:1px solid #2a1c30; border-radius:9px; padding:8px 12px; }
+    .hist-res { width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.82rem; flex-shrink:0; }
+    .hist-win { background:rgba(200,160,0,.2); color:#ffd94a; } .hist-loss { background:rgba(120,110,130,.2); color:#a89aae; } .hist-draw { background:rgba(120,140,180,.18); color:#9ab0d0; }
+    .hist-vs { flex:1; font-size:.85rem; color:#e8e2d8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .hist-coin { font-size:.82rem; font-weight:700; white-space:nowrap; }
+    /* ── 랭킹 내 순위 ── */
+    .lb-mydiv { text-align:center; font-size:.7rem; color:#6a5a70; padding:4px 0 2px; }
+    .lb-row.lb-mine { border-color:var(--gold); background:rgba(200,160,0,.08); }
     /* 앱 설치 버튼 */
     .install-btn {
       width:100%; background:rgba(200,160,0,.1); border:1.5px dashed rgba(200,160,0,.5); color:#ffe9a8;
@@ -1192,6 +1239,15 @@
   </div>
 </div>
 
+<!-- 최근 전적 -->
+<div class="lb-modal" id="histModal" onclick="if(event.target===this)closeHist()">
+  <div class="lb-box">
+    <div class="lb-title">📜 최근 전적</div>
+    <div id="histList" class="hist-list"></div>
+    <button class="btn btn-outline" onclick="closeHist()">닫기</button>
+  </div>
+</div>
+
 <!-- 튜토리얼 코치 -->
 <div id="tutBox">
   <div class="tut-tag">🎓 튜토리얼</div>
@@ -1213,6 +1269,7 @@
       <button class="btn btn-gold" id="rematchBtn" style="width:auto" onclick="rematch(this)">🔄 재대결</button>
       <button class="btn btn-outline" style="width:auto" onclick="goLobby()">로비로</button>
     </div>
+    <button class="btn btn-kakao btn-sm" style="width:100%;margin-top:8px" onclick="challengeFriend()">💬 친구에게 도전장 보내기</button>
   </div>
 </div>
 

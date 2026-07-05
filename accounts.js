@@ -92,6 +92,8 @@ function profileOf(u) {
     nickColor: u.nickColor || null,          // 염색약 결과 (색 키)
     cardBack: u.cardBack || null,            // 장착 중인 카드백
     items: u.items || {},                    // 보유 아이템 { id: 개수 or true }
+    streak: u.winStreak || 0,                // 현재 연승
+    history: (u.history || []).slice(0, 10), // 최근 전적
   };
 }
 
@@ -256,17 +258,71 @@ function rewardKey(vsBot, difficulty) {
   return 'ai_hard';   // normal/hard 둘 다 중간 취급
 }
 
+const DAILY_LOGIN = 30;        // 1일 접속 보상
+const FIRST_WIN_BONUS = 50;    // 하루 첫 승 보너스
+function todayStr() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+
+// 1일 접속 보상 (하루 1회)
+function claimDaily(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null; if (!u) return null;
+  if (u.lastLoginDay === todayStr()) return { claimed: false, profile: profileOf(u) };
+  u.lastLoginDay = todayStr();
+  u.coins = (u.coins || 0) + DAILY_LOGIN;
+  persist(idl);
+  return { claimed: true, amount: DAILY_LOGIN, profile: profileOf(u) };
+}
+
 // 결과 반영 (result: 'win'|'loss'|'draw') → { profile, rewards }
 function recordResult(token, result, opts = {}) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null; if (!u) return null;
-  const r = (REWARDS[rewardKey(opts.vsBot, opts.difficulty)] || REWARDS.multi)[result] || { coins: 0, xp: 0 };
-  if (result === 'win') u.wins++;
-  else if (result === 'loss') u.losses++;
-  u.xp += r.xp || 0;
-  u.coins = (u.coins || 0) + (r.coins || 0);
-  if (r.rp) u.rp = Math.max(0, u.rp + r.rp);
+  const base = (REWARDS[rewardKey(opts.vsBot, opts.difficulty)] || REWARDS.multi)[result] || { coins: 0, xp: 0 };
+  const beforeLevel = levelOf(u.xp), beforeRank = rankOf(u.rp).name;
+  const sameIp = !!opts.sameIp && !opts.vsBot;   // 같은 IP 멀티 = 파밍 방지
+
+  if (result === 'win') { u.wins++; u.winStreak = (u.winStreak || 0) + 1; }
+  else if (result === 'loss') { u.losses++; u.winStreak = 0; }
+
+  let coins = base.coins || 0, xp = base.xp || 0, rp = base.rp || 0;
+  let firstWin = 0, streak = 0;
+
+  if (sameIp) {
+    // 같은 IP끼리 대전 → 코인이 새로 생기지 않게: 승자만 얻고 패자는 잃음, 보너스·RP 없음
+    coins = result === 'win' ? 50 : result === 'loss' ? -50 : 0;
+    rp = 0; xp = Math.min(xp, 10);
+  } else {
+    if (result === 'win' && u.lastWinDay !== todayStr()) { firstWin = FIRST_WIN_BONUS; u.lastWinDay = todayStr(); }
+    if (result === 'win' && u.winStreak >= 2) streak = Math.min((u.winStreak - 1) * 10, 50);
+  }
+  coins += firstWin + streak;
+
+  u.xp += xp;
+  u.coins = Math.max(0, (u.coins || 0) + coins);
+  if (rp) u.rp = Math.max(0, u.rp + rp);
+
+  // 최근 전적 (최대 10)
+  u.history = u.history || [];
+  u.history.unshift({ vs: opts.oppLabel || (opts.vsBot ? 'AI' : '상대'), result, coins, at: Date.now() });
+  if (u.history.length > 10) u.history.length = 10;
   persist(idl);
-  return { profile: profileOf(u), rewards: { coins: r.coins || 0, xp: r.xp || 0, rp: r.rp || 0 } };
+
+  const afterLevel = levelOf(u.xp), afterRank = rankOf(u.rp).name;
+  return {
+    profile: profileOf(u),
+    rewards: {
+      coins, xp, rp, firstWin, streak, streakCount: u.winStreak, sameIp,
+      levelUp: afterLevel > beforeLevel ? afterLevel : 0,
+      rankUp: (afterRank !== beforeRank && rp > 0) ? afterRank : 0,
+    },
+  };
 }
 
-module.exports = { signup, login, kakaoLogin, setNick, byToken, meByToken, recordResult, profileOf, topPlayers, shopList, buyItem, equipItem };
+// 내 랭킹 순위 (RP 기준 1-based)
+function myRank(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null; if (!u) return null;
+  const sorted = Object.values(db.users).sort((a, b) => (b.rp - a.rp) || (b.wins - a.wins));
+  const pos = sorted.findIndex(x => x.id.toLowerCase() === u.id.toLowerCase());
+  const p = profileOf(u);
+  return { no: pos + 1, total: sorted.length, nick: p.nick, nickColor: p.nickColor, rank: p.rank, rankIcon: p.rankIcon, rankColor: p.rankColor, rp: p.rp, wins: p.wins, losses: p.losses };
+}
+
+module.exports = { signup, login, kakaoLogin, setNick, byToken, meByToken, recordResult, claimDaily, myRank, profileOf, topPlayers, shopList, buyItem, equipItem };

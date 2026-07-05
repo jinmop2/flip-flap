@@ -97,11 +97,27 @@ function logout() {
   localStorage.removeItem('ff_auth'); myAccount = null;
   socket.emit('auth', { token: null }); renderAccount();
 }
+// 범용 토스트 (화면 상단 중앙에 잠깐 떴다 사라짐)
+let toastTimer = null;
+function toast(html, ms = 2600) {
+  let t = document.getElementById('ffToast');
+  if (!t) { t = document.createElement('div'); t.id = 'ffToast'; document.body.appendChild(t); }
+  t.innerHTML = html;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
+
 async function restoreSession() {
   const tk = localStorage.getItem('ff_auth'); if (!tk) return;
   const r = await apiPost('/api/me', { token: tk });
-  if (r.ok) { myAccount = r.profile; renderAccount(); }
+  if (r.ok) { myAccount = r.profile; renderAccount(); claimDaily(); }
   else localStorage.removeItem('ff_auth');
+}
+// 1일 접속 보상 수령
+async function claimDaily() {
+  const d = await apiPost('/api/daily', { token: localStorage.getItem('ff_auth') });
+  if (d && d.claimed) { myAccount = d.profile; renderAccount(); toast(`🎁 출석 보상 <b style="color:#ffd94a">🪙 +${d.amount}</b> 받았어요!`); }
 }
 function renderAccount() {
   const chip = document.getElementById('profileChip');
@@ -112,8 +128,11 @@ function renderAccount() {
     chip.style.display = 'flex';
     const canNick = !myAccount.nickLocked || ((myAccount.items || {}).nick_change || 0) > 0;   // 첫 설정 or 변경권 보유
     chip.innerHTML = profileChipHTML(myAccount)
-      + (canNick ? '<button class="pc-edit" onclick="openNickModal()" title="닉네임 바꾸기">✏️</button>' : '')
-      + '<button class="pc-logout" onclick="logout()">로그아웃</button>';
+      + '<div class="pc-btns">'
+      + '<button class="pc-icon" onclick="openHist()" title="최근 전적">📜</button>'
+      + (canNick ? '<button class="pc-icon" onclick="openNickModal()" title="닉네임 바꾸기">✏️</button>' : '')
+      + '<button class="pc-logout" onclick="logout()">로그아웃</button>'
+      + '</div>';
     authBtn.style.display = 'none';
   } else {
     guest.style.display = 'flex';
@@ -131,18 +150,43 @@ function profileChipHTML(p) {
       <div class="pc-econ"><span class="pc-rp">🏆 ${p.rp} RP</span><span class="pc-coin">🪙 ${p.coins || 0}</span></div>
     </div>`;
 }
-// 로그인 프로필이 게임 종료 등으로 갱신됨 + 보상 표시
+// 로그인 프로필이 게임 종료 등으로 갱신됨 + 보상 연출
+let pendingRewards = null;
 socket.on('profile', ({ profile, result, rewards }) => {
   myAccount = profile; renderAccount(); refreshEmotes();
-  if (rewards && (rewards.coins || rewards.xp || rewards.rp)) {
-    const parts = [];
-    if (rewards.coins) parts.push(`🪙 +${rewards.coins}`);
-    if (rewards.xp) parts.push(`XP +${rewards.xp}`);
-    if (rewards.rp) parts.push(`RP ${rewards.rp > 0 ? '+' : ''}${rewards.rp}`);
-    const el = document.getElementById('goRewards');
-    if (el) { el.textContent = parts.join(' · '); el.style.display = 'block'; }
-  }
+  pendingRewards = rewards || null;   // 결과창이 뜬 뒤 showRewards()에서 연출
 });
+// 숫자 카운트업
+function countUp(el, to, prefix = '', ms = 800) {
+  const start = performance.now(), sign = to < 0 ? '-' : '+', abs = Math.abs(to);
+  (function step(t) {
+    const p = Math.min((t - start) / ms, 1);
+    el.textContent = prefix + sign + Math.round(abs * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(step);
+  })(performance.now());
+}
+function showRewards() {
+  const el = document.getElementById('goRewards');
+  const r = pendingRewards;
+  if (!el || !r || !(r.coins || r.xp || r.rp)) { if (el) el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `<div class="rw-row">
+      <span class="rw-coin">🪙 <b id="rwCoin">0</b></span>
+      <span class="rw-xp">XP +${r.xp}</span>
+      ${r.rp ? `<span class="rw-rp">RP ${r.rp > 0 ? '+' : ''}${r.rp}</span>` : ''}
+    </div>
+    <div id="rwBadges" class="rw-badges"></div>`;
+  countUp(document.getElementById('rwCoin'), r.coins, '');
+  const badges = document.getElementById('rwBadges');
+  const add = (cls, txt, delay) => { const b = document.createElement('div'); b.className = 'rw-badge ' + cls; b.textContent = txt; b.style.animationDelay = delay + 'ms'; badges.appendChild(b); };
+  let d = 400;
+  if (r.firstWin) { add('bd-first', `🎯 하루 첫 승 보너스 +${r.firstWin}`, d); d += 250; }
+  if (r.streak && r.streakCount >= 2) { add('bd-streak', `🔥 ${r.streakCount}연승! +${r.streak}`, d); d += 250; playSound('setwin'); }
+  if (r.levelUp) { add('bd-level', `⬆️ 레벨 업! Lv.${r.levelUp}`, d); d += 250; playSound('setwin'); }
+  if (r.rankUp) { add('bd-rank', `👑 승급! ${r.rankUp}`, d); d += 250; playSound('setwin'); }
+  if (r.sameIp) { add('bd-warn', `⚠️ 같은 접속 대전 — 코인만 이동`, d); d += 250; }
+  pendingRewards = null;
+}
 // ── 닉네임 설정 모달 ──
 function openNickModal() {
   document.getElementById('nickErr').textContent = '';
@@ -215,9 +259,43 @@ async function openLeaderboard() {
         <span class="lb-rp">${p.rp} RP</span>`;
       list.appendChild(row);
     });
+    // 내 순위가 톱20 밖이면 하단에 별도 표시
+    if (myAccount) {
+      const inTop = r.players.some(p => p.nick === myNick);
+      const mr = await apiPost('/api/myrank', { token: localStorage.getItem('ff_auth') });
+      if (!inTop && mr.me && mr.me.no) {
+        const me = mr.me;
+        const row = document.createElement('div'); row.className = 'lb-row me lb-mine';
+        row.innerHTML = `<span class="lb-no">${me.no}</span>
+          <span class="lb-rank" style="color:${me.rankColor}">${me.rankIcon}</span>
+          <span class="lb-nick${ncClass(me.nickColor)}">${esc(me.nick)}</span>
+          <span class="lb-wl">${me.wins}승 ${me.losses}패</span>
+          <span class="lb-rp">${me.rp} RP</span>`;
+        const div = document.createElement('div'); div.className = 'lb-mydiv'; div.textContent = `⋯ 내 순위 (${me.no}위 / ${me.total}명) ⋯`;
+        list.appendChild(div); list.appendChild(row);
+      }
+    }
   } catch (_) { list.innerHTML = '<div class="lb-empty">불러오기 실패</div>'; }
 }
 function closeLb() { document.getElementById('lbModal').classList.remove('show'); }
+
+// ── 최근 전적 ──
+function openHist() {
+  const list = document.getElementById('histList');
+  const h = (myAccount && myAccount.history) || [];
+  list.innerHTML = h.length ? '' : '<div class="lb-empty">아직 전적이 없어요. 한 판 해보세요!</div>';
+  h.forEach(m => {
+    const res = m.result === 'win' ? { t: '승', c: 'hist-win' } : m.result === 'loss' ? { t: '패', c: 'hist-loss' } : { t: '무', c: 'hist-draw' };
+    const coin = m.coins > 0 ? `+${m.coins}` : `${m.coins}`;
+    const row = document.createElement('div'); row.className = 'hist-row';
+    row.innerHTML = `<span class="hist-res ${res.c}">${res.t}</span>
+      <span class="hist-vs">vs ${esc(m.vs)}</span>
+      <span class="hist-coin" style="color:${m.coins >= 0 ? '#ffd94a' : '#ff8a8a'}">🪙 ${coin}</span>`;
+    list.appendChild(row);
+  });
+  document.getElementById('histModal').classList.add('show');
+}
+function closeHist() { document.getElementById('histModal').classList.remove('show'); }
 
 // ── 상점 ────────────────────────────────────────────────────
 const DYE_NAMES = { red:'빨강', blue:'파랑', green:'초록', orange:'주황', purple:'보라', cyan:'청록', pink:'핑크', lime:'라임', gold:'✨골드✨', rainbow:'🌈무지개🌈' };
@@ -250,7 +328,11 @@ function renderShop() {
       const cnt = it.type === 'ticket' && owned ? ` (보유 ${owned})` : '';
       btnHtml = `<button class="shop-buy" onclick="buyShopItem('${it.id}')">🪙 ${it.price}${cnt}</button>`;
     }
-    row.innerHTML = `<span class="shop-ico">${it.icon}</span>
+    const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang' };
+    const preview = CBP[it.id]
+      ? `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`
+      : `<span class="shop-ico">${it.icon}</span>`;
+    row.innerHTML = `${preview}
       <div class="shop-info"><div class="shop-name">${it.name}</div><div class="shop-desc">${it.desc}</div></div>${btnHtml}`;
     list.appendChild(row);
   });
@@ -259,10 +341,38 @@ async function buyShopItem(itemId) {
   const msg = document.getElementById('shopMsg');
   const r = await apiPost('/api/buy', { token: localStorage.getItem('ff_auth'), itemId });
   if (r.error) { msg.textContent = '⚠️ ' + r.error; return; }
-  myAccount = r.profile; renderAccount(); renderShop(); refreshEmotes();
-  if (r.dye) msg.innerHTML = `🎨 <b class="${'nc-' + r.dye}">${DYE_NAMES[r.dye] || r.dye}</b> 색이 나왔어요! 닉네임에 바로 적용!`;
-  else msg.textContent = '✅ 구매 완료!';
-  playSound && playSound('setwin');
+  myAccount = r.profile; renderAccount(); refreshEmotes();
+  if (r.dye) { renderShop(); dyeRoll(r.dye); }   // 염색약은 뽑기 연출
+  else { renderShop(); msg.textContent = '✅ 구매 완료!'; playSound && playSound('setwin'); }
+}
+// 염색약 뽑기 연출 — 색이 촤르륵 지나가다 결과에 멈춤
+const DYE_KEYS = ['red','orange','lime','green','cyan','blue','purple','pink','gold','rainbow'];
+function dyeRoll(result) {
+  let ov = document.getElementById('dyeRoll');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'dyeRoll'; document.body.appendChild(ov); }
+  const rare = result === 'gold' || result === 'rainbow';
+  ov.innerHTML = `<div class="dye-box">
+      <div class="dye-title">🎨 염색약 개봉!</div>
+      <div class="dye-spin"><b id="dyeName" class="nc-red">???</b></div>
+      <div class="dye-sub" id="dyeSub">두구두구…</div>
+    </div>`;
+  ov.classList.add('show');
+  const name = document.getElementById('dyeName'), sub = document.getElementById('dyeSub');
+  let i = 0, ticks = 26 + Math.floor(Math.random() * 6);
+  const spin = setInterval(() => {
+    const k = DYE_KEYS[i % DYE_KEYS.length]; i++;
+    name.className = 'nc-' + k; name.textContent = DYE_NAMES[k] || k;
+    playSound && playSound('flip');
+    if (i >= ticks) {
+      clearInterval(spin);
+      name.className = 'nc-' + result; name.textContent = DYE_NAMES[result] || result;
+      sub.innerHTML = rare ? '🎉 <b style="color:#ffd94a">대박!</b> 희귀 색이에요!' : '닉네임에 바로 적용됐어요!';
+      if (rare) { name.classList.add('dye-pop'); playSound && playSound('victory'); }
+      else playSound && playSound('setwin');
+      setTimeout(() => ov.classList.remove('show'), rare ? 2600 : 1700);
+    }
+  }, 70);
+  ov.onclick = () => { clearInterval(spin); ov.classList.remove('show'); };
 }
 async function equipBack(itemId, isOn) {
   const r = await apiPost('/api/equip', { token: localStorage.getItem('ff_auth'), itemId: isOn ? null : itemId });
@@ -366,7 +476,7 @@ function tone(freq, type, vol, dur, delay = 0) {
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
   o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur);
 }
-let soundOff = false;   // 마스터 음소거 (BGM + 효과음)
+let soundOff = localStorage.getItem('ff_sound') === 'off';   // 마스터 음소거 (저장됨)
 function playSound(n) {
   if (soundOff) return;
   try { AC.resume(); } catch(_) {}
@@ -438,14 +548,19 @@ function startBGM() {
     }
   }, 25);
 }
-function toggleBGM() {   // 마스터 음소거 토글 (BGM + 효과음 전체)
-  soundOff = !soundOff;
-  if (bgmMaster) bgmMaster.gain.linearRampToValueAtTime(soundOff ? 0 : BGM_VOL, AC.currentTime + 0.25);
-  const b = document.getElementById('bgmBtn');
+function applySoundBtn() {
+  const b = document.getElementById('bgmBtn'); if (!b) return;
   b.querySelector('.ci').textContent = soundOff ? '🔇' : '🔊';
   b.title = soundOff ? '소리 켜기' : '소리 끄기';
   b.style.opacity = soundOff ? '.55' : '1';
 }
+function toggleBGM() {   // 마스터 음소거 토글 (BGM + 효과음 전체) — 설정 저장
+  soundOff = !soundOff;
+  localStorage.setItem('ff_sound', soundOff ? 'off' : 'on');
+  if (bgmMaster) bgmMaster.gain.linearRampToValueAtTime(soundOff ? 0 : BGM_VOL, AC.currentTime + 0.25);
+  applySoundBtn();
+}
+window.addEventListener('DOMContentLoaded', applySoundBtn);   // 저장된 상태 반영
 
 // ── 게임 설명서 ─────────────────────────────────────────────
 function toggleRules(show) {
@@ -671,6 +786,18 @@ function shareKakao(btn) {
     });
   } catch (e) { console.warn('카카오 공유 실패:', e); shareInvite(btn); }
 }
+// 게임 종료 후 도전장 — 사이트 링크를 카톡/공유 시트로
+function challengeFriend() {
+  const url = `${location.origin}${location.pathname}`;
+  const nick = (myAccount && myAccount.nick) || getNick();
+  const text = `🃏 ${nick}님이 FLIP FLAP 도전장을 보냈어요!\n경매·블러핑 심리전 보드게임 한 판 어때요?`;
+  if (window.Kakao && Kakao.isInitialized()) {
+    try { Kakao.Share.sendDefault({ objectType: 'text', text, link: { mobileWebUrl: url, webUrl: url }, buttonTitle: '도전 받기' }); return; }
+    catch (e) { /* 폴백 */ }
+  }
+  if (navigator.share) navigator.share({ title: 'FLIP FLAP 도전장', text, url }).catch(() => {});
+  else { copyText(url, { textContent: '', }); alert('링크를 복사했어요! 친구에게 붙여넣어 도전장을 보내세요.'); }
+}
 function copyLink(btn) { copyText(inviteURL(), btn); }
 // 폰에서 누르면 카톡·문자·라인 등 설치된 앱 공유 시트가 뜸 (Web Share API)
 function shareInvite(btn) {
@@ -796,10 +923,15 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
     if (setKind && !byProgress && !forfeit) { celebrateSet('oppAcq', setKind); delay = 1400; }
   }
   renderGameOverStats(winner, byProgress ? null : setKind, mi);
+  // 게스트가 이겼으면 회원 전환 유도
+  if (!myAccount && winner === mi) {
+    const lost = isVsBot ? (difficulty === 'expert' ? 150 : difficulty === 'easy' ? 10 : 30) : 50;
+    setTimeout(() => toast(`💡 로그인했다면 <b style="color:#ffd94a">🪙 ${lost}</b>을 받았을 거예요!<br>가입하고 보상을 모아보세요`, 3600), delay + 700);
+  }
   // 몰수 게임은 방이 사라져서 재대결 불가
   const rb = document.getElementById('rematchBtn');
   if (rb) rb.style.display = (forfeit && !isVsBot) ? 'none' : '';
-  setTimeout(() => document.getElementById('gameOver').style.display = 'flex', delay);
+  setTimeout(() => { document.getElementById('gameOver').style.display = 'flex'; showRewards(); }, delay);
 });
 
 // 승리/패배 화면 통계 (완성 세트 + 획득 수)
