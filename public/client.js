@@ -47,15 +47,13 @@ socket.on('opp_disconnected', ({ left } = {}) => showGrace(left));
 socket.on('grace_tick', ({ left } = {}) => showGrace(left));
 socket.on('opp_reconnected', () => { hideGrace(); setConn('상대 재접속됨', 'ok'); setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400); });
 
-// ── 닉네임 (게스트) ─────────────────────────────────────────
-const nickInput = document.getElementById('nickInput');
+// ── 닉네임 (게스트) — 랜덤 게스트+4자리, 설정 불필요 ────────
 (function initNick() {
   let n = localStorage.getItem('ff_nick');
-  if (!n) { n = '게스트' + Math.floor(1000 + Math.random() * 9000); localStorage.setItem('ff_nick', n); }
-  if (nickInput) nickInput.value = n;
+  if (!n || !/^게스트\d{4}$/.test(n)) { n = '게스트' + Math.floor(1000 + Math.random() * 9000); localStorage.setItem('ff_nick', n); }
+  const el = document.getElementById('guestNickText'); if (el) el.textContent = n;
 })();
-if (nickInput) nickInput.addEventListener('input', () => { const v = nickInput.value.trim(); if (v) localStorage.setItem('ff_nick', v); });
-function getNick() { return myAccount ? myAccount.nick : ((nickInput && nickInput.value.trim()) || localStorage.getItem('ff_nick') || '게스트'); }
+function getNick() { return myAccount ? myAccount.nick : (localStorage.getItem('ff_nick') || '게스트'); }
 
 // ── 회원 계정 ────────────────────────────────────────────────
 let myAccount = null;   // 로그인 프로필 (null=게스트)
