@@ -47,14 +47,6 @@ socket.on('opp_disconnected', ({ left } = {}) => showGrace(left));
 socket.on('grace_tick', ({ left } = {}) => showGrace(left));
 socket.on('opp_reconnected', () => { hideGrace(); setConn('상대 재접속됨', 'ok'); setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400); });
 
-// ── 난이도 선택 ─────────────────────────────────────────────
-document.getElementById('diffRow').addEventListener('click', e => {
-  const b = e.target.closest('.diff-btn'); if (!b) return;
-  document.querySelectorAll('.diff-btn').forEach(x => x.classList.remove('active'));
-  b.classList.add('active');
-  difficulty = b.dataset.diff;
-});
-
 // ── 닉네임 (게스트) ─────────────────────────────────────────
 const nickInput = document.getElementById('nickInput');
 (function initNick() {
@@ -444,6 +436,56 @@ function isMyAction(s) {
 }
 let prevMyAction = false;
 
+// ── 로비 모드 선택 (솔로/멀티) ──────────────────────────────
+function openMode(m) {
+  const solo = document.getElementById('soloPanel'), multi = document.getElementById('multiPanel');
+  const already = (m === 'solo' ? solo : multi).classList.contains('show');
+  solo.classList.toggle('show', m === 'solo' && !already);
+  multi.classList.toggle('show', m === 'multi' && !already);
+  document.getElementById('modeSolo').classList.toggle('active', m === 'solo' && !already);
+  document.getElementById('modeMulti').classList.toggle('active', m === 'multi' && !already);
+}
+function soloPlay(d) { difficulty = d; createRoom(true); }
+
+// ── 튜토리얼 — 쉬움 AI와 실전 + 단계별 가이드 ───────────────
+let tutorial = false, tutSeen = {};
+const TUT_STEPS = [
+  { id: 'pick',     when: s => s.phase === 'pick',
+    text: '🎉 실전으로 배워봐요! 먼저 <b>선공 뽑기</b> — 가운데 두 장 중 하나를 고르세요. 더 <b>강한 카드</b>를 뽑은 사람이 선공이에요.' },
+  { id: 'draw_me',  when: s => s.phase === 'draw' && s.auctioneer === s.myIndex,
+    text: '내가 이번 턴 <b>경매 진행자</b>! 가운데 <b>덱을 눌러</b> 카드 1장을 공개하세요. 이게 경매에 걸리는 상품이에요.' },
+  { id: 'offer_me', when: s => s.phase === 'offer' && s.auctioneer === s.myIndex,
+    text: '이제 <b>내 손패 1장</b>을 골라 추가로 내놓아요. 방금 공개된 카드와 합쳐 <b>경매품 2장</b>이 돼요. 💡 나한테 필요 없는 카드를 내놓는 게 좋아요.' },
+  { id: 'type_me',  when: s => s.phase === 'choose_type' && s.auctioneer === s.myIndex,
+    text: '<b>경매 방식</b>을 고르세요!<br>👁 <b>오픈</b>: 경매품 공개 · 배팅 비공개<br>🙈 <b>클로즈</b>: 경매품 비공개 · 배팅 공개' },
+  { id: 'bid_me',   when: s => s.phase === 'bidding' && s.auction && !s.auction.myBid,
+    text: '<b>배팅</b>! 손패 1장을 내요.<br>① 숫자가 <b>작을수록</b> 강함 (2&gt;3&gt;4&gt;6)<br>② 같은 숫자면 등급 낮은 쪽 승리<br>⚠️ 배팅에 쓴 카드는 <b>상대에게 넘어가요!</b>' },
+  { id: 'reveal',   when: s => s.phase === 'reveal',
+    text: '<b>결과 공개!</b> 이긴 쪽이 경매품 2장을 가져가 앞에 깔아요. 🎯 목표: <b>같은 숫자를 그 숫자만큼</b> 모으면 즉시 승리! (2는 2장, 3은 3장…)' },
+  { id: 'draw_opp', when: s => s.phase === 'draw' && s.auctioneer !== s.myIndex,
+    text: '이번엔 <b>상대가 진행자</b> — 진행자는 턴마다 번갈아요. 상대가 출품하고 방식을 고른 뒤, <b>배팅은 진행자가 먼저</b> 내요.' },
+  { id: 'bid_me2',  when: s => s.phase === 'bidding' && s.auction && !s.auction.myBid && tutSeen.bid_me && tutSeen.reveal,
+    text: '💡 <b>반전 카드</b>: 가장 약한 <b>6-10</b>은 가장 강한 <b>2-1</b>만은 이겨요 — <b>졸개의 배신!</b> 상대가 2-1을 낼 것 같으면 노려보세요.' },
+];
+function startTutorial() {
+  tutorial = true; tutSeen = {};
+  difficulty = 'easy';
+  createRoom(true);
+}
+function tutTick() {
+  if (!tutorial || !state) return;
+  for (const st of TUT_STEPS) {
+    if (tutSeen[st.id]) continue;
+    if (st.when(state)) { tutSeen[st.id] = true; tutShow(st.text); return; }
+  }
+}
+function tutShow(html) {
+  document.getElementById('tutText').innerHTML = html;
+  document.getElementById('tutBox').style.display = 'block';
+}
+function tutConfirm() { document.getElementById('tutBox').style.display = 'none'; }
+function endTutorial() { tutorial = false; tutConfirm(); }
+
 // ── 방 ──────────────────────────────────────────────────────
 function createRoom(vsBot) {
   isVsBot = vsBot;
@@ -546,6 +588,7 @@ socket.on('state_update', s => {
   drewNow = prev === 'draw' && s.phase === 'offer';
   prevPhase = s.phase; state = s; myIndex = s.myIndex;
   render(changed);
+  tutTick();
   if (changed && s.phase === 'reveal') playSound('reveal');
   if (drewNow) playSound('deal');
   // 세트 완성이 보드에 나타나는 순간 강조 (결과창은 서버가 잠시 뒤 띄움)
@@ -595,6 +638,10 @@ socket.on('special', () => {
 });
 socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex: mi }) => {
   clearSession(); stopTitleBlink(); hideGrace(); recordResult(winner, mi);
+  if (tutorial) {   // 튜토리얼 마무리 인사
+    tutorial = false;
+    tutShow('🎓 <b>튜토리얼 완료!</b> 이제 규칙을 다 배웠어요. 💡 마지막 팁: 덱이 다 떨어지면 <b>세트에 가장 가까운 사람</b>이 이겨요. 실전에서 친구와 붙어보세요!');
+  }
   const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
   let delay = 500;
   if (winner === 0) {
