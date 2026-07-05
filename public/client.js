@@ -112,11 +112,14 @@ function renderAccount() {
   if (myAccount) {
     guest.style.display = 'none';
     chip.style.display = 'flex';
-    chip.innerHTML = profileChipHTML(myAccount) + (myAccount.nickLocked ? '' : '<button class="pc-edit" onclick="openNickModal()" title="닉네임 정하기 (한 번만!)">✏️</button>');
-    authBtn.textContent = '로그아웃'; authBtn.onclick = logout;
+    chip.innerHTML = profileChipHTML(myAccount)
+      + (myAccount.nickLocked ? '' : '<button class="pc-edit" onclick="openNickModal()" title="닉네임 정하기 (한 번만!)">✏️</button>')
+      + '<button class="pc-logout" onclick="logout()">로그아웃</button>';
+    authBtn.style.display = 'none';
   } else {
     guest.style.display = 'flex';
     chip.style.display = 'none';
+    authBtn.style.display = '';
     authBtn.textContent = '로그인 / 회원가입'; authBtn.onclick = () => openAuth('login');
   }
 }
@@ -365,7 +368,7 @@ function toggleBGM() {   // 마스터 음소거 토글 (BGM + 효과음 전체)
   soundOff = !soundOff;
   if (bgmMaster) bgmMaster.gain.linearRampToValueAtTime(soundOff ? 0 : BGM_VOL, AC.currentTime + 0.25);
   const b = document.getElementById('bgmBtn');
-  b.textContent = soundOff ? '🔇' : '🔊';
+  b.querySelector('.ci').textContent = soundOff ? '🔇' : '🔊';
   b.title = soundOff ? '소리 켜기' : '소리 끄기';
   b.style.opacity = soundOff ? '.55' : '1';
 }
@@ -389,7 +392,7 @@ function sendEmote(emoji) {
 socket.on('emote', ({ emoji }) => showEmote(emoji, 'opp'));
 function showEmote(emoji, side) {
   playSound('emote');
-  const anchor = document.getElementById(side === 'me' ? 'myHand' : 'oppHand');
+  const anchor = document.getElementById(side === 'me' ? 'myHand' : 'oppAcq');
   const b = document.createElement('div');
   b.className = 'emote-bubble'; b.textContent = emoji;
   let x = window.innerWidth / 2, y = side === 'me' ? window.innerHeight - 160 : 120;
@@ -447,25 +450,42 @@ function openMode(m) {
 }
 function soloPlay(d) { difficulty = d; createRoom(true); }
 
-// ── 튜토리얼 — 쉬움 AI와 실전 + 단계별 가이드 ───────────────
-let tutorial = false, tutSeen = {};
+// ── 튜토리얼 — 쉬움 AI와 실전 + 단계별 코치 ─────────────────
+// 원칙: 한 번에 한 가지만, 짧게, "지금 뭘 클릭할지"를 반짝임으로 표시
+let tutorial = false, tutSeen = {}, tutTarget = null;
 const TUT_STEPS = [
-  { id: 'pick',     when: s => s.phase === 'pick',
-    text: '🎉 실전으로 배워봐요! 먼저 <b>선공 뽑기</b> — 가운데 두 장 중 하나를 고르세요. 더 <b>강한 카드</b>를 뽑은 사람이 선공이에요.' },
-  { id: 'draw_me',  when: s => s.phase === 'draw' && s.auctioneer === s.myIndex,
-    text: '내가 이번 턴 <b>경매 진행자</b>! 가운데 <b>덱을 눌러</b> 카드 1장을 공개하세요. 이게 경매에 걸리는 상품이에요.' },
+  { id: 'pick', when: s => s.phase === 'pick' && s.pick && s.pick.myChoice == null,
+    pos: 'bot', target: '#auctionItems',
+    text: '환영해요! 🎯 목표는 하나 — <b>같은 숫자 카드를 그 숫자만큼</b> 모으면 승리! (3은 3장, 6은 6장)',
+    act:  '반짝이는 두 장 중 <b>한 장을 클릭</b>하세요. 강한 카드를 뽑으면 선공!' },
+  { id: 'pickr', when: s => s.phase === 'pick_reveal',
+    pos: 'bot',
+    text: '카드 공개! <b>숫자가 작을수록 강해요</b> (2 &gt; 3 &gt; 4 &gt; 6). 이긴 쪽이 첫 <b>경매 진행자</b>가 돼요.' },
+  { id: 'draw_me', when: s => s.phase === 'draw' && s.auctioneer === s.myIndex,
+    pos: 'bot', target: '#deckStack',
+    text: '내가 <b>진행자</b>예요. 진행자는 경매에 내놓을 상품을 공개해요.',
+    act:  '왼쪽 <b>덱을 클릭</b>!' },
   { id: 'offer_me', when: s => s.phase === 'offer' && s.auctioneer === s.myIndex,
-    text: '이제 <b>내 손패 1장</b>을 골라 추가로 내놓아요. 방금 공개된 카드와 합쳐 <b>경매품 2장</b>이 돼요. 💡 나한테 필요 없는 카드를 내놓는 게 좋아요.' },
-  { id: 'type_me',  when: s => s.phase === 'choose_type' && s.auctioneer === s.myIndex,
-    text: '<b>경매 방식</b>을 고르세요!<br>👁 <b>오픈</b>: 경매품 공개 · 배팅 비공개<br>🙈 <b>클로즈</b>: 경매품 비공개 · 배팅 공개' },
-  { id: 'bid_me',   when: s => s.phase === 'bidding' && s.auction && !s.auction.myBid,
-    text: '<b>배팅</b>! 손패 1장을 내요.<br>① 숫자가 <b>작을수록</b> 강함 (2&gt;3&gt;4&gt;6)<br>② 같은 숫자면 등급 낮은 쪽 승리<br>⚠️ 배팅에 쓴 카드는 <b>상대에게 넘어가요!</b>' },
-  { id: 'reveal',   when: s => s.phase === 'reveal',
-    text: '<b>결과 공개!</b> 이긴 쪽이 경매품 2장을 가져가 앞에 깔아요. 🎯 목표: <b>같은 숫자를 그 숫자만큼</b> 모으면 즉시 승리! (2는 2장, 3은 3장…)' },
+    pos: 'top', target: '#myHand',
+    text: '경매 상품은 항상 <b>2장</b> — 방금 공개한 카드 + 내 손패 1장.',
+    act:  '아래 손패에서 <b>필요 없는 카드</b>를 클릭해 내놓으세요' },
+  { id: 'type_me', when: s => s.phase === 'choose_type' && s.auctioneer === s.myIndex,
+    pos: 'top', target: '#actionArea',
+    text: '경매 방식 선택!<br>👁 <b>오픈</b> = 상품 공개, 배팅은 비밀<br>🙈 <b>클로즈</b> = 상품 비밀, 배팅은 공개',
+    act:  '마음에 드는 방식을 클릭' },
+  { id: 'bid_me', when: s => s.phase === 'bidding' && s.auction && !s.auction.myBid && (s.auctioneer === s.myIndex || s.auction.oppBidSubmitted),
+    pos: 'top', target: '#myHand',
+    text: '<b>배팅!</b> 강한 카드가 상품 2장을 다 가져가요. ⚠️ 단, 배팅한 카드는 <b>상대 손으로</b> 넘어가요 — 세게 쓸수록 손해도 커요!',
+    act:  '손패에서 카드 클릭 → <b>배팅 확정</b> 버튼' },
+  { id: 'reveal', when: s => s.phase === 'reveal',
+    pos: 'top',
+    text: '결과! 이긴 쪽이 상품 2장을 <b>자기 앞에</b> 깔아요. 🎯 <b>앞에 깔린 카드만</b> 세트로 인정 — 손에 든 건 소용 없어요.' },
   { id: 'draw_opp', when: s => s.phase === 'draw' && s.auctioneer !== s.myIndex,
-    text: '이번엔 <b>상대가 진행자</b> — 진행자는 턴마다 번갈아요. 상대가 출품하고 방식을 고른 뒤, <b>배팅은 진행자가 먼저</b> 내요.' },
-  { id: 'bid_me2',  when: s => s.phase === 'bidding' && s.auction && !s.auction.myBid && tutSeen.bid_me && tutSeen.reveal,
-    text: '💡 <b>반전 카드</b>: 가장 약한 <b>6-10</b>은 가장 강한 <b>2-1</b>만은 이겨요 — <b>졸개의 배신!</b> 상대가 2-1을 낼 것 같으면 노려보세요.' },
+    pos: 'bot',
+    text: '이번 턴 진행자는 <b>상대</b> — 진행자는 매 턴 번갈아요. 상대가 상품을 걸면 곧 배팅 차례가 와요. 잠깐 기다려요 ☕' },
+  { id: 'betray', when: s => s.phase === 'bidding' && s.auction && !s.auction.myBid && tutSeen.bid_me && tutSeen.reveal,
+    pos: 'top',
+    text: '💡 비밀 무기: 가장 약한 <b>6-10</b>이 가장 강한 <b>2-1</b>만은 이겨요 — <b>졸개의 배신!</b> 상대의 에이스를 저격할 수 있죠.' },
 ];
 function startTutorial() {
   tutorial = true; tutSeen = {};
@@ -476,15 +496,30 @@ function tutTick() {
   if (!tutorial || !state) return;
   for (const st of TUT_STEPS) {
     if (tutSeen[st.id]) continue;
-    if (st.when(state)) { tutSeen[st.id] = true; tutShow(st.text); return; }
+    if (st.when(state)) { tutSeen[st.id] = true; tutShow(st); return; }
+  }
+  // 활성 스텝의 하이라이트 대상이 사라졌으면 정리 (예: 덱 클릭 후)
+  if (tutTarget && !document.contains(tutTarget)) tutClearGlow();
+}
+function tutShow(st) {
+  const box = document.getElementById('tutBox');
+  document.getElementById('tutText').innerHTML = st.text + (st.act ? `<div class="tut-do">👉 ${st.act}</div>` : '');
+  box.classList.remove('pos-top', 'pos-bot', 'pop');
+  box.classList.add('pos-' + (st.pos || 'top'));
+  box.style.display = 'block';
+  void box.offsetWidth;           // 애니메이션 재시작
+  box.classList.add('pop');
+  tutClearGlow();
+  if (st.target) {
+    tutTarget = document.querySelector(st.target);
+    if (tutTarget) tutTarget.classList.add('tut-glow');
   }
 }
-function tutShow(html) {
-  document.getElementById('tutText').innerHTML = html;
-  document.getElementById('tutBox').style.display = 'block';
+function tutClearGlow() {
+  if (tutTarget) { tutTarget.classList.remove('tut-glow'); tutTarget = null; }
 }
-function tutConfirm() { document.getElementById('tutBox').style.display = 'none'; }
-function endTutorial() { tutorial = false; tutConfirm(); }
+function tutConfirm() { document.getElementById('tutBox').style.display = 'none'; }   // 반짝임은 유지 — 뭘 누를지 계속 보이게
+function endTutorial() { tutorial = false; tutConfirm(); tutClearGlow(); }
 
 // ── 방 ──────────────────────────────────────────────────────
 function createRoom(vsBot) {
@@ -827,12 +862,14 @@ function render(changed = false) {
     reveal: '결과 공개!', game_over: '게임 종료',
   };
   const bar = document.getElementById('statusBar');
-  if (changed) { bar.style.opacity = '0'; setTimeout(() => { bar.innerHTML = msgs[s.phase] ?? s.phase; bar.style.opacity = '1'; }, 180); }
-  else bar.innerHTML = msgs[s.phase] ?? s.phase;
+  const msg = msgs[s.phase] ?? s.phase;
+  if (lastSig.status !== msg) {   // 같은 문구면 건드리지 않음 (깜빡임·리플로우 방지)
+    lastSig.status = msg;
+    if (changed) { bar.style.opacity = '0'; setTimeout(() => { bar.innerHTML = msg; bar.style.opacity = '1'; }, 150); }
+    else bar.innerHTML = msg;
+  }
 
-  document.getElementById('oppHandLen').textContent = `· 손패 ${s.oppHandLen}장`;
   renderDeck();
-  renderOppHand(s.oppHandLen);
   renderPile('oppAcq', s.oppAcq);
   renderPile('myAcq', s.myAcq);
   renderAuction(changed);
@@ -866,18 +903,6 @@ function renderDeck() {
   cnt.className = 'deck-count'; cnt.textContent = `덱 ${n}장`;
   el.appendChild(cnt);
   el.classList.toggle('drawable', s.phase === 'draw' && s.auctioneer === s.myIndex);
-}
-
-// 상대 손패 = 뒷면 카드 부채꼴
-function renderOppHand(n) {
-  if (lastSig.oppHand === n) return; lastSig.oppHand = n;   // 장수 그대로면 스킵
-  const el = document.getElementById('oppHand'); el.innerHTML = '';
-  for (let i = 0; i < n; i++) {
-    const slot = document.createElement('div'); slot.className = 'fan-slot';
-    slot.appendChild(makeCard(null));
-    el.appendChild(slot);
-  }
-  fanRow(el, true);
 }
 
 // 획득 카드 = 종류별로 겹쳐 쌓은 더미 (세트 진행도 표시)
@@ -934,6 +959,10 @@ function fanRow(container, isTop) {
 }
 function renderAuction(changed) {
   const s = state;
+  // 내용이 안 바뀌었으면 중앙 DOM 재생성 스킵 (끊김·깜빡임 방지)
+  const sig = JSON.stringify([s.phase, s.auctioneer, s.pick, s.auction, selectedBidCard && selectedBidCard.id]);
+  if (lastSig.auction === sig) return;
+  lastSig.auction = sig;
   const items = document.getElementById('auctionItems');
   const action = document.getElementById('actionArea'), badge = document.getElementById('auctionTypeBadge');
   items.innerHTML = ''; action.innerHTML = '';

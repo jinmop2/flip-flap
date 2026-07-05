@@ -55,13 +55,20 @@
     .sec-title { display:flex; justify-content:space-between; align-items:center; font-size:.72rem; font-weight:600; color:#6a5a70; letter-spacing:1px; padding:0 2px; }
     .online-actions { display:flex; gap:8px; }
     .online-actions .btn { flex:1; }
-    /* 상단 링크 (게임 방법 · 튜토리얼) */
-    .lobby-top { display:flex; justify-content:center; gap:10px; }
+    /* 게임 방법 · 튜토리얼 (프로필 아래) */
+    .lobby-top { display:flex; gap:10px; width:100%; }
     .top-link {
-      background:#16101c; border:1px solid #2a1c30; color:#c8bcc4; border-radius:20px;
-      padding:8px 16px; font-family:'Fredoka'; font-size:.84rem; font-weight:600; cursor:pointer; transition:.15s;
+      flex:1; background:#16101c; border:1px solid #2a1c30; color:#c8bcc4; border-radius:12px;
+      padding:10px 12px; font-family:'Fredoka'; font-size:.84rem; font-weight:600; cursor:pointer; transition:.15s;
     }
     .top-link:hover { border-color:var(--gold); color:var(--gold); }
+    /* 프로필 칩 안 로그아웃 */
+    .profile-chip { width:100%; }
+    .pc-logout {
+      margin-left:auto; flex-shrink:0; background:none; border:1px solid #3a2a40; color:#9a8fa0;
+      border-radius:8px; padding:6px 10px; font-family:'Fredoka'; font-size:.7rem; cursor:pointer; transition:.15s;
+    }
+    .pc-logout:hover { border-color:#c05050; color:#ff9a9a; }
     /* 솔로/멀티 모드 카드 */
     .mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; }
     .mode-card {
@@ -86,18 +93,34 @@
     .solo-diffs .btn { flex:1; padding:13px 4px; }
     /* 튜토리얼 코치 박스 */
     #tutBox {
-      display:none; position:fixed; top:56px; left:50%; transform:translateX(-50%); z-index:55;
-      width:min(360px, calc(100vw - 24px)); background:rgba(24,15,30,.96);
-      border:1.5px solid var(--gold); border-radius:14px; padding:12px 14px 10px;
-      box-shadow:0 8px 30px rgba(0,0,0,.65); animation:slideDown .25s ease;
+      display:none; position:fixed; left:50%; transform:translateX(-50%); z-index:55;
+      width:min(370px, calc(100vw - 20px)); background:rgba(22,14,28,.97);
+      border:1.5px solid var(--gold); border-radius:14px; padding:11px 14px 9px;
+      box-shadow:0 8px 30px rgba(0,0,0,.7);
     }
-    .tut-tag { font-size:.68rem; font-weight:700; color:var(--gold); letter-spacing:2px; margin-bottom:5px; }
-    #tutText { font-size:.85rem; line-height:1.6; color:#e8dfc8; }
+    #tutBox.pos-top { top:72px; bottom:auto; }
+    #tutBox.pos-bot { top:auto; bottom:235px; }
+    #tutBox.pop { animation:tutIn .3s cubic-bezier(.34,1.3,.64,1); }
+    @keyframes tutIn { from { opacity:0; transform:translateX(-50%) translateY(8px) scale(.97); } to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }
+    .tut-tag { font-size:.66rem; font-weight:700; color:var(--gold); letter-spacing:2px; margin-bottom:4px; }
+    #tutText { font-size:.84rem; line-height:1.55; color:#e8dfc8; }
     #tutText b { color:#ffe9a8; }
-    .tut-actions { display:flex; align-items:center; justify-content:space-between; margin-top:9px; }
-    .tut-actions .btn { width:auto; padding:7px 18px; font-size:.82rem; }
-    .tut-quit { background:none; border:none; color:#6a5a70; font-family:'Fredoka'; font-size:.74rem; cursor:pointer; }
+    .tut-do { margin-top:7px; font-weight:700; color:#ffd94a; font-size:.84rem; }
+    .tut-actions { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
+    .tut-actions .btn { width:auto; padding:6px 16px; font-size:.8rem; }
+    .tut-quit { background:none; border:none; color:#6a5a70; font-family:'Fredoka'; font-size:.72rem; cursor:pointer; }
     .tut-quit:hover { color:#c8bcc4; }
+    /* 지금 클릭할 곳 강조 */
+    .tut-glow { border-radius:14px; animation:tutGlow 1.3s ease-in-out infinite; }
+    @keyframes tutGlow {
+      0%,100% { box-shadow:0 0 0 2px rgba(255,215,80,.45), 0 0 10px 2px rgba(255,215,80,.25); }
+      50%     { box-shadow:0 0 0 3px rgba(255,215,80,.9), 0 0 28px 8px rgba(255,215,80,.45); }
+    }
+    @media (max-width:600px) {
+      #tutBox.pos-bot { bottom:185px; }
+      #tutBox.pos-top { top:60px; }
+      #tutText { font-size:.78rem; }
+    }
     /* 방 목록 */
     #roomList { display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto; min-height:56px; }
     .rl-empty { font-size:.76rem; color:#4a3a50; text-align:center; padding:18px 0; }
@@ -228,13 +251,15 @@
     #tableLogo .tl.flap { transform:rotate(180deg); margin-top:-10px; }
 
     /* 인게임 컨트롤 (룰 / BGM) */
-    #controls { position:absolute; top:16px; right:20px; z-index:5; display:flex; gap:8px; }
+    #controls { position:absolute; top:14px; right:16px; z-index:5; display:flex; gap:8px; }
     .ctrl-btn {
-      width:34px; height:34px; border-radius:10px; cursor:pointer;
-      background:rgba(0,0,0,.3); border:1px solid rgba(200,160,0,.3); color:#ffe9a8;
-      font-family:'Fredoka'; font-size:.9rem; font-weight:700;
-      display:flex; align-items:center; justify-content:center; transition:all .15s;
+      width:54px; height:52px; border-radius:12px; cursor:pointer;
+      background:rgba(0,0,0,.35); border:1px solid rgba(200,160,0,.35); color:#ffe9a8;
+      font-family:'Fredoka'; font-weight:700;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; transition:all .15s;
     }
+    .ctrl-btn .ci { font-size:1.25rem; line-height:1.1; }
+    .ctrl-btn .cl { font-size:.58rem; letter-spacing:1px; opacity:.85; }
     .ctrl-btn:hover { background:rgba(200,160,0,.2); transform:translateY(-1px); }
     #exitBtn { border-color:rgba(255,96,96,.35); color:#ff9a9a; }
     #exitBtn:hover { background:rgba(255,96,96,.18); }
@@ -386,14 +411,17 @@
     .r-special .r-st{ color:var(--gold); font-weight:700; font-size:.85rem; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
 
     /* HUD (테이블 상단 얇은 바) */
-    #hud {
-      display:flex; justify-content:space-between; align-items:center;
-      padding:4px 10px; margin-bottom:4px; position:relative; z-index:2;
+    /* 턴 표시 — 덱 바로 위 */
+    #turnInfo {
+      position:absolute; left:calc(50% - 218px); top:calc(50% - 76px); width:64px;
+      text-align:center; font-size:.74rem; color:rgba(255,255,255,.55); font-weight:700; z-index:3;
+      letter-spacing:1px;
     }
-    #deckInfo,#turnInfo { font-size:.72rem; color:rgba(255,255,255,.4); font-weight:600; }
+    /* 안내 문구 — 중앙 경매 매트 바로 아래 */
     #statusBar {
-      font-size:.88rem; color:#ffe9a8; font-weight:600; text-align:center; flex:1;
-      transition:opacity .2s; text-shadow:0 1px 3px rgba(0,0,0,.6);
+      font-size:.92rem; color:#ffe9a8; font-weight:600; text-align:center;
+      min-height:22px; margin-top:4px; padding:0 12px;
+      transition:opacity .18s; text-shadow:0 1px 4px rgba(0,0,0,.7);
     }
 
     /* 존 공통 */
@@ -648,19 +676,20 @@
 
       /* 부채꼴 높이 */
       .fan { min-height:82px; }
-      .fan.top { min-height:52px; }
 
-      /* HUD·라벨·타이머 */
-      #hud { padding:2px 4px; }
-      #statusBar { font-size:.76rem; }
-      #turnInfo { font-size:.66rem; }
+      /* 라벨·타이머 */
+      #statusBar { font-size:.78rem; }
+      #turnInfo { left:8px; width:50px; font-size:.62rem; top:calc(50% - 58px); }
       .zone-label { font-size:.56rem; }
       .timer { font-size:.82rem; padding:2px 8px; }
       .type-badge { font-size:.55rem; padding:2px 7px; }
 
       /* 컨트롤 버튼 */
-      #controls { top:10px; right:12px; gap:6px; }
-      .ctrl-btn { width:30px; height:30px; font-size:.85rem; }
+      #controls { top:8px; right:10px; gap:6px; }
+      .ctrl-btn { width:46px; height:44px; }
+      .ctrl-btn .ci { font-size:1.05rem; }
+      .ctrl-btn .cl { font-size:.52rem; }
+      #oppZone { padding-top:52px; }   /* 상대 라벨이 컨트롤 버튼과 안 겹치게 */
 
       /* 워터마크 로고 축소 */
       #tableLogo .tl { font-size:3.2rem; letter-spacing:5px; }
@@ -696,10 +725,6 @@
 <div id="connStatus">서버 연결 중…</div>
 
 <div id="lobby">
-  <div class="lobby-top">
-    <button class="top-link" onclick="toggleRules(true)">📖 게임 방법</button>
-    <button class="top-link" onclick="startTutorial()">🎓 튜토리얼</button>
-  </div>
   <div class="logo">
     <h1>FLIP</h1><div class="flap">FLAP</div>
     <p class="sub">경매 · 블러핑 · 심리전</p>
@@ -713,6 +738,12 @@
       <input id="nickInput" type="text" placeholder="게스트 닉네임" maxlength="12">
     </div>
     <button class="lobby-rules-link" id="authBtn" onclick="openAuth('login')">로그인 / 회원가입</button>
+
+    <!-- 게임 방법 · 튜토리얼 -->
+    <div class="lobby-top">
+      <button class="top-link" onclick="toggleRules(true)">📖 게임 방법</button>
+      <button class="top-link" onclick="startTutorial()">🎓 튜토리얼</button>
+    </div>
 
     <!-- 솔로 / 멀티 -->
     <div class="mode-grid">
@@ -852,9 +883,9 @@
     <span class="tl">FLIP</span><span class="tl flap">FLAP</span>
   </div>
   <div id="controls">
-    <div class="ctrl-btn" id="bgmBtn" title="소리 끄기" onclick="toggleBGM()">🔊</div>
-    <div class="ctrl-btn" id="rulesBtn" title="게임 설명" onclick="toggleRules(true)">?</div>
-    <div class="ctrl-btn" id="exitBtn" title="나가기" onclick="exitGame()">🚪</div>
+    <div class="ctrl-btn" id="bgmBtn" title="소리 켜기/끄기" onclick="toggleBGM()"><span class="ci">🔊</span><span class="cl">소리</span></div>
+    <div class="ctrl-btn" id="rulesBtn" title="게임 설명" onclick="toggleRules(true)"><span class="ci">📖</span><span class="cl">설명</span></div>
+    <div class="ctrl-btn" id="exitBtn" title="게임 나가기" onclick="exitGame()"><span class="ci">🚪</span><span class="cl">나가기</span></div>
   </div>
 
   <!-- 상대 프로필 (클릭하면 전적) -->
@@ -879,33 +910,27 @@
     <div class="pc-body"></div><div class="pc-stats"></div>
   </div>
 
-  <div id="hud">
-    <span id="turnInfo">턴 -</span>
-    <span id="statusBar">-</span>
-    <span style="width:54px"></span>
-  </div>
-
   <!-- 상대 (맞은편) -->
   <div class="zone" id="oppZone">
     <div class="zone-label">
       <span id="oppNickLabel">상대</span> <span id="cpuTag" class="cpu-tag" style="display:none">AI</span>
       <span id="cpuDiff" class="cpu-tag diff" style="display:none"></span>
-      <span id="oppHandLen"></span>
       <span class="timer" id="oppTimer">7:00</span>
     </div>
-    <div class="fan top" id="oppHand"></div>
     <div class="pile" id="oppAcq"></div>
     <div class="bid-area" id="oppBid"></div>
   </div>
 
   <!-- 중앙 경매 매트 -->
   <div class="zone" id="centerZone">
+    <div id="turnInfo">턴 -</div>
     <div id="deckStack" onclick="drawCard()"></div>
     <div id="auctionMat">
       <div class="type-badge" id="auctionTypeBadge" style="min-height:16px"></div>
       <div class="auction-row" id="auctionItems"></div>
       <div id="actionArea"></div>
     </div>
+    <div id="statusBar">-</div>
   </div>
 
   <!-- 나 (내 자리) -->
