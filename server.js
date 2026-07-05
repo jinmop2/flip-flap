@@ -15,7 +15,13 @@ app.use((req, res, next) => {
   next();
 });
 app.get('/health', (req, res) => res.json({ ok: true, rooms: Object.keys(rooms).length, uptime: Math.round(process.uptime()) }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, fp) {
+    if (fp.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-cache');                       // SW 갱신 즉시 감지
+    else if (/\.(png|jpg|svg|ico)$/.test(fp)) res.setHeader('Cache-Control', 'public, max-age=604800');  // 아이콘류 7일
+    else res.setHeader('Cache-Control', 'no-cache');                                            // html/js: etag 재검증(304) — 배포 즉시 반영
+  },
+}));
 
 // 간단 rate limit (IP당 분당 N회) — 무차별 대입 방지
 const rlMap = new Map();

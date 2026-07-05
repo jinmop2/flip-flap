@@ -1,4 +1,4 @@
-const socket = io();
+const socket = io({ transports: ['websocket', 'polling'] });   // 웹소켓 우선 — 폴링 왕복 생략, 연결 빨라짐
 let state = null, myIndex = null, selectedBidCard = null;
 let isVsBot = false, prevPhase = null, difficulty = 'hard';
 let myRoomId = null;
@@ -1141,4 +1141,9 @@ function animateWinCards() {
   document.querySelectorAll('#myAcq .card').forEach((c, i) => {
     setTimeout(() => { c.classList.remove('anim-win'); void c.offsetWidth; c.classList.add('anim-win'); }, i * 80);
   });
+}
+
+// ── PWA 서비스워커 등록 (재방문 로딩 가속 + 홈 화면 설치) ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }
