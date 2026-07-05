@@ -35,6 +35,7 @@ setInterval(() => { const now = Date.now(); for (const [k, e] of rlMap) if (now 
 app.post('/api/signup', rateLimit(20), (req, res) => { const { id, password, nick } = req.body || {}; res.json(accounts.signup(id, password, nick)); });
 app.post('/api/login',  rateLimit(30), (req, res) => { const { id, password } = req.body || {}; res.json(accounts.login(id, password)); });
 app.post('/api/me',     rateLimit(90), (req, res) => { const { token } = req.body || {}; res.json(accounts.meByToken(token)); });
+app.post('/api/nick',   rateLimit(20), (req, res) => { const { token, nick } = req.body || {}; res.json(accounts.setNick(token, nick)); });
 app.get('/api/leaderboard', rateLimit(60), (req, res) => res.json({ ok: true, players: accounts.topPlayers(20) }));
 
 // ── 카카오 간편로그인 (REST 키는 환경변수 KAKAO_REST_KEY) ──
@@ -65,7 +66,7 @@ app.get('/auth/kakao/callback', rateLimit(30), async (req, res) => {
     const nick = (ku.kakao_account && ku.kakao_account.profile && ku.kakao_account.profile.nickname) || (ku.properties && ku.properties.nickname) || '플레이어';
     const out = accounts.kakaoLogin(ku.id, nick);
     // 토큰은 URL 프래그먼트로 전달 (서버 로그·리퍼러에 안 남음) — 클라가 저장 후 지움
-    res.redirect('/#ktoken=' + out.token);
+    res.redirect('/#ktoken=' + out.token + (out.isNew ? '&knew=1' : ''));   // 첫 로그인이면 닉 설정 유도
   } catch (e) { console.error('카카오 콜백 오류:', e.message); res.redirect('/#kerr=' + encodeURIComponent('카카오 로그인 중 오류가 났어요')); }
 });
 

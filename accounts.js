@@ -128,6 +128,19 @@ function byToken(token) {
 }
 function meByToken(token) { const u = byToken(token); return u ? { ok: true, profile: profileOf(u) } : { error: '세션 만료' }; }
 
+// 닉네임 변경 (본인 확인은 토큰으로)
+function setNick(token, nick) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '세션이 만료됐어요. 다시 로그인해주세요.' };
+  nick = String(nick || '').trim();
+  if (!validNick(nick)) return { error: '닉네임은 1~12자예요.' };
+  const nl = nick.toLowerCase();
+  if (db.nickTaken[nl] && db.nickTaken[nl] !== idl) return { error: '이미 사용 중인 닉네임이에요.' };
+  if (u.nick) delete db.nickTaken[u.nick.toLowerCase()];
+  u.nick = nick; db.nickTaken[nl] = idl; persist(idl);
+  return { ok: true, profile: profileOf(u) };
+}
+
 // ── 카카오 간편로그인 ──
 // 겹치지 않는 닉네임 만들기 (카카오 닉 그대로 → 겹치면 #2, #3…)
 function uniqueNick(base) {
@@ -173,4 +186,4 @@ function recordResult(token, result) {
   return profileOf(u);
 }
 
-module.exports = { signup, login, kakaoLogin, byToken, meByToken, recordResult, profileOf, topPlayers };
+module.exports = { signup, login, kakaoLogin, setNick, byToken, meByToken, recordResult, profileOf, topPlayers };

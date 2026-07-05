@@ -249,7 +249,9 @@
     .auth-tabs { display:flex; gap:0; border-bottom:1px solid #2a1c30; margin-bottom:4px; }
     .auth-tab { flex:1; background:none; border:none; padding:9px; cursor:pointer; font-family:'Fredoka'; font-size:.9rem; font-weight:600; color:#6a5a70; border-bottom:2px solid transparent; }
     .auth-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
-    #authModal input { text-transform:none; letter-spacing:0; text-align:left; }
+    #authModal input, #nickModal input { text-transform:none; letter-spacing:0; text-align:left; }
+    .pc-edit { background:none; border:none; cursor:pointer; font-size:.85rem; opacity:.55; padding:2px; }
+    .pc-edit:hover { opacity:1; }
     .auth-err { color:#ff8a8a; font-size:.78rem; min-height:16px; }
     .auth-hint { font-size:.7rem; color:#6a5a70; text-align:center; line-height:1.5; margin-top:2px; }
     /* 랭킹 행 */
@@ -742,6 +744,20 @@
       <button class="btn btn-outline" onclick="closeAuth()">취소</button>
     </div>
     <p class="auth-hint">회원가입하면 랭크·레벨·전적이 기록돼요. 가입 없이도 게스트로 플레이 가능!</p>
+  </div>
+</div>
+
+<!-- 닉네임 설정 (카카오 첫 로그인 / 프로필 ✏️) -->
+<div class="lb-modal" id="nickModal" onclick="if(event.target===this)closeNickModal()">
+  <div class="lb-box">
+    <div class="lb-title">✏️ 닉네임 설정</div>
+    <p class="auth-hint">게임에서 쓸 닉네임을 정해주세요 (1~12자, 중복 불가)</p>
+    <input id="nickNew" type="text" maxlength="12" placeholder="닉네임" onkeydown="if(event.key==='Enter')submitNick()">
+    <div id="nickErr" class="auth-err"></div>
+    <div class="lb-btns">
+      <button class="btn btn-gold" onclick="submitNick()">저장</button>
+      <button class="btn btn-outline" onclick="closeNickModal()">나중에</button>
+    </div>
   </div>
 </div>
 

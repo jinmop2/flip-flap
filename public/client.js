@@ -116,7 +116,7 @@ function renderAccount() {
   if (myAccount) {
     guest.style.display = 'none';
     chip.style.display = 'flex';
-    chip.innerHTML = profileChipHTML(myAccount);
+    chip.innerHTML = profileChipHTML(myAccount) + '<button class="pc-edit" onclick="openNickModal()" title="닉네임 변경">✏️</button>';
     authBtn.textContent = '로그아웃'; authBtn.onclick = logout;
   } else {
     guest.style.display = 'flex';
@@ -133,11 +133,33 @@ function profileChipHTML(p) {
 socket.on('profile', ({ profile, result }) => {
   myAccount = profile; renderAccount();
 });
+// ── 닉네임 설정 모달 ──
+function openNickModal() {
+  document.getElementById('nickErr').textContent = '';
+  const i = document.getElementById('nickNew');
+  i.value = myAccount ? myAccount.nick : '';
+  document.getElementById('nickModal').classList.add('show');
+  setTimeout(() => { i.focus(); i.select(); }, 60);
+}
+function closeNickModal() { document.getElementById('nickModal').classList.remove('show'); }
+async function submitNick() {
+  const nick = document.getElementById('nickNew').value.trim();
+  const err = document.getElementById('nickErr');
+  const tk = localStorage.getItem('ff_auth');
+  const r = await apiPost('/api/nick', { token: tk, nick });
+  if (r.error) { err.textContent = '⚠️ ' + r.error; return; }
+  myAccount = r.profile; renderAccount(); closeNickModal();
+  socket.emit('auth', { token: tk });   // 게임 서버에도 새 닉 반영
+}
+
 // ── 카카오 로그인 콜백 처리 (#ktoken=… / #kerr=…) ──
+let kakaoFirstLogin = false;
 (function handleKakaoReturn() {
   const h = location.hash || '';
   if (h.startsWith('#ktoken=')) {
-    localStorage.setItem('ff_auth', decodeURIComponent(h.slice(8)));
+    const p = new URLSearchParams(h.slice(1));
+    localStorage.setItem('ff_auth', p.get('ktoken'));
+    kakaoFirstLogin = !!p.get('knew');
     history.replaceState(null, '', location.pathname + location.search);   // 토큰 흔적 제거
   } else if (h.startsWith('#kerr=')) {
     const msg = decodeURIComponent(h.slice(6));
@@ -145,7 +167,7 @@ socket.on('profile', ({ profile, result }) => {
     setTimeout(() => alert('⚠️ ' + msg), 300);
   }
 })();
-restoreSession();
+restoreSession().then(() => { if (kakaoFirstLogin && myAccount) openNickModal(); });   // 첫 카카오 로그인 → 닉 정하기
 // 서버에 카카오 로그인이 설정 안 됐으면 버튼 숨김
 fetch('/api/kakao-enabled').then(r => r.json()).then(d => {
   if (!d.enabled) { const b = document.getElementById('kakaoLoginBtn'); if (b) { b.style.display = 'none'; const o = document.querySelector('.auth-or'); if (o) o.style.display = 'none'; } }
