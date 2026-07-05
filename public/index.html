@@ -287,8 +287,10 @@
     .game-pcard {
       position:absolute; z-index:6; cursor:pointer;
       background:rgba(0,0,0,.4); border:1px solid rgba(200,160,0,.22); border-radius:11px;
-      padding:5px 10px; max-width:170px; transition:border-color .15s;
+      padding:5px 10px; width:max-content; max-width:180px; transition:border-color .15s;
     }
+    #myProfile { text-align:right; }
+    #myProfile .pc-body, #myProfile .pc-diff, #myProfile .pc-stats { margin-left:auto; }
     .game-pcard:hover { border-color:rgba(200,160,0,.5); }
     #oppProfile { top:14px; right:16px; }
     #myProfile  { bottom:14px; right:16px; }
@@ -681,8 +683,8 @@
       #deckStack { left:8px; width:50px; height:70px; }
       #deckStack .deck-count { font-size:.55rem; bottom:-17px; }
 
-      /* 경매 매트 — 화면 중앙 정렬 (덱은 좌측에 오버레이) */
-      #auctionMat { padding:10px 12px; gap:8px; width:86%; min-height:200px; margin:0 auto; }
+      /* 경매 매트 — 덱(좌측)과 안 겹치게 폭 좁혀 중앙 정렬 */
+      #auctionMat { padding:10px 10px; gap:8px; width:auto; max-width:224px; min-width:200px; min-height:200px; margin:0 auto; }
       .auction-row { gap:8px; min-height:82px; }
       .a-label, .bid-lbl { font-size:.55rem; }
       #actionArea .btn-sm { padding:8px 12px; font-size:.8rem; }
