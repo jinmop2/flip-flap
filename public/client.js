@@ -628,8 +628,7 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles }) =
   seenAcq.myAcq = new Set(); seenAcq.oppAcq = new Set(); boardCelebrated = false; lastSig = {};
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('game').style.display = 'flex';
-  // 상대 태그: AI면 난이도, 사람이면 숨김
-  document.getElementById('cpuTag').style.display = 'none';
+  // AI면 프로필 아래 난이도 배지, 사람이면 숨김
   const de = document.getElementById('cpuDiff');
   if (vsBot) { de.style.display = ''; de.textContent = { easy:'쉬움', normal:'보통', hard:'어려움', expert:'전문가' }[diff] || diff; }
   else de.style.display = 'none';

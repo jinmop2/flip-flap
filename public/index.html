@@ -269,8 +269,8 @@
     #tableLogo .tl { font-family:'Bangers',cursive; font-size:5.5rem; letter-spacing:8px; color:#fff; display:block; }
     #tableLogo .tl.flap { transform:rotate(180deg); margin-top:-10px; }
 
-    /* 인게임 컨트롤 (룰 / BGM) */
-    #controls { position:absolute; top:14px; right:16px; z-index:5; display:flex; gap:8px; }
+    /* 인게임 컨트롤 (나가기 / 소리 / 설명) — 좌측 상단 */
+    #controls { position:absolute; top:14px; left:16px; z-index:8; display:flex; gap:8px; }
     .ctrl-btn {
       width:54px; height:52px; border-radius:12px; cursor:pointer;
       background:rgba(0,0,0,.35); border:1px solid rgba(200,160,0,.35); color:#ffe9a8;
@@ -290,8 +290,12 @@
       padding:5px 10px; max-width:170px; transition:border-color .15s;
     }
     .game-pcard:hover { border-color:rgba(200,160,0,.5); }
-    #oppProfile { top:40px; left:12px; }
-    #myProfile  { bottom:12px; left:12px; }
+    #oppProfile { top:14px; right:16px; }
+    #myProfile  { bottom:14px; left:16px; }
+    /* 프로필 옆 시간: 상대는 프로필 아래, 나는 프로필 위 */
+    .pc-timer { position:absolute; z-index:6; margin:0; }
+    #oppTimer { top:64px; right:16px; }
+    #myTimer  { bottom:64px; left:16px; }
     .pc-body { display:flex; align-items:center; gap:6px; min-width:0; }
     .pc-body .gp-rank { font-size:1.1rem; line-height:1; flex-shrink:0; }
     .pc-body .gp-nick { font-size:.82rem; font-weight:700; color:#f0ead8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -300,8 +304,8 @@
     .pc-stats b { color:#ffe9a8; }
     .game-pcard.show-stats .pc-stats { max-height:20px; opacity:1; margin-top:4px; }
 
-    /* 이모트 버튼 — 내 프로필 위 */
-    #emoteWrap { position:absolute; bottom:52px; left:12px; z-index:7; }
+    /* 이모트 버튼 — 내 시간 위 */
+    #emoteWrap { position:absolute; bottom:100px; left:16px; z-index:7; }
     .emote-fab {
       width:36px; height:36px; border-radius:50%; cursor:pointer;
       background:linear-gradient(135deg,#3a2a48,#241a2e); border:1px solid rgba(200,160,0,.4);
@@ -445,7 +449,7 @@
 
     /* 존 공통 */
     .zone { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; }
-    #oppZone { padding-top:2px; }
+    #oppZone { padding-top:0; margin-top:-6px; }   /* 상대 손패 좀 더 위로 */
     #centerZone { flex:1; justify-content:center; gap:10px; }
     #myZone { justify-content:flex-end; }
 
@@ -677,8 +681,8 @@
       #deckStack { left:8px; width:50px; height:70px; }
       #deckStack .deck-count { font-size:.55rem; bottom:-17px; }
 
-      /* 경매 매트 */
-      #auctionMat { min-width:0; padding:10px 12px; gap:8px; width:78%; margin-left:auto; }
+      /* 경매 매트 — 화면 중앙 정렬 (덱은 좌측에 오버레이) */
+      #auctionMat { min-width:0; padding:10px 12px; gap:8px; width:auto; max-width:84%; margin:0 auto; }
       .auction-row { gap:8px; }
       .a-label, .bid-lbl { font-size:.55rem; }
       #actionArea .btn-sm { padding:8px 12px; font-size:.8rem; }
@@ -706,12 +710,18 @@
       .timer { font-size:.82rem; padding:2px 8px; }
       .type-badge { font-size:.55rem; padding:2px 7px; }
 
-      /* 컨트롤 버튼 */
-      #controls { top:8px; right:10px; gap:6px; }
+      /* 컨트롤 버튼 (좌측 상단) */
+      #controls { top:8px; left:10px; gap:6px; }
       .ctrl-btn { width:46px; height:44px; }
       .ctrl-btn .ci { font-size:1.05rem; }
       .ctrl-btn .cl { font-size:.52rem; }
-      #oppZone { padding-top:52px; }   /* 상대 라벨이 컨트롤 버튼과 안 겹치게 */
+      /* 프로필·시간 모바일 위치 */
+      #oppProfile { top:8px; right:10px; }
+      #oppTimer { top:52px; right:10px; }
+      #myProfile { bottom:10px; left:10px; }
+      #myTimer { bottom:56px; left:10px; }
+      #emoteWrap { bottom:92px; left:10px; }
+      #oppZone { padding-top:56px; margin-top:0; }   /* 상대 손패가 프로필·컨트롤 아래로 */
 
       /* 워터마크 로고 축소 */
       #tableLogo .tl { font-size:3.2rem; letter-spacing:5px; }
@@ -723,14 +733,11 @@
       /* 룰 모달 */
       #rulesBox { padding:22px 20px; }
 
-      /* ── 모바일 프로필: 카드 안 가리게 축소·이동 ── */
-      .game-pcard { padding:3px 8px; max-width:132px; }
+      /* ── 모바일 프로필: 카드 안 가리게 축소 ── */
+      .game-pcard { padding:3px 8px; max-width:128px; }
       .pc-body .gp-rank { font-size:1rem; }
       .pc-body .gp-nick { font-size:.72rem; }
       .pc-body .gp-lv { display:none; }               /* 폭 절약 */
-      #oppProfile { top:26px; left:8px; }             /* 라벨 왼쪽·부채꼴 위 빈 공간 */
-      #myProfile  { bottom:6px; left:8px; }
-      #emoteWrap  { bottom:46px; left:8px; }
       /* 라벨의 중복 닉 숨김 (프로필이 대신 표시) */
       #oppNickLabel, #myNickLabel { display:none; }
 
@@ -905,16 +912,17 @@
     <span class="tl">FLIP</span><span class="tl flap">FLAP</span>
   </div>
   <div id="controls">
+    <div class="ctrl-btn" id="exitBtn" title="게임 나가기" onclick="exitGame()"><span class="ci">🚪</span><span class="cl">나가기</span></div>
     <div class="ctrl-btn" id="bgmBtn" title="소리 켜기/끄기" onclick="toggleBGM()"><span class="ci">🔊</span><span class="cl">소리</span></div>
     <div class="ctrl-btn" id="rulesBtn" title="게임 설명" onclick="toggleRules(true)"><span class="ci">📖</span><span class="cl">설명</span></div>
-    <div class="ctrl-btn" id="exitBtn" title="게임 나가기" onclick="exitGame()"><span class="ci">🚪</span><span class="cl">나가기</span></div>
   </div>
 
-  <!-- 상대 프로필 (클릭하면 전적) · AI면 난이도 표시 -->
+  <!-- 상대 프로필 (우측 상단, 클릭하면 전적) + 시간은 프로필 아래 -->
   <div class="game-pcard" id="oppProfile" onclick="toggleStats(this)">
     <div class="pc-body"></div><div class="pc-stats"></div>
     <div class="pc-diff" id="cpuDiff" style="display:none"></div>
   </div>
+  <div class="timer pc-timer" id="oppTimer">7:00</div>
   <!-- 내 프로필 (클릭하면 전적) + 이모트 버튼(프로필 위) -->
   <div class="emote-wrap" id="emoteWrap">
     <button class="emote-fab" id="emoteBtn" title="이모트" onclick="toggleEmotes()">😀</button>
@@ -929,16 +937,14 @@
       <button onclick="sendEmote('😭')">😭</button>
     </div>
   </div>
+  <!-- 내 시간은 내 프로필 위 -->
+  <div class="timer pc-timer" id="myTimer">7:00</div>
   <div class="game-pcard" id="myProfile" onclick="toggleStats(this)">
     <div class="pc-body"></div><div class="pc-stats"></div>
   </div>
 
   <!-- 상대 (맞은편) -->
   <div class="zone" id="oppZone">
-    <div class="zone-label">
-      <span id="oppNickLabel">상대</span> <span id="cpuTag" class="cpu-tag" style="display:none">AI</span>
-      <span class="timer" id="oppTimer">7:00</span>
-    </div>
     <div class="fan top" id="oppHand"></div>
     <div class="pile" id="oppAcq"></div>
     <div class="bid-area" id="oppBid"></div>
@@ -961,7 +967,6 @@
     <div class="bid-area" id="myBid"></div>
     <div class="pile" id="myAcq"></div>
     <div class="fan" id="myHand"></div>
-    <div class="zone-label" style="margin-top:2px"><span id="myNickLabel">나</span> · 손패 <span class="timer" id="myTimer">7:00</span></div>
   </div>
 </div>
 
