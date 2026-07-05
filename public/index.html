@@ -131,6 +131,88 @@
     .shop-buy:disabled { opacity:.45; cursor:default; }
     /* 결과 보상 */
     #goRewards { display:none; font-size:.95rem; font-weight:700; color:#ffd94a; margin:4px 0 2px; letter-spacing:.5px; }
+    /* ── 로딩 스플래시 ── */
+    #splash {
+      position:fixed; inset:0; z-index:100; background:
+        radial-gradient(ellipse at 50% 40%, #2a1c14 0%, #140d0a 70%);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      transition:opacity .5s;
+    }
+    #splash.hide { opacity:0; pointer-events:none; }
+    .sp-mid { display:flex; flex-direction:column; align-items:center; gap:20px; }
+    .sp-spinner {
+      width:30px; height:30px; border-radius:50%; border:3px solid rgba(200,160,0,.2);
+      border-top-color:var(--gold); animation:spSpin .9s linear infinite;
+    }
+    @keyframes spSpin { to { transform:rotate(360deg); } }
+    .sp-loading { font-size:.78rem; color:#8a7a80; letter-spacing:2px; }
+    .sp-credit { position:absolute; bottom:26px; text-align:center; font-size:.7rem; color:#6a5a70; line-height:1.8; }
+    .sp-credit b { color:#9a8aa0; }
+    /* ── 하단 프로필 바 ── */
+    #profileBar {
+      position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:30;
+      width:min(480px, 100%); cursor:pointer;
+      background:linear-gradient(180deg, #1c1424 0%, #140d16 100%);
+      border:1px solid #32233c; border-bottom:none; border-radius:18px 18px 0 0;
+      box-shadow:0 -8px 30px rgba(0,0,0,.55);
+    }
+    #profileBar:hover { border-color:rgba(200,160,0,.45); }
+    .pb-xp { height:5px; background:#241a2e; border-radius:18px 18px 0 0; overflow:hidden; }
+    .pb-xpfill { height:100%; width:0%; background:linear-gradient(90deg,var(--yel),var(--gold)); transition:width .5s; }
+    .pb-body { display:flex; align-items:center; gap:11px; padding:10px 16px 12px; }
+    .pb-ava {
+      width:46px; height:46px; border-radius:12px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; font-size:1.6rem;
+      background:rgba(0,0,0,.35); border:1.5px solid rgba(200,160,0,.35);
+    }
+    .pb-mid { flex:1; min-width:0; text-align:left; }
+    .pb-nick { font-size:.95rem; font-weight:800; color:#f0ead8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pb-stats { font-size:.68rem; color:#9a8fa0; margin-top:1px; }
+    .pb-right { display:flex; flex-direction:column; gap:4px; align-items:flex-end; flex-shrink:0; }
+    .pb-badge { font-size:.72rem; font-weight:800; padding:2px 9px; border-radius:7px; white-space:nowrap; }
+    .pb-coin { color:#ffd94a; background:rgba(255,215,80,.1); border:1px solid rgba(255,215,80,.25); }
+    .pb-rp   { color:#ffe9a8; background:rgba(200,160,0,.1); border:1px solid rgba(200,160,0,.25); }
+    .pb-lv { position:absolute; top:9px; left:14px; font-size:.6rem; font-weight:800; color:#ffd94a; background:#140d16; border:1px solid rgba(200,160,0,.4); border-radius:8px; padding:0 7px; }
+    .pb-login { margin-left:auto; flex-shrink:0; background:rgba(200,160,0,.15); border:1.5px solid var(--gold); color:#ffe9a8; border-radius:10px; padding:8px 14px; font-family:'Fredoka'; font-size:.8rem; font-weight:700; cursor:pointer; }
+    #lobby { padding-bottom:96px; }   /* 하단 바에 안 가리게 */
+    /* ── 내 정보 ── */
+    .myinfo-box { max-width:400px; }
+    .mi-head { display:flex; align-items:center; gap:12px; background:#1c1424; border:1px solid #2a1c30; border-radius:14px; padding:12px 14px; margin-bottom:4px; }
+    .mi-ava { width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:2rem; background:rgba(0,0,0,.35); border:1.5px solid rgba(200,160,0,.4); flex-shrink:0; }
+    .mi-info { flex:1; min-width:0; text-align:left; }
+    .mi-nick { font-size:1.05rem; font-weight:800; color:#f0ead8; }
+    .mi-line { font-size:.74rem; color:#9a8fa0; margin-top:2px; }
+    .mi-line b { color:#ffe9a8; }
+    .mi-badges { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+    .mi-badges span { font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:6px; }
+    .mi-sec { font-size:.74rem; font-weight:700; color:#8a7a80; letter-spacing:1px; text-align:left; margin:8px 0 2px; }
+    .mi-inv { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; }
+    .mi-item { position:relative; background:#1c1424; border:1px solid #2a1c30; border-radius:11px; padding:9px 4px 6px; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
+    .mi-item .ico { font-size:1.5rem; line-height:1; }
+    .mi-item .nm { font-size:.56rem; color:#9a8fa0; text-align:center; line-height:1.25; }
+    .mi-item .cnt { position:absolute; top:3px; right:5px; font-size:.6rem; font-weight:800; color:#ffd94a; }
+    .mi-item.equipped { border-color:var(--gold); box-shadow:0 0 8px rgba(200,160,0,.3); }
+    .mi-item.equipped::after { content:'장착'; position:absolute; bottom:-1px; left:50%; transform:translateX(-50%); font-size:.5rem; background:var(--gold); color:#140d0a; font-weight:800; border-radius:5px 5px 0 0; padding:0 6px; }
+    .mi-empty { grid-column:1/-1; font-size:.74rem; color:#5a4a60; padding:14px 0; text-align:center; }
+    /* ── 상점 그리드 ── */
+    .shop-sel { display:flex; align-items:center; gap:11px; background:#1c1424; border:1px solid rgba(200,160,0,.3); border-radius:13px; padding:10px 12px; min-height:64px; }
+    .ss-ico { font-size:1.9rem; flex-shrink:0; width:44px; text-align:center; }
+    .ss-info { flex:1; min-width:0; text-align:left; }
+    .ss-name { font-size:.88rem; font-weight:800; color:#f0ead8; }
+    .ss-desc { font-size:.66rem; color:#8a7a80; margin-top:2px; line-height:1.4; }
+    .shop-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-height:44vh; overflow-y:auto; margin-bottom:10px; }
+    .shop-tile {
+      position:relative; background:#1c1424; border:1.5px solid #2a1c30; border-radius:13px;
+      padding:12px 4px 8px; display:flex; flex-direction:column; align-items:center; gap:5px;
+      cursor:pointer; transition:.13s;
+    }
+    .shop-tile:hover { border-color:rgba(200,160,0,.5); }
+    .shop-tile.sel { border-color:var(--gold); background:#241a2e; box-shadow:0 0 10px rgba(200,160,0,.25); }
+    .shop-tile .ico { font-size:2rem; line-height:1; min-height:38px; display:flex; align-items:center; }
+    .shop-tile .nm { font-size:.6rem; color:#c8bcc4; font-weight:600; text-align:center; line-height:1.3; min-height:24px; }
+    .shop-tile .pr { font-size:.66rem; font-weight:800; color:#ffd94a; }
+    .shop-tile .pr.own { color:#7dd87d; }
+    .shop-tile .shop-cbprev { width:34px; height:47px; }
     /* ── 범용 토스트 ── */
     #ffToast {
       position:fixed; top:14px; left:50%; transform:translateX(-50%) translateY(-16px);
@@ -881,6 +963,22 @@
 </head>
 <body>
 
+<!-- 로딩 스플래시 (접속되면 사라짐) -->
+<div id="splash">
+  <div class="sp-mid">
+    <div class="logo">
+      <h1>FLIP</h1><div class="flap">FLAP</div>
+      <p class="sub">경매 · 블러핑 · 심리전</p>
+    </div>
+    <div class="sp-spinner"></div>
+    <div class="sp-loading">접속 중…</div>
+  </div>
+  <div class="sp-credit">
+    made by <b>Mongdung Games</b><br>
+    contact us · jinmo9@yonsei.ac.kr
+  </div>
+</div>
+
 <div id="connStatus">서버 연결 중…</div>
 
 <div id="lobby">
@@ -893,15 +991,6 @@
     <span class="online-badge" id="onlineBadge"><span class="online-dot"></span><b id="onlineCount">–</b> 접속 중</span>
   </div>
   <div class="lobby-btns" id="lobbyMain">
-    <!-- 계정 / 닉네임 -->
-    <div id="profileChip" class="profile-chip" style="display:none"></div>
-    <div class="nick-bar" id="guestNick">
-      <span>👤</span>
-      <span id="guestNickText">게스트</span>
-      <span class="guest-tag">임시</span>
-    </div>
-    <button class="lobby-rules-link" id="authBtn" onclick="openAuth('login')">로그인 / 회원가입</button>
-
     <!-- 게임 방법 · 튜토리얼 · 상점 -->
     <div class="lobby-top">
       <button class="top-link" onclick="toggleRules(true)"><span class="tl-ico">📖</span>게임방법</button>
@@ -945,9 +1034,10 @@
     <button class="install-btn" id="installBtn" style="display:none" onclick="installApp()">📲 홈 화면에 앱으로 추가</button>
   </div>
 
-  <div class="made-by">
-    made by <b>Mongdung Games</b><br>
-    contact us · <a href="mailto:jinmo9@yonsei.ac.kr">jinmo9@yonsei.ac.kr</a>
+  <!-- 하단 고정 프로필 바 (클릭 → 내 정보) -->
+  <div id="profileBar" onclick="openMyInfo()">
+    <div class="pb-xp"><div class="pb-xpfill" id="pbXpFill"></div></div>
+    <div class="pb-body" id="pbBody"></div>
   </div>
 
   <!-- 방 만든 뒤 대기 카드 -->
@@ -1227,15 +1317,40 @@
   </div>
 </div>
 
-<!-- 상점 -->
+<!-- 상점 (그리드형) -->
 <div class="lb-modal" id="shopModal" onclick="if(event.target===this)closeShop()">
   <div class="lb-box shop-box">
     <div class="lb-title" style="display:flex;justify-content:space-between;align-items:center">
       <span>🛒 상점</span><span class="shop-coins" id="shopCoins">🪙 0</span>
     </div>
+    <!-- 선택한 상품 상세 + 구매 -->
+    <div class="shop-sel" id="shopSel">
+      <div class="ss-ico" id="ssIco">🎨</div>
+      <div class="ss-info">
+        <div class="ss-name" id="ssName">상품을 선택하세요</div>
+        <div class="ss-desc" id="ssDesc"></div>
+      </div>
+      <button class="shop-buy" id="ssBtn" style="display:none"></button>
+    </div>
     <div id="shopMsg" class="shop-msg"></div>
-    <div id="shopList" class="shop-list"></div>
+    <div id="shopList" class="shop-grid"></div>
     <button class="btn btn-outline" onclick="closeShop()">닫기</button>
+  </div>
+</div>
+
+<!-- 내 정보 (프로필 · 인벤토리 · 전적) -->
+<div class="lb-modal" id="myInfoModal" onclick="if(event.target===this)closeMyInfo()">
+  <div class="lb-box myinfo-box">
+    <div class="lb-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>👤 내 정보</span>
+      <button class="pc-logout" onclick="logout();closeMyInfo()">로그아웃</button>
+    </div>
+    <div id="miHeader"></div>
+    <div class="mi-sec">🎒 인벤토리</div>
+    <div id="miInv" class="mi-inv"></div>
+    <div class="mi-sec">📜 최근 전적</div>
+    <div id="miHist" class="hist-list" style="max-height:180px"></div>
+    <button class="btn btn-outline" onclick="closeMyInfo()">닫기</button>
   </div>
 </div>
 

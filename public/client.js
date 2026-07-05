@@ -18,7 +18,15 @@ function setConn(text, cls) {
   if (!el) return;
   el.textContent = text; el.className = cls || '';
 }
+// 로딩 스플래시 — 접속되면 부드럽게 사라짐 (실패해도 8초 후엔 숨김)
+function hideSplash() {
+  const s = document.getElementById('splash');
+  if (s && !s.classList.contains('hide')) setTimeout(() => s.classList.add('hide'), 350);
+}
+setTimeout(hideSplash, 8000);
+
 socket.on('connect', () => {
+  hideSplash();
   setConn('서버 연결됨', 'ok');
   setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400);
   const tk = localStorage.getItem('ff_auth');
@@ -119,36 +127,95 @@ async function claimDaily() {
   const d = await apiPost('/api/daily', { token: localStorage.getItem('ff_auth') });
   if (d && d.claimed) { myAccount = d.profile; renderAccount(); toast(`🎁 출석 보상 <b style="color:#ffd94a">🪙 +${d.amount}</b> 받았어요!`); }
 }
+const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
+// 하단 고정 프로필 바 (클릭 → 내 정보)
 function renderAccount() {
-  const chip = document.getElementById('profileChip');
-  const guest = document.getElementById('guestNick');
-  const authBtn = document.getElementById('authBtn');
+  const body = document.getElementById('pbBody');
+  const fill = document.getElementById('pbXpFill');
+  if (!body) return;
   if (myAccount) {
-    guest.style.display = 'none';
-    chip.style.display = 'flex';
-    const canNick = !myAccount.nickLocked || ((myAccount.items || {}).nick_change || 0) > 0;   // 첫 설정 or 변경권 보유
-    chip.innerHTML = profileChipHTML(myAccount)
-      + '<div class="pc-btns">'
-      + '<button class="pc-icon" onclick="openHist()" title="최근 전적">📜</button>'
-      + (canNick ? '<button class="pc-icon" onclick="openNickModal()" title="닉네임 바꾸기">✏️</button>' : '')
-      + '<button class="pc-logout" onclick="logout()">로그아웃</button>'
-      + '</div>';
-    authBtn.style.display = 'none';
+    const p = myAccount;
+    const total = p.wins + p.losses;
+    body.innerHTML = `
+      <span class="pb-lv">Lv.${p.level}</span>
+      <div class="pb-ava" style="color:${p.rankColor}">${p.rankIcon}</div>
+      <div class="pb-mid">
+        <div class="pb-nick${ncClass(p.nickColor)}">${esc(p.nick)}</div>
+        <div class="pb-stats">${p.wins}승 ${p.losses}패${total ? ` (${p.winRate}%)` : ''} · <span style="color:${p.rankColor}">${esc(p.rank)}</span></div>
+      </div>
+      <div class="pb-right">
+        <span class="pb-badge pb-coin">🪙 ${p.coins || 0}</span>
+        <span class="pb-badge pb-rp">🏆 ${p.rp} RP</span>
+      </div>`;
+    if (fill) fill.style.width = (p.xpInLevel || 0) + '%';
   } else {
-    guest.style.display = 'flex';
-    chip.style.display = 'none';
-    authBtn.style.display = '';
-    authBtn.textContent = '로그인 / 회원가입'; authBtn.onclick = () => openAuth('login');
+    body.innerHTML = `
+      <div class="pb-ava">👤</div>
+      <div class="pb-mid">
+        <div class="pb-nick">${esc(getNick())}</div>
+        <div class="pb-stats">게스트 · 기록이 저장되지 않아요</div>
+      </div>
+      <button class="pb-login" onclick="event.stopPropagation();openAuth('login')">로그인</button>`;
+    if (fill) fill.style.width = '0%';
   }
 }
-const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
-function profileChipHTML(p) {
-  return `<div class="pc-rank" style="color:${p.rankColor}">${p.rankIcon}</div>
-    <div class="pc-mid">
-      <div class="pc-nick${ncClass(p.nickColor)}">${esc(p.nick)}</div>
-      <div class="pc-sub">Lv.${p.level} · <span style="color:${p.rankColor}">${esc(p.rank)}</span> · ${p.wins}승 ${p.losses}패</div>
-      <div class="pc-econ"><span class="pc-rp">🏆 ${p.rp} RP</span><span class="pc-coin">🪙 ${p.coins || 0}</span></div>
+
+// ── 내 정보 (프로필 · 인벤토리 · 전적) ──
+async function openMyInfo() {
+  if (!myAccount) { openAuth('login'); return; }
+  const p = myAccount;
+  const canNick = !p.nickLocked || ((p.items || {}).nick_change || 0) > 0;
+  document.getElementById('miHeader').innerHTML = `
+    <div class="mi-head">
+      <div class="mi-ava" style="color:${p.rankColor}">${p.rankIcon}</div>
+      <div class="mi-info">
+        <div class="mi-nick${ncClass(p.nickColor)}">${esc(p.nick)} ${canNick ? '<button class="pc-icon" onclick="closeMyInfo();openNickModal()" title="닉네임 바꾸기">✏️</button>' : ''}</div>
+        <div class="mi-line">Lv.<b>${p.level}</b> (XP ${p.xpInLevel}/100) · <span style="color:${p.rankColor}">${esc(p.rank)}</span> <b>${p.rp} RP</b></div>
+        <div class="mi-line"><b>${p.wins}승 ${p.losses}패</b> · 승률 ${p.winRate}%</div>
+        <div class="mi-badges">
+          <span class="pb-coin pb-badge">🪙 ${p.coins || 0}</span>
+          ${p.streak >= 2 ? `<span style="background:rgba(255,120,60,.16);color:#ffab5e">🔥 ${p.streak}연승 중</span>` : ''}
+        </div>
+      </div>
     </div>`;
+  renderMyInv();
+  renderMiHist();
+  document.getElementById('myInfoModal').classList.add('show');
+}
+function closeMyInfo() { document.getElementById('myInfoModal').classList.remove('show'); }
+async function renderMyInv() {
+  const inv = document.getElementById('miInv');
+  if (!shopItems) { try { shopItems = (await fetch('/api/shop').then(r => r.json())).items; } catch (_) {} }
+  const items = myAccount.items || {};
+  const owned = (shopItems || []).filter(it => items[it.id]);
+  // 염색약 결과(현재 닉 색)도 보여줌
+  let html = '';
+  if (myAccount.nickColor) html += `<div class="mi-item"><span class="ico">🎨</span><span class="nm ${'nc-' + myAccount.nickColor}">${(DYE_NAMES[myAccount.nickColor] || myAccount.nickColor)} 염색</span></div>`;
+  owned.forEach(it => {
+    const isCb = it.type === 'cardback';
+    const on = isCb && myAccount.cardBack === it.id;
+    const cnt = it.type === 'ticket' ? `<span class="cnt">x${items[it.id]}</span>` : '';
+    html += `<div class="mi-item${on ? ' equipped' : ''}" ${isCb ? `onclick="invEquip('${it.id}', ${on})"` : ''} title="${it.name}">
+      ${cnt}<span class="ico">${it.icon}</span><span class="nm">${it.name.replace(' 카드백','')}</span></div>`;
+  });
+  inv.innerHTML = html || '<div class="mi-empty">아직 아이템이 없어요 — 상점 구경 가기 🛒</div>';
+}
+async function invEquip(itemId, isOn) {
+  const r = await apiPost('/api/equip', { token: localStorage.getItem('ff_auth'), itemId: isOn ? null : itemId });
+  if (!r.error) { myAccount = r.profile; renderMyInv(); }
+}
+function renderMiHist() {
+  const list = document.getElementById('miHist');
+  const h = (myAccount && myAccount.history) || [];
+  list.innerHTML = h.length ? '' : '<div class="mi-empty">아직 전적이 없어요</div>';
+  h.forEach(m => {
+    const res = m.result === 'win' ? { t: '승', c: 'hist-win' } : m.result === 'loss' ? { t: '패', c: 'hist-loss' } : { t: '무', c: 'hist-draw' };
+    const row = document.createElement('div'); row.className = 'hist-row';
+    row.innerHTML = `<span class="hist-res ${res.c}">${res.t}</span>
+      <span class="hist-vs">vs ${esc(m.vs)}</span>
+      <span class="hist-coin" style="color:${m.coins >= 0 ? '#ffd94a' : '#ff8a8a'}">🪙 ${m.coins > 0 ? '+' : ''}${m.coins}</span>`;
+    list.appendChild(row);
+  });
 }
 // 로그인 프로필이 게임 종료 등으로 갱신됨 + 보상 연출
 let pendingRewards = null;
@@ -221,6 +288,7 @@ let kakaoFirstLogin = false;
     setTimeout(() => alert('⚠️ ' + msg), 300);
   }
 })();
+renderAccount();   // 게스트 상태로 하단 바 먼저 렌더
 restoreSession().then(() => { if (kakaoFirstLogin && myAccount) openNickModal(); });   // 첫 카카오 로그인 → 닉 정하기
 // 서버에 카카오 로그인이 설정 안 됐으면 버튼 숨김
 fetch('/api/kakao-enabled').then(r => r.json()).then(d => {
@@ -310,37 +378,64 @@ async function openShop() {
   renderShop();
 }
 function closeShop() { document.getElementById('shopModal').classList.remove('show'); }
+const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang' };
+const shopIcon = it => CBP[it.id]
+  ? `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`
+  : it.icon;
+let shopSelId = null;
 function renderShop() {
   document.getElementById('shopCoins').textContent = `🪙 ${myAccount ? myAccount.coins : 0}`;
   const list = document.getElementById('shopList');
-  if (!shopItems) { list.innerHTML = '<div class="lb-empty">상점을 불러오지 못했어요</div>'; return; }
+  if (!shopItems || !shopItems.length) { list.innerHTML = '<div class="lb-empty">상점을 불러오지 못했어요. 잠시 후 다시 열어주세요.</div>'; return; }
+  if (!shopSelId) shopSelId = shopItems[0].id;
   list.innerHTML = '';
   shopItems.forEach(it => {
     const owned = myAccount.items && myAccount.items[it.id];
-    const row = document.createElement('div'); row.className = 'shop-item';
-    let btnHtml;
-    if (it.type === 'cardback' && owned) {
-      const on = myAccount.cardBack === it.id;
-      btnHtml = `<button class="shop-buy${on ? '' : ' owned'}" onclick="equipBack('${it.id}', ${on})">${on ? '장착 중 ✓' : '장착'}</button>`;
-    } else if (it.type === 'emotes' && owned) {
-      btnHtml = `<button class="shop-buy owned" disabled>보유 중 ✓</button>`;
-    } else {
-      const cnt = it.type === 'ticket' && owned ? ` (보유 ${owned})` : '';
-      btnHtml = `<button class="shop-buy" onclick="buyShopItem('${it.id}')">🪙 ${it.price}${cnt}</button>`;
-    }
-    const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang' };
-    const preview = CBP[it.id]
-      ? `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`
-      : `<span class="shop-ico">${it.icon}</span>`;
-    row.innerHTML = `${preview}
-      <div class="shop-info"><div class="shop-name">${it.name}</div><div class="shop-desc">${it.desc}</div></div>${btnHtml}`;
-    list.appendChild(row);
+    const tile = document.createElement('div');
+    tile.className = 'shop-tile' + (shopSelId === it.id ? ' sel' : '');
+    let pr;
+    if (it.type === 'cardback' && owned) pr = `<span class="pr own">${myAccount.cardBack === it.id ? '장착 중' : '보유'}</span>`;
+    else if (it.type === 'emotes' && owned) pr = `<span class="pr own">보유</span>`;
+    else pr = `<span class="pr">🪙 ${it.price}</span>${it.type === 'ticket' && owned ? `<span class="pr own">x${owned}</span>` : ''}`;
+    tile.innerHTML = `<span class="ico">${shopIcon(it)}</span><span class="nm">${it.name}</span>${pr}`;
+    tile.onclick = () => shopSelect(it.id);
+    list.appendChild(tile);
   });
+  shopSelect(shopSelId, true);
+}
+// 타일 선택 → 상단 상세 패널 갱신
+function shopSelect(id, keep) {
+  shopSelId = id;
+  if (!keep) renderShopTiles();
+  const it = (shopItems || []).find(x => x.id === id); if (!it) return;
+  const owned = myAccount.items && myAccount.items[it.id];
+  document.getElementById('ssIco').innerHTML = shopIcon(it);
+  document.getElementById('ssName').textContent = it.name;
+  document.getElementById('ssDesc').textContent = it.desc;
+  const btn = document.getElementById('ssBtn');
+  btn.style.display = '';
+  btn.disabled = false; btn.className = 'shop-buy';
+  if (it.type === 'cardback' && owned) {
+    const on = myAccount.cardBack === it.id;
+    btn.textContent = on ? '장착 해제' : '장착하기';
+    btn.onclick = () => equipBack(it.id, on);
+  } else if (it.type === 'emotes' && owned) {
+    btn.textContent = '보유 중 ✓'; btn.disabled = true; btn.className = 'shop-buy owned';
+  } else {
+    btn.textContent = `구매 🪙 ${it.price}`;
+    btn.onclick = () => buyShopItem(it.id);
+  }
+}
+function renderShopTiles() {   // 선택 표시만 갱신 (전체 재생성 없이)
+  document.querySelectorAll('.shop-tile').forEach((t, i) => t.classList.toggle('sel', shopItems[i] && shopItems[i].id === shopSelId));
 }
 async function buyShopItem(itemId) {
   const msg = document.getElementById('shopMsg');
+  const btn = document.getElementById('ssBtn'); if (btn) btn.disabled = true;   // 연타 방지
   const r = await apiPost('/api/buy', { token: localStorage.getItem('ff_auth'), itemId });
+  if (btn) btn.disabled = false;
   if (r.error) { msg.textContent = '⚠️ ' + r.error; return; }
+  msg.textContent = '';
   myAccount = r.profile; renderAccount(); refreshEmotes();
   if (r.dye) { renderShop(); dyeRoll(r.dye); }   // 염색약은 뽑기 연출
   else { renderShop(); msg.textContent = '✅ 구매 완료!'; playSound && playSound('setwin'); }
