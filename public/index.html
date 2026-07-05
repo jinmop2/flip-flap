@@ -118,7 +118,9 @@
       background:rgba(200,160,0,.1); border:1px dashed rgba(200,160,0,.4); border-radius:12px;
       padding:6px 18px 4px; text-indent:8px;
     }
-    .wc-btns { display:flex; gap:8px; }
+    .wc-btns { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+    .btn-kakao { background:#FEE500; color:#191919; border:1.5px solid #FEE500; font-weight:800; }
+    .btn-kakao:hover { background:#ffd900; }
     .wc-wait { font-size:.82rem; color:#8a7a80; }
 
     /* 서버 연결 상태 */
@@ -692,7 +694,8 @@
     <div class="wc-sub">친구에겐 코드/링크 공유, 또는 로비 목록에서 참가</div>
     <div class="wc-code" id="waitCode">-----</div>
     <div class="wc-btns">
-      <button class="btn btn-gold btn-sm" onclick="shareInvite(this)">📤 공유하기</button>
+      <button class="btn btn-kakao btn-sm" onclick="shareKakao(this)">💬 카톡 공유</button>
+      <button class="btn btn-gold btn-sm" onclick="shareInvite(this)">📤 공유</button>
       <button class="btn btn-outline btn-sm" onclick="copyLink(this)">링크 복사</button>
       <button class="btn btn-outline btn-sm" onclick="copyCode(this)">코드 복사</button>
     </div>
@@ -969,6 +972,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.8.1/kakao.min.js" integrity="sha384-OL+ylM/iuPLtW5U3XcvLSGhE8JzReKDank5InqlHGWPhb4140/yrBw0bg0y7+C9J" crossorigin="anonymous"></script>
 <script src="client.js"></script>
 </body>
 </html>

@@ -434,6 +434,24 @@ function copyText(text, btn) {
 }
 function copyCode(btn) { copyText(sharedCode, btn); }
 function inviteURL() { return `${location.origin}${location.pathname}?room=${sharedCode}`; }
+
+// ── 카카오 SDK (JS 키는 공개용 — 도메인 등록으로 보호됨) ──
+const KAKAO_JS_KEY = 'e57f8c530bfbde01a6f3a6ab8232c2df';
+try { if (window.Kakao && !Kakao.isInitialized()) Kakao.init(KAKAO_JS_KEY); } catch (_) {}
+
+// 카톡 친구/채팅방으로 초대 메시지 바로 보내기
+function shareKakao(btn) {
+  const url = inviteURL();
+  if (!window.Kakao || !Kakao.isInitialized()) return shareInvite(btn);  // SDK 로드 실패 시 대체
+  try {
+    Kakao.Share.sendDefault({
+      objectType: 'text',
+      text: `🃏 FLIP FLAP 한 판 할래?\n경매·블러핑 심리전 보드게임!\n\n방 코드: ${sharedCode}`,
+      link: { mobileWebUrl: url, webUrl: url },
+      buttonTitle: '게임 참가하기',
+    });
+  } catch (e) { console.warn('카카오 공유 실패:', e); shareInvite(btn); }
+}
 function copyLink(btn) { copyText(inviteURL(), btn); }
 // 폰에서 누르면 카톡·문자·라인 등 설치된 앱 공유 시트가 뜸 (Web Share API)
 function shareInvite(btn) {
