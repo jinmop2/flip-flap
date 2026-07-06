@@ -738,9 +738,11 @@ function startBGM() {
     document.addEventListener('pointerdown', kick, { once: true });
   }
 }
+const SVG_VOL_ON  = '<svg class="svgi" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>';
+const SVG_VOL_OFF = '<svg class="svgi" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
 function applySoundBtn() {
   const b = document.getElementById('bgmBtn'); if (!b) return;
-  b.querySelector('.ci').textContent = soundOff ? '🔇' : '🔊';
+  b.querySelector('.ci').innerHTML = soundOff ? SVG_VOL_OFF : SVG_VOL_ON;
   b.title = soundOff ? '소리 켜기' : '소리 끄기';
   b.style.opacity = soundOff ? '.55' : '1';
 }
@@ -1336,7 +1338,7 @@ function render(changed = false) {
   const think = t => `<span class="thinking-dots">${t}<span>.</span><span>.</span><span>.</span></span>`;
   const biddingMsg = () => {
     if (a?.myBid) return (isVsBot && !a.oppBidSubmitted) ? think('AI 배팅 중') : '배팅 완료 — 대기 중...';
-    if (myTurnToBid) return '배팅 카드를 손패에서 선택하세요';
+    if (myTurnToBid) return (a && a.auctionType === 'closed' ? '🙈 클로즈(배팅 공개)' : '👁 오픈(배팅 비밀)') + ' — 손패에서 배팅 카드 선택!';
     return isVsBot ? think('진행자(AI) 먼저 배팅 중') : '진행자가 먼저 배팅합니다 — 대기 중';
   };
   const firstNick = () => (gameNicks && gameNicks[s.auctioneer - 1]) || (s.auctioneer === s.myIndex ? '나' : '상대');
@@ -1544,23 +1546,14 @@ function renderAuction(changed) {
     row.appendChild(bo); row.appendChild(bc); action.appendChild(row);
   }
 
+  // 안내 문구는 매트 아래 statusBar가 담당 — 여기엔 확정 버튼만 (중복 제거)
   const myTurnToBid = !isSpec && s.phase === 'bidding' && !a.myBid && (mine || a.oppBidSubmitted);
-  if (myTurnToBid) {
-    if (selectedBidCard) {
-      const btn = document.createElement('button');
-      btn.className = 'btn btn-gold btn-sm'; btn.style.marginTop = '10px';
-      btn.textContent = `${selectedBidCard.kind}번 (${selectedBidCard.grade}등급) 배팅 확정`;
-      btn.onclick = () => { playSound('place'); socket.emit('submit_bid', { cardId: selectedBidCard.id }); selectedBidCard = null; };
-      action.appendChild(btn);
-    } else {
-      const h = document.createElement('p'); h.className = 'hint-text';
-      h.textContent = atype === 'closed' ? '클로즈 · 공개 배팅 — 손패에서 카드를 선택하세요' : '오픈 · 비공개 배팅 — 손패에서 카드를 선택하세요';
-      action.appendChild(h);
-    }
-  } else if (s.phase === 'bidding' && !a.myBid) {
-    const h = document.createElement('p'); h.className = 'hint-text';
-    h.textContent = '진행자가 먼저 배팅합니다 — 잠시 대기';
-    action.appendChild(h);
+  if (myTurnToBid && selectedBidCard) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-gold btn-sm'; btn.style.marginTop = '10px';
+    btn.textContent = `${selectedBidCard.kind}번 (${selectedBidCard.grade}등급) 배팅 확정`;
+    btn.onclick = () => { playSound('place'); socket.emit('submit_bid', { cardId: selectedBidCard.id }); selectedBidCard = null; };
+    action.appendChild(btn);
   }
 
   // reveal: 경매 결과 안내 (낙찰/패배 + 이유)
