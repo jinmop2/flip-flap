@@ -659,6 +659,28 @@ function tone(freq, type, vol, dur, delay = 0) {
   o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur);
 }
 let soundOff = localStorage.getItem('ff_sound') === 'off';   // 마스터 음소거 (저장됨)
+// 재즈 징글용 헬퍼 (BGM과 독립적으로 AC.destination에 바로 출력)
+function jbrass(freq, delay, dur, vol, bendTo) {   // 뮤트 트럼펫 (원하면 끝에 피치 벤드)
+  const t = AC.currentTime + delay;
+  const o = AC.createOscillator(), g = AC.createGain(), lp = AC.createBiquadFilter();
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(freq, t);
+  if (bendTo) o.frequency.exponentialRampToValueAtTime(bendTo, t + dur);
+  lp.type = 'lowpass'; lp.frequency.value = 1700; lp.Q.value = 1;
+  const lfo = AC.createOscillator(), lg = AC.createGain();
+  lfo.frequency.value = 5.5; lg.gain.value = freq * 0.012; lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + dur + 0.05);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.04);
+  g.gain.setValueAtTime(vol, t + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(lp); lp.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.05);
+}
+function jcym(delay, freq, dur, vol) {   // 심벌 크래시/히트
+  const t = AC.currentTime + delay;
+  const n = Math.floor(AC.sampleRate * 0.5), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  const s = AC.createBufferSource(); s.buffer = b;
+  const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = 0.7;
+  const g = AC.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(bp); bp.connect(g); g.connect(AC.destination); s.start(t); s.stop(t + dur + 0.05);
+}
 function playSound(n) {
   if (soundOff) return;
   try { AC.resume(); } catch(_) {}
@@ -667,52 +689,104 @@ function playSound(n) {
     case 'place':  tone(320,'triangle',.12,.12); tone(240,'triangle',.08,.1,.06); break;
     case 'flip':   tone(520,'sine',.1,.1); tone(680,'sine',.08,.09,.08); break;
     case 'reveal': tone(440,'sawtooth',.06,.05); tone(660,'sine',.14,.18,.06); tone(880,'sine',.1,.2,.15); break;
-    case 'special':[880,1180,1480,988].forEach((f,i)=>tone(f,'square',.1,.15,i*.09)); break;
-    case 'victory':[523,659,784,1047,1319].forEach((f,i)=>tone(f,'sine',.2,.3,i*.08)); break;
-    case 'defeat': [440,370,311,262].forEach((f,i)=>tone(f,'triangle',.14,.35,i*.12)); break;
+    // 졸개의 배신 — 살금살금 크로매틱 워크 + 날카로운 스탭 ("걸렸어" 느낌)
+    case 'special':[110,116.5,123.5,130.8].forEach((f,i)=>tone(f,'triangle',.14,.1,i*.08));
+                   jbrass(587.33,.34,.5,.16); jcym(.34,6000,.35,.06); break;
+    // 승리 — 블루지 상행 릭 + 밝은 6/9 스탭
+    case 'victory':[440,523,659,784].forEach((f,i)=>jbrass(f,i*.1,.16,.12));
+                   jbrass(880,.4,.7,.16); [440,554,659,740].forEach(f=>tone(f,'sine',.08,.6,.42)); break;
+    // 패배 — 뮤트 트럼펫 하강 + 마지막 음 처지는 벤드 (와-와)
+    case 'defeat': jbrass(392,0,.4,.12); jbrass(349,.28,.4,.12); jbrass(294,.56,.9,.13,220); break;
     case 'deal':   tone(280,'sine',.05,.07); break;
     case 'bell':   [0,0.45].forEach(off => [1568,2093].forEach((f,i)=>tone(f,'sine',.2,1.2, off+i*.02))); break;
     case 'tick':   tone(1400,'square',.06,.05); break;
-    case 'setwin': [523,659,784,1047,1319,1568].forEach((f,i)=>tone(f,'triangle',.16,.4,i*.07)); break;
+    // 세트 완성 — 재즈 6th로 마무리하는 밝은 상행
+    case 'setwin': [523,659,784,880].forEach((f,i)=>jbrass(f,i*.08,.14,.11));
+                   jbrass(1047,.32,.5,.14); [523,659,784,880].forEach(f=>tone(f,'sine',.06,.5,.34)); break;
     case 'ping':   tone(1046,'sine',.16,.16); tone(1568,'sine',.12,.22,.09); break;
     case 'emote':  tone(760,'sine',.1,.12); break;
   }
 }
 
-// ── 배경음악 (게임풍 시퀀서: 베이스 + 아르페지오 + 반짝임) ──
+// ── 배경음악 (재즈 느와르: 워킹 베이스 + 스윙 라이드 + 비브라폰 코드 + 뮤트 트럼펫) ──
 let bgmMaster = null, bgmOn = false;
-let bgmSched = null, bgmStep = 0, bgmNextT = 0;
-const BGM_VOL = 0.13;
-const STEP = 0.15;                 // 8분음표 길이(초) ≈ 100bpm
-// 코드 진행: Am – F – C – G (각 8스텝)
-const BGM_PROG = [
-  { root: 110.00, tones: [220.00, 261.63, 329.63] }, // Am
-  { root:  87.31, tones: [174.61, 220.00, 261.63] }, // F
-  { root: 130.81, tones: [261.63, 329.63, 392.00] }, // C
-  { root:  98.00, tones: [196.00, 246.94, 293.66] }, // G
+let bgmSched = null, bgmBeat = 0, bgmNextT = 0;
+const BGM_VOL = 0.14;
+const BPM = 88, SWING = 0.63;      // 느긋한 스윙
+// 마이너 재즈 4마디 루프: Am7 – Dm7 – E7♭9 – Am7
+// 워킹 베이스(비트당 한 음, 다음 코드로 크로매틱 접근)
+const BASS = [
+  [110.00, 130.81, 164.81, 155.56], // Am7 → (Eb 접근) D
+  [ 73.42,  87.31, 110.00,  87.31], // Dm7 → (F 접근) E
+  [ 82.41, 103.83, 123.47, 123.47], // E7♭9 → (B 접근) A
+  [110.00,  82.41, 110.00, 164.81], // Am7 → (E→A 도미넌트) 루프
 ];
-const ARP = [0, 1, 2, 1, 0, 2, 1, 2];   // 8스텝 아르페지오 패턴
+// 백비트 코드 보이싱 (2·4박에 살짝)
+const COMP = [
+  [261.63, 329.63, 392.00], // Am7  : C E G
+  [174.61, 220.00, 261.63], // Dm7  : F A C
+  [207.65, 293.66, 349.23], // E7♭9 : G# D F  (3·7·♭9 = 느와르 긴장)
+  [261.63, 329.63, 392.00], // Am7  : C E G
+];
 
-function pluck(freq, t, dur, vol, type = 'triangle') {
-  const o = AC.createOscillator(), g = AC.createGain();
-  o.type = type; o.frequency.value = freq;
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(vol, t + 0.012);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g); g.connect(bgmMaster);
-  o.start(t); o.stop(t + dur + 0.03);
+let noiseBuf = null;
+function noiseBuffer() {
+  if (noiseBuf) return noiseBuf;
+  const n = Math.floor(AC.sampleRate * 0.4), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  return (noiseBuf = b);
 }
-function bgmScheduleStep(step, t) {
-  const ch = BGM_PROG[Math.floor(step / 8) % BGM_PROG.length];
-  const local = step % 8;
-  // 베이스
-  if (local === 0) pluck(ch.root, t, 0.55, 0.30, 'sine');
-  if (local === 4) pluck(ch.root * 1.5, t, 0.35, 0.16, 'sine');   // 5도 살짝
-  // 아르페지오
-  const oct = local >= 4 ? 2 : 1;
-  pluck(ch.tones[ARP[local] % ch.tones.length] * oct, t, 0.24, 0.11, 'triangle');
-  // 반짝이는 리드
-  if (local === 2 || local === 6) pluck(ch.tones[2] * 2, t, 0.16, 0.05, 'square');
+// 브러시/라이드 심벌 (밴드패스 노이즈)
+function perc(t, freq, q, dur, vol) {
+  const s = AC.createBufferSource(); s.buffer = noiseBuffer();
+  const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q;
+  const g = AC.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(bp); bp.connect(g); g.connect(bgmMaster); s.start(t); s.stop(t + dur + 0.02);
+}
+// 어쿠스틱 베이스 (삼각파 + 짧은 어택)
+function bassNote(freq, t, dur, vol = 0.32) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'triangle'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(bgmMaster); o.start(t); o.stop(t + dur + 0.03);
+}
+// 비브라폰 코드 (사인 + 부드러운 감쇠)
+function compChord(freqs, t, vol = 0.06) {
+  freqs.forEach(f => {
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    o.connect(g); g.connect(bgmMaster); o.start(t); o.stop(t + 0.65);
+  });
+}
+// 뮤트 트럼펫 (톱니 → 로우패스 + 살짝 비브라토)
+function leadNote(freq, t, dur, vol = 0.07) {
+  const o = AC.createOscillator(), g = AC.createGain(), lp = AC.createBiquadFilter();
+  o.type = 'sawtooth'; o.frequency.value = freq;
+  lp.type = 'lowpass'; lp.frequency.value = 1500; lp.Q.value = 1;
+  const lfo = AC.createOscillator(), lg = AC.createGain();
+  lfo.frequency.value = 5.5; lg.gain.value = freq * 0.01; lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + dur + 0.05);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.06);
+  g.gain.setValueAtTime(vol, t + dur * 0.55); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(lp); lp.connect(g); g.connect(bgmMaster); o.start(t); o.stop(t + dur + 0.05);
+}
+function bgmScheduleBeat(beat, t, beatDur) {
+  const bar = Math.floor(beat / 4) % 4, b = beat % 4;
+  const swT = t + beatDur * SWING;   // 스윙 업비트
+  // 워킹 베이스 (비트마다)
+  bassNote(BASS[bar][b], t, beatDur * 0.92);
+  // 라이드 심벌: 매 비트 + 2·4박 뒤 스윙 업비트 (딩- 딩다 스윙)
+  perc(t, 7200, 1.6, 0.13, 0.045);
+  if (b === 1 || b === 3) perc(swT, 7600, 1.6, 0.10, 0.035);
+  // 브러시 스네어 백비트 (2·4박) + 비브라폰 코드
+  if (b === 1 || b === 3) { perc(t + 0.005, 3200, 0.8, 0.14, 0.05); compChord(COMP[bar], t + 0.01); }
+  // 뮤트 트럼펫: 마지막 마디(턴어라운드)에 짧은 블루지 릭
+  if (bar === 3) {
+    if (b === 2) leadNote(329.63, swT, beatDur * 0.5);          // E4
+    if (b === 3) { leadNote(392.00, t, beatDur * 0.4); leadNote(440.00, swT, beatDur * 0.9); }  // G4 → A4
+  } else if (bar === 0 && b === 0) {
+    leadNote(261.63, t + beatDur * 0.5, beatDur * 1.4, 0.05);   // 마디 머리에 은은한 C
+  }
 }
 function startBGM() {
   if (bgmOn) return;
@@ -720,15 +794,16 @@ function startBGM() {
   bgmOn = true;
   bgmMaster = AC.createGain();
   bgmMaster.gain.value = soundOff ? 0 : BGM_VOL;
-  const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+  const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 5200;   // 심벌 살짝 반짝이게
   bgmMaster.connect(lp); lp.connect(AC.destination);
-  bgmStep = 0; bgmNextT = AC.currentTime + 0.1;
+  const beatDur = 60 / BPM;
+  bgmBeat = 0; bgmNextT = AC.currentTime + 0.15;
   bgmSched = setInterval(() => {
-    while (bgmNextT < AC.currentTime + 0.12) {
-      bgmScheduleStep(bgmStep, bgmNextT);
-      bgmNextT += STEP; bgmStep++;
+    while (bgmNextT < AC.currentTime + 0.2) {
+      bgmScheduleBeat(bgmBeat, bgmNextT, beatDur);
+      bgmNextT += beatDur; bgmBeat++;
     }
-  }, 25);
+  }, 30);
 }
 function applySoundBtn() {
   const b = document.getElementById('bgmBtn'); if (!b) return;
