@@ -1,4 +1,6 @@
 const socket = io({ transports: ['websocket', 'polling'] });   // 웹소켓 우선 — 폴링 왕복 생략, 연결 빨라짐
+document.addEventListener('dragstart', e => e.preventDefault());   // 카드·이미지 드래그 차단
+document.addEventListener('contextmenu', e => { if (e.target.closest('#game')) e.preventDefault(); });   // 게임 중 길게눌러 메뉴 방지
 let state = null, myIndex = null, selectedBidCard = null;
 let isVsBot = false, isSpec = false, prevPhase = null, difficulty = 'hard';
 let myRoomId = null;
@@ -58,6 +60,11 @@ socket.on('connect', () => {
   else           socket.emit('enter_lobby');
 });
 socket.on('auth_ok', ({ profile }) => { myAccount = profile; renderAccount(); });
+socket.on('dup_login', () => {   // 다른 기기에서 같은 계정 로그인 → 이 세션 종료
+  clearSession();
+  alert('다른 기기(또는 창)에서 같은 계정으로 접속했어요.\n이 창의 연결을 종료합니다.');
+  location.href = location.origin + location.pathname;
+});
 socket.on('disconnect', () => setConn('연결 끊김 — 재접속 중…', 'bad'));
 socket.on('connect_error', (e) => { setConn('서버 연결 실패', 'bad'); console.error('socket connect_error:', e && e.message); });
 socket.on('rejoin_failed', () => { clearSession(); });
@@ -309,14 +316,15 @@ let kakaoFirstLogin = false;
 })();
 // ── 타이틀 화면 (구글/카카오/게스트 선택) ──
 function hideTitle() { const t = document.getElementById('title'); if (t) t.classList.add('hide'); }
-function showTitle() { const t = document.getElementById('title'); if (t) t.classList.remove('hide'); }
-function startAsGuest() { hideTitle(); }   // 게스트 닉은 이미 자동 배정됨
+function showTitle() { sessionStorage.removeItem('ff_guest'); const t = document.getElementById('title'); if (t) t.classList.remove('hide'); }
+function startAsGuest() { sessionStorage.setItem('ff_guest', '1'); hideTitle(); }   // 게스트 선택 기억
 const cameFromOAuth = kakaoFirstLogin || location.href.includes('ktoken');   // 방금 로그인하고 돌아온 경우
 
 renderAccount();   // 게스트 상태로 하단 바 먼저 렌더
 restoreSession().then(() => {
   if (kakaoFirstLogin && myAccount) openNickModal();
-  if (myAccount) hideTitle();   // 이미 로그인돼 있으면 타이틀 건너뜀
+  // 로그인돼 있거나, 게스트로 시작해 게임을 돌던 중(나가기·새로고침)이면 타이틀 건너뜀
+  if (myAccount || sessionStorage.getItem('ff_guest')) hideTitle();
 });
 // 설정된 소셜 로그인 버튼만 타이틀에 노출
 fetch('/api/auth-config').then(r => r.json()).then(d => {
@@ -1591,8 +1599,10 @@ function renderBids() {
   const myLbl = isSpec ? ((gameNicks && gameNicks[0]) || 'P1') + ' 배팅' : '내 배팅';
   const opLbl = isSpec ? ((gameNicks && gameNicks[1]) || 'P2') + ' 배팅' : '상대 배팅';
 
-  // 내(아래) 배팅 — 관전 시 비공개면 뒷면
+  // 내(아래) 배팅 — 내 카드는 항상 앞면(내가 낸 건 나에게 공개). 선택 중이면 미리보기
+  const myTurnBid = !isSpec && s.phase === 'bidding' && !a.myBid && (s.auctioneer === s.myIndex || a.oppBidSubmitted);
   if (a.myBid)                 my.appendChild(bidSlot(myLbl, a.myBid, { reveal: isReveal && !!a.myBid }));
+  else if (myTurnBid && selectedBidCard) my.appendChild(bidSlot('내 배팅 (선택 중)', selectedBidCard, {}));
   else if (isSpec && a.myBidSubmitted) my.appendChild(bidSlot(myLbl + ' ✓', null, { back: true }));
   else                         my.appendChild(bidSlot(myLbl, null));
 

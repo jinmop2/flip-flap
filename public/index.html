@@ -21,8 +21,10 @@
       --gold:#c8a000; --paper:#f7f5f2;
       --felt:#1f4a3c; --felt-d:#143026;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }   /* 더블탭 확대 방지 */
-    html, body { overscroll-behavior:none; }                    /* 당겨서 새로고침·바운스 방지 */
+    * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; -webkit-user-drag:none; -webkit-touch-callout:none; }   /* 더블탭 확대·드래그 방지 */
+    html, body { overscroll-behavior:none; -webkit-user-select:none; -moz-user-select:none; user-select:none; }   /* 당겨서 새로고침·바운스·드래그 선택 방지 */
+    input, textarea, [contenteditable] { -webkit-user-select:text; user-select:text; }   /* 입력창만 선택 허용 */
+    img, svg { -webkit-user-drag:none; user-drag:none; }
     body.ingame { position:fixed; inset:0; width:100%; overflow:hidden; }   /* 게임 중 화면 스크롤 잠금 */
     body {
       font-family:'Fredoka',system-ui,sans-serif;

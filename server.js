@@ -465,6 +465,7 @@ function delay(roomId, fn, base, rand) {
 // ── 방 관리 ────────────────────────────────────────────────
 
 const rooms = {};
+const accountSockets = new Map();   // idl → socketId (같은 계정 동시접속 차단)
 const makeRoomId = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 
 function stateFor(game, pi) {
@@ -633,8 +634,17 @@ io.on('connection', (socket) => {
   // 로그인 토큰 연결 (계정 프로필)
   socket.on('auth', ({ token } = {}) => {
     const u = token && accounts.byToken(token);
-    if (u) { socket.token = token; socket.emit('auth_ok', { profile: accounts.profileOf(u) }); }
-    else { socket.token = null; }
+    if (u) {
+      socket.token = token; socket.emit('auth_ok', { profile: accounts.profileOf(u) });
+      // 같은 계정으로 다른 곳에서 이미 접속 중이면 기존 세션을 밀어냄 (최신 로그인 우선)
+      const idl = String(u.id).toLowerCase();
+      const prev = accountSockets.get(idl);
+      if (prev && prev !== socket.id) {
+        const ps = io.sockets.sockets.get(prev);
+        if (ps) { ps.emit('dup_login'); setTimeout(() => { try { ps.disconnect(true); } catch (_) {} }, 400); }
+      }
+      accountSockets.set(idl, socket.id); socket.accountId = idl;
+    } else { socket.token = null; }
   });
   // 이 소켓 플레이어의 프로필 (로그인=계정, 아니면 게스트)
   function myProfile(nick) {
@@ -879,6 +889,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const c = (connByIp.get(ip) || 1) - 1;   // IP 연결 카운트 감소
     if (c <= 0) connByIp.delete(ip); else connByIp.set(ip, c);
+    if (socket.accountId && accountSockets.get(socket.accountId) === socket.id) accountSockets.delete(socket.accountId);
     matchQueue = matchQueue.filter(q => q.sid !== socket.id);  // 매칭 대기열에서 제거
     const roomId = socket.roomId;
     const room = roomId && rooms[roomId];
