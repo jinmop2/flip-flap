@@ -1,6 +1,6 @@
 // FLIP FLAP 서비스워커 — 재방문 로딩 가속 + 설치(PWA) 요건
 // 전략: 네트워크 우선(배포 즉시 반영), 실패 시 캐시 폴백. 소켓/API는 건드리지 않음.
-const VER = 'ff-v1';
+const VER = 'ff-v2';
 const CORE = ['/', '/client.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {

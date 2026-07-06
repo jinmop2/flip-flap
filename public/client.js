@@ -767,7 +767,7 @@ function setBgmVolume(v, ramp = 0.2) {
 function startBGM() {
   if (bgmOn) return;
   bgmOn = true;
-  bgmAudio = new Audio('/bgm.mp3');
+  bgmAudio = new Audio('/bgm.mp3?v=2');   // ?v 갱신 = 캐시 우회(브라우저 7일 캐시·SW 무시)
   bgmAudio.loop = true;
   bgmAudio.crossOrigin = 'anonymous';
   try {
