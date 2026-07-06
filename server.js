@@ -1078,5 +1078,12 @@ function finishStats(room, winner, forfeit = false) {
   (room.specs || []).forEach(sid => io.to(sid).emit('game_over', { winner, spec: true, nicks: room.nicks }));
 }
 
+// 전역 예외 방어 — 처리 안 된 오류로 프로세스가 죽어 모든 실시간 게임이 끊기지 않게
+process.on('uncaughtException', e => console.error('[uncaughtException]', e && e.stack || e));
+process.on('unhandledRejection', e => console.error('[unhandledRejection]', e && e.stack || e));
+
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`http://localhost:${PORT}`));
+const server = http.listen(PORT, () => console.log(`http://localhost:${PORT}`));
+
+// 배포/재시작(SIGTERM) 시 새 연결 차단 후 정리 — 진행 중 저장은 이미 즉시 persist됨
+process.on('SIGTERM', () => { console.log('SIGTERM 수신 — 종료 중'); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 5000); });
