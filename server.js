@@ -18,7 +18,7 @@ app.get('/health', (req, res) => res.json({ ok: true, rooms: Object.keys(rooms).
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders(res, fp) {
     if (fp.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-cache');                       // SW 갱신 즉시 감지
-    else if (/\.(png|jpg|svg|ico)$/.test(fp)) res.setHeader('Cache-Control', 'public, max-age=604800');  // 아이콘류 7일
+    else if (/\.(png|jpg|svg|ico|mp3|woff2?)$/.test(fp)) res.setHeader('Cache-Control', 'public, max-age=604800');  // 아이콘·음악·폰트 7일 캐시
     else res.setHeader('Cache-Control', 'no-cache');                                            // html/js: etag 재검증(304) — 배포 즉시 반영
   },
 }));

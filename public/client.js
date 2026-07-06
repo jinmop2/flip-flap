@@ -710,18 +710,33 @@ function playSound(n) {
 }
 
 // ── 배경음악 (카지노 재즈 mp3 루프) ──
-const BGM_VOL = 0.42;
-let bgmAudio = null, bgmOn = false;
+// Web Audio 그래프로 라우팅 → GainNode로 볼륨 제어 (iOS에서 audio.volume이 안 먹는 문제 해결)
+// + 효과음보다 낮게 밸런스
+const BGM_VOL = 0.20;
+let bgmAudio = null, bgmOn = false, bgmGain = null;
+function setBgmVolume(v, ramp = 0.2) {
+  if (bgmGain) bgmGain.gain.linearRampToValueAtTime(v, AC.currentTime + ramp);
+  else if (bgmAudio) bgmAudio.volume = v;   // Web Audio 연결 실패 시 폴백
+}
 function startBGM() {
   if (bgmOn) return;
   bgmOn = true;
   bgmAudio = new Audio('/bgm.mp3');
   bgmAudio.loop = true;
-  bgmAudio.volume = soundOff ? 0 : BGM_VOL;
-  bgmAudio.play().catch(() => {   // 자동재생 차단 시 첫 상호작용에서 재생
-    const kick = () => { bgmAudio.play().catch(() => {}); document.removeEventListener('pointerdown', kick); };
+  bgmAudio.crossOrigin = 'anonymous';
+  try {
+    AC.resume();
+    const src = AC.createMediaElementSource(bgmAudio);
+    bgmGain = AC.createGain();
+    bgmGain.gain.value = soundOff ? 0 : BGM_VOL;
+    src.connect(bgmGain); bgmGain.connect(AC.destination);
+  } catch (e) { bgmAudio.volume = soundOff ? 0 : BGM_VOL; }   // 폴백: 엘리먼트 볼륨
+  const tryPlay = () => bgmAudio.play().catch(() => {});
+  tryPlay();
+  if (bgmAudio.paused) {   // 자동재생 차단 → 첫 상호작용에서 재생
+    const kick = () => { try { AC.resume(); } catch (_) {} tryPlay(); document.removeEventListener('pointerdown', kick); };
     document.addEventListener('pointerdown', kick, { once: true });
-  });
+  }
 }
 function applySoundBtn() {
   const b = document.getElementById('bgmBtn'); if (!b) return;
@@ -732,7 +747,7 @@ function applySoundBtn() {
 function toggleBGM() {   // 마스터 음소거 토글 (BGM + 효과음 전체) — 설정 저장
   soundOff = !soundOff;
   localStorage.setItem('ff_sound', soundOff ? 'off' : 'on');
-  if (bgmAudio) bgmAudio.volume = soundOff ? 0 : BGM_VOL;
+  setBgmVolume(soundOff ? 0 : BGM_VOL);
   applySoundBtn();
 }
 window.addEventListener('DOMContentLoaded', applySoundBtn);   // 저장된 상태 반영
