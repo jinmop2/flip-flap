@@ -220,6 +220,40 @@
     .shop-tile .pr { font-size:.66rem; font-weight:800; color:#ffd94a; }
     .shop-tile .pr.own { color:#7dd87d; }
     .shop-tile .shop-cbprev { width:34px; height:47px; }
+    /* ── 명패 (닉네임 장식) ── */
+    .np-wood, .np-neon, .np-gold, .np-daily { padding:1px 9px; border-radius:8px; display:inline-block; }
+    .np-wood  { background:linear-gradient(135deg,#5a3f24,#3c2a16); border:1px solid #8a6a3a; }
+    .np-neon  { background:#160b26; border:1px solid #c39bff; box-shadow:0 0 9px rgba(195,155,255,.55); }
+    .np-gold  { background:linear-gradient(135deg,#6a5312,#a8850f); border:1px solid #ffd94a; box-shadow:0 0 8px rgba(255,215,80,.4); }
+    .np-daily { background:linear-gradient(135deg,#14532d,#166534); border:1px solid #4ade80; }
+    /* ── 칭호 태그 ── */
+    .title-tag { font-size:.62rem; font-weight:800; margin-left:6px; white-space:nowrap; }
+    .pb-nickrow { display:flex; align-items:center; min-width:0; }
+    .pb-nickrow .pb-nick { overflow:hidden; text-overflow:ellipsis; }
+    /* 칭호 목록 (내 정보) */
+    .title-list { display:flex; flex-direction:column; gap:6px; max-height:180px; overflow-y:auto; }
+    .title-row { display:flex; align-items:center; gap:10px; background:#1c1424; border:1px solid #2a1c30; border-radius:10px; padding:8px 11px; cursor:pointer; text-align:left; }
+    .title-row.locked { opacity:.55; cursor:default; }
+    .title-row.on { border-color:var(--gold); box-shadow:0 0 8px rgba(200,160,0,.25); }
+    .tr-ico { font-size:1.2rem; flex-shrink:0; }
+    .tr-info { flex:1; min-width:0; }
+    .tr-name { font-size:.82rem; font-weight:800; }
+    .tr-cond { font-size:.64rem; color:#8a7a80; margin-top:1px; }
+    .tr-state { font-size:.68rem; font-weight:700; color:#ffd94a; flex-shrink:0; }
+    /* ── 일일 미션 ── */
+    .mis-list { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+    .mis-row { display:flex; align-items:center; gap:12px; background:#1c1424; border:1px solid #2a1c30; border-radius:11px; padding:10px 13px; }
+    .mis-row.done { border-color:rgba(120,216,120,.4); }
+    .mis-info { flex:1; min-width:0; text-align:left; }
+    .mis-name { font-size:.82rem; font-weight:700; color:#f0ead8; }
+    .mis-bar { height:6px; background:#241a2e; border-radius:4px; margin-top:6px; overflow:hidden; }
+    .mis-fill { height:100%; background:linear-gradient(90deg,var(--yel),var(--gold)); border-radius:4px; transition:width .4s; }
+    .mis-row.done .mis-fill { background:linear-gradient(90deg,#4ade80,#22c55e); }
+    .mis-prog { font-size:.62rem; color:#8a7a80; margin-top:3px; }
+    .mis-reward { font-size:.8rem; font-weight:800; color:#ffd94a; flex-shrink:0; }
+    .mis-row.done .mis-reward { color:#4ade80; }
+    /* ── 관전 목록 ── */
+    .rl-item.rl-live { border-color:rgba(255,100,100,.35); }
     /* ── 범용 토스트 ── */
     #ffToast {
       position:fixed; top:14px; left:50%; transform:translateX(-50%) translateY(-16px);
@@ -1009,6 +1043,7 @@
     <div class="lobby-top">
       <button class="top-link" onclick="toggleRules(true)"><span class="tl-ico">📖</span>게임방법</button>
       <button class="top-link" onclick="startTutorial()"><span class="tl-ico">🎓</span>튜토리얼</button>
+      <button class="top-link" onclick="openMissions()"><span class="tl-ico">🎯</span>미션</button>
       <button class="top-link shop-link" onclick="openShop()"><span class="tl-ico">🛒</span>상점</button>
     </div>
 
@@ -1365,6 +1400,16 @@
   </div>
 </div>
 
+<!-- 일일 미션 -->
+<div class="lb-modal" id="missionModal" onclick="if(event.target===this)closeMissions()">
+  <div class="lb-box">
+    <div class="lb-title">🎯 일일 미션</div>
+    <p class="auth-hint" style="margin:0 0 6px">완료하면 코인이 바로 지급돼요 · 매일 자정 리셋</p>
+    <div id="missionList" class="mis-list"></div>
+    <button class="btn btn-outline" onclick="closeMissions()">닫기</button>
+  </div>
+</div>
+
 <!-- 내 정보 (프로필 · 인벤토리 · 전적) -->
 <div class="lb-modal" id="myInfoModal" onclick="if(event.target===this)closeMyInfo()">
   <div class="lb-box myinfo-box">
@@ -1375,6 +1420,8 @@
     <div id="miHeader"></div>
     <div class="mi-sec">🎒 인벤토리</div>
     <div id="miInv" class="mi-inv"></div>
+    <div class="mi-sec">🏷️ 칭호</div>
+    <div id="miTitles" class="title-list"></div>
     <div class="mi-sec">📜 최근 전적</div>
     <div id="miHist" class="hist-list" style="max-height:180px"></div>
     <button class="btn btn-outline" onclick="closeMyInfo()">닫기</button>

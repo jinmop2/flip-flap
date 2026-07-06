@@ -43,12 +43,15 @@ app.post('/api/login',  rateLimit(30), (req, res) => { const { id, password } = 
 app.post('/api/me',     rateLimit(90), (req, res) => { const { token } = req.body || {}; res.json(accounts.meByToken(token)); });
 app.post('/api/nick',   rateLimit(20), (req, res) => { const { token, nick } = req.body || {}; res.json(accounts.setNick(token, nick)); });
 app.post('/api/daily',  rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.claimDaily(token) || { error: '로그인이 필요해요.' }); });
+app.post('/api/missions', rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.missionList(token)); });
+app.post('/api/titles',   rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.titleList(token)); });
+app.post('/api/equip-title', rateLimit(30), (req, res) => { const { token, titleId } = req.body || {}; res.json(accounts.equipTitle(token, titleId || null)); });
 app.post('/api/myrank', rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json({ ok: true, me: accounts.myRank(token) }); });
 app.get('/api/leaderboard', rateLimit(60), (req, res) => res.json({ ok: true, players: accounts.topPlayers(20) }));
 // ── 상점 ──
 app.get('/api/shop', rateLimit(60), (req, res) => res.json({ ok: true, items: accounts.shopList() }));
 app.post('/api/buy',   rateLimit(30), (req, res) => { const { token, itemId } = req.body || {}; res.json(accounts.buyItem(token, itemId)); });
-app.post('/api/equip', rateLimit(30), (req, res) => { const { token, itemId } = req.body || {}; res.json(accounts.equipItem(token, itemId)); });
+app.post('/api/equip', rateLimit(30), (req, res) => { const { token, itemId, kind } = req.body || {}; res.json(accounts.equipItem(token, itemId, kind)); });
 
 // ── 카카오 간편로그인 (REST 키는 환경변수 KAKAO_REST_KEY) ──
 const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY || '';
@@ -478,10 +481,43 @@ function stateFor(game, pi) {
   };
 }
 
+// 관전자용 상태 — 공개 정보만 (양쪽 손패 내용은 숨김)
+function stateForSpec(game) {
+  const a = game.auction;
+  let auction = null;
+  if (a) {
+    const reveal = game.phase === 'reveal';
+    auction = {
+      centerCard: a.centerCard,
+      offeredCard: (a.auctionType === 'open' || reveal) ? a._offeredCard : null,
+      auctionType: a.auctionType,
+      // 관전자는 클로즈(공개 배팅)와 결과 공개 때만 배팅을 봄
+      p1Bid: (reveal || (a.auctionType === 'closed' && a.p1Submitted)) ? a.p1Bid : null,
+      p2Bid: (reveal || (a.auctionType === 'closed' && a.p2Submitted)) ? a.p2Bid : null,
+      p1Submitted: a.p1Submitted, p2Submitted: a.p2Submitted,
+    };
+  }
+  let pick = null;
+  if (game.pick && (game.phase === 'pick' || game.phase === 'pick_reveal')) {
+    pick = { choices: game.pick.choices, cards: game.pick.revealed ? game.pick.cards : [null, null] };
+  }
+  return {
+    spec: true, phase: game.phase, turn: game.turn, auctioneer: game.auctioneer,
+    centerDeckSize: game.centerDeck.length,
+    p1HandLen: game.p1Hand.length, p2HandLen: game.p2Hand.length,
+    p1Acq: game.p1Acquired, p2Acq: game.p2Acquired,
+    auction, pick, time: game.time, active: activePlayer(game),
+  };
+}
+
 function broadcast(roomId) {
   const room = rooms[roomId];
   if (!room) return;
   room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('state_update', stateFor(room.game, i)); });
+  if (room.specs && room.specs.length) {
+    const sp = stateForSpec(room.game);
+    room.specs.forEach(sid => io.to(sid).emit('state_update', sp));
+  }
 }
 
 // ── 체스 시계 (전역 틱 1개로 모든 방 처리 — 방마다 타이머 안 만듦) ──
@@ -507,7 +543,9 @@ setInterval(() => {
         continue;
       }
     }
-    room.players.forEach(sid => { if (sid) io.to(sid).emit('clock', { t1: g.time[1], t2: g.time[2], active: ap }); });
+    const clk = { t1: g.time[1], t2: g.time[2], active: ap };
+    room.players.forEach(sid => { if (sid) io.to(sid).emit('clock', clk); });
+    (room.specs || []).forEach(sid => io.to(sid).emit('clock', clk));
   }
 }, 1000);
 
@@ -517,6 +555,9 @@ function openRoomList() {
   for (const [id, r] of Object.entries(rooms)) {
     if (!r.vsBot && !r.game && r.players[0] && !r.players[1])
       list.push({ id, name: r.name || '이름 없는 방', host: (r.nicks && r.nicks[0]) || '???', secret: !!r.secret });
+    // 진행 중인 멀티 게임 → 관전 가능 목록
+    else if (!r.vsBot && r.game && r.game.phase !== 'game_over' && !r.secret)
+      list.push({ id, live: true, name: `${r.nicks[0] || '?'} vs ${r.nicks[1] || '?'}`, turn: r.game.turn, specs: (r.specs || []).length });
   }
   return list.slice(-30).reverse();
 }
@@ -761,11 +802,34 @@ io.on('connection', (socket) => {
     if (room.rematch[0] && room.rematch[1]) restartGame(socket.roomId);
   });
 
+  // ── 관전 입장 ──
+  socket.on('spectate', ({ roomId } = {}) => {
+    const room = rooms[roomId];
+    if (!room || !room.game || room.game.phase === 'game_over' || room.vsBot || room.secret)
+      return socket.emit('error', '관전할 수 없는 게임이에요.');
+    room.specs = room.specs || [];
+    if (room.specs.length >= 10) return socket.emit('error', '관전 인원이 가득 찼어요.');
+    leaveOldRoom();
+    socket.leave('lobby');
+    room.specs.push(socket.id);
+    socket.roomId = roomId; socket.isSpec = true;
+    socket.emit('game_start', { spectate: true, roomId, nicks: room.nicks, profiles: room.profiles });
+    socket.emit('state_update', stateForSpec(room.game));
+    broadcastRooms();   // 관전자 수 갱신
+  });
+
   // 게임 나가기 — 진행 중이면 나간 사람 몰수패 (상대에게만 몰수승 전송)
   socket.on('leave_room', () => {
     const roomId = socket.roomId;
     const room = roomId && rooms[roomId];
     if (!room) return;
+    // 관전자가 나감 → 목록에서만 제거, 게임엔 영향 없음
+    if (socket.isSpec) {
+      room.specs = (room.specs || []).filter(sid => sid !== socket.id);
+      socket.roomId = null; socket.isSpec = false;
+      socket.join('lobby'); broadcastRooms();
+      return;
+    }
     if (room.graceTimer) { clearInterval(room.graceTimer); room.graceTimer = null; }
     endClock(room);
     const slot = room.players.indexOf(socket.id);
@@ -790,6 +854,7 @@ io.on('connection', (socket) => {
     const roomId = socket.roomId;
     const room = roomId && rooms[roomId];
     if (!room) return;
+    if (socket.isSpec) { room.specs = (room.specs || []).filter(sid => sid !== socket.id); broadcastRooms(); return; }   // 관전자 끊김
     const slot = room.players.indexOf(socket.id);
     if (slot === -1) return;   // 이미 교체된 옛 소켓 → 무시 (양쪽 오알림 방지)
     room.players[slot] = null;
@@ -887,6 +952,9 @@ function settle(roomId) {
   const special = (is610(p1Bid) && is21(p2Bid)) || (is610(p2Bid) && is21(p1Bid));
   if (special) {
     room.players.forEach(sid => { if (sid) io.to(sid).emit('special', {}); });
+    // 배신 성공자(6-10을 낸 승자) 미션·칭호 반영
+    const actor = p1Wins ? 0 : 1;   // 6-10이 이기므로 승자가 배신자
+    if (room.tokens && room.tokens[actor]) accounts.betrayEvent(room.tokens[actor]);
   }
 
   if (p1Wins) g.p1Acquired.push(...items); else g.p2Acquired.push(...items);
@@ -951,6 +1019,8 @@ function finishStats(room, winner) {
     const out = accounts.recordResult(tok, result, { vsBot: room.vsBot, difficulty: room.difficulty, sameIp, oppLabel });
     if (out && room.players[i]) io.to(room.players[i]).emit('profile', { profile: out.profile, result, rewards: out.rewards });
   });
+  // 관전자에게 종료 알림
+  (room.specs || []).forEach(sid => io.to(sid).emit('game_over', { winner, spec: true, nicks: room.nicks }));
 }
 
 const PORT = process.env.PORT || 3000;

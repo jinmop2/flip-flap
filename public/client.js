@@ -1,6 +1,6 @@
 const socket = io({ transports: ['websocket', 'polling'] });   // 웹소켓 우선 — 폴링 왕복 생략, 연결 빨라짐
 let state = null, myIndex = null, selectedBidCard = null;
-let isVsBot = false, prevPhase = null, difficulty = 'hard';
+let isVsBot = false, isSpec = false, prevPhase = null, difficulty = 'hard';
 let myRoomId = null;
 
 // 영구 플레이어 ID (재접속 식별용)
@@ -140,9 +140,15 @@ async function restoreSession() {
 // 1일 접속 보상 수령
 async function claimDaily() {
   const d = await apiPost('/api/daily', { token: localStorage.getItem('ff_auth') });
-  if (d && d.claimed) { myAccount = d.profile; renderAccount(); toast(`🎁 출석 보상 <b style="color:#ffd94a">🪙 +${d.amount}</b> 받았어요!`); }
+  if (d && d.claimed) {
+    myAccount = d.profile; renderAccount();
+    toast(`🎁 출석 보상 <b style="color:#ffd94a">🪙 +${d.amount}</b> 받았어요!${d.plateBonus ? ' <span style="color:#4ade80">(🍀 명패 +' + d.plateBonus + ' 포함)</span>' : ''}`);
+  }
 }
 const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
+const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily' };
+const npClass = p => p && NP_CLASS[p] ? ' ' + NP_CLASS[p] : '';   // 명패 클래스
+const titleTag = t => t ? `<span class="title-tag" style="color:${t.color}">${t.icon} ${esc(t.name)}</span>` : '';
 // 하단 고정 프로필 바 (클릭 → 내 정보)
 function renderAccount() {
   const body = document.getElementById('pbBody');
@@ -155,7 +161,7 @@ function renderAccount() {
       <span class="pb-lv">Lv.${p.level}</span>
       <div class="pb-ava" style="color:${p.rankColor}">${p.rankIcon}</div>
       <div class="pb-mid">
-        <div class="pb-nick${ncClass(p.nickColor)}">${esc(p.nick)}</div>
+        <div class="pb-nickrow"><span class="pb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span>${titleTag(p.titleInfo)}</div>
         <div class="pb-stats">${p.wins}승 ${p.losses}패${total ? ` (${p.winRate}%)` : ''} · <span style="color:${p.rankColor}">${esc(p.rank)}</span></div>
       </div>
       <div class="pb-right">
@@ -194,6 +200,7 @@ async function openMyInfo() {
       </div>
     </div>`;
   renderMyInv();
+  renderMyTitles();
   renderMiHist();
   document.getElementById('myInfoModal').classList.add('show');
 }
@@ -266,6 +273,8 @@ function showRewards() {
   if (r.streak && r.streakCount >= 2) { add('bd-streak', `🔥 ${r.streakCount}연승! +${r.streak}`, d); d += 250; playSound('setwin'); }
   if (r.levelUp) { add('bd-level', `⬆️ 레벨 업! Lv.${r.levelUp}`, d); d += 250; playSound('setwin'); }
   if (r.rankUp) { add('bd-rank', `👑 승급! ${r.rankUp}`, d); d += 250; playSound('setwin'); }
+  (r.missions || []).forEach(m => { add('bd-first', `🎯 미션 완료: ${m.name} +${m.reward}`, d); d += 250; });
+  (r.titles || []).forEach(t => { add('bd-rank', `${t.icon} 칭호 획득! ${t.name}`, d); d += 250; playSound('setwin'); });
   if (r.sameIp) { add('bd-warn', `⚠️ 같은 접속 대전 — 코인만 이동`, d); d += 250; }
   pendingRewards = null;
 }
@@ -338,7 +347,7 @@ async function openLeaderboard() {
       row.className = 'lb-row' + (myNick && p.nick === myNick ? ' me' : '');
       row.innerHTML = `<span class="lb-no${p.no <= 3 ? ' top' : ''}">${p.no <= 3 ? ['🥇','🥈','🥉'][p.no-1] : p.no}</span>
         <span class="lb-rank" style="color:${p.rankColor}">${p.rankIcon}</span>
-        <span class="lb-nick${ncClass(p.nickColor)}">${esc(p.nick)}</span>
+        <span class="lb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span>
         <span class="lb-wl">${p.wins}승 ${p.losses}패</span>
         <span class="lb-rp">${p.rp} RP</span>`;
       list.appendChild(row);
@@ -362,6 +371,52 @@ async function openLeaderboard() {
   } catch (_) { list.innerHTML = '<div class="lb-empty">불러오기 실패</div>'; }
 }
 function closeLb() { document.getElementById('lbModal').classList.remove('show'); }
+
+// ── 일일 미션 ──
+async function openMissions() {
+  if (!myAccount) { alert('미션은 로그인하면 이용할 수 있어요!'); openAuth('login'); return; }
+  const list = document.getElementById('missionList');
+  list.innerHTML = '<div class="lb-empty">불러오는 중…</div>';
+  document.getElementById('missionModal').classList.add('show');
+  const r = await apiPost('/api/missions', { token: localStorage.getItem('ff_auth') });
+  if (r.error || !r.list) { list.innerHTML = '<div class="lb-empty">불러오기 실패</div>'; return; }
+  list.innerHTML = '';
+  r.list.forEach(m => {
+    const row = document.createElement('div');
+    row.className = 'mis-row' + (m.claimed ? ' done' : '');
+    row.innerHTML = `
+      <div class="mis-info">
+        <div class="mis-name">${m.claimed ? '✅' : '🎯'} ${esc(m.name)}</div>
+        <div class="mis-bar"><div class="mis-fill" style="width:${Math.round(m.prog / m.goal * 100)}%"></div></div>
+        <div class="mis-prog">${m.prog}/${m.goal}</div>
+      </div>
+      <div class="mis-reward">${m.claimed ? '완료!' : `🪙 ${m.reward}`}</div>`;
+    list.appendChild(row);
+  });
+}
+function closeMissions() { document.getElementById('missionModal').classList.remove('show'); }
+
+// ── 칭호 (내 정보에서 관리) ──
+async function renderMyTitles() {
+  const box = document.getElementById('miTitles'); if (!box) return;
+  const r = await apiPost('/api/titles', { token: localStorage.getItem('ff_auth') });
+  if (r.error || !r.list) { box.innerHTML = ''; return; }
+  box.innerHTML = '';
+  r.list.forEach(t => {
+    const on = r.equipped === t.id;
+    const el = document.createElement('div');
+    el.className = 'title-row' + (t.owned ? '' : ' locked') + (on ? ' on' : '');
+    el.innerHTML = `<span class="tr-ico">${t.icon}</span>
+      <div class="tr-info"><div class="tr-name" style="color:${t.owned ? t.color : '#6a5a70'}">${esc(t.name)}</div>
+      <div class="tr-cond">${esc(t.cond)}${t.owned ? '' : ` (${t.prog}/${t.goal})`}</div></div>
+      <span class="tr-state">${on ? '장착 중 ✓' : t.owned ? '장착' : '🔒'}</span>`;
+    if (t.owned) el.onclick = async () => {
+      const res = await apiPost('/api/equip-title', { token: localStorage.getItem('ff_auth'), titleId: on ? null : t.id });
+      if (!res.error) { myAccount = res.profile; renderAccount(); renderMyTitles(); }
+    };
+    box.appendChild(el);
+  });
+}
 
 // ── 최근 전적 ──
 function openHist() {
@@ -411,6 +466,7 @@ function renderShop() {
     tile.className = 'shop-tile' + (shopSelId === it.id ? ' sel' : '');
     let pr;
     if (it.type === 'cardback' && owned) pr = `<span class="pr own">${myAccount.cardBack === it.id ? '장착 중' : '보유'}</span>`;
+    else if (it.type === 'plate' && owned) pr = `<span class="pr own">${myAccount.plate === it.id ? '장착 중' : '보유'}</span>`;
     else if (it.type === 'emotes' && owned) pr = `<span class="pr own">보유</span>`;
     else pr = `<span class="pr">🪙 ${it.price}</span>${it.type === 'ticket' && owned ? `<span class="pr own">x${owned}</span>` : ''}`;
     tile.innerHTML = `<span class="ico">${shopIcon(it)}</span><span class="nm">${it.name}</span>${pr}`;
@@ -431,10 +487,10 @@ function shopSelect(id, keep) {
   const btn = document.getElementById('ssBtn');
   btn.style.display = '';
   btn.disabled = false; btn.className = 'shop-buy';
-  if (it.type === 'cardback' && owned) {
-    const on = myAccount.cardBack === it.id;
+  if ((it.type === 'cardback' || it.type === 'plate') && owned) {
+    const on = (it.type === 'cardback' ? myAccount.cardBack : myAccount.plate) === it.id;
     btn.textContent = on ? '장착 해제' : '장착하기';
-    btn.onclick = () => equipBack(it.id, on);
+    btn.onclick = () => equipBack(it.id, on, it.type);
   } else if (it.type === 'emotes' && owned) {
     btn.textContent = '보유 중 ✓'; btn.disabled = true; btn.className = 'shop-buy owned';
   } else {
@@ -485,17 +541,23 @@ function dyeRoll(result) {
   }, 70);
   ov.onclick = () => { clearInterval(spin); ov.classList.remove('show'); };
 }
-async function equipBack(itemId, isOn) {
-  const r = await apiPost('/api/equip', { token: localStorage.getItem('ff_auth'), itemId: isOn ? null : itemId });
+async function equipBack(itemId, isOn, kind) {
+  const r = await apiPost('/api/equip', { token: localStorage.getItem('ff_auth'), itemId: isOn ? null : itemId, kind: kind || 'cardback' });
   if (r.error) { document.getElementById('shopMsg').textContent = '⚠️ ' + r.error; return; }
-  myAccount = r.profile; renderShop();
+  myAccount = r.profile; renderShop(); renderAccount();
 }
 // 파티 이모트 팩 — 보유 시 피커에 추가
+const EMOTE_PACKS = {
+  emote_party:  ['🤡','😈','💀','🎉','👑','🍀','💢','🫠'],
+  emote_animal: ['🐶','🐱','🐷','🐸','🦊','🐻','🐤','🦄'],
+};
 function refreshEmotes() {
   const picker = document.getElementById('emotePicker'); if (!picker) return;
   picker.querySelectorAll('.emote-extra').forEach(b => b.remove());
-  if (myAccount && myAccount.items && myAccount.items.emote_party) {
-    ['🤡','😈','💀','🎉','👑','🍀','💢','🫠'].forEach(e => {
+  if (!myAccount || !myAccount.items) return;
+  for (const [pack, emojis] of Object.entries(EMOTE_PACKS)) {
+    if (!myAccount.items[pack]) continue;
+    emojis.forEach(e => {
       const b = document.createElement('button'); b.className = 'emote-extra'; b.textContent = e;
       b.onclick = () => sendEmote(e); picker.appendChild(b);
     });
@@ -536,8 +598,8 @@ function renderGameProfile(elId, p) {
     body.innerHTML = `<span class="gp-rank">👤</span><span class="gp-nick">${esc(p.nick)}</span>`;
     if (stats) stats.innerHTML = `게스트 (기록 없음)`;
   } else {
-    body.innerHTML = `<span class="gp-rank" style="color:${p.rankColor}">${p.rankIcon}</span><span class="gp-nick${ncClass(p.nickColor)}">${esc(p.nick)}</span><span class="gp-lv">Lv.${p.level}</span>`;
-    if (stats) stats.innerHTML = `<span style="color:${p.rankColor}">${esc(p.rank)}</span> · <b>${p.wins}승 ${p.losses}패</b> · 승률 ${p.winRate}%`;
+    body.innerHTML = `<span class="gp-rank" style="color:${p.rankColor}">${p.rankIcon}</span><span class="gp-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span><span class="gp-lv">Lv.${p.level}</span>`;
+    if (stats) stats.innerHTML = (p.titleInfo ? titleTag(p.titleInfo) + ' · ' : '') + `<span style="color:${p.rankColor}">${esc(p.rank)}</span> · <b>${p.wins}승 ${p.losses}패</b> · 승률 ${p.winRate}%`;
   }
 }
 function toggleStats(el) { el.classList.toggle('show-stats'); }
@@ -569,12 +631,21 @@ function renderRoomList(list) {
   el.innerHTML = '';
   if (!list || !list.length) { el.innerHTML = '<div class="rl-empty">열린 방이 없어요. 방을 만들어보세요!</div>'; return; }
   list.forEach(r => {
-    const item = document.createElement('div'); item.className = 'rl-item';
-    const lock = r.secret ? '<span class="rl-lock">🔒</span>' : '';
-    item.innerHTML = `<div class="rl-info"><div class="rl-name">${lock}${esc(r.name)}</div><div class="rl-host">👤 ${esc(r.host)}</div></div>`;
-    const b = document.createElement('button'); b.className = 'btn btn-gold rl-join'; b.textContent = '참가';
-    b.onclick = () => joinRoomById(r.id, r.secret);
-    item.appendChild(b); el.appendChild(item);
+    const item = document.createElement('div'); item.className = 'rl-item' + (r.live ? ' rl-live' : '');
+    if (r.live) {
+      // 진행 중인 게임 → 관전
+      item.innerHTML = `<div class="rl-info"><div class="rl-name">🔴 ${esc(r.name)}</div><div class="rl-host">턴 ${r.turn}${r.specs ? ` · 👁 ${r.specs}` : ''}</div></div>`;
+      const b = document.createElement('button'); b.className = 'btn btn-outline rl-join'; b.textContent = '👁 관전';
+      b.onclick = () => socket.emit('spectate', { roomId: r.id });
+      item.appendChild(b);
+    } else {
+      const lock = r.secret ? '<span class="rl-lock">🔒</span>' : '';
+      item.innerHTML = `<div class="rl-info"><div class="rl-name">${lock}${esc(r.name)}</div><div class="rl-host">👤 ${esc(r.host)}</div></div>`;
+      const b = document.createElement('button'); b.className = 'btn btn-gold rl-join'; b.textContent = '참가';
+      b.onclick = () => joinRoomById(r.id, r.secret);
+      item.appendChild(b);
+    }
+    el.appendChild(item);
   });
 }
 
@@ -731,7 +802,7 @@ function startTitleBlink() {
 function stopTitleBlink() { if (titleBlink) { clearInterval(titleBlink); titleBlink = null; } document.title = BASE_TITLE; }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) stopTitleBlink(); });
 function isMyAction(s) {
-  if (!s) return false;
+  if (!s || isSpec) return false;
   if (s.phase === 'pick') return s.pick && s.pick.myChoice == null;
   if (['draw', 'offer', 'choose_type'].includes(s.phase)) return s.auctioneer === s.myIndex;
   if (s.phase === 'bidding') return s.auction && !s.auction.myBid && (s.auctioneer === s.myIndex || s.auction.oppBidSubmitted);
@@ -957,14 +1028,18 @@ function shareInvite(btn) {
 function cancelWait() { clearSession(); fastReload(); }
 
 socket.on('error', msg => alert(msg));
-socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles }) => {
+socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spectate }) => {
   isVsBot = vsBot;
+  isSpec = !!spectate;
   gameNicks = nicks || null;
   gameProfiles = profiles || null;
-  if (roomId) saveSession(roomId);
+  if (roomId && !isSpec) saveSession(roomId);   // 관전은 재접속 세션 저장 안 함
+  // 관전 모드: 이모트 숨김 + 관전 배너
+  const ew = document.getElementById('emoteWrap'); if (ew) ew.style.display = isSpec ? 'none' : '';
   // 재대결/매칭/재접속 대비 초기화
   document.getElementById('gameOver').style.display = 'none';
   document.getElementById('matchModal').classList.remove('show');
+  closeModePanels();   // 열려 있던 솔로/멀티 팝업 닫기 (관전 진입 등)
   hideGrace();
   document.getElementById('rematchNote').textContent = '';
   const gr = document.getElementById('goRewards'); if (gr) { gr.textContent = ''; gr.style.display = 'none'; }
@@ -983,6 +1058,19 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles }) =
 });
 let drewNow = false;
 socket.on('state_update', s => {
+  // 관전자 상태 → 플레이어 화면 형태로 변환 (아래=P1, 위=P2)
+  if (s.spec) {
+    s = {
+      ...s, myIndex: 1,
+      myHand: [], myAcq: s.p1Acq, oppAcq: s.p2Acq, oppHandLen: s.p2HandLen,
+      auction: s.auction ? {
+        centerCard: s.auction.centerCard, offeredCard: s.auction.offeredCard, auctionType: s.auction.auctionType,
+        myBid: s.auction.p1Bid, oppBid: s.auction.p2Bid,
+        myBidSubmitted: s.auction.p1Submitted, oppBidSubmitted: s.auction.p2Submitted,
+      } : null,
+      pick: s.pick ? { myChoice: s.pick.choices[0], oppChoice: s.pick.choices[1], cards: s.pick.cards } : null,
+    };
+  }
   const prev = prevPhase;
   const changed = s.phase !== prevPhase;
   drewNow = prev === 'draw' && s.phase === 'offer';
@@ -1036,7 +1124,16 @@ socket.on('special', () => {
   t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
   setTimeout(() => { t.style.display = 'none'; }, 2600);
 });
-socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex: mi }) => {
+socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex: mi, spec, nicks }) => {
+  if (spec) {   // 관전자: 중립 결과 화면
+    const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
+    title.textContent = '게임 종료'; title.style.color = '#c8a000';
+    desc.textContent = winner === 0 ? '무승부!' : `🏆 ${(nicks && nicks[winner - 1]) || 'P' + winner} 승리!`;
+    document.getElementById('goStats').innerHTML = '';
+    const rb = document.getElementById('rematchBtn'); if (rb) rb.style.display = 'none';
+    setTimeout(() => document.getElementById('gameOver').style.display = 'flex', 800);
+    return;
+  }
   clearSession(); stopTitleBlink(); hideGrace(); recordResult(winner, mi);
   if (tutorial) {   // 튜토리얼 마무리 인사
     tutorial = false; tutQueue = []; tutOpen = false; tutClearGlow();
@@ -1233,7 +1330,13 @@ function render(changed = false) {
     reveal: '결과 공개!', game_over: '게임 종료',
   };
   const bar = document.getElementById('statusBar');
-  const msg = msgs[s.phase] ?? s.phase;
+  let msg = msgs[s.phase] ?? s.phase;
+  if (isSpec) {   // 관전 문구 (중립 시점)
+    const an = (gameNicks && gameNicks[s.auctioneer - 1]) || '진행자';
+    msg = ({ pick: '👁 선공 뽑는 중…', pick_reveal: `⚡ ${an} 선공!`, draw: `👁 ${an} 카드 뽑는 중`,
+      offer: `👁 ${an} 출품 중`, choose_type: `👁 ${an} 경매 방식 선택 중`, bidding: '👁 배팅 중…',
+      reveal: '결과 공개!', game_over: '게임 종료' })[s.phase] || '👁 관전 중';
+  }
   if (lastSig.status !== msg) {   // 같은 문구면 건드리지 않음 (깜빡임·리플로우 방지)
     lastSig.status = msg;
     if (changed) { bar.style.opacity = '0'; setTimeout(() => { bar.innerHTML = msg; bar.style.opacity = '1'; }, 150); }
@@ -1251,7 +1354,7 @@ function render(changed = false) {
 // 중앙덱 스택
 function drawCard() {
   const s = state;
-  if (!s || s.phase !== 'draw' || s.auctioneer !== s.myIndex) return;
+  if (!s || isSpec || s.phase !== 'draw' || s.auctioneer !== s.myIndex) return;
   playSound('place');
   socket.emit('draw_card');
 }
@@ -1274,7 +1377,7 @@ function renderDeck() {
   const cnt = document.createElement('div');
   cnt.className = 'deck-count'; cnt.textContent = `덱 ${n}장`;
   el.appendChild(cnt);
-  el.classList.toggle('drawable', s.phase === 'draw' && s.auctioneer === s.myIndex);
+  el.classList.toggle('drawable', !isSpec && s.phase === 'draw' && s.auctioneer === s.myIndex);
 }
 
 // 상대의 카드백 스킨 (프로필에 장착 정보가 실려옴)
@@ -1378,7 +1481,7 @@ function renderAuction(changed) {
       const lbl = document.createElement('div'); lbl.className = 'a-label'; lbl.textContent = label || '?';
       wrap.appendChild(lbl);
       const cardEl = makeCard(revealed ? p.cards[slot] : null, { reveal: !!revealed });
-      if (s.phase === 'pick' && p.myChoice == null && !isOpp) {
+      if (!isSpec && s.phase === 'pick' && p.myChoice == null && !isOpp) {
         cardEl.classList.add('selectable', 'pickable');
         cardEl.addEventListener('click', () => { playSound('flip'); socket.emit('pick_card', { slot }); });
       }
@@ -1412,7 +1515,7 @@ function renderAuction(changed) {
     }));
   }
 
-  if (s.phase === 'choose_type' && mine) {
+  if (s.phase === 'choose_type' && mine && !isSpec) {
     const row = document.createElement('div'); row.className = 'btn-row';
     const bo = document.createElement('button'); bo.className = 'btn btn-gold btn-sm'; bo.textContent = '오픈 경매';
     bo.title = '경매품 공개 · 배팅 비공개'; bo.onclick = () => { playSound('flip'); socket.emit('choose_auction', { type: 'open' }); };
@@ -1421,7 +1524,7 @@ function renderAuction(changed) {
     row.appendChild(bo); row.appendChild(bc); action.appendChild(row);
   }
 
-  const myTurnToBid = s.phase === 'bidding' && !a.myBid && (mine || a.oppBidSubmitted);
+  const myTurnToBid = !isSpec && s.phase === 'bidding' && !a.myBid && (mine || a.oppBidSubmitted);
   if (myTurnToBid) {
     if (selectedBidCard) {
       const btn = document.createElement('button');
@@ -1466,18 +1569,36 @@ function renderBids() {
   if (!a || (s.phase !== 'bidding' && s.phase !== 'reveal')) return;
   const isReveal = s.phase === 'reveal';
 
-  // 내 배팅 (내 앞) — 항상 나에게 보임
-  my.appendChild(bidSlot('내 배팅', a.myBid ?? null, { reveal: isReveal && !!a.myBid }));
+  // 라벨: 관전이면 닉네임, 아니면 내/상대
+  const myLbl = isSpec ? ((gameNicks && gameNicks[0]) || 'P1') + ' 배팅' : '내 배팅';
+  const opLbl = isSpec ? ((gameNicks && gameNicks[1]) || 'P2') + ' 배팅' : '상대 배팅';
 
-  // 상대 배팅 (상대 앞) — 서버가 공개 여부 결정 (클로즈=즉시 / 오픈=reveal)
-  const ol = `상대 배팅${a.oppBidSubmitted ? ' ✓' : ''}`;
+  // 내(아래) 배팅 — 관전 시 비공개면 뒷면
+  if (a.myBid)                 my.appendChild(bidSlot(myLbl, a.myBid, { reveal: isReveal && !!a.myBid }));
+  else if (isSpec && a.myBidSubmitted) my.appendChild(bidSlot(myLbl + ' ✓', null, { back: true }));
+  else                         my.appendChild(bidSlot(myLbl, null));
+
+  // 상대(위) 배팅 — 서버가 공개 여부 결정 (클로즈=즉시 / 오픈=reveal)
+  const ol = `${opLbl}${a.oppBidSubmitted ? ' ✓' : ''}`;
   if (a.oppBid)            opp.appendChild(bidSlot(ol, a.oppBid, { reveal: isReveal }));
   else if (a.oppBidSubmitted) opp.appendChild(bidSlot(ol, null, { back: true }));
-  else                    opp.appendChild(bidSlot('상대 배팅', null));
+  else                    opp.appendChild(bidSlot(opLbl, null));
 }
 
 function renderHand() {
   const s = state, a = s.auction, el = document.getElementById('myHand');
+  // 관전: 아래(P1) 손패를 뒷면으로만 표시
+  if (isSpec) {
+    const n = s.p1HandLen || 0;
+    if (lastSig.hand === 'spec' + n) return; lastSig.hand = 'spec' + n;
+    el.innerHTML = '';
+    for (let i = 0; i < n; i++) {
+      const slot = document.createElement('div'); slot.className = 'fan-slot';
+      slot.appendChild(makeCard(null)); el.appendChild(slot);
+    }
+    fanRow(el, false);
+    return;
+  }
   const mine = s.auctioneer === s.myIndex;
   // 방식 선택 전(offer/choose_type)이면 손패 클릭으로 출품카드 교체 가능
   const offer = (s.phase === 'offer' || s.phase === 'choose_type') && mine;

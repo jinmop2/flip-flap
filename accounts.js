@@ -94,6 +94,9 @@ function profileOf(u) {
     items: u.items || {},                    // 보유 아이템 { id: 개수 or true }
     streak: u.winStreak || 0,                // 현재 연승
     history: (u.history || []).slice(0, 10), // 최근 전적
+    plate: u.plate || null,                  // 장착 명패
+    title: u.title || null,                  // 장착 칭호 id
+    titleInfo: u.title && TITLES[u.title] ? { name: TITLES[u.title].name, icon: TITLES[u.title].icon, color: TITLES[u.title].color } : null,
   };
 }
 
@@ -166,6 +169,12 @@ const SHOP = {
                  desc: '전통 오방색 카드 뒷면' },
   emote_party: { name: '파티 이모트 팩',      icon: '🎉', price: 400,  type: 'emotes',
                  desc: '이모트 8종 추가: 🤡😈💀🎉👑🍀💢🫠' },
+  emote_animal:{ name: '동물 이모트 팩',      icon: '🐾', price: 400,  type: 'emotes',
+                 desc: '이모트 8종 추가: 🐶🐱🐷🐸🦊🐻🐤🦄' },
+  np_wood:  { name: '나무 명패',   icon: '🪵', price: 400,  type: 'plate', desc: '닉네임을 감싸는 소박한 나무 명패' },
+  np_neon:  { name: '네온 명패',   icon: '💜', price: 800,  type: 'plate', desc: '보랏빛으로 빛나는 네온 명패' },
+  np_gold:  { name: '황금 명패',   icon: '🏅', price: 1000, type: 'plate', desc: '번쩍번쩍 황금 명패' },
+  np_daily: { name: '행운의 명패', icon: '🍀', price: 1500, type: 'plate', desc: '장착 중이면 매일 출석 보상 +20🪙' },
 };
 // 염색약 뽑기 풀 (weight 비율)
 const DYE_POOL = [
@@ -189,21 +198,39 @@ function buyItem(token, itemId) {
   if (!u) return { error: '로그인이 필요해요.' };
   const it = SHOP[itemId]; if (!it) return { error: '없는 상품이에요.' };
   u.items = u.items || {}; u.coins = u.coins || 0;
-  if ((it.type === 'cardback' || it.type === 'emotes') && u.items[itemId]) return { error: '이미 보유한 아이템이에요.' };
+  if ((it.type === 'cardback' || it.type === 'emotes' || it.type === 'plate') && u.items[itemId]) return { error: '이미 보유한 아이템이에요.' };
   if (u.coins < it.price) return { error: `코인이 부족해요. (보유 ${u.coins} / 필요 ${it.price})` };
   u.coins -= it.price;
   let dye = null;
   if (it.type === 'dye') { dye = rollDye(); u.nickColor = dye; }                 // 즉시 발라짐
   else if (it.type === 'ticket') u.items[itemId] = (u.items[itemId] || 0) + 1;   // 소모권 적립
-  else { u.items[itemId] = true; if (it.type === 'cardback') u.cardBack = itemId; }  // 사면 바로 장착
+  else {
+    u.items[itemId] = true;                                                     // 사면 바로 장착
+    if (it.type === 'cardback') u.cardBack = itemId;
+    if (it.type === 'plate') u.plate = itemId;
+  }
   persist(idl);
   return { ok: true, profile: profileOf(u), dye };
 }
-function equipItem(token, itemId) {   // 카드백 장착/해제 (itemId=null이면 기본으로)
+function equipItem(token, itemId, kind) {   // 카드백/명패 장착·해제 (itemId=null이면 해제, kind로 슬롯 지정)
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
-  if (itemId && (!SHOP[itemId] || SHOP[itemId].type !== 'cardback' || !(u.items || {})[itemId])) return { error: '보유하지 않은 카드백이에요.' };
-  u.cardBack = itemId || null;
+  if (itemId) {
+    const it = SHOP[itemId];
+    if (!it || (it.type !== 'cardback' && it.type !== 'plate') || !(u.items || {})[itemId]) return { error: '보유하지 않은 아이템이에요.' };
+    if (it.type === 'cardback') u.cardBack = itemId; else u.plate = itemId;
+  } else {
+    if (kind === 'plate') u.plate = null; else u.cardBack = null;
+  }
+  persist(idl);
+  return { ok: true, profile: profileOf(u) };
+}
+// 칭호 장착 (titleId=null이면 해제)
+function equipTitle(token, titleId) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  if (titleId && !((u.titles || {})[titleId])) return { error: '아직 획득하지 못한 칭호예요.' };
+  u.title = titleId || null;
   persist(idl);
   return { ok: true, profile: profileOf(u) };
 }
@@ -240,7 +267,7 @@ function topPlayers(limit = 20) {
   return Object.values(db.users)
     .sort((a, b) => (b.rp - a.rp) || (b.wins - a.wins))
     .slice(0, Math.min(limit, 50))
-    .map((u, i) => { const p = profileOf(u); return { no: i + 1, nick: p.nick, nickColor: p.nickColor, level: p.level, rank: p.rank, rankIcon: p.rankIcon, rankColor: p.rankColor, rp: p.rp, wins: p.wins, losses: p.losses }; });
+    .map((u, i) => { const p = profileOf(u); return { no: i + 1, nick: p.nick, nickColor: p.nickColor, plate: p.plate, titleInfo: p.titleInfo, level: p.level, rank: p.rank, rankIcon: p.rankIcon, rankColor: p.rankColor, rp: p.rp, wins: p.wins, losses: p.losses }; });
 }
 
 // ── 보상 테이블 ──
@@ -262,14 +289,97 @@ const DAILY_LOGIN = 30;        // 1일 접속 보상
 const FIRST_WIN_BONUS = 50;    // 하루 첫 승 보너스
 function todayStr() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
 
+// ── 칭호 (조건 달성 시 자동 획득) ──
+const TITLES = {
+  t_tutor:  { name: '새내기 졸업',   icon: '🎓', color: '#7dd87d', cond: '첫 승리',            goalKey: 'wins',       goal: 1 },
+  t_streak: { name: '연승 제조기',   icon: '🔥', color: '#ffab5e', cond: '5연승 달성',          goalKey: 'bestStreak', goal: 5 },
+  t_betray: { name: '배신의 달인',   icon: '⚔️', color: '#ff8a8a', cond: '졸개의 배신 5회',     goalKey: 'betray',     goal: 5 },
+  t_expert: { name: '전문가 사냥꾼', icon: '🎯', color: '#ffd94a', cond: '전문가 AI 10승',      goalKey: 'expertWins', goal: 10 },
+  t_multi:  { name: '경매왕',        icon: '👑', color: '#c39bff', cond: '멀티플레이 20승',     goalKey: 'multiWins',  goal: 20 },
+};
+function statOf(u, key) { return key === 'wins' ? (u.wins || 0) : ((u.stats || {})[key] || 0); }
+function checkTitles(u) {   // 새로 획득한 칭호 목록 반환
+  u.titles = u.titles || {};
+  const newly = [];
+  for (const [id, t] of Object.entries(TITLES)) {
+    if (!u.titles[id] && statOf(u, t.goalKey) >= t.goal) {
+      u.titles[id] = true;
+      newly.push({ id, name: t.name, icon: t.icon });
+    }
+  }
+  return newly;
+}
+
+// ── 일일 미션 (자동 수령) ──
+const MISSIONS = {
+  m_play3:  { name: '아무 대전 3판 플레이',  goal: 3, reward: 30, ev: 'play' },
+  m_win1:   { name: '1승 거두기',            goal: 1, reward: 40, ev: 'win' },
+  m_multi1: { name: '멀티플레이 1판',        goal: 1, reward: 50, ev: 'multi_play' },
+  m_betray: { name: '졸개의 배신 성공하기',  goal: 1, reward: 80, ev: 'betray' },
+};
+function missionState(u) {   // 날짜 바뀌면 자동 리셋
+  const day = todayStr();
+  if (!u.missions || u.missions.day !== day) u.missions = { day, prog: {}, claimed: {} };
+  return u.missions;
+}
+function missionEvent(u, ev) {   // 진행도 +1, 목표 달성 시 즉시 코인 지급 → 완료 목록 반환
+  const m = missionState(u); const done = [];
+  for (const [id, def] of Object.entries(MISSIONS)) {
+    if (def.ev !== ev || m.claimed[id]) continue;
+    m.prog[id] = (m.prog[id] || 0) + 1;
+    if (m.prog[id] >= def.goal) {
+      m.claimed[id] = true;
+      u.coins = (u.coins || 0) + def.reward;
+      done.push({ id, name: def.name, reward: def.reward });
+    }
+  }
+  return done;
+}
+// 게임 도중 발생한 이벤트(졸개의 배신)는 게임 종료 보상에 합쳐서 알림
+function betrayEvent(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null; if (!u) return;
+  u.stats = u.stats || {}; u.stats.betray = (u.stats.betray || 0) + 1;
+  const pend = u._pend = u._pend || { missions: [], titles: [] };
+  pend.missions.push(...missionEvent(u, 'betray'));
+  pend.titles.push(...checkTitles(u));
+  persist(idl);
+}
+// 미션 현황 (클라 표시용)
+function missionList(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const m = missionState(u);
+  return {
+    ok: true,
+    list: Object.entries(MISSIONS).map(([id, def]) => ({
+      id, name: def.name, goal: def.goal, reward: def.reward,
+      prog: Math.min(m.prog[id] || 0, def.goal), claimed: !!m.claimed[id],
+    })),
+  };
+}
+// 칭호 현황 (진행도 포함)
+function titleList(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  return {
+    ok: true, equipped: u.title || null,
+    list: Object.entries(TITLES).map(([id, t]) => ({
+      id, name: t.name, icon: t.icon, color: t.color, cond: t.cond,
+      owned: !!((u.titles || {})[id]), prog: Math.min(statOf(u, t.goalKey), t.goal), goal: t.goal,
+    })),
+  };
+}
+
 // 1일 접속 보상 (하루 1회)
 function claimDaily(token) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null; if (!u) return null;
   if (u.lastLoginDay === todayStr()) return { claimed: false, profile: profileOf(u) };
   u.lastLoginDay = todayStr();
-  u.coins = (u.coins || 0) + DAILY_LOGIN;
+  let amount = DAILY_LOGIN;
+  if (u.plate === 'np_daily') amount += 20;   // 🍀 행운의 명패 착용 보너스
+  u.coins = (u.coins || 0) + amount;
   persist(idl);
-  return { claimed: true, amount: DAILY_LOGIN, profile: profileOf(u) };
+  return { claimed: true, amount, plateBonus: u.plate === 'np_daily' ? 20 : 0, profile: profileOf(u) };
 }
 
 // 결과 반영 (result: 'win'|'loss'|'draw') → { profile, rewards }
@@ -281,6 +391,20 @@ function recordResult(token, result, opts = {}) {
 
   if (result === 'win') { u.wins++; u.winStreak = (u.winStreak || 0) + 1; }
   else if (result === 'loss') { u.losses++; u.winStreak = 0; }
+
+  // 칭호용 통계
+  u.stats = u.stats || {};
+  if (u.winStreak > (u.stats.bestStreak || 0)) u.stats.bestStreak = u.winStreak;
+  if (result === 'win') {
+    if (opts.vsBot && opts.difficulty === 'expert') u.stats.expertWins = (u.stats.expertWins || 0) + 1;
+    if (!opts.vsBot) u.stats.multiWins = (u.stats.multiWins || 0) + 1;
+  }
+
+  // 일일 미션 진행 (자동 수령 — 코인 즉시 지급)
+  const missions = [];
+  missions.push(...missionEvent(u, 'play'));
+  if (!opts.vsBot) missions.push(...missionEvent(u, 'multi_play'));
+  if (result === 'win') missions.push(...missionEvent(u, 'win'));
 
   let coins = base.coins || 0, xp = base.xp || 0, rp = base.rp || 0;
   let firstWin = 0, streak = 0;
@@ -305,6 +429,15 @@ function recordResult(token, result, opts = {}) {
   if (u.history.length > 10) u.history.length = 10;
   persist(idl);
 
+  // 칭호 획득 체크 + 게임 중 쌓인 알림(_pend, 예: 졸개의 배신) 합치기
+  const titles = checkTitles(u);
+  if (u._pend) {
+    missions.push(...u._pend.missions);
+    titles.push(...u._pend.titles.filter(t => !titles.some(x => x.id === t.id)));
+    delete u._pend;
+  }
+  persist(idl);
+
   const afterLevel = levelOf(u.xp), afterRank = rankOf(u.rp).name;
   return {
     profile: profileOf(u),
@@ -312,6 +445,7 @@ function recordResult(token, result, opts = {}) {
       coins, xp, rp, firstWin, streak, streakCount: u.winStreak, sameIp,
       levelUp: afterLevel > beforeLevel ? afterLevel : 0,
       rankUp: (afterRank !== beforeRank && rp > 0) ? afterRank : 0,
+      missions, titles,
     },
   };
 }
@@ -325,4 +459,8 @@ function myRank(token) {
   return { no: pos + 1, total: sorted.length, nick: p.nick, nickColor: p.nickColor, rank: p.rank, rankIcon: p.rankIcon, rankColor: p.rankColor, rp: p.rp, wins: p.wins, losses: p.losses };
 }
 
-module.exports = { signup, login, kakaoLogin, setNick, byToken, meByToken, recordResult, claimDaily, myRank, profileOf, topPlayers, shopList, buyItem, equipItem };
+module.exports = {
+  signup, login, kakaoLogin, setNick, byToken, meByToken, recordResult, claimDaily, myRank,
+  profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
+  missionList, titleList, betrayEvent,
+};
