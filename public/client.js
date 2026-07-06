@@ -798,10 +798,25 @@ function showEmote(emoji, side) {
 
 // ── 나가기 / 재대결 ─────────────────────────────────────────
 function goLobby() { clearSession(); fastReload(); }
+// 예쁜 확인 다이얼로그 (기본 confirm 대체)
+let _confirmCb = null;
+function askConfirm({ icon = '❓', title, desc = '', yes = '확인', no = '취소' }, cb) {
+  document.getElementById('cfIcon').textContent = icon;
+  document.getElementById('cfTitle').textContent = title;
+  document.getElementById('cfDesc').textContent = desc;
+  document.getElementById('cfYes').textContent = yes;
+  document.getElementById('cfNo').textContent = no;
+  _confirmCb = cb;
+  document.getElementById('confirmModal').classList.add('show');
+}
+function confirmClose(ok) {
+  document.getElementById('confirmModal').classList.remove('show');
+  const cb = _confirmCb; _confirmCb = null;
+  if (ok && cb) cb();
+}
 function exitGame() {
-  if (!confirm('게임에서 나갈까요?')) return;
-  socket.emit('leave_room');
-  goLobby();
+  askConfirm({ icon: '🚪', title: '게임에서 나갈까요?', desc: isVsBot ? 'AI 대전은 언제든 다시 시작할 수 있어요.' : '진행 중인 게임은 몰수패로 처리될 수 있어요.', yes: '나가기', no: '계속하기' },
+    () => { socket.emit('leave_room'); goLobby(); });
 }
 function rematch(btn) {
   socket.emit('rematch');
@@ -1340,9 +1355,13 @@ function render(changed = false) {
     const oel = document.getElementById('oppNickLabel'); if (oel && oppN) oel.textContent = oppN;
     const mel = document.getElementById('myNickLabel'); if (mel && myN) mel.textContent = myN;
   }
-  if (gameProfiles) {
-    renderGameProfile('oppProfile', gameProfiles[s.myIndex === 1 ? 1 : 0]);
-    renderGameProfile('myProfile',  gameProfiles[s.myIndex === 1 ? 0 : 1], true);
+  if (gameProfiles) {   // 프로필은 게임 중 안 바뀜 → 1회만 그림
+    const psig = s.myIndex + '|' + JSON.stringify(gameProfiles);
+    if (lastSig.prof !== psig) {
+      lastSig.prof = psig;
+      renderGameProfile('oppProfile', gameProfiles[s.myIndex === 1 ? 1 : 0]);
+      renderGameProfile('myProfile',  gameProfiles[s.myIndex === 1 ? 0 : 1], true);
+    }
   }
 
   // 배팅 순서: 진행자 먼저 → 내가 배팅할 차례인지
