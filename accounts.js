@@ -200,9 +200,17 @@ function rollDye() {
 function shopList() {
   return Object.entries(SHOP).map(([id, it]) => ({ id, ...it }));
 }
+const buyLocks = new Set();   // 재화 처리 재진입(중복 구매) 방지 락
 function buyItem(token, itemId) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
+  if (buyLocks.has(idl)) return { error: '잠시 후 다시 시도해 주세요.' };   // 락 획득
+  buyLocks.add(idl);
+  try {
+    return doBuy(idl, u, itemId);
+  } finally { buyLocks.delete(idl); }
+}
+function doBuy(idl, u, itemId) {
   const it = SHOP[itemId]; if (!it) return { error: '없는 상품이에요.' };
   u.items = u.items || {}; u.coins = u.coins || 0;
   if ((it.type === 'cardback' || it.type === 'emotes' || it.type === 'plate' || it.type === 'table' || it.type === 'cardface') && u.items[itemId]) return { error: '이미 보유한 아이템이에요.' };
@@ -286,11 +294,12 @@ function topPlayers(limit = 20) {
 
 // ── 보상 테이블 ──
 // 코인: 전문가 AI가 압도적 / RP: 멀티 전용 (AI 농사 방지) / XP: 난이도 차등
+// 보상 테이블 (기획서 기준) — 클라이언트 값 신뢰 금지, 전량 서버 계산
 const REWARDS = {
-  ai_easy:   { win: { coins: 10,  xp: 10 }, loss: { coins: 0,  xp: 5 },  draw: { coins: 5,  xp: 8 } },
-  ai_hard:   { win: { coins: 30,  xp: 20 }, loss: { coins: 5,  xp: 5 },  draw: { coins: 15, xp: 10 } },
-  ai_expert: { win: { coins: 150, xp: 40 }, loss: { coins: 25, xp: 8 },  draw: { coins: 75, xp: 20 } },
-  multi:     { win: { coins: 50,  xp: 30, rp: 25 }, loss: { coins: 10, xp: 10, rp: -13 }, draw: { coins: 25, xp: 15, rp: 0 } },
+  ai_easy:   { win: { coins: 5,  xp: 5 },  loss: { coins: 0,  xp: 0 }, draw: { coins: 0,  xp: 3 } },
+  ai_hard:   { win: { coins: 15, xp: 10 }, loss: { coins: 0,  xp: 3 }, draw: { coins: 5,  xp: 5 } },
+  ai_expert: { win: { coins: 40, xp: 20 }, loss: { coins: 5,  xp: 5 }, draw: { coins: 15, xp: 10 } },
+  multi:     { win: { coins: 60, xp: 50, rp: 25 }, loss: { coins: 25, xp: 20, rp: -13 }, draw: { coins: 25, xp: 15, rp: 0 } },
 };
 function rewardKey(vsBot, difficulty) {
   if (!vsBot) return 'multi';
@@ -300,8 +309,28 @@ function rewardKey(vsBot, difficulty) {
 }
 
 const DAILY_LOGIN = 30;        // 1일 접속 보상
-const FIRST_WIN_BONUS = 50;    // 하루 첫 승 보너스
-function todayStr() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+const FIRST_WIN_BONUS = 100;   // 하루 첫 승 보너스 (PvP승 or 전문가 AI승)
+const PLATE_DAILY_BONUS = 50;  // 🍀 행운의 명패 착용 시 출석 추가
+const MIN_TURNS = 5, MIN_PLAYTIME = 60;   // 진행 조건 필터
+const MATCH_LIMIT = 3;         // 같은 상대와 하루 보상 인정 판수
+const DECAY_RANK_RP = 900, DECAY_DAYS = 3, DECAY_PER_DAY = 10;   // 다이아 이상 미접속 감소
+
+// ── 시간 (KST 자정 기준) ──
+const KST = 9 * 3600 * 1000;
+function kstDayIndex(ts = Date.now()) { return Math.floor((ts + KST) / 86400000); }   // KST 기준 일 인덱스(정수)
+function todayStr() { const d = new Date(Date.now() + KST); return d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate(); }
+
+// ── 매치 로그 (자만추/저격 방지) — 같은 두 유저 하루 판수 카운트 (인메모리) ──
+const matchLogs = new Map();   // match_key → { day, count }
+function matchKey(a, b) { return [String(a).toLowerCase(), String(b).toLowerCase()].sort().join('__'); }
+function bumpMatchCount(a, b) {
+  const mk = matchKey(a, b), day = kstDayIndex();
+  let e = matchLogs.get(mk);
+  if (!e || e.day !== day) e = { day, count: 0 };
+  e.count++; matchLogs.set(mk, e);
+  return e.count;
+}
+setInterval(() => { const day = kstDayIndex(); for (const [k, e] of matchLogs) if (e.day !== day) matchLogs.delete(k); }, 3600000);
 
 // ── 칭호 (조건 달성 시 자동 획득) ──
 const TITLES = {
@@ -384,27 +413,62 @@ function titleList(token) {
   };
 }
 
-// 1일 접속 보상 (하루 1회)
+// 랭크 감소: 다이아(900RP) 이상이 3일 이상 미접속 시 미접속 일수 × 10 RP 차감
+function applyRankDecay(u, todayIdx) {
+  if ((u.rp || 0) < DECAY_RANK_RP || u.lastLoginIdx == null) return 0;
+  const days = todayIdx - u.lastLoginIdx;
+  if (days < DECAY_DAYS) return 0;
+  const dec = days * DECAY_PER_DAY;
+  u.rp = Math.max(0, u.rp - dec);
+  return dec;
+}
+// 1일 접속 보상 (KST 자정 기준, 하루 1회)
 function claimDaily(token) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null; if (!u) return null;
-  if (u.lastLoginDay === todayStr()) return { claimed: false, profile: profileOf(u) };
-  u.lastLoginDay = todayStr();
-  let amount = DAILY_LOGIN;
-  if (u.plate === 'np_daily') amount += 20;   // 🍀 행운의 명패 착용 보너스
+  const today = kstDayIndex();
+  const decay = applyRankDecay(u, today);   // 접속 전 랭크 감소 정산
+  if (u.lastLoginIdx === today) { if (decay) persist(idl); return { claimed: false, decay, profile: profileOf(u) }; }
+  u.lastLoginIdx = today;
+  const plateBonus = u.plate === 'np_daily' ? PLATE_DAILY_BONUS : 0;   // 🍀 행운의 명패
+  const amount = DAILY_LOGIN + plateBonus;
   u.coins = (u.coins || 0) + amount;
   persist(idl);
-  return { claimed: true, amount, plateBonus: u.plate === 'np_daily' ? 20 : 0, profile: profileOf(u) };
+  return { claimed: true, amount, plateBonus, decay, profile: profileOf(u) };
 }
 
 // 결과 반영 (result: 'win'|'loss'|'draw') → { profile, rewards }
+// opts: { vsBot, difficulty, turns, playtimeSec, sameIp, friendly, oppUid }
 function recordResult(token, result, opts = {}) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null; if (!u) return null;
   const base = (REWARDS[rewardKey(opts.vsBot, opts.difficulty)] || REWARDS.multi)[result] || { coins: 0, xp: 0 };
   const beforeLevel = levelOf(u.xp), beforeRank = rankOf(u.rp).name;
-  const sameIp = !!opts.sameIp && !opts.vsBot;   // 같은 IP 멀티 = 파밍 방지
+  const today = kstDayIndex();
 
-  if (result === 'win') { u.wins++; u.winStreak = (u.winStreak || 0) + 1; }
-  else if (result === 'loss') { u.losses++; u.winStreak = 0; }
+  // ── 어뷰징 필터 (순차 적용) → 걸리면 모든 보상 0, 전적만 기록 ──
+  let blocked = false, reason = null;
+  // 2. 진행 조건: 너무 짧은 판(턴/시간)은 보상 없음 (솔로·멀티 공통)
+  //    단, 탈주 패배는 페널티(RP-13)를 그대로 부과해야 하므로 예외
+  const tooShort = (opts.turns || 0) < MIN_TURNS || (opts.playtimeSec || 0) < MIN_PLAYTIME;
+  const forfeitLoss = opts.forfeit && result === 'loss';
+  if (tooShort && !forfeitLoss) { blocked = true; reason = 'short'; }
+  // 3. 자만추/저격 방지 (PvP 한정): 같은 IP·친선전, 또는 같은 상대와 하루 3판 초과
+  if (!opts.vsBot && !blocked) {
+    if (opts.sameIp || opts.friendly) { blocked = true; reason = 'friendly'; }
+    else if (opts.oppUid && bumpMatchCount(u.id, opts.oppUid) > MATCH_LIMIT) { blocked = true; reason = 'repeat'; }
+  }
+
+  // 전적·연승 갱신 (연승은 PvP승 또는 전문가 AI승만 +1, 패배 시 초기화)
+  const winnable = result === 'win' && (!opts.vsBot || opts.difficulty === 'expert');
+  if (result === 'win') u.wins++;
+  else if (result === 'loss') u.losses++;
+  if (winnable) u.winStreak = (u.winStreak || 0) + 1;
+  else if (result === 'loss') u.winStreak = 0;
+
+  // 5. AI 고의 패작 필터: AI전 3연패부터 패배 보상 0, 승/무 시 초기화
+  if (opts.vsBot) {
+    if (result === 'loss') u.aiLossStreak = (u.aiLossStreak || 0) + 1;
+    else u.aiLossStreak = 0;
+  }
 
   // 칭호용 통계
   u.stats = u.stats || {};
@@ -423,13 +487,12 @@ function recordResult(token, result, opts = {}) {
   let coins = base.coins || 0, xp = base.xp || 0, rp = base.rp || 0;
   let firstWin = 0, streak = 0;
 
-  if (sameIp) {
-    // 같은 IP끼리 대전 → 코인이 새로 생기지 않게: 승자만 얻고 패자는 잃음, 보너스·RP 없음
-    coins = result === 'win' ? 50 : result === 'loss' ? -50 : 0;
-    rp = 0; xp = Math.min(xp, 10);
+  if (blocked) {
+    coins = 0; xp = 0; rp = 0;                                  // 어뷰징 → 재화 전량 0
   } else {
-    if (result === 'win' && u.lastWinDay !== todayStr()) { firstWin = FIRST_WIN_BONUS; u.lastWinDay = todayStr(); }
-    if (result === 'win' && u.winStreak >= 2) streak = Math.min((u.winStreak - 1) * 10, 50);
+    if (opts.vsBot && result === 'loss' && (u.aiLossStreak || 0) >= 3) coins = 0;   // 고의 패작 방지
+    if (winnable && u.lastWinIdx !== today) { firstWin = FIRST_WIN_BONUS; u.lastWinIdx = today; }   // 하루 첫 승
+    if (winnable && u.winStreak >= 2) streak = Math.min((u.winStreak - 1) * 10, 50);                // 연승 보너스
   }
   coins += firstWin + streak;
 
@@ -456,7 +519,7 @@ function recordResult(token, result, opts = {}) {
   return {
     profile: profileOf(u),
     rewards: {
-      coins, xp, rp, firstWin, streak, streakCount: u.winStreak, sameIp,
+      coins, xp, rp, firstWin, streak, streakCount: u.winStreak, blocked, reason,
       levelUp: afterLevel > beforeLevel ? afterLevel : 0,
       rankUp: (afterRank !== beforeRank && rp > 0) ? afterRank : 0,
       missions, titles,

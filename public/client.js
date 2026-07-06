@@ -281,7 +281,13 @@ function showRewards() {
   if (r.rankUp) { add('bd-rank', `👑 승급! ${r.rankUp}`, d); d += 250; playSound('setwin'); }
   (r.missions || []).forEach(m => { add('bd-first', `🎯 미션 완료: ${m.name} +${m.reward}`, d); d += 250; });
   (r.titles || []).forEach(t => { add('bd-rank', `${t.icon} 칭호 획득! ${t.name}`, d); d += 250; playSound('setwin'); });
-  if (r.sameIp) { add('bd-warn', `⚠️ 같은 접속 대전 — 코인만 이동`, d); d += 250; }
+  if (r.blocked) {
+    const msg = r.reason === 'short' ? '너무 짧은 판 — 보상 없음'
+              : r.reason === 'friendly' ? '같은 접속·친선 대전 — 보상 없음'
+              : r.reason === 'repeat' ? '같은 상대 반복 대전 — 보상 없음'
+              : '보상 지급 제외';
+    add('bd-warn', `⚠️ ${msg}`, d); d += 250;
+  }
   pendingRewards = null;
 }
 // ── 닉네임 설정 모달 ──

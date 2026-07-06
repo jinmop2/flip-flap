@@ -677,6 +677,7 @@ io.on('connection', (socket) => {
       rooms[roomId].nicks[1] = 'AI';
       rooms[roomId].profiles[1] = { nick: 'AI', guest: true, bot: true };
       rooms[roomId].game = createGame();
+      rooms[roomId].startedAt = Date.now();
       socket.emit('game_start', { vsBot: true, difficulty, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles });
       broadcast(roomId);
       startClock(roomId);
@@ -701,6 +702,7 @@ io.on('connection', (socket) => {
     socket.leave('lobby');
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 1; socket.pid = pid;
     room.game = createGame();
+    room.startedAt = Date.now();
     io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: room.nicks, profiles: room.profiles });
     broadcast(roomId);
     startClock(roomId);
@@ -876,7 +878,7 @@ io.on('connection', (socket) => {
     if (g && g.phase !== 'game_over' && !room.vsBot && slot !== -1) {
       const winner = slot === 0 ? 2 : 1;
       g.phase = 'game_over';
-      finishStats(room, winner);
+      finishStats(room, winner, true);
       room.players.forEach((s, i) => { if (s && i !== slot) io.to(s).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
     } else {
       room.players.forEach((s, i) => { if (s && i !== slot) io.to(s).emit('opponent_left'); });
@@ -929,7 +931,7 @@ function forfeitPlayer(roomId, slot) {
   endClock(room);
   const winner = slot === 0 ? 2 : 1;
   if (room.game) room.game.phase = 'game_over';
-  finishStats(room, winner);
+  finishStats(room, winner, true);
   room.players.forEach((s, i) => { if (s && i !== slot) io.to(s).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
   delete rooms[roomId]; broadcastRooms();
 }
@@ -938,6 +940,7 @@ function forfeitPlayer(roomId, slot) {
 function restartGame(roomId) {
   const room = rooms[roomId]; if (!room) return;
   room.game = createGame();
+  room.startedAt = Date.now();
   room.rematch = [false, false];
   room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks, profiles: room.profiles }); });
   broadcast(roomId);
@@ -1044,7 +1047,7 @@ function settle(roomId) {
 }
 
 // 로그인 유저의 전적/랭크/레벨/코인 반영 + 갱신된 프로필·보상 전송
-function finishStats(room, winner) {
+function finishStats(room, winner, forfeit = false) {
   if (!room.tokens) return;
   // 같은 IP 멀티 대전 감지 (자기 계정끼리 코인 파밍 방지)
   let sameIp = false;
@@ -1052,11 +1055,20 @@ function finishStats(room, winner) {
     const s0 = io.sockets.sockets.get(room.players[0]), s1 = io.sockets.sockets.get(room.players[1]);
     if (s0 && s1 && s0.clientIp && s0.clientIp === s1.clientIp) sameIp = true;
   }
+  const turns = (room.game && room.game.turn) || 0;
+  const playtimeSec = room.startedAt ? Math.floor((Date.now() - room.startedAt) / 1000) : 0;
+  const friendly = !!room.secret;   // 비밀번호(친선) 방 = 자만추 방지 대상
+  // 상대 계정 uid (같은 상대와 하루 3판 초과 감지용)
+  const uidOf = t => { const u = t && accounts.byToken(t); return u ? u.id : null; };
   room.tokens.forEach((tok, i) => {
     if (!tok) return;
     const result = winner === 0 ? 'draw' : (winner === i + 1 ? 'win' : 'loss');
     const oppLabel = room.vsBot ? 'AI' : (room.nicks ? room.nicks[1 - i] : '상대');
-    const out = accounts.recordResult(tok, result, { vsBot: room.vsBot, difficulty: room.difficulty, sameIp, oppLabel });
+    const oppUid = room.vsBot ? null : uidOf(room.tokens[1 - i]);
+    const out = accounts.recordResult(tok, result, {
+      vsBot: room.vsBot, difficulty: room.difficulty, oppLabel,
+      sameIp, friendly, turns, playtimeSec, oppUid, forfeit,
+    });
     if (out && room.players[i]) io.to(room.players[i]).emit('profile', { profile: out.profile, result, rewards: out.rewards });
   });
   // 관전자에게 종료 알림

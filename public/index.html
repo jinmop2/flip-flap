@@ -475,8 +475,14 @@
       box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 12px 40px rgba(0,0,0,.6);
       display:flex; flex-direction:column; gap:12px; animation:slideDown .3s cubic-bezier(.34,1.4,.64,1);
       max-height:min(88vh, 700px); overflow-y:auto;   /* 내용이 길어도 닫기 버튼까지 스크롤 가능 */
+      position:relative;
     }
     .lb-title { font-size:1.05rem; font-weight:700; color:#ffe9a8; }
+    .lb-title .close-x { position:absolute; top:12px; right:12px; width:40px; height:40px; display:flex;
+      align-items:center; justify-content:center; cursor:pointer; color:#e0cba0; font-size:1.7rem; line-height:1;
+      border-radius:50%; background:rgba(0,0,0,.28); border:1px solid rgba(185,141,52,.35);
+      -webkit-tap-highlight-color:transparent; transition:background .15s, color .15s; z-index:2; }
+    .lb-title .close-x:hover, .lb-title .close-x:active { color:#fff; background:rgba(140,30,45,.6); }
     .lb-btns { display:flex; gap:8px; margin-top:4px; }
     /* 공용 확인 다이얼로그 */
     .confirm-box { align-items:center; text-align:center; gap:10px; padding:26px 24px; }
@@ -729,6 +735,7 @@
       border:1.5px solid #b98d34; border-radius:20px; padding:26px 28px;
       box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 16px 44px rgba(0,0,0,.6);
       max-width:480px; width:100%; max-height:86vh; overflow-y:auto; animation:slideDown .35s cubic-bezier(.34,1.4,.64,1);
+      position:relative;
     }
     #rulesBox h2 { font-family:'Bangers'; font-size:2rem; letter-spacing:2px; margin-bottom:4px;
       background:linear-gradient(180deg,#fff3c8,#f5cf6e 45%,#c8912e); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
@@ -738,8 +745,11 @@
     #rulesBox ul { padding-left:18px; }
     #rulesBox b { color:#ffe9a8; }
     #rulesBox .r-tag { display:inline-block; padding:1px 7px; border-radius:5px; font-weight:600; font-size:.78rem; }
-    #rulesBox .close-x { float:right; cursor:pointer; color:#c8a86a; font-size:1.5rem; line-height:1; }
-    #rulesBox .close-x:hover { color:#ffe9a8; }
+    #rulesBox .close-x { position:absolute; top:12px; right:12px; width:40px; height:40px; display:flex;
+      align-items:center; justify-content:center; cursor:pointer; color:#e0cba0; font-size:1.7rem; line-height:1;
+      border-radius:50%; background:rgba(0,0,0,.28); border:1px solid rgba(185,141,52,.35);
+      -webkit-tap-highlight-color:transparent; transition:background .15s, color .15s; z-index:2; }
+    #rulesBox .close-x:hover, #rulesBox .close-x:active { color:#fff; background:rgba(140,30,45,.6); }
 
     /* ── 설명서 그림/다이어그램 ── */
     .rc {
@@ -1279,7 +1289,7 @@
 <!-- 랭킹 -->
 <div class="lb-modal" id="lbModal" onclick="if(event.target===this)closeLb()">
   <div class="lb-box" style="width:340px;">
-    <div class="lb-title">🏆 랭킹 <span class="close-x" style="float:right; cursor:pointer; color:#6a5a70;" onclick="closeLb()">×</span></div>
+    <div class="lb-title">🏆 랭킹 <span class="close-x" onclick="closeLb()">×</span></div>
     <div id="lbList" style="display:flex; flex-direction:column; gap:4px; max-height:60vh; overflow-y:auto;"></div>
   </div>
 </div>
