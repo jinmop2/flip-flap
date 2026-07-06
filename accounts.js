@@ -95,6 +95,8 @@ function profileOf(u) {
     streak: u.winStreak || 0,                // 현재 연승
     history: (u.history || []).slice(0, 10), // 최근 전적
     plate: u.plate || null,                  // 장착 명패
+    table: u.table || null,                  // 장착 테이블 스킨
+    cardFace: u.cardFace || null,            // 장착 카드 앞면 스킨
     title: u.title || null,                  // 장착 칭호 id
     titleInfo: u.title && TITLES[u.title] ? { name: TITLES[u.title].name, icon: TITLES[u.title].icon, color: TITLES[u.title].color } : null,
   };
@@ -175,6 +177,11 @@ const SHOP = {
   np_neon:  { name: '네온 명패',   icon: '💜', price: 800,  type: 'plate', desc: '보랏빛으로 빛나는 네온 명패' },
   np_gold:  { name: '황금 명패',   icon: '🏅', price: 1000, type: 'plate', desc: '번쩍번쩍 황금 명패' },
   np_daily: { name: '행운의 명패', icon: '🍀', price: 1500, type: 'plate', desc: '장착 중이면 매일 출석 보상 +20🪙' },
+  tbl_blue:  { name: '블루 테이블',   icon: '🔵', price: 600,  type: 'table', desc: '차분한 심해 블루 테이블' },
+  tbl_purple:{ name: '퍼플 테이블',   icon: '🟣', price: 700,  type: 'table', desc: '고급스러운 자주빛 테이블' },
+  tbl_gold:  { name: '골드 테이블',   icon: '🟡', price: 1200, type: 'table', desc: '럭셔리 카지노 골드 테이블' },
+  face_neon: { name: '네온 카드',     icon: '🃏', price: 700,  type: 'cardface', desc: '숫자가 네온으로 빛나는 카드 앞면' },
+  face_classic:{ name: '클래식 카드', icon: '♠️', price: 900,  type: 'cardface', desc: '트럼프풍 세리프 숫자 카드 앞면' },
 };
 // 염색약 뽑기 풀 (weight 비율)
 const DYE_POOL = [
@@ -198,7 +205,7 @@ function buyItem(token, itemId) {
   if (!u) return { error: '로그인이 필요해요.' };
   const it = SHOP[itemId]; if (!it) return { error: '없는 상품이에요.' };
   u.items = u.items || {}; u.coins = u.coins || 0;
-  if ((it.type === 'cardback' || it.type === 'emotes' || it.type === 'plate') && u.items[itemId]) return { error: '이미 보유한 아이템이에요.' };
+  if ((it.type === 'cardback' || it.type === 'emotes' || it.type === 'plate' || it.type === 'table' || it.type === 'cardface') && u.items[itemId]) return { error: '이미 보유한 아이템이에요.' };
   if (u.coins < it.price) return { error: `코인이 부족해요. (보유 ${u.coins} / 필요 ${it.price})` };
   u.coins -= it.price;
   let dye = null;
@@ -208,19 +215,23 @@ function buyItem(token, itemId) {
     u.items[itemId] = true;                                                     // 사면 바로 장착
     if (it.type === 'cardback') u.cardBack = itemId;
     if (it.type === 'plate') u.plate = itemId;
+    if (it.type === 'table') u.table = itemId;
+    if (it.type === 'cardface') u.cardFace = itemId;
   }
   persist(idl);
   return { ok: true, profile: profileOf(u), dye };
 }
-function equipItem(token, itemId, kind) {   // 카드백/명패 장착·해제 (itemId=null이면 해제, kind로 슬롯 지정)
+// 장착·해제 (itemId=null이면 kind 슬롯 해제)
+const SLOT = { cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace' };
+function equipItem(token, itemId, kind) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
   if (itemId) {
     const it = SHOP[itemId];
-    if (!it || (it.type !== 'cardback' && it.type !== 'plate') || !(u.items || {})[itemId]) return { error: '보유하지 않은 아이템이에요.' };
-    if (it.type === 'cardback') u.cardBack = itemId; else u.plate = itemId;
-  } else {
-    if (kind === 'plate') u.plate = null; else u.cardBack = null;
+    if (!it || !SLOT[it.type] || !(u.items || {})[itemId]) return { error: '보유하지 않은 아이템이에요.' };
+    u[SLOT[it.type]] = itemId;
+  } else if (SLOT[kind]) {
+    u[SLOT[kind]] = null;
   }
   persist(idl);
   return { ok: true, profile: profileOf(u) };

@@ -214,17 +214,17 @@ async function renderMyInv() {
   let html = '';
   if (myAccount.nickColor) html += `<div class="mi-item"><span class="ico">🎨</span><span class="nm ${'nc-' + myAccount.nickColor}">${(DYE_NAMES[myAccount.nickColor] || myAccount.nickColor)} 염색</span></div>`;
   owned.forEach(it => {
-    const isCb = it.type === 'cardback';
-    const on = isCb && myAccount.cardBack === it.id;
+    const slot = EQUIP_SLOT[it.type];          // 장착 가능 아이템(카드백/명패/테이블/카드앞면)
+    const on = slot && myAccount[slot] === it.id;
     const cnt = it.type === 'ticket' ? `<span class="cnt">x${items[it.id]}</span>` : '';
-    html += `<div class="mi-item${on ? ' equipped' : ''}" ${isCb ? `onclick="invEquip('${it.id}', ${on})"` : ''} title="${it.name}">
+    html += `<div class="mi-item${on ? ' equipped' : ''}" ${slot ? `onclick="invEquip('${it.id}', ${on}, '${it.type}')"` : ''} title="${it.name}">
       ${cnt}<span class="ico">${it.icon}</span><span class="nm">${it.name.replace(' 카드백','')}</span></div>`;
   });
   inv.innerHTML = html || '<div class="mi-empty">아직 아이템이 없어요 — 상점 구경 가기 🛒</div>';
 }
-async function invEquip(itemId, isOn) {
-  const r = await apiPost('/api/equip', { token: localStorage.getItem('ff_auth'), itemId: isOn ? null : itemId });
-  if (!r.error) { myAccount = r.profile; renderMyInv(); }
+async function invEquip(itemId, isOn, kind) {
+  const r = await apiPost('/api/equip', { token: localStorage.getItem('ff_auth'), itemId: isOn ? null : itemId, kind });
+  if (!r.error) { myAccount = r.profile; renderMyInv(); renderAccount(); applyMySkins(); }
 }
 function renderMiHist() {
   const list = document.getElementById('miHist');
@@ -453,6 +453,8 @@ const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-oban
 const shopIcon = it => CBP[it.id]
   ? `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`
   : it.icon;
+// 장착 슬롯: 상점 타입 → 프로필 필드
+const EQUIP_SLOT = { cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace' };
 let shopSelId = null;
 function renderShop() {
   document.getElementById('shopCoins').textContent = `🪙 ${myAccount ? myAccount.coins : 0}`;
@@ -465,8 +467,7 @@ function renderShop() {
     const tile = document.createElement('div');
     tile.className = 'shop-tile' + (shopSelId === it.id ? ' sel' : '');
     let pr;
-    if (it.type === 'cardback' && owned) pr = `<span class="pr own">${myAccount.cardBack === it.id ? '장착 중' : '보유'}</span>`;
-    else if (it.type === 'plate' && owned) pr = `<span class="pr own">${myAccount.plate === it.id ? '장착 중' : '보유'}</span>`;
+    if (EQUIP_SLOT[it.type] && owned) pr = `<span class="pr own">${myAccount[EQUIP_SLOT[it.type]] === it.id ? '장착 중' : '보유'}</span>`;
     else if (it.type === 'emotes' && owned) pr = `<span class="pr own">보유</span>`;
     else pr = `<span class="pr">🪙 ${it.price}</span>${it.type === 'ticket' && owned ? `<span class="pr own">x${owned}</span>` : ''}`;
     tile.innerHTML = `<span class="ico">${shopIcon(it)}</span><span class="nm">${it.name}</span>${pr}`;
@@ -487,8 +488,8 @@ function shopSelect(id, keep) {
   const btn = document.getElementById('ssBtn');
   btn.style.display = '';
   btn.disabled = false; btn.className = 'shop-buy';
-  if ((it.type === 'cardback' || it.type === 'plate') && owned) {
-    const on = (it.type === 'cardback' ? myAccount.cardBack : myAccount.plate) === it.id;
+  if (EQUIP_SLOT[it.type] && owned) {
+    const on = myAccount[EQUIP_SLOT[it.type]] === it.id;
     btn.textContent = on ? '장착 해제' : '장착하기';
     btn.onclick = () => equipBack(it.id, on, it.type);
   } else if (it.type === 'emotes' && owned) {
@@ -544,7 +545,7 @@ function dyeRoll(result) {
 async function equipBack(itemId, isOn, kind) {
   const r = await apiPost('/api/equip', { token: localStorage.getItem('ff_auth'), itemId: isOn ? null : itemId, kind: kind || 'cardback' });
   if (r.error) { document.getElementById('shopMsg').textContent = '⚠️ ' + r.error; return; }
-  myAccount = r.profile; renderShop(); renderAccount();
+  myAccount = r.profile; renderShop(); renderAccount(); applyMySkins();   // 테이블/카드앞면 즉시 반영
 }
 // 파티 이모트 팩 — 보유 시 피커에 추가
 const EMOTE_PACKS = {
@@ -708,102 +709,19 @@ function playSound(n) {
   }
 }
 
-// ── 배경음악 (재즈 느와르: 워킹 베이스 + 스윙 라이드 + 비브라폰 코드 + 뮤트 트럼펫) ──
-let bgmMaster = null, bgmOn = false;
-let bgmSched = null, bgmBeat = 0, bgmNextT = 0;
-const BGM_VOL = 0.14;
-const BPM = 88, SWING = 0.63;      // 느긋한 스윙
-// 마이너 재즈 4마디 루프: Am7 – Dm7 – E7♭9 – Am7
-// 워킹 베이스(비트당 한 음, 다음 코드로 크로매틱 접근)
-const BASS = [
-  [110.00, 130.81, 164.81, 155.56], // Am7 → (Eb 접근) D
-  [ 73.42,  87.31, 110.00,  87.31], // Dm7 → (F 접근) E
-  [ 82.41, 103.83, 123.47, 123.47], // E7♭9 → (B 접근) A
-  [110.00,  82.41, 110.00, 164.81], // Am7 → (E→A 도미넌트) 루프
-];
-// 백비트 코드 보이싱 (2·4박에 살짝)
-const COMP = [
-  [261.63, 329.63, 392.00], // Am7  : C E G
-  [174.61, 220.00, 261.63], // Dm7  : F A C
-  [207.65, 293.66, 349.23], // E7♭9 : G# D F  (3·7·♭9 = 느와르 긴장)
-  [261.63, 329.63, 392.00], // Am7  : C E G
-];
-
-let noiseBuf = null;
-function noiseBuffer() {
-  if (noiseBuf) return noiseBuf;
-  const n = Math.floor(AC.sampleRate * 0.4), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
-  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-  return (noiseBuf = b);
-}
-// 브러시/라이드 심벌 (밴드패스 노이즈)
-function perc(t, freq, q, dur, vol) {
-  const s = AC.createBufferSource(); s.buffer = noiseBuffer();
-  const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q;
-  const g = AC.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  s.connect(bp); bp.connect(g); g.connect(bgmMaster); s.start(t); s.stop(t + dur + 0.02);
-}
-// 어쿠스틱 베이스 (삼각파 + 짧은 어택)
-function bassNote(freq, t, dur, vol = 0.32) {
-  const o = AC.createOscillator(), g = AC.createGain();
-  o.type = 'triangle'; o.frequency.value = freq;
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g); g.connect(bgmMaster); o.start(t); o.stop(t + dur + 0.03);
-}
-// 비브라폰 코드 (사인 + 부드러운 감쇠)
-function compChord(freqs, t, vol = 0.06) {
-  freqs.forEach(f => {
-    const o = AC.createOscillator(), g = AC.createGain();
-    o.type = 'sine'; o.frequency.value = f;
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
-    o.connect(g); g.connect(bgmMaster); o.start(t); o.stop(t + 0.65);
-  });
-}
-// 뮤트 트럼펫 (톱니 → 로우패스 + 살짝 비브라토)
-function leadNote(freq, t, dur, vol = 0.07) {
-  const o = AC.createOscillator(), g = AC.createGain(), lp = AC.createBiquadFilter();
-  o.type = 'sawtooth'; o.frequency.value = freq;
-  lp.type = 'lowpass'; lp.frequency.value = 1500; lp.Q.value = 1;
-  const lfo = AC.createOscillator(), lg = AC.createGain();
-  lfo.frequency.value = 5.5; lg.gain.value = freq * 0.01; lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + dur + 0.05);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.06);
-  g.gain.setValueAtTime(vol, t + dur * 0.55); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(lp); lp.connect(g); g.connect(bgmMaster); o.start(t); o.stop(t + dur + 0.05);
-}
-function bgmScheduleBeat(beat, t, beatDur) {
-  const bar = Math.floor(beat / 4) % 4, b = beat % 4;
-  const swT = t + beatDur * SWING;   // 스윙 업비트
-  // 워킹 베이스 (비트마다)
-  bassNote(BASS[bar][b], t, beatDur * 0.92);
-  // 라이드 심벌: 매 비트 + 2·4박 뒤 스윙 업비트 (딩- 딩다 스윙)
-  perc(t, 7200, 1.6, 0.13, 0.045);
-  if (b === 1 || b === 3) perc(swT, 7600, 1.6, 0.10, 0.035);
-  // 브러시 스네어 백비트 (2·4박) + 비브라폰 코드
-  if (b === 1 || b === 3) { perc(t + 0.005, 3200, 0.8, 0.14, 0.05); compChord(COMP[bar], t + 0.01); }
-  // 뮤트 트럼펫: 마지막 마디(턴어라운드)에 짧은 블루지 릭
-  if (bar === 3) {
-    if (b === 2) leadNote(329.63, swT, beatDur * 0.5);          // E4
-    if (b === 3) { leadNote(392.00, t, beatDur * 0.4); leadNote(440.00, swT, beatDur * 0.9); }  // G4 → A4
-  } else if (bar === 0 && b === 0) {
-    leadNote(261.63, t + beatDur * 0.5, beatDur * 1.4, 0.05);   // 마디 머리에 은은한 C
-  }
-}
+// ── 배경음악 (카지노 재즈 mp3 루프) ──
+const BGM_VOL = 0.42;
+let bgmAudio = null, bgmOn = false;
 function startBGM() {
   if (bgmOn) return;
-  try { AC.resume(); } catch (_) {}
   bgmOn = true;
-  bgmMaster = AC.createGain();
-  bgmMaster.gain.value = soundOff ? 0 : BGM_VOL;
-  const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 5200;   // 심벌 살짝 반짝이게
-  bgmMaster.connect(lp); lp.connect(AC.destination);
-  const beatDur = 60 / BPM;
-  bgmBeat = 0; bgmNextT = AC.currentTime + 0.15;
-  bgmSched = setInterval(() => {
-    while (bgmNextT < AC.currentTime + 0.2) {
-      bgmScheduleBeat(bgmBeat, bgmNextT, beatDur);
-      bgmNextT += beatDur; bgmBeat++;
-    }
-  }, 30);
+  bgmAudio = new Audio('/bgm.mp3');
+  bgmAudio.loop = true;
+  bgmAudio.volume = soundOff ? 0 : BGM_VOL;
+  bgmAudio.play().catch(() => {   // 자동재생 차단 시 첫 상호작용에서 재생
+    const kick = () => { bgmAudio.play().catch(() => {}); document.removeEventListener('pointerdown', kick); };
+    document.addEventListener('pointerdown', kick, { once: true });
+  });
 }
 function applySoundBtn() {
   const b = document.getElementById('bgmBtn'); if (!b) return;
@@ -814,7 +732,7 @@ function applySoundBtn() {
 function toggleBGM() {   // 마스터 음소거 토글 (BGM + 효과음 전체) — 설정 저장
   soundOff = !soundOff;
   localStorage.setItem('ff_sound', soundOff ? 'off' : 'on');
-  if (bgmMaster) bgmMaster.gain.linearRampToValueAtTime(soundOff ? 0 : BGM_VOL, AC.currentTime + 0.25);
+  if (bgmAudio) bgmAudio.volume = soundOff ? 0 : BGM_VOL;
   applySoundBtn();
 }
 window.addEventListener('DOMContentLoaded', applySoundBtn);   // 저장된 상태 반영
@@ -1124,6 +1042,7 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spe
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('game').style.display = 'flex';
   document.body.classList.add('ingame');   // 게임 중 화면 스크롤 잠금
+  applyMySkins();   // 내 테이블/카드앞면 스킨 적용
   // AI면 프로필 아래 난이도 배지, 사람이면 숨김
   const de = document.getElementById('cpuDiff');
   if (vsBot) { de.style.display = ''; de.textContent = { easy:'쉬움', normal:'보통', hard:'어려움', expert:'전문가' }[diff] || diff; }
@@ -1318,6 +1237,17 @@ function resultReason(my, opp) {
   if ((is610(my) && is21(opp)) || (is610(opp) && is21(my))) return '⚔ 졸개의 배신!';
   if (my.kind !== opp.kind) return `종류 ${my.kind} vs ${opp.kind} → 작은 쪽 승리`;
   return `등급 ${my.grade} vs ${opp.grade} → 낮은 쪽 승리`;
+}
+
+// 내 테이블/카드앞면 스킨을 게임 화면에 적용 (내 시야 기준 코스메틱)
+const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold' };
+const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic' };
+function applyMySkins() {
+  const g = document.getElementById('game'); if (!g) return;
+  g.classList.remove('tbl-blue', 'tbl-purple', 'tbl-gold', 'cf-neon', 'cf-classic');
+  const p = myAccount;
+  if (p && TABLE_CLS[p.table]) g.classList.add(TABLE_CLS[p.table]);
+  if (p && FACE_CLS[p.cardFace]) g.classList.add(FACE_CLS[p.cardFace]);
 }
 
 function makeCard(card, opts = {}) {

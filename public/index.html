@@ -500,6 +500,15 @@
       border:10px solid #2a1c12;
       outline:2px solid #3a281a;
     }
+    /* ── 테이블 스킨 (배경 그라데만 교체) ── */
+    #game.tbl-blue   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #1a3a5a 0%, #0f2438 78%, #08131f 100%); }
+    #game.tbl-purple { background:radial-gradient(ellipse 90% 70% at 50% 50%, #3d2350 0%, #251533 78%, #140b1c 100%); }
+    #game.tbl-gold   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #5a4410 0%, #3a2c0a 78%, #1e1605 100%); border-color:#4a3410; }
+    /* ── 카드 앞면 스킨 (내 시야 카드 숫자 테마) ── */
+    #game.cf-neon .card .c-num { color:#6ffcff; text-shadow:0 0 8px rgba(90,240,255,.8),0 0 2px rgba(90,240,255,.9); }
+    #game.cf-neon .card .c-rank { color:#ff8ef0; }
+    #game.cf-classic .card .c-num { font-family:'Georgia','Times New Roman',serif; font-weight:700; color:#f4ecd8; text-shadow:0 1px 2px rgba(0,0,0,.5); }
+    #game.cf-classic .card .c-rank { font-family:'Georgia',serif; }
     /* 펠트 위 미세 무늬 */
     #game::before {
       content:''; position:absolute; inset:14px; border-radius:20px; pointer-events:none;
@@ -1058,7 +1067,7 @@
     </div>
 
     <!-- 친구 초대 -->
-    <button class="btn btn-kakao" style="width:100%" onclick="inviteFriend()">💬 친구 초대하기</button>
+    <button class="lobby-rules-link" style="color:#c8b84a" onclick="inviteFriend()">💬 친구 초대하기</button>
 
     <!-- 앱 설치 (설치 가능할 때만 표시) -->
     <button class="install-btn" id="installBtn" style="display:none" onclick="installApp()">📲 홈 화면에 앱으로 추가</button>
