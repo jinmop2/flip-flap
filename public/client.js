@@ -29,6 +29,10 @@ if (sessionStorage.getItem('ff_skipsplash')) {
   splashHidden = true;
   const s = document.getElementById('splash'); if (s) s.style.display = 'none';
 }
+// 내부 이동(나가기 등)·게스트·로그인 세션이면 타이틀 화면을 처음부터 숨김 (깜빡임 방지)
+if (sessionStorage.getItem('ff_guest') || localStorage.getItem('ff_auth')) {
+  const t = document.getElementById('title'); if (t) { t.classList.add('hide'); t.style.display = 'none'; }
+}
 function hideSplash() {
   if (splashHidden) return; splashHidden = true;
   const s = document.getElementById('splash'); if (!s) return;
@@ -286,9 +290,14 @@ function openNickModal() {
   const i = document.getElementById('nickNew');
   i.value = myAccount ? myAccount.nick : '';
   document.getElementById('nickModal').classList.add('show');
-  setTimeout(() => { i.focus(); i.select(); }, 60);
+  // 모바일 키보드가 갑자기 튀지 않게 자동 포커스는 생략 (사용자가 직접 탭)
 }
 function closeNickModal() { document.getElementById('nickModal').classList.remove('show'); }
+// '나중에' 눌러도 한 번 더 확인 (실수 방지)
+function confirmSkipNick() {
+  askConfirm({ icon: '✏️', title: '닉네임을 지금 안 정할까요?', desc: '나중에 바꾸려면 상점의 닉네임 변경권이 필요할 수 있어요.', yes: '나중에 할게요', no: '지금 정하기' },
+    () => closeNickModal());
+}
 async function submitNick() {
   const nick = document.getElementById('nickNew').value.trim();
   const err = document.getElementById('nickErr');
@@ -316,7 +325,7 @@ let kakaoFirstLogin = false;
 })();
 // ── 타이틀 화면 (구글/카카오/게스트 선택) ──
 function hideTitle() { const t = document.getElementById('title'); if (t) t.classList.add('hide'); }
-function showTitle() { sessionStorage.removeItem('ff_guest'); const t = document.getElementById('title'); if (t) t.classList.remove('hide'); }
+function showTitle() { sessionStorage.removeItem('ff_guest'); const t = document.getElementById('title'); if (t) { t.style.display = ''; t.classList.remove('hide'); } }
 function startAsGuest() { sessionStorage.setItem('ff_guest', '1'); hideTitle(); }   // 게스트 선택 기억
 const cameFromOAuth = kakaoFirstLogin || location.href.includes('ktoken');   // 방금 로그인하고 돌아온 경우
 
