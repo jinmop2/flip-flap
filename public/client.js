@@ -152,7 +152,8 @@ async function claimDaily() {
   }
 }
 const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
-const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily' };
+const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50' };
+const xpPct = p => Math.max(0, Math.min(100, Math.round((p.xpInLevel || 0) / (p.xpNeeded || 100) * 100)));
 const npClass = p => p && NP_CLASS[p] ? ' ' + NP_CLASS[p] : '';   // 명패 클래스
 const titleTag = t => t ? `<span class="title-tag" style="color:${t.color}">${t.icon} ${esc(t.name)}</span>` : '';
 // 하단 고정 프로필 바 (클릭 → 내 정보)
@@ -174,7 +175,7 @@ function renderAccount() {
         <span class="pb-badge pb-coin">🪙 ${p.coins || 0}</span>
         <span class="pb-badge pb-rp">🏆 ${p.rp} RP</span>
       </div>`;
-    if (fill) fill.style.width = (p.xpInLevel || 0) + '%';
+    if (fill) fill.style.width = xpPct(p) + '%';
   } else {
     body.innerHTML = `
       <div class="pb-ava">👤</div>
@@ -197,7 +198,7 @@ async function openMyInfo() {
       <div class="mi-ava" style="color:${p.rankColor}">${p.rankIcon}</div>
       <div class="mi-info">
         <div class="mi-nick${ncClass(p.nickColor)}">${esc(p.nick)} ${canNick ? '<button class="pc-icon" onclick="closeMyInfo();openNickModal()" title="닉네임 바꾸기">✏️</button>' : ''}</div>
-        <div class="mi-line">Lv.<b>${p.level}</b> (XP ${p.xpInLevel}/100) · <span style="color:${p.rankColor}">${esc(p.rank)}</span> <b>${p.rp} RP</b></div>
+        <div class="mi-line">Lv.<b>${p.level}</b> (XP ${p.xpInLevel}/${p.xpNeeded}) · <span style="color:${p.rankColor}">${esc(p.rank)}</span> <b>${p.rp} RP</b></div>
         <div class="mi-line"><b>${p.wins}승 ${p.losses}패</b> · 승률 ${p.winRate}%</div>
         <div class="mi-badges">
           <span class="pb-coin pb-badge">🪙 ${p.coins || 0}</span>
@@ -280,6 +281,7 @@ function showRewards() {
   if (r.levelUp) { add('bd-level', `⬆️ 레벨 업! Lv.${r.levelUp}`, d); d += 250; playSound('setwin'); }
   if (r.rankUp) { add('bd-rank', `👑 승급! ${r.rankUp}`, d); d += 250; playSound('setwin'); }
   (r.missions || []).forEach(m => { add('bd-first', `🎯 미션 완료: ${m.name} +${m.reward}`, d); d += 250; });
+  (r.milestones || []).forEach(m => { add('bd-rank', `${m.icon} ${m.label}`, d); d += 250; playSound('setwin'); });
   (r.titles || []).forEach(t => { add('bd-rank', `${t.icon} 칭호 획득! ${t.name}`, d); d += 250; playSound('setwin'); });
   if (r.blocked) {
     const msg = r.reason === 'short' ? '너무 짧은 판 — 보상 없음'
@@ -484,20 +486,32 @@ const shopIcon = it => CBP[it.id]
 // 장착 슬롯: 상점 타입 → 프로필 필드
 const EQUIP_SLOT = { cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace' };
 let shopSelId = null;
+// 마일스톤 아이템은 보유/티켓 있을 때만 상점에 노출
+function shopVisible() {
+  const items = (myAccount && myAccount.items) || {};
+  return (shopItems || []).filter(it => {
+    if (it.id === 'np_lv50') return !!items.np_lv50;
+    if (it.id === 'dye_rare') return (items.dye_rare_ticket || 0) > 0;
+    return true;
+  });
+}
 function renderShop() {
   document.getElementById('shopCoins').textContent = `🪙 ${myAccount ? myAccount.coins : 0}`;
   const list = document.getElementById('shopList');
-  if (!shopItems || !shopItems.length) { list.innerHTML = '<div class="lb-empty">상점을 불러오지 못했어요. 잠시 후 다시 열어주세요.</div>'; return; }
-  if (!shopSelId) shopSelId = shopItems[0].id;
+  const vis = shopVisible();
+  if (!vis.length) { list.innerHTML = '<div class="lb-empty">상점을 불러오지 못했어요. 잠시 후 다시 열어주세요.</div>'; return; }
+  if (!shopSelId || !vis.some(x => x.id === shopSelId)) shopSelId = vis[0].id;
   list.innerHTML = '';
-  shopItems.forEach(it => {
+  vis.forEach(it => {
     const owned = myAccount.items && myAccount.items[it.id];
     const tile = document.createElement('div');
     tile.className = 'shop-tile' + (shopSelId === it.id ? ' sel' : '');
     let pr;
-    if (EQUIP_SLOT[it.type] && owned) pr = `<span class="pr own">${myAccount[EQUIP_SLOT[it.type]] === it.id ? '장착 중' : '보유'}</span>`;
+    if (it.type === 'dye_rare') pr = `<span class="pr own">확정권 x${(myAccount.items || {}).dye_rare_ticket || 0}</span>`;
+    else if (EQUIP_SLOT[it.type] && owned) pr = `<span class="pr own">${myAccount[EQUIP_SLOT[it.type]] === it.id ? '장착 중' : '보유'}</span>`;
     else if (it.type === 'emotes' && owned) pr = `<span class="pr own">보유</span>`;
     else pr = `<span class="pr">🪙 ${it.price}</span>${it.type === 'ticket' && owned ? `<span class="pr own">x${owned}</span>` : ''}`;
+    tile.dataset.id = it.id;
     tile.innerHTML = `<span class="ico">${shopIcon(it)}</span><span class="nm">${it.name}</span>${pr}`;
     tile.onclick = () => shopSelect(it.id);
     list.appendChild(tile);
@@ -516,7 +530,11 @@ function shopSelect(id, keep) {
   const btn = document.getElementById('ssBtn');
   btn.style.display = '';
   btn.disabled = false; btn.className = 'shop-buy';
-  if (EQUIP_SLOT[it.type] && owned) {
+  if (it.type === 'dye_rare') {
+    const n = (myAccount.items || {}).dye_rare_ticket || 0;
+    btn.textContent = `사용하기 (확정권 x${n})`;
+    btn.onclick = () => buyShopItem(it.id);
+  } else if (EQUIP_SLOT[it.type] && owned) {
     const on = myAccount[EQUIP_SLOT[it.type]] === it.id;
     btn.textContent = on ? '장착 해제' : '장착하기';
     btn.onclick = () => equipBack(it.id, on, it.type);
@@ -528,7 +546,7 @@ function shopSelect(id, keep) {
   }
 }
 function renderShopTiles() {   // 선택 표시만 갱신 (전체 재생성 없이)
-  document.querySelectorAll('.shop-tile').forEach((t, i) => t.classList.toggle('sel', shopItems[i] && shopItems[i].id === shopSelId));
+  document.querySelectorAll('.shop-tile').forEach(t => t.classList.toggle('sel', t.dataset.id === shopSelId));
 }
 async function buyShopItem(itemId) {
   const msg = document.getElementById('shopMsg');
@@ -793,12 +811,24 @@ function toggleEmotes(force) {
   const show = force === undefined ? !p.classList.contains('show') : force;
   p.classList.toggle('show', show);
 }
+let emoteMuted = false;              // 상대 이모트 차단
+let lastEmoteSent = 0;               // 로컬 쿨타임(서버와 동일 3초)
+function toggleEmoteMute() {
+  emoteMuted = !emoteMuted;
+  const b = document.getElementById('emoteMuteBtn');
+  if (b) { b.classList.toggle('muted', emoteMuted); b.textContent = emoteMuted ? '🔇 상대 차단됨' : '🔔 상대 이모트'; }
+  toast(emoteMuted ? '🔇 상대 이모트를 차단했어요' : '🔔 상대 이모트를 다시 봐요', 1600);
+}
 function sendEmote(emoji) {
+  const now = Date.now();
+  if (now - lastEmoteSent < 3000) { toast('⏳ 이모트는 3초에 한 번만 보낼 수 있어요', 1400); return; }
+  lastEmoteSent = now;
   socket.emit('emote', { emoji });
   showEmote(emoji, 'me');
   toggleEmotes(false);
 }
-socket.on('emote', ({ emoji }) => showEmote(emoji, 'opp'));
+socket.on('emote', ({ emoji }) => { if (!emoteMuted) showEmote(emoji, 'opp'); });
+socket.on('emote_cooldown', () => { lastEmoteSent = Date.now(); });   // 서버 쿨타임 동기화
 function showEmote(emoji, side) {
   playSound('emote');
   const anchor = document.getElementById(side === 'me' ? 'myHand' : 'oppHand');
@@ -1220,7 +1250,7 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
   renderGameOverStats(winner, byProgress ? null : setKind, mi);
   // 게스트가 이겼으면 회원 전환 유도
   if (!myAccount && winner === mi) {
-    const lost = isVsBot ? (difficulty === 'expert' ? 150 : difficulty === 'easy' ? 10 : 30) : 50;
+    const lost = isVsBot ? (difficulty === 'expert' ? 40 : difficulty === 'easy' ? 5 : 15) : 60;
     setTimeout(() => toast(`💡 로그인했다면 <b style="color:#ffd94a">🪙 ${lost}</b>을 받았을 거예요!<br>가입하고 보상을 모아보세요`, 3600), delay + 700);
   }
   // 몰수 게임은 방이 사라져서 재대결 불가

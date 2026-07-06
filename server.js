@@ -829,6 +829,9 @@ io.on('connection', (socket) => {
   socket.on('emote', ({ emoji } = {}) => {
     const room = rooms[socket.roomId]; if (!room) return;
     const e = String(emoji || '').slice(0, 8); if (!e) return;
+    const now = Date.now();
+    if (now - (socket.lastEmote || 0) < 3000) return socket.emit('emote_cooldown');   // 3초 쿨타임 (도배 방지)
+    socket.lastEmote = now;
     room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('emote', { emoji: e }); });
   });
 

@@ -65,8 +65,20 @@ function hashPw(pw, salt) { return crypto.scryptSync(pw, salt, 32).toString('hex
 function makeToken() { return crypto.randomBytes(24).toString('hex'); }
 
 // ── 레벨 / 랭크 ──
-function levelOf(xp) { return 1 + Math.floor(xp / 100); }
-function xpInLevel(xp) { return xp % 100; }              // 0~99 (다음 레벨까지 100)
+// 현재 레벨에서 다음 레벨까지 필요한 XP (누진 곡선)
+function xpForNext(level) {
+  if (level < 10) return level * 50 + 50;
+  if (level < 20) return level * 100;
+  return level * 150;
+}
+// 누적 XP → { level, inLevel(현재 레벨 진척), need(다음 레벨까지) } — While 루프로 잉여 이월
+function levelInfo(totalXp) {
+  let level = 1, rem = Math.max(0, Math.floor(totalXp || 0));
+  while (rem >= xpForNext(level)) { rem -= xpForNext(level); level++; }
+  return { level, inLevel: rem, need: xpForNext(level) };
+}
+function levelOf(xp) { return levelInfo(xp).level; }
+function xpInLevel(xp) { return levelInfo(xp).inLevel; }
 const RANKS = [
   { rp: 0,    name: '브론즈',   icon: '🥉', color: '#b08d57' },
   { rp: 100,  name: '실버',     icon: '🥈', color: '#b8c0cc' },
@@ -84,7 +96,7 @@ function profileOf(u) {
   return {
     id: u.id, nick: u.nick, guest: false,
     nickLocked: !(u.provider === 'kakao' && !u.nickSet),   // false면 아직 닉 설정 기회 남음
-    level: levelOf(u.xp), xp: u.xp, xpInLevel: xpInLevel(u.xp),
+    level: levelOf(u.xp), xp: u.xp, xpInLevel: xpInLevel(u.xp), xpNeeded: levelInfo(u.xp).need,
     rp: u.rp, rank: rank.name, rankIcon: rank.icon, rankColor: rank.color,
     wins: u.wins, losses: u.losses,
     winRate: total ? Math.round(u.wins / total * 100) : 0,
@@ -176,7 +188,9 @@ const SHOP = {
   np_wood:  { name: '나무 명패',   icon: '🪵', price: 400,  type: 'plate', desc: '닉네임을 감싸는 소박한 나무 명패' },
   np_neon:  { name: '네온 명패',   icon: '💜', price: 800,  type: 'plate', desc: '보랏빛으로 빛나는 네온 명패' },
   np_gold:  { name: '황금 명패',   icon: '🏅', price: 1000, type: 'plate', desc: '번쩍번쩍 황금 명패' },
-  np_daily: { name: '행운의 명패', icon: '🍀', price: 1500, type: 'plate', desc: '장착 중이면 매일 출석 보상 +20🪙' },
+  np_daily: { name: '행운의 명패', icon: '🍀', price: 1500, type: 'plate', desc: '장착 중이면 매일 출석 보상 +50🪙' },
+  np_lv50:  { name: '레벨50 한정 명패', icon: '🎖️', price: 0, type: 'plate', milestone: true, desc: '레벨 50 달성자만 얻는 한정판 명패' },
+  dye_rare: { name: '희귀 염색약 확정권', icon: '💎', price: 0, type: 'dye_rare', milestone: true, desc: '희귀 색상(청록·핑크·라임) 확정 — 레벨20 보상' },
   tbl_blue:  { name: '블루 테이블',   icon: '🔵', price: 600,  type: 'table', desc: '차분한 심해 블루 테이블' },
   tbl_purple:{ name: '퍼플 테이블',   icon: '🟣', price: 700,  type: 'table', desc: '고급스러운 자주빛 테이블' },
   tbl_gold:  { name: '골드 테이블',   icon: '🟡', price: 1200, type: 'table', desc: '럭셔리 카지노 골드 테이블' },
@@ -197,6 +211,31 @@ function rollDye() {
   for (const d of DYE_POOL) { x -= d.w; if (x <= 0) return d.key; }
   return 'red';
 }
+const RARE_DYES = ['cyan', 'pink', 'lime'];   // 희귀 등급 (레벨20 확정권)
+function rollRareDye() { return RARE_DYES[Math.floor(Math.random() * RARE_DYES.length)]; }
+
+// ── 레벨 마일스톤 보상 (최초 1회) ──
+const MILESTONES = {
+  10: { icon: '🪙', label: 'Lv.10 달성 — 코인 300', coins: 300 },
+  20: { icon: '💎', label: 'Lv.20 달성 — 희귀 염색약 확정권', ticket: 'dye_rare_ticket' },
+  50: { icon: '🎖️', label: 'Lv.50 달성 — 한정판 명패', plate: 'np_lv50' },
+};
+function grantMilestones(u) {
+  u.milestones = u.milestones || {};
+  const level = levelOf(u.xp);
+  const got = [];
+  for (const key of Object.keys(MILESTONES)) {
+    const lv = +key;
+    if (level < lv || u.milestones[lv]) continue;   // 미도달 or 이미 수령
+    u.milestones[lv] = true;
+    const m = MILESTONES[lv];
+    if (m.coins) u.coins = (u.coins || 0) + m.coins;
+    if (m.ticket) { u.items = u.items || {}; u.items[m.ticket] = (u.items[m.ticket] || 0) + 1; }
+    if (m.plate) { u.items = u.items || {}; u.items[m.plate] = true; }   // 인벤토리 지급 (상점서 장착)
+    got.push({ level: lv, icon: m.icon, label: m.label });
+  }
+  return got;
+}
 function shopList() {
   return Object.entries(SHOP).map(([id, it]) => ({ id, ...it }));
 }
@@ -213,6 +252,15 @@ function buyItem(token, itemId) {
 function doBuy(idl, u, itemId) {
   const it = SHOP[itemId]; if (!it) return { error: '없는 상품이에요.' };
   u.items = u.items || {}; u.coins = u.coins || 0;
+  // 희귀 염색약 확정권 사용 (레벨20 보상 티켓 소모)
+  if (it.type === 'dye_rare') {
+    if (!(u.items.dye_rare_ticket > 0)) return { error: '희귀 염색약 확정권이 없어요.' };
+    u.items.dye_rare_ticket--;
+    const dye = rollRareDye(); u.nickColor = dye;
+    persist(idl);
+    return { ok: true, profile: profileOf(u), dye };
+  }
+  if (it.milestone) return { error: '레벨 보상으로만 얻을 수 있어요.' };   // 마일스톤 아이템은 구매 불가
   if ((it.type === 'cardback' || it.type === 'emotes' || it.type === 'plate' || it.type === 'table' || it.type === 'cardface') && u.items[itemId]) return { error: '이미 보유한 아이템이에요.' };
   if (u.coins < it.price) return { error: `코인이 부족해요. (보유 ${u.coins} / 필요 ${it.price})` };
   u.coins -= it.price;
@@ -314,6 +362,7 @@ const PLATE_DAILY_BONUS = 50;  // 🍀 행운의 명패 착용 시 출석 추가
 const MIN_TURNS = 5, MIN_PLAYTIME = 60;   // 진행 조건 필터
 const MATCH_LIMIT = 3;         // 같은 상대와 하루 보상 인정 판수
 const DECAY_RANK_RP = 900, DECAY_DAYS = 3, DECAY_PER_DAY = 10;   // 다이아 이상 미접속 감소
+const PLATE_RP_WEIGHT = 10;    // 플래티넘(500+) 3연승 이상 RP 가중치
 
 // ── 시간 (KST 자정 기준) ──
 const KST = 9 * 3600 * 1000;
@@ -493,12 +542,17 @@ function recordResult(token, result, opts = {}) {
     if (opts.vsBot && result === 'loss' && (u.aiLossStreak || 0) >= 3) coins = 0;   // 고의 패작 방지
     if (winnable && u.lastWinIdx !== today) { firstWin = FIRST_WIN_BONUS; u.lastWinIdx = today; }   // 하루 첫 승
     if (winnable && u.winStreak >= 2) streak = Math.min((u.winStreak - 1) * 10, 50);                // 연승 보너스
+    // 플래티넘(500+) 양학 방지: 멀티 3연승 이상 시 RP 가중치 +10 → 강자를 빠르게 상위 티어로
+    if (!opts.vsBot && result === 'win' && u.winStreak >= 3 && (u.rp || 0) >= 500) rp += PLATE_RP_WEIGHT;
   }
   coins += firstWin + streak;
 
   u.xp += xp;
   u.coins = Math.max(0, (u.coins || 0) + coins);
   if (rp) u.rp = Math.max(0, u.rp + rp);
+
+  // 레벨 마일스톤 (Lv10/20/50 최초 1회) — XP 반영 후 검사
+  const milestones = grantMilestones(u);
 
   // 최근 전적 (최대 10)
   u.history = u.history || [];
@@ -522,7 +576,7 @@ function recordResult(token, result, opts = {}) {
       coins, xp, rp, firstWin, streak, streakCount: u.winStreak, blocked, reason,
       levelUp: afterLevel > beforeLevel ? afterLevel : 0,
       rankUp: (afterRank !== beforeRank && rp > 0) ? afterRank : 0,
-      missions, titles,
+      missions, titles, milestones,
     },
   };
 }

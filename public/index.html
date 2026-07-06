@@ -203,9 +203,10 @@
       background:linear-gradient(180deg, #3a1018 0%, #240a10 100%);
       border:1.5px solid #b98d34; border-bottom:none; border-radius:18px 18px 0 0;
       box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 -8px 30px rgba(0,0,0,.55);
+      overflow:hidden;   /* 상단 XP 게이지가 둥근 모서리 밖으로 삐져나오지 않게 */
     }
     #profileBar:hover { filter:brightness(1.1); }
-    .pb-xp { height:5px; background:#1a0810; overflow:hidden; }
+    .pb-xp { height:5px; background:#1a0810; overflow:hidden; border-radius:16px 16px 0 0; }
     .pb-xpfill { height:100%; width:0%; background:linear-gradient(90deg,#c8912e,#ffd97a); transition:width .5s; }
     .pb-body { display:flex; align-items:center; gap:11px; padding:10px 16px 12px; }
     .pb-ava {
@@ -263,11 +264,12 @@
     .shop-tile .pr.own { color:#7dd87d; }
     .shop-tile .shop-cbprev { width:34px; height:47px; }
     /* ── 명패 (닉네임 장식) ── */
-    .np-wood, .np-neon, .np-gold, .np-daily { padding:1px 9px; border-radius:8px; display:inline-block; }
+    .np-wood, .np-neon, .np-gold, .np-daily, .np-lv50 { padding:1px 9px; border-radius:8px; display:inline-block; }
     .np-wood  { background:linear-gradient(135deg,#5a3f24,#3c2a16); border:1px solid #8a6a3a; }
     .np-neon  { background:#160b26; border:1px solid #c39bff; box-shadow:0 0 9px rgba(195,155,255,.55); }
     .np-gold  { background:linear-gradient(135deg,#6a5312,#a8850f); border:1px solid #ffd94a; box-shadow:0 0 8px rgba(255,215,80,.4); }
     .np-daily { background:linear-gradient(135deg,#14532d,#166534); border:1px solid #4ade80; }
+    .np-lv50  { background:linear-gradient(135deg,#4a148c,#b8860b); border:1px solid #ffd94a; box-shadow:0 0 10px rgba(184,134,11,.6); }
     /* ── 칭호 태그 ── */
     .title-tag { font-size:.62rem; font-weight:800; margin-left:6px; white-space:nowrap; }
     .pb-nickrow { display:flex; align-items:center; min-width:0; }
@@ -672,6 +674,13 @@
       font-size:1.35rem; cursor:pointer; transition:transform .1s, background .1s;
     }
     #emotePicker button:hover { background:rgba(200,160,0,.15); transform:scale(1.15); }
+    #emotePicker .emote-mute {
+      grid-column:1/-1; width:auto; height:32px; font-size:.8rem; font-weight:600;
+      color:#c8a86a; background:rgba(0,0,0,.25); border:1px solid rgba(185,141,52,.3);
+      border-radius:9px; margin-top:2px; white-space:nowrap;
+    }
+    #emotePicker .emote-mute:hover { transform:none; background:rgba(185,141,52,.18); }
+    #emotePicker .emote-mute.muted { color:#ff9a9a; background:rgba(140,30,45,.35); border-color:rgba(200,80,80,.4); }
 
     /* 날아가는 이모트 버블 (뜨고 조금 머물다 사라짐) */
     .emote-bubble {
@@ -1242,17 +1251,17 @@
       <button class="diff-card d-easy" onclick="soloPlay('easy')">
         <span class="dc-stars">★<i>★★</i></span>
         <span class="dc-name">쉬움</span>
-        <span class="dc-reward">승리 🪙10</span>
+        <span class="dc-reward">승리 🪙5</span>
       </button>
       <button class="diff-card d-hard" onclick="soloPlay('hard')">
         <span class="dc-stars">★★<i>★</i></span>
         <span class="dc-name">보통</span>
-        <span class="dc-reward">승리 🪙30</span>
+        <span class="dc-reward">승리 🪙15</span>
       </button>
       <button class="diff-card d-expert" onclick="soloPlay('expert')">
         <span class="dc-crown">👑</span>
         <span class="dc-name">전문가</span>
-        <span class="dc-reward">승리 🪙150</span>
+        <span class="dc-reward">승리 🪙40</span>
       </button>
     </div>
     <button class="btn btn-outline" onclick="closeModePanels()">닫기</button>
@@ -1386,6 +1395,7 @@
       <button onclick="sendEmote('🤔')">🤔</button>
       <button onclick="sendEmote('😏')">😏</button>
       <button onclick="sendEmote('😭')">😭</button>
+      <button id="emoteMuteBtn" class="emote-mute" onclick="toggleEmoteMute()" title="상대 이모트 차단">🔔 상대 이모트</button>
     </div>
   </div>
   <!-- 내 시간은 내 프로필 위 -->
