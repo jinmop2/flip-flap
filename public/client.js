@@ -85,14 +85,8 @@ async function apiPost(url, body) {
   try { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
   catch (_) { return { error: '서버 연결 실패' }; }
 }
-function openAuth(mode) {
-  authMode = mode || 'login'; setAuthMode(authMode);
-  document.getElementById('authErr').textContent = '';
-  // 마지막 로그인 아이디 기억
-  const last = localStorage.getItem('ff_lastid');
-  if (last && !document.getElementById('authId').value) document.getElementById('authId').value = last;
-  document.getElementById('authModal').classList.add('show');
-}
+// 로그인 요청 → 타이틀 화면(구글/카카오/게스트)로 통일 (아이디/비번 로그인은 제거)
+function openAuth() { if (typeof showTitle === 'function') showTitle(); }
 function closeAuth() { document.getElementById('authModal').classList.remove('show'); }
 function setAuthMode(m) {
   authMode = m;
@@ -119,6 +113,7 @@ async function submitAuth() {
 function logout() {
   localStorage.removeItem('ff_auth'); myAccount = null;
   socket.emit('auth', { token: null }); renderAccount();
+  if (typeof showTitle === 'function') showTitle();   // 로그아웃 → 타이틀 화면으로
 }
 // 범용 토스트 (화면 상단 중앙에 잠깐 떴다 사라짐)
 let toastTimer = null;
@@ -312,11 +307,21 @@ let kakaoFirstLogin = false;
     setTimeout(() => alert('⚠️ ' + msg), 300);
   }
 })();
+// ── 타이틀 화면 (구글/카카오/게스트 선택) ──
+function hideTitle() { const t = document.getElementById('title'); if (t) t.classList.add('hide'); }
+function showTitle() { const t = document.getElementById('title'); if (t) t.classList.remove('hide'); }
+function startAsGuest() { hideTitle(); }   // 게스트 닉은 이미 자동 배정됨
+const cameFromOAuth = kakaoFirstLogin || location.href.includes('ktoken');   // 방금 로그인하고 돌아온 경우
+
 renderAccount();   // 게스트 상태로 하단 바 먼저 렌더
-restoreSession().then(() => { if (kakaoFirstLogin && myAccount) openNickModal(); });   // 첫 카카오 로그인 → 닉 정하기
-// 서버에 카카오 로그인이 설정 안 됐으면 버튼 숨김
-fetch('/api/kakao-enabled').then(r => r.json()).then(d => {
-  if (!d.enabled) { const b = document.getElementById('kakaoLoginBtn'); if (b) { b.style.display = 'none'; const o = document.querySelector('.auth-or'); if (o) o.style.display = 'none'; } }
+restoreSession().then(() => {
+  if (kakaoFirstLogin && myAccount) openNickModal();
+  if (myAccount) hideTitle();   // 이미 로그인돼 있으면 타이틀 건너뜀
+});
+// 설정된 소셜 로그인 버튼만 타이틀에 노출
+fetch('/api/auth-config').then(r => r.json()).then(d => {
+  if (d.google) { const b = document.getElementById('titleGoogle'); if (b) b.style.display = 'flex'; }
+  if (d.kakao)  { const b = document.getElementById('titleKakao');  if (b) b.style.display = 'flex'; }
 }).catch(() => {});
 
 // ── 빠른 대전 (자동 매칭) ───────────────────────────────────

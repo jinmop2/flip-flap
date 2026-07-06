@@ -56,8 +56,37 @@ app.post('/api/equip', rateLimit(30), (req, res) => { const { token, itemId, kin
 // ── 카카오 간편로그인 (REST 키는 환경변수 KAKAO_REST_KEY) ──
 const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY || '';
 const KAKAO_CLIENT_SECRET = process.env.KAKAO_CLIENT_SECRET || '';   // 콘솔 [카카오 로그인>고급]의 Client Secret
+// ── 구글 로그인 (환경변수 GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET) ──
+const GOOGLE_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 function baseURL(req) { return `${req.protocol}://${req.get('host')}`; }
-app.get('/api/kakao-enabled', (req, res) => res.json({ enabled: !!KAKAO_REST_KEY }));
+// 어떤 소셜 로그인이 설정됐는지 클라에 알림 (미설정 버튼은 숨김)
+app.get('/api/auth-config', (req, res) => res.json({ kakao: !!KAKAO_REST_KEY, google: !!GOOGLE_ID }));
+app.get('/api/kakao-enabled', (req, res) => res.json({ enabled: !!KAKAO_REST_KEY }));   // 하위호환
+app.get('/auth/google', rateLimit(30), (req, res) => {
+  if (!GOOGLE_ID) return res.redirect('/#kerr=' + encodeURIComponent('구글 로그인이 아직 설정되지 않았어요'));
+  const redirect = encodeURIComponent(baseURL(req) + '/auth/google/callback');
+  const p = new URLSearchParams({ client_id: GOOGLE_ID, redirect_uri: baseURL(req) + '/auth/google/callback', response_type: 'code', scope: 'openid email profile', prompt: 'select_account' });
+  res.redirect('https://accounts.google.com/o/oauth2/v2/auth?' + p.toString());
+});
+app.get('/auth/google/callback', rateLimit(30), async (req, res) => {
+  try {
+    const code = String(req.query.code || '');
+    if (!code || !GOOGLE_ID) return res.redirect('/#kerr=' + encodeURIComponent('구글 인증이 취소됐어요'));
+    const tr = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'authorization_code', client_id: GOOGLE_ID, client_secret: GOOGLE_SECRET, redirect_uri: baseURL(req) + '/auth/google/callback', code }),
+    });
+    const tok = await tr.json();
+    if (!tok.access_token) { console.error('구글 토큰 실패:', JSON.stringify(tok)); return res.redirect('/#kerr=' + encodeURIComponent('구글 인증에 실패했어요')); }
+    const ur = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', { headers: { Authorization: 'Bearer ' + tok.access_token } });
+    const gu = await ur.json();
+    if (!gu.id) { console.error('구글 유저 조회 실패:', JSON.stringify(gu)); return res.redirect('/#kerr=' + encodeURIComponent('구글 정보를 가져오지 못했어요')); }
+    const nick = gu.name || (gu.email ? gu.email.split('@')[0] : '플레이어');
+    const out = accounts.googleLogin(gu.id, nick);
+    res.redirect('/#ktoken=' + out.token + (out.isNew ? '&knew=1' : ''));
+  } catch (e) { console.error('구글 콜백 오류:', e.message); res.redirect('/#kerr=' + encodeURIComponent('구글 로그인 중 오류가 났어요')); }
+});
 app.get('/auth/kakao', rateLimit(30), (req, res) => {
   if (!KAKAO_REST_KEY) return res.redirect('/#kerr=' + encodeURIComponent('카카오 로그인이 아직 설정되지 않았어요'));
   const redirect = encodeURIComponent(baseURL(req) + '/auth/kakao/callback');

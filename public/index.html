@@ -140,6 +140,29 @@
     .shop-buy:disabled { opacity:.45; cursor:default; }
     /* 결과 보상 */
     #goRewards { display:none; font-size:.95rem; font-weight:700; color:#ffd94a; margin:4px 0 2px; letter-spacing:.5px; }
+    /* ── 타이틀 화면 (로그인 선택) ── */
+    #title {
+      position:fixed; inset:0; z-index:90; background:
+        radial-gradient(ellipse at 50% 35%, #2a1230 0%, #120818 72%);
+      display:flex; align-items:center; justify-content:center; padding:24px;
+      transition:opacity .4s;
+    }
+    #title.hide { opacity:0; pointer-events:none; }
+    .title-mid { display:flex; flex-direction:column; align-items:center; gap:26px; width:100%; max-width:340px; }
+    .logo.big h1, .logo.big .flap { font-size:4.6rem; }
+    .title-btns { display:flex; flex-direction:column; gap:11px; width:100%; }
+    .social-btn {
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      width:100%; padding:14px 16px; border-radius:13px; cursor:pointer;
+      font-family:'Fredoka'; font-size:1rem; font-weight:700; border:none; transition:transform .12s, filter .12s;
+    }
+    .social-btn:hover { transform:translateY(-2px); filter:brightness(1.05); }
+    .social-btn:active { transform:translateY(0); }
+    .social-btn.google { background:#fff; color:#3c4043; box-shadow:0 3px 12px rgba(0,0,0,.35); }
+    .social-btn.kakao  { background:#FEE500; color:#191919; }
+    .social-btn.kakao .kbubble { font-size:1.1rem; }
+    .social-btn.guest  { background:rgba(255,255,255,.08); color:#c8bcc4; border:1.5px solid #3a2a48; }
+    .title-note { font-size:.74rem; color:#8a7a98; text-align:center; margin-top:-6px; }
     /* ── 로딩 스플래시 ── */
     #splash {
       position:fixed; inset:0; z-index:100; background:
@@ -1047,6 +1070,29 @@
       made by <b>Mongdung Games</b><br>
       contact us · jinmo9@yonsei.ac.kr
     </div>
+  </div>
+</div>
+
+<!-- 타이틀 화면 (로그인/게스트 선택) -->
+<div id="title">
+  <div class="title-mid">
+    <div class="logo big">
+      <h1>FLIP</h1><div class="flap">FLAP</div>
+      <p class="sub">경매 · 블러핑 · 심리전</p>
+    </div>
+    <div class="title-btns">
+      <button class="social-btn google" id="titleGoogle" style="display:none" onclick="location.href='/auth/google'">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.3 9.14 5.38 12 5.38z"/></svg>
+        <span>Google로 시작</span>
+      </button>
+      <button class="social-btn kakao" id="titleKakao" style="display:none" onclick="location.href='/auth/kakao'">
+        <span class="kbubble">💬</span><span>카카오로 시작</span>
+      </button>
+      <button class="social-btn guest" onclick="startAsGuest()">
+        <span>게스트로 시작</span>
+      </button>
+    </div>
+    <p class="title-note">로그인하면 랭크·코인·전적이 저장돼요</p>
   </div>
 </div>
 

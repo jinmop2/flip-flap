@@ -258,12 +258,13 @@ function uniqueNick(base) {
   return 'P' + (Date.now() % 1000000);
 }
 // kakaoId(카카오 회원번호)로 계정 찾기 — 없으면 자동 가입
-function kakaoLogin(kakaoId, kNick) {
-  const idl = 'kakao_' + String(kakaoId);
+// 소셜 로그인 공통 (provider: 'kakao'|'google', extId: 소셜 고유번호) — 없으면 자동 가입
+function socialLogin(provider, extId, extNick) {
+  const idl = provider + '_' + String(extId);
   let u = db.users[idl];
   if (!u) {
-    const nick = uniqueNick(kNick);
-    u = { id: idl, nick, nickSet: false, provider: 'kakao', token: makeToken(), tokenExp: Date.now() + TOKEN_TTL, wins: 0, losses: 0, xp: 0, rp: 0, createdAt: Date.now() };   // 닉은 첫 로그인 모달에서 확정
+    const nick = uniqueNick(extNick);
+    u = { id: idl, nick, nickSet: false, provider, token: makeToken(), tokenExp: Date.now() + TOKEN_TTL, wins: 0, losses: 0, xp: 0, rp: 0, createdAt: Date.now() };   // 닉은 첫 로그인 모달에서 확정
     db.users[idl] = u; db.nickTaken[nick.toLowerCase()] = idl; tokenIndex[u.token] = idl; persist(idl);
     return { ok: true, token: u.token, profile: profileOf(u), isNew: true };
   }
@@ -272,6 +273,8 @@ function kakaoLogin(kakaoId, kNick) {
   tokenIndex[u.token] = idl; persist(idl);
   return { ok: true, token: u.token, profile: profileOf(u) };
 }
+function kakaoLogin(kakaoId, kNick)   { return socialLogin('kakao', kakaoId, kNick); }
+function googleLogin(googleId, gNick) { return socialLogin('google', googleId, gNick); }
 
 // 랭킹 (RP 상위)
 function topPlayers(limit = 20) {
@@ -471,7 +474,7 @@ function myRank(token) {
 }
 
 module.exports = {
-  signup, login, kakaoLogin, setNick, byToken, meByToken, recordResult, claimDaily, myRank,
+  signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, claimDaily, myRank,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   missionList, titleList, betrayEvent,
 };
