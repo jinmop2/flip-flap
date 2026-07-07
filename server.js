@@ -7,6 +7,7 @@ const accounts = require('./accounts');
 const expert3 = require('./expert3');   // 전문가 AI v3 (카운팅+몬테카를로+종반탐색)
 
 app.set('trust proxy', 1);
+app.use(require('compression')());   // gzip — html/js/json 전송량 ~75% 절감
 app.use(express.json({ limit: '4kb' }));
 // 보안 헤더 (프레임 정책은 프리뷰 호환 위해 생략)
 app.use((req, res, next) => {
@@ -19,7 +20,7 @@ app.get('/health', (req, res) => res.json({ ok: true, rooms: Object.keys(rooms).
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders(res, fp) {
     if (fp.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-cache');                       // SW 갱신 즉시 감지
-    else if (/\.(png|jpg|svg|ico|mp3|woff2?)$/.test(fp)) res.setHeader('Cache-Control', 'public, max-age=604800');  // 아이콘·음악·폰트 7일 캐시
+    else if (/\.(png|jpg|svg|ico|mp3|m4a|woff2?)$/.test(fp)) res.setHeader('Cache-Control', 'public, max-age=604800');  // 아이콘·음악·폰트 7일 캐시
     else res.setHeader('Cache-Control', 'no-cache');                                            // html/js: etag 재검증(304) — 배포 즉시 반영
   },
 }));

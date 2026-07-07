@@ -778,7 +778,9 @@ function setBgmVolume(v, ramp = 0.2) {
 function startBGM() {
   if (bgmOn) return;
   bgmOn = true;
-  bgmAudio = new Audio('/bgm.mp3?v=2');   // ?v 갱신 = 캐시 우회(브라우저 7일 캐시·SW 무시)
+  // AAC(m4a, 절반 용량) 우선 — 미지원 브라우저만 mp3 폴백. ?v 갱신 = 캐시 우회
+  const canM4a = document.createElement('audio').canPlayType('audio/mp4; codecs="mp4a.40.2"');
+  bgmAudio = new Audio(canM4a ? '/bgm.m4a?v=1' : '/bgm.mp3?v=2');
   bgmAudio.loop = true;
   bgmAudio.crossOrigin = 'anonymous';
   try {
