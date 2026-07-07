@@ -391,10 +391,12 @@ function maybeCpuAct(roomId) {
       const hand = ci === 0 ? g.p1Hand : g.p2Hand;
       const acq  = ci === 0 ? g.p1Acquired : g.p2Acquired;
       const opp  = ci === 0 ? g.p2Acquired : g.p1Acquired;
+      // 난이도별 AI: expert=v3(카운팅·MC) / 보통(hard·normal)=구 전문가 / easy=기존 유지
       const card = room.difficulty === 'expert'
         ? expert3.offerV3({ hand, myAcq: acq, oppAcq: opp, center: g.auction.centerCard,
             deckLeft: g.centerDeck.length, oppHandLen: (ci === 0 ? g.p2Hand : g.p1Hand).length }, room.aiMem || (room.aiMem = expert3.createMem()))
-        : cpuChooseOffer(hand, acq);
+        : room.difficulty === 'easy' ? cpuChooseOffer(hand, acq)
+        : offerX(hand, acq, opp);
       const idx = hand.findIndex(c => c.id === card.id);
       if (idx === -1) return;
       g.auction._offeredCard = hand.splice(idx, 1)[0];
@@ -412,7 +414,8 @@ function maybeCpuAct(roomId) {
       const prize = [g.auction.centerCard, g.auction._offeredCard];
       const type = room.difficulty === 'expert'
         ? expert3.typeV3({ hand, myAcq: acq, oppAcq: opp, center: prize[0], offered: prize[1] }, room.aiMem || (room.aiMem = expert3.createMem()))
-        : cpuChooseType(hand, prize, acq, room.difficulty);
+        : room.difficulty === 'easy' ? cpuChooseType(hand, prize, acq, 'easy')
+        : typeX(hand, prize, acq, opp);
       g.auction.auctionType = type === 'close' ? 'closed' : type;   // 'open'|'closed'
       g.phase = 'bidding';
       broadcast(roomId);
@@ -437,10 +440,10 @@ function maybeCpuAct(roomId) {
       const opp  = ci === 0 ? g.p2Acquired : g.p1Acquired;
       const prize = [g.auction.centerCard, g.auction._offeredCard];
       let bid;
+      // 클로즈 후공이면 진행자 배팅 카드가 보임 → 최소 승리 배팅
+      const visOpp = (!isAuctioneer && g.auction.auctionType === 'closed')
+        ? (g.auctioneer === 1 ? g.auction.p1Bid : g.auction.p2Bid) : null;
       if (room.difficulty === 'expert') {
-        // 클로즈 후공이면 진행자 배팅 카드가 보임 → 최소 승리 배팅
-        const visOpp = (!isAuctioneer && g.auction.auctionType === 'closed')
-          ? (g.auctioneer === 1 ? g.auction.p1Bid : g.auction.p2Bid) : null;
         // 치팅 방지: 클로즈 후공이면 출품 카드를 모름
         const offered = (isAuctioneer || g.auction.auctionType === 'open') ? g.auction._offeredCard : null;
         bid = expert3.bidV3({
@@ -448,8 +451,10 @@ function maybeCpuAct(roomId) {
           auctionType: g.auction.auctionType, isAuctioneer, deckLeft: g.centerDeck.length,
           oppHandLen: (ci === 0 ? g.p2Hand : g.p1Hand).length,
         }, room.aiMem || (room.aiMem = expert3.createMem()));
+      } else if (room.difficulty === 'easy') {
+        bid = cpuDecideBid(hand, prize, acq, 'easy');
       } else {
-        bid = cpuDecideBid(hand, prize, acq, room.difficulty);
+        bid = decideBidX(hand, prize, acq, opp, visOpp, g.centerDeck.length);   // 보통 = 구 전문가
       }
       const idx = hand.findIndex(c => c.id === bid.id);
       if (idx === -1) return;
