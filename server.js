@@ -4,6 +4,7 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const path = require('path');
 const accounts = require('./accounts');
+const expert3 = require('./expert3');   // 전문가 AI v3 (카운팅+몬테카를로+종반탐색)
 
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '4kb' }));
@@ -390,7 +391,10 @@ function maybeCpuAct(roomId) {
       const hand = ci === 0 ? g.p1Hand : g.p2Hand;
       const acq  = ci === 0 ? g.p1Acquired : g.p2Acquired;
       const opp  = ci === 0 ? g.p2Acquired : g.p1Acquired;
-      const card = room.difficulty === 'expert' ? offerX(hand, acq, opp) : cpuChooseOffer(hand, acq);
+      const card = room.difficulty === 'expert'
+        ? expert3.offerV3({ hand, myAcq: acq, oppAcq: opp, center: g.auction.centerCard,
+            deckLeft: g.centerDeck.length, oppHandLen: (ci === 0 ? g.p2Hand : g.p1Hand).length }, room.aiMem || (room.aiMem = expert3.createMem()))
+        : cpuChooseOffer(hand, acq);
       const idx = hand.findIndex(c => c.id === card.id);
       if (idx === -1) return;
       g.auction._offeredCard = hand.splice(idx, 1)[0];
@@ -407,7 +411,7 @@ function maybeCpuAct(roomId) {
       const opp  = ci === 0 ? g.p2Acquired : g.p1Acquired;
       const prize = [g.auction.centerCard, g.auction._offeredCard];
       const type = room.difficulty === 'expert'
-        ? typeX(hand, prize, acq, opp)
+        ? expert3.typeV3({ hand, myAcq: acq, oppAcq: opp, center: prize[0], offered: prize[1] }, room.aiMem || (room.aiMem = expert3.createMem()))
         : cpuChooseType(hand, prize, acq, room.difficulty);
       g.auction.auctionType = type === 'close' ? 'closed' : type;   // 'open'|'closed'
       g.phase = 'bidding';
@@ -437,7 +441,13 @@ function maybeCpuAct(roomId) {
         // 클로즈 후공이면 진행자 배팅 카드가 보임 → 최소 승리 배팅
         const visOpp = (!isAuctioneer && g.auction.auctionType === 'closed')
           ? (g.auctioneer === 1 ? g.auction.p1Bid : g.auction.p2Bid) : null;
-        bid = decideBidX(hand, prize, acq, opp, visOpp, g.centerDeck.length);
+        // 치팅 방지: 클로즈 후공이면 출품 카드를 모름
+        const offered = (isAuctioneer || g.auction.auctionType === 'open') ? g.auction._offeredCard : null;
+        bid = expert3.bidV3({
+          hand, myAcq: acq, oppAcq: opp, center: g.auction.centerCard, offered, visOpp,
+          auctionType: g.auction.auctionType, isAuctioneer, deckLeft: g.centerDeck.length,
+          oppHandLen: (ci === 0 ? g.p2Hand : g.p1Hand).length,
+        }, room.aiMem || (room.aiMem = expert3.createMem()));
       } else {
         bid = cpuDecideBid(hand, prize, acq, room.difficulty);
       }
@@ -678,6 +688,7 @@ io.on('connection', (socket) => {
       rooms[roomId].profiles[1] = { nick: 'AI', guest: true, bot: true };
       rooms[roomId].game = createGame();
       rooms[roomId].startedAt = Date.now();
+      rooms[roomId].aiMem = expert3.createMem();   // 전문가 AI 카운팅 메모리
       socket.emit('game_start', { vsBot: true, difficulty, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles });
       broadcast(roomId);
       startClock(roomId);
@@ -944,6 +955,7 @@ function restartGame(roomId) {
   const room = rooms[roomId]; if (!room) return;
   room.game = createGame();
   room.startedAt = Date.now();
+  room.aiMem = expert3.createMem();   // 새 판 → AI 메모리 초기화
   room.rematch = [false, false];
   room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks, profiles: room.profiles }); });
   broadcast(roomId);
@@ -993,6 +1005,21 @@ function settle(roomId) {
   const items = [g.auction.centerCard, g.auction._offeredCard];
 
   const p1Wins = aBeatsB(p1Bid, p2Bid);
+
+  // 전문가 AI 카운팅 메모리 갱신 (리빌에서 전부 공개되는 정보만 — 치팅 아님)
+  if (room.cpuIndex !== undefined && room.difficulty === 'expert' && room.aiMem) {
+    const ci = room.cpuIndex;
+    const aiBidCard = ci === 0 ? p1Bid : p2Bid, humanBid = ci === 0 ? p2Bid : p1Bid;
+    const humanAcq = ci === 0 ? g.p2Acquired : g.p1Acquired;
+    const aiAcq = ci === 0 ? g.p1Acquired : g.p2Acquired;
+    const oppValEst = Math.max(
+      expert3.wantValue(items, humanAcq, expert3.feasibleTarget(humanAcq, aiAcq)),
+      expert3.denyValue(items, aiAcq));
+    expert3.noteSettle(room.aiMem, {
+      myBid: aiBidCard, oppBid: humanBid, offered: g.auction._offeredCard,
+      offeredByMe: g.auctioneer === ci + 1, oppValEst,
+    });
+  }
 
   // 졸개의 배신 발동 감지
   const special = (is610(p1Bid) && is21(p2Bid)) || (is610(p2Bid) && is21(p1Bid));

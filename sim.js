@@ -130,9 +130,24 @@ function decideBidX2(hand, prize, myAcq, oppAcq, visOpp, deckLeft) {
 }
 
 // ── AI 디스패처 ──
-function aiOffer(hand, myAcq, oppAcq, d){ return (d==='expertx'||d==='expertx2')?offerX(hand,myAcq,oppAcq):cpuChooseOffer(hand,myAcq); }
-function aiType(hand, prize, myAcq, oppAcq, d){ return (d==='expertx'||d==='expertx2')?typeX(hand,prize,myAcq,oppAcq):cpuChooseType(hand,prize,myAcq,d); }
-function aiBid(hand, prize, myAcq, oppAcq, type, visOpp, d, deckLeft){
+const X3 = require('./expert3.js');
+function aiOffer(hand, myAcq, oppAcq, d, ctx){
+  if (d==='expertx3') return X3.offerV3({ hand, myAcq, oppAcq, center: ctx.center, deckLeft: ctx.deckLeft, oppHandLen: ctx.oppHandLen }, ctx.mem);
+  return (d==='expertx'||d==='expertx2')?offerX(hand,myAcq,oppAcq):cpuChooseOffer(hand,myAcq);
+}
+function aiType(hand, prize, myAcq, oppAcq, d, ctx){
+  if (d==='expertx3') return X3.typeV3({ hand, myAcq, oppAcq, center: prize[0], offered: prize[1] }, ctx.mem);
+  return (d==='expertx'||d==='expertx2')?typeX(hand,prize,myAcq,oppAcq):cpuChooseType(hand,prize,myAcq,d);
+}
+function aiBid(hand, prize, myAcq, oppAcq, type, visOpp, d, deckLeft, ctx){
+  if (d==='expertx3') {
+    // 치팅 방지: 클로즈 후공이면 출품 카드를 모른다
+    const offered = ctx.isAuctioneer || type==='open' ? prize[1] : null;
+    return X3.bidV3({
+      hand, myAcq, oppAcq, center: prize[0], offered, visOpp,
+      auctionType: type, isAuctioneer: ctx.isAuctioneer, deckLeft, oppHandLen: ctx.oppHandLen,
+    }, ctx.mem);
+  }
   if (d==='expertx2') return decideBidX2(hand,prize,myAcq,oppAcq,visOpp,deckLeft);
   if (d==='expertx')  return decideBidX(hand,prize,myAcq,oppAcq,visOpp);
   return cpuDecideBid(hand,prize,myAcq,d);
@@ -146,29 +161,38 @@ function playGame(d1, d2) {
     acq:[[],[]], auctioneer:0, turns:0,
   };
   const diff=[d1,d2];
+  const mems=[X3.createMem(), X3.createMem()];   // expertx3용 카운팅 메모리
   let guard=0;
   while (guard++ < 500) {
     if (g.centerDeck.length===0) return { winner:resolveEnd(g.acq[0],g.acq[1]), turns:g.turns };
     const auc=g.auctioneer, opp=1-auc;
     const center=g.centerDeck.shift();
     if(g.hands[auc].length===0) return { winner:resolveEnd(g.acq[0],g.acq[1]), turns:g.turns };
-    const offCard=aiOffer(g.hands[auc], g.acq[auc], g.acq[opp], diff[auc]);
+    const ctxA = { mem:mems[auc], center, deckLeft:g.centerDeck.length, oppHandLen:g.hands[opp].length, isAuctioneer:true };
+    const offCard=aiOffer(g.hands[auc], g.acq[auc], g.acq[opp], diff[auc], ctxA);
     g.hands[auc].splice(g.hands[auc].indexOf(offCard),1);
     const prize=[center, offCard];
-    const type=aiType(g.hands[auc], prize, g.acq[auc], g.acq[opp], diff[auc]);
+    const type=aiType(g.hands[auc], prize, g.acq[auc], g.acq[opp], diff[auc], ctxA);
     if(g.hands[auc].length===0||g.hands[opp].length===0) return { winner:resolveEnd(g.acq[0],g.acq[1]), turns:g.turns };
     const dl = g.centerDeck.length;
     // 진행자 먼저 배팅
-    const bidA=aiBid(g.hands[auc], prize, g.acq[auc], g.acq[opp], type, null, diff[auc], dl);
+    const bidA=aiBid(g.hands[auc], prize, g.acq[auc], g.acq[opp], type, null, diff[auc], dl,
+      { mem:mems[auc], isAuctioneer:true, oppHandLen:g.hands[opp].length });
     g.hands[auc].splice(g.hands[auc].indexOf(bidA),1);
     // 후공 배팅 (클로즈면 진행자 배팅 공개)
     const visForOpp = type==='closed' ? bidA : null;
-    const bidO=aiBid(g.hands[opp], prize, g.acq[opp], g.acq[auc], type, visForOpp, diff[opp], dl);
+    const bidO=aiBid(g.hands[opp], prize, g.acq[opp], g.acq[auc], type, visForOpp, diff[opp], dl,
+      { mem:mems[opp], isAuctioneer:false, oppHandLen:g.hands[auc].length });
     g.hands[opp].splice(g.hands[opp].indexOf(bidO),1);
     // 정산
     const aucWins=aBeatsB(bidA,bidO);
     if(aucWins)g.acq[auc].push(center,offCard); else g.acq[opp].push(center,offCard);
     g.hands[opp].push(bidA); g.hands[auc].push(bidO);
+    // expertx3 메모리 갱신 (리빌에서 공개되는 정보만)
+    const valA = Math.max(X3.wantValue(prize, g.acq[auc], X3.feasibleTarget(g.acq[auc], g.acq[opp])), X3.denyValue(prize, g.acq[opp]));
+    const valO = Math.max(X3.wantValue(prize, g.acq[opp], X3.feasibleTarget(g.acq[opp], g.acq[auc])), X3.denyValue(prize, g.acq[auc]));
+    X3.noteSettle(mems[auc], { myBid:bidA, oppBid:bidO, offered:offCard, offeredByMe:true,  oppValEst:valO });
+    X3.noteSettle(mems[opp], { myBid:bidO, oppBid:bidA, offered:offCard, offeredByMe:false, oppValEst:valA });
     g.turns++;
     const s0=checkSet(g.acq[0]), s1=checkSet(g.acq[1]);
     if(s0)return{winner:0,turns:g.turns,setKind:s0};
