@@ -169,24 +169,47 @@ function playGame(d1, d2) {
     const center=g.centerDeck.shift();
     if(g.hands[auc].length===0) return { winner:resolveEnd(g.acq[0],g.acq[1]), turns:g.turns };
     const ctxA = { mem:mems[auc], center, deckLeft:g.centerDeck.length, oppHandLen:g.hands[opp].length, isAuctioneer:true };
-    const offCard=aiOffer(g.hands[auc], g.acq[auc], g.acq[opp], diff[auc], ctxA);
-    g.hands[auc].splice(g.hands[auc].indexOf(offCard),1);
-    const prize=[center, offCard];
-    const type=aiType(g.hands[auc], prize, g.acq[auc], g.acq[opp], diff[auc], ctxA);
+    // RULE=firstnooffer: 첫 경매는 출품 없이 중앙 카드만 / first2center: 첫 경매는 덱 2장 (선공 보정)
+    const noOffer = (process.env.RULE === 'firstnooffer' || process.env.RULE === 'first2center') && g.turns === 0;
+    let offCard = null;
+    if (!noOffer) {
+      offCard = aiOffer(g.hands[auc], g.acq[auc], g.acq[opp], diff[auc], ctxA);
+      g.hands[auc].splice(g.hands[auc].indexOf(offCard),1);
+    }
+    const prize = noOffer
+      ? (process.env.RULE === 'first2center' && g.centerDeck.length ? [center, g.centerDeck.shift()] : [center])
+      : [center, offCard];
+    let type=aiType(g.hands[auc], prize, g.acq[auc], g.acq[opp], diff[auc], ctxA);
+    if (process.env.RULE === 'firstopen' && g.turns === 0) type = 'open';   // 첫 경매 오픈 강제
+    if (process.env.RULE === 'allopen') type = 'open';   // 모든 경매 오픈 강제 (클로즈 요인 완전 제거 실험)
+    if (noOffer) type = 'open';   // 개장 경매: 숨길 출품이 없으니 오픈 고정 (덱 공개 + 배팅 비공개)
     if(g.hands[auc].length===0||g.hands[opp].length===0) return { winner:resolveEnd(g.acq[0],g.acq[1]), turns:g.turns };
     const dl = g.centerDeck.length;
-    // 진행자 먼저 배팅
-    const bidA=aiBid(g.hands[auc], prize, g.acq[auc], g.acq[opp], type, null, diff[auc], dl,
-      { mem:mems[auc], isAuctioneer:true, oppHandLen:g.hands[opp].length });
-    g.hands[auc].splice(g.hands[auc].indexOf(bidA),1);
-    // 후공 배팅 (클로즈면 진행자 배팅 공개)
-    const visForOpp = type==='closed' ? bidA : null;
-    const bidO=aiBid(g.hands[opp], prize, g.acq[opp], g.acq[auc], type, visForOpp, diff[opp], dl,
-      { mem:mems[opp], isAuctioneer:false, oppHandLen:g.hands[auc].length });
-    g.hands[opp].splice(g.hands[opp].indexOf(bidO),1);
+    // RULE 변형 (선후공 밸런스 실험): live=현행 / blind=클로즈도 동시 비공개 / aucsecond=클로즈에서 진행자가 후공
+    const RULE = process.env.RULE || 'live';
+    let bidA, bidO;
+    if (RULE === 'aucsecond' && type === 'closed') {
+      // 비진행자 먼저 공개 배팅 → 진행자가 보고 최소승리
+      bidO = aiBid(g.hands[opp], prize, g.acq[opp], g.acq[auc], type, null, diff[opp], dl,
+        { mem:mems[opp], isAuctioneer:false, oppHandLen:g.hands[auc].length });
+      g.hands[opp].splice(g.hands[opp].indexOf(bidO),1);
+      bidA = aiBid(g.hands[auc], prize, g.acq[auc], g.acq[opp], type, bidO, diff[auc], dl,
+        { mem:mems[auc], isAuctioneer:true, oppHandLen:g.hands[opp].length });
+      g.hands[auc].splice(g.hands[auc].indexOf(bidA),1);
+    } else {
+      // 진행자 먼저 배팅
+      bidA = aiBid(g.hands[auc], prize, g.acq[auc], g.acq[opp], type, null, diff[auc], dl,
+        { mem:mems[auc], isAuctioneer:true, oppHandLen:g.hands[opp].length });
+      g.hands[auc].splice(g.hands[auc].indexOf(bidA),1);
+      // 후공 배팅 (live: 클로즈면 진행자 배팅 공개 / blind: 항상 비공개)
+      const visForOpp = (RULE !== 'blind' && type==='closed') ? bidA : null;
+      bidO = aiBid(g.hands[opp], prize, g.acq[opp], g.acq[auc], type, visForOpp, diff[opp], dl,
+        { mem:mems[opp], isAuctioneer:false, oppHandLen:g.hands[auc].length });
+      g.hands[opp].splice(g.hands[opp].indexOf(bidO),1);
+    }
     // 정산
     const aucWins=aBeatsB(bidA,bidO);
-    if(aucWins)g.acq[auc].push(center,offCard); else g.acq[opp].push(center,offCard);
+    if(aucWins)g.acq[auc].push(...prize); else g.acq[opp].push(...prize);
     g.hands[opp].push(bidA); g.hands[auc].push(bidO);
     // expertx3 메모리 갱신 (리빌에서 공개되는 정보만)
     const valA = Math.max(X3.wantValue(prize, g.acq[auc], X3.feasibleTarget(g.acq[auc], g.acq[opp])), X3.denyValue(prize, g.acq[opp]));
@@ -197,7 +220,11 @@ function playGame(d1, d2) {
     const s0=checkSet(g.acq[0]), s1=checkSet(g.acq[1]);
     if(s0)return{winner:0,turns:g.turns,setKind:s0};
     if(s1)return{winner:1,turns:g.turns,setKind:s1};
-    g.auctioneer = 1 - g.auctioneer;   // 실제 게임처럼 진행자 매 턴 교대
+    // 진행자 교대 방식 (RULE): 기본 매턴 교대 / winnerhosts=낙찰자가 다음 진행 / loserhosts=패자가 다음 진행
+    const HOSTRULE = process.env.RULE || 'live';
+    if (HOSTRULE === 'winnerhosts') g.auctioneer = aucWins ? auc : opp;
+    else if (HOSTRULE === 'loserhosts') g.auctioneer = aucWins ? opp : auc;
+    else g.auctioneer = 1 - g.auctioneer;   // 실제 게임처럼 진행자 매 턴 교대
   }
   return { winner:-1, turns:g.turns };
 }

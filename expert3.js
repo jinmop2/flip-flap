@@ -329,6 +329,9 @@ function typeV3(view, mem) {
   const prize = [view.center, view.offered].filter(Boolean);
   const myTarget = feasibleTarget(view.myAcq, view.oppAcq);
   const myVal = Math.max(wantValue(prize, view.myAcq, myTarget), denyValue(prize, view.oppAcq));
+  // 첫 턴 진행자는 오픈: 정보 없는 1턴 클로즈는 후공 최소승리에 일방적으로 당함
+  // (시뮬 4000판: 선공 승률 36.5%→43.3%, 2턴까지 확장하면 오히려 손해라 1턴만)
+  if (view.myAcq.length + view.oppAcq.length === 0) return 'open';
   if (myVal >= 0.5) return 'open';                               // 갖고 싶다 → 내 강배팅 숨김
   const oppNeedOff = view.offered ? view.offered.kind - cnt(view.oppAcq, view.offered.kind) : 9;
   if (oppNeedOff <= 2) return 'closed';                          // 상대가 탐낼 출품 → 숨겨서 경합 차단
