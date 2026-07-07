@@ -480,9 +480,19 @@ async function openShop() {
 }
 function closeShop() { document.getElementById('shopModal').classList.remove('show'); }
 const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang', back_ruby: 'cb-ruby', back_galaxy: 'cb-galaxy' };
-const shopIcon = it => CBP[it.id]
-  ? `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`
-  : it.icon;
+const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest' };
+const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold' };
+// 상점 아이콘 = 게임 안 실물 미리보기 (카드백/테이블/카드앞면/명패/이모트/염색)
+const shopIcon = it => {
+  if (CBP[it.id])  return `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`;
+  if (TBLP[it.id]) return `<div class="shop-tblprev ${TBLP[it.id]}"></div>`;
+  if (CFP[it.id])  return `<div class="shop-cfprev ${CFP[it.id]}"><i>1</i>6</div>`;
+  if (it.type === 'plate' && NP_CLASS[it.id]) return `<span class="shop-npprev ${NP_CLASS[it.id]}">${it.id === 'np_daily' ? '🍀' : ''}닉네임</span>`;
+  if (it.type === 'emotes' && EMOTE_PACKS[it.id]) return `<span class="shop-emprev">${EMOTE_PACKS[it.id].slice(0, 3).join('')}</span>`;
+  if (it.type === 'dye')      return `<div class="shop-dyeprev"></div>`;
+  if (it.type === 'dye_rare') return `<div class="shop-dyeprev rare"></div>`;
+  return it.icon;
+};
 // 장착 슬롯: 상점 타입 → 프로필 필드
 const EQUIP_SLOT = { cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace' };
 let shopSelId = null;
