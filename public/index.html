@@ -13,6 +13,8 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="FLIP FLAP">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -128,6 +130,19 @@
     .card.back.cb-night .bf { color:#9ab0e8; }
     .card.back.cb-gold { background:linear-gradient(160deg,#4a3808,#9a7a18); border-color:#ffd94a; box-shadow:0 3px 10px rgba(200,160,0,.35); }
     .card.back.cb-gold .bf { color:#ffe9a8; }
+    .card.back.cb-ruby { background:linear-gradient(160deg,#4a0a18,#8a1830); border-color:#e05a70; box-shadow:0 3px 10px rgba(200,40,70,.35); }
+    .card.back.cb-ruby .bf { color:#ffb0c0; }
+    .card.back.cb-galaxy {
+      background:
+        radial-gradient(1px 1px at 20% 30%, #fff 50%, transparent 51%),
+        radial-gradient(1px 1px at 70% 15%, #ffe9a8 50%, transparent 51%),
+        radial-gradient(1.5px 1.5px at 45% 70%, #9ab0e8 50%, transparent 51%),
+        radial-gradient(1px 1px at 85% 55%, #fff 50%, transparent 51%),
+        radial-gradient(1px 1px at 30% 85%, #c39bff 50%, transparent 51%),
+        linear-gradient(160deg,#0a0a2a,#2a1050 60%,#0f1838);
+      border-color:#8a7aff; box-shadow:0 3px 12px rgba(120,100,255,.4);
+    }
+    .card.back.cb-galaxy .bf { color:#c8d0ff; text-shadow:0 0 6px rgba(150,160,255,.8); }
     .card.back.cb-obang {
       background:linear-gradient(150deg,var(--red) 0 22%,var(--yel) 22% 42%,#f0e8d8 42% 58%,var(--blue) 58% 78%,#2e2118 78% 100%);
       border-color:#f0e8d8;
@@ -264,12 +279,13 @@
     .shop-tile .pr.own { color:#7dd87d; }
     .shop-tile .shop-cbprev { width:34px; height:47px; }
     /* ── 명패 (닉네임 장식) ── */
-    .np-wood, .np-neon, .np-gold, .np-daily, .np-lv50 { padding:1px 9px; border-radius:8px; display:inline-block; }
+    .np-wood, .np-neon, .np-gold, .np-daily, .np-lv50, .np-ruby { padding:1px 9px; border-radius:8px; display:inline-block; }
     .np-wood  { background:linear-gradient(135deg,#5a3f24,#3c2a16); border:1px solid #8a6a3a; }
     .np-neon  { background:#160b26; border:1px solid #c39bff; box-shadow:0 0 9px rgba(195,155,255,.55); }
     .np-gold  { background:linear-gradient(135deg,#6a5312,#a8850f); border:1px solid #ffd94a; box-shadow:0 0 8px rgba(255,215,80,.4); }
     .np-daily { background:linear-gradient(135deg,#14532d,#166534); border:1px solid #4ade80; }
     .np-lv50  { background:linear-gradient(135deg,#4a148c,#b8860b); border:1px solid #ffd94a; box-shadow:0 0 10px rgba(184,134,11,.6); }
+    .np-ruby  { background:linear-gradient(135deg,#5a0a1c,#8a1830); border:1px solid #e05a70; box-shadow:0 0 9px rgba(220,70,100,.5); }
     /* ── 칭호 태그 ── */
     .title-tag { font-size:.62rem; font-weight:800; margin-left:6px; white-space:nowrap; }
     .pb-nickrow { display:flex; align-items:center; min-width:0; }
@@ -597,11 +613,14 @@
     #game.tbl-blue   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #1a3a5a 0%, #0f2438 78%, #08131f 100%); }
     #game.tbl-purple { background:radial-gradient(ellipse 90% 70% at 50% 50%, #3d2350 0%, #251533 78%, #140b1c 100%); }
     #game.tbl-gold   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #5a4410 0%, #3a2c0a 78%, #1e1605 100%); border-color:#4a3410; }
+    #game.tbl-forest { background:radial-gradient(ellipse 90% 70% at 50% 50%, #14532d 0%, #0d3a20 78%, #061f10 100%); }
     /* ── 카드 앞면 스킨 (내 시야 카드 숫자 테마) ── */
     #game.cf-neon .card .c-num { color:#6ffcff; text-shadow:0 0 8px rgba(90,240,255,.8),0 0 2px rgba(90,240,255,.9); }
     #game.cf-neon .card .c-rank { color:#ff8ef0; }
     #game.cf-classic .card .c-num { font-family:'Georgia','Times New Roman',serif; font-weight:700; color:#f4ecd8; text-shadow:0 1px 2px rgba(0,0,0,.5); }
     #game.cf-classic .card .c-rank { font-family:'Georgia',serif; }
+    #game.cf-gold .card .c-num { color:#ffd94a; text-shadow:0 0 8px rgba(255,200,60,.7),0 1px 2px rgba(0,0,0,.5); }
+    #game.cf-gold .card .c-rank { color:#ffe9a8; }
     /* 펠트 위 미세 무늬 */
     #game::before {
       content:''; position:absolute; inset:14px; border-radius:20px; pointer-events:none;
@@ -1622,12 +1641,12 @@
 </div>
 
 <!-- 튜토리얼 코치 -->
-<div id="tutBox">
-  <div class="tut-tag">🎓 튜토리얼</div>
+<div id="tutBox" onclick="tutConfirm()" style="cursor:pointer">
+  <div class="tut-tag">🎓 튜토리얼 <span style="float:right;font-size:.68rem;color:#8a7a80;font-weight:400">아무 곳이나 탭 →</span></div>
   <div id="tutText"></div>
   <div class="tut-actions">
-    <button class="btn btn-gold" onclick="tutConfirm()">알겠어요!</button>
-    <button class="tut-quit" onclick="endTutorial()">튜토리얼 종료</button>
+    <button class="btn btn-gold" onclick="event.stopPropagation(); tutConfirm()">알겠어요!</button>
+    <button class="tut-quit" onclick="event.stopPropagation(); endTutorial()">튜토리얼 종료</button>
   </div>
 </div>
 

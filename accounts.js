@@ -115,8 +115,10 @@ function profileOf(u) {
 }
 
 // ── API ──
-function validId(id)   { return /^[A-Za-z0-9_]{3,16}$/.test(id || ''); }
-function validNick(n)  { const s = String(n || '').trim(); return s.length >= 1 && s.length <= 12; }
+// __proto__/constructor 등 예약어 차단 — 객체 키로 쓰이므로 프로토타입 오염 방지
+const RESERVED_KEY = /^(__proto__|constructor|prototype|hasownproperty|tostring|valueof)$/i;
+function validId(id)   { return /^[A-Za-z0-9_]{3,16}$/.test(id || '') && !RESERVED_KEY.test(id); }
+function validNick(n)  { const s = String(n || '').trim(); return s.length >= 1 && s.length <= 12 && !RESERVED_KEY.test(s); }
 
 const TOKEN_TTL = 30 * 24 * 3600 * 1000;   // 토큰 30일 만료
 function signup(id, pw, nick) {
@@ -181,10 +183,16 @@ const SHOP = {
                  desc: '번쩍이는 황금 카드 뒷면' },
   back_obang:  { name: '오방색 카드백',       icon: '🎏', price: 1200, type: 'cardback',
                  desc: '전통 오방색 카드 뒷면' },
+  back_ruby:   { name: '루비 카드백',         icon: '❤️‍🔥', price: 700,  type: 'cardback',
+                 desc: '와인빛으로 물든 카드 뒷면' },
+  back_galaxy: { name: '은하수 카드백',       icon: '🌌', price: 1500, type: 'cardback',
+                 desc: '별이 흐르는 프리미엄 카드 뒷면' },
   emote_party: { name: '파티 이모트 팩',      icon: '🎉', price: 400,  type: 'emotes',
                  desc: '이모트 8종 추가: 🤡😈💀🎉👑🍀💢🫠' },
   emote_animal:{ name: '동물 이모트 팩',      icon: '🐾', price: 400,  type: 'emotes',
                  desc: '이모트 8종 추가: 🐶🐱🐷🐸🦊🐻🐤🦄' },
+  emote_battle:{ name: '승부사 이모트 팩',    icon: '⚔️', price: 400,  type: 'emotes',
+                 desc: '이모트 8종 추가: ⚔️🛡️😤🤯🥶🎲🎯🏆' },
   np_wood:  { name: '나무 명패',   icon: '🪵', price: 400,  type: 'plate', desc: '닉네임을 감싸는 소박한 나무 명패' },
   np_neon:  { name: '네온 명패',   icon: '💜', price: 800,  type: 'plate', desc: '보랏빛으로 빛나는 네온 명패' },
   np_gold:  { name: '황금 명패',   icon: '🏅', price: 1000, type: 'plate', desc: '번쩍번쩍 황금 명패' },
@@ -194,8 +202,11 @@ const SHOP = {
   tbl_blue:  { name: '블루 테이블',   icon: '🔵', price: 600,  type: 'table', desc: '차분한 심해 블루 테이블' },
   tbl_purple:{ name: '퍼플 테이블',   icon: '🟣', price: 700,  type: 'table', desc: '고급스러운 자주빛 테이블' },
   tbl_gold:  { name: '골드 테이블',   icon: '🟡', price: 1200, type: 'table', desc: '럭셔리 카지노 골드 테이블' },
+  tbl_forest:{ name: '그린 펠트 테이블', icon: '🟢', price: 600, type: 'table', desc: '클래식 카지노 그린 펠트' },
   face_neon: { name: '네온 카드',     icon: '🃏', price: 700,  type: 'cardface', desc: '숫자가 네온으로 빛나는 카드 앞면' },
   face_classic:{ name: '클래식 카드', icon: '♠️', price: 900,  type: 'cardface', desc: '트럼프풍 세리프 숫자 카드 앞면' },
+  face_gold: { name: '황금 숫자 카드', icon: '👑', price: 1000, type: 'cardface', desc: '숫자가 황금빛으로 빛나는 카드 앞면' },
+  np_ruby:   { name: '루비 명패',     icon: '❤️‍🔥', price: 1200, type: 'plate', desc: '와인빛으로 반짝이는 루비 명패' },
 };
 // 염색약 뽑기 풀 (weight 비율)
 const DYE_POOL = [

@@ -152,7 +152,7 @@ async function claimDaily() {
   }
 }
 const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
-const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50' };
+const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby' };
 const xpPct = p => Math.max(0, Math.min(100, Math.round((p.xpInLevel || 0) / (p.xpNeeded || 100) * 100)));
 const npClass = p => p && NP_CLASS[p] ? ' ' + NP_CLASS[p] : '';   // 명패 클래스
 const titleTag = t => t ? `<span class="title-tag" style="color:${t.color}">${t.icon} ${esc(t.name)}</span>` : '';
@@ -479,7 +479,7 @@ async function openShop() {
   renderShop();
 }
 function closeShop() { document.getElementById('shopModal').classList.remove('show'); }
-const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang' };
+const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang', back_ruby: 'cb-ruby', back_galaxy: 'cb-galaxy' };
 const shopIcon = it => CBP[it.id]
   ? `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`
   : it.icon;
@@ -596,6 +596,7 @@ async function equipBack(itemId, isOn, kind) {
 // 파티 이모트 팩 — 보유 시 피커에 추가
 const EMOTE_PACKS = {
   emote_party:  ['🤡','😈','💀','🎉','👑','🍀','💢','🫠'],
+  emote_battle: ['⚔️','🛡️','😤','🤯','🥶','🎲','🎯','🏆'],
   emote_animal: ['🐶','🐱','🐷','🐸','🦊','🐻','🐤','🦄'],
 };
 function refreshEmotes() {
@@ -907,9 +908,16 @@ function soloPlay(d) { closeModePanels(); difficulty = d; createRoom(true); }
 // 원칙: 한 번에 한 가지만, 짧게, "지금 뭘 클릭할지"를 반짝임으로 표시
 let tutorial = false, tutSeen = {}, tutTarget = null;
 const TUT_STEPS = [
+  { id: 'cards1', when: s => s.phase === 'pick',
+    pos: 'bot',
+    text: '환영해요! 🎓 먼저 <b>카드 읽는 법</b>부터.<br>가운데 <b>큰 숫자 = 종류</b>(모아야 하는 장수), 왼쪽 위 <b>작은 숫자 = 등급</b>(작을수록 강함)',
+    cards: '<div class="tut-cards"><span class="tcard k6"><i>1</i>6</span><span class="tvs">=</span><span class="twin">6짜리 · 등급 1</span></div>' },
+  { id: 'cards2', when: s => s.phase === 'pick',
+    pos: 'bot',
+    text: '🎯 목표는 하나 — <b>같은 종류를 그 숫자만큼</b> 모으면 즉시 승리! (2는 2장, 6은 6장)<br>숫자가 작을수록 장수는 적지만 <b>배팅에서 강해요</b> (2 &gt; 3 &gt; 4 &gt; 6)' },
   { id: 'pick', when: s => s.phase === 'pick' && s.pick && s.pick.myChoice == null,
     pos: 'bot', target: '#auctionItems',
-    text: '환영해요! 🎯 목표는 하나 — <b>같은 숫자 카드를 그 숫자만큼</b> 모으면 승리! (3은 3장, 6은 6장)',
+    text: '이제 <b>선공 뽑기</b>!',
     act:  '반짝이는 두 장 중 <b>한 장을 클릭</b>하세요. 강한 카드를 뽑으면 선공!' },
   { id: 'pickr', when: s => s.phase === 'pick_reveal',
     pos: 'bot',
@@ -985,7 +993,8 @@ function tutBlock(on) {
   let b = document.getElementById('tutBlocker');
   if (!b) {
     b = document.createElement('div'); b.id = 'tutBlocker';
-    b.style.cssText = 'position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.15)';
+    b.style.cssText = 'position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.15);cursor:pointer';
+    b.onclick = () => tutConfirm();   // 아무 곳이나 탭해도 다음으로
     document.body.appendChild(b);
   }
   b.style.display = on ? 'block' : 'none';
@@ -1001,11 +1010,13 @@ function tutClearGlow() {
   if (tutTarget) { tutTarget.classList.remove('tut-glow'); tutTarget = null; }
 }
 function tutConfirm() {
+  if (!tutOpen) return;                                    // 중복 탭 방지
   tutOpen = false;
   if (tutQueue.length) return tutShow(tutQueue.shift());   // 밀린 설명이 있으면 이어서 (보류 유지)
   document.getElementById('tutBox').style.display = 'none';
   tutBlock(false);
   socket.emit('tut_release');   // 체크포인트 통과 → 게임 진행 재개
+  tutTick();                    // 같은 화면에 이어질 다음 설명 (카드 읽기 → 목표 → 뽑기)
 }
 function endTutorial() {
   tutorial = false; tutQueue = []; tutOpen = false;
@@ -1330,8 +1341,8 @@ function resultReason(my, opp) {
 }
 
 // 내 테이블/카드앞면 스킨을 게임 화면에 적용 (내 시야 기준 코스메틱)
-const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold' };
-const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic' };
+const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest' };
+const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold' };
 function applyMySkins() {
   const g = document.getElementById('game'); if (!g) return;
   g.classList.remove('tbl-blue', 'tbl-purple', 'tbl-gold', 'cf-neon', 'cf-classic');
@@ -1480,7 +1491,7 @@ function renderDeck() {
 }
 
 // 상대의 카드백 스킨 (프로필에 장착 정보가 실려옴)
-const CB_CLASS = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang' };
+const CB_CLASS = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang', back_ruby: 'cb-ruby', back_galaxy: 'cb-galaxy' };
 function oppBackClass() {
   const p = gameProfiles && gameProfiles[myIndex === 1 ? 1 : 0];
   return (p && CB_CLASS[p.cardBack]) || null;
