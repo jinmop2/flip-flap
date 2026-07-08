@@ -150,6 +150,7 @@ async function claimDaily() {
     myAccount = d.profile; renderAccount();
     const streakTxt = d.streak >= 2 ? ` <span style="color:#ff9a3c">🔥 ${d.streak}일 연속!</span>` : '';
     toast(`🎁 출석 보상 <b style="color:#ffd94a">🪙 +${d.amount}</b>${streakTxt}${d.plateBonus ? ' <span style="color:#4ade80">(🍀 명패 포함)</span>' : ''}`, 3200);
+    (d.titles || []).forEach((t, i) => setTimeout(() => toast(`${t.icon} 칭호 획득! <b>${t.name}</b>`, 3000), 3400 + i * 3100));
   }
   claimReferral();   // 저장된 초대 코드가 있으면 자동 등록
 }
@@ -328,6 +329,9 @@ function showRewards() {
         <div class="rwp-bar"><div class="rwp-fill rk" id="rwpRp"></div></div>
         <span class="rwp-val">${next[0] - rp} RP → ${next[1]}${r.rp ? ` <b style="color:${r.rp > 0 ? '#7dd87d' : '#ff8a8a'}">${r.rp > 0 ? '+' : ''}${r.rp}</b>` : ''}</span></div>`;
     }
+    // 재접속 유도 — 내일 출석 보상 예고 (연속 유지 시 금액)
+    const nextDaily = 30 + Math.min((myAccount.loginStreak || 0) * 10, 70) + (myAccount.plate === 'np_daily' ? 50 : 0);
+    html += `<div style="margin-top:8px;font-size:.72rem;color:#c8a86a">📅 내일 접속하면 출석 보상 <b style="color:#ffd94a">🪙 ${nextDaily}</b>${(myAccount.loginStreak || 0) >= 1 ? ` (🔥 ${(myAccount.loginStreak || 0) + 1}일 연속)` : ''}</div>`;
     html += '</div>';
     el.insertAdjacentHTML('beforeend', html);
     // 게이지 모션: 이전 값에서 시작 → 획득분만큼 차오름. 레벨업/승급은 꽉 채우고 반짝 → 새 게이지
@@ -936,7 +940,9 @@ function showEmote(emoji, side) {
 function goLobby() { clearSession(); fastReload(); }
 // 예쁜 확인 다이얼로그 (기본 confirm 대체)
 let _confirmCb = null;
-function askConfirm({ icon = '❓', title, desc = '', yes = '확인', no = '취소' }, cb) {
+let _confirmNoCb = null;
+function askConfirm({ icon = '❓', title, desc = '', yes = '확인', no = '취소' }, cb, noCb) {
+  _confirmNoCb = noCb || null;
   document.getElementById('cfIcon').textContent = icon;
   document.getElementById('cfTitle').textContent = title;
   document.getElementById('cfDesc').textContent = desc;
@@ -947,8 +953,9 @@ function askConfirm({ icon = '❓', title, desc = '', yes = '확인', no = '취�
 }
 function confirmClose(ok) {
   document.getElementById('confirmModal').classList.remove('show');
-  const cb = _confirmCb; _confirmCb = null;
+  const cb = _confirmCb, ncb = _confirmNoCb; _confirmCb = null; _confirmNoCb = null;
   if (ok && cb) cb();
+  else if (!ok && ncb) ncb();
 }
 function exitGame() {
   askConfirm({ icon: '🚪', title: '게임에서 나갈까요?', desc: isVsBot ? 'AI 대전은 언제든 다시 시작할 수 있어요.' : '진행 중인 게임은 몰수패로 처리될 수 있어요.', yes: '나가기', no: '계속하기' },
@@ -1226,6 +1233,22 @@ function shareInvite(btn) {
 }
 function cancelWait() { clearSession(); fastReload(); }
 
+// ── 관전자 도전 (관전 → 대전 전환) ──
+function specChallenge(btn) {
+  socket.emit('spec_challenge', { nick: getNick() });
+  if (btn) { btn.disabled = true; btn.style.opacity = '.6'; btn.textContent = '⚔️ 도전장 전송 — 수락 대기…'; }
+}
+socket.on('challenged', ({ nick }) => {
+  playSound('ping');
+  askConfirm({ icon: '⚔️', title: `${nick}님의 도전장!`, desc: '관전하던 유저가 대전을 신청했어요. 받아들일까요?', yes: '받아들인다!', no: '거절' },
+    () => socket.emit('challenge_accept'),
+    () => socket.emit('challenge_decline'));
+});
+socket.on('spec_challenge_fail', () => {
+  toast('😢 상대가 도전을 받지 않았어요', 2500);
+  const b = document.querySelector('#goStats button'); if (b) { b.disabled = false; b.style.opacity = '1'; b.textContent = '⚔️ 승자에게 도전하기'; }
+});
+
 socket.on('error', msg => alert(msg));
 socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spectate }) => {
   isVsBot = vsBot;
@@ -1398,7 +1421,8 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
     const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
     title.textContent = '게임 종료'; title.style.color = '#c8a000';
     desc.textContent = winner === 0 ? '무승부!' : `🏆 ${(nicks && nicks[winner - 1]) || 'P' + winner} 승리!`;
-    document.getElementById('goStats').innerHTML = '';
+    document.getElementById('goStats').innerHTML = winner !== 0
+      ? `<button class="btn btn-gold" style="width:auto" onclick="specChallenge(this)">⚔️ 승자에게 도전하기</button>` : '';
     const rb = document.getElementById('rematchBtn'); if (rb) rb.style.display = 'none';
     setTimeout(() => document.getElementById('gameOver').style.display = 'flex', 800);
     return;

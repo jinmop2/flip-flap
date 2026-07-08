@@ -105,6 +105,7 @@ function profileOf(u) {
     cardBack: u.cardBack || null,            // 장착 중인 카드백
     items: u.items || {},                    // 보유 아이템 { id: 개수 or true }
     streak: u.winStreak || 0,                // 현재 연승
+    loginStreak: u.loginStreak || 0,         // 연속 출석 일수
     history: (u.history || []).slice(0, 10), // 최근 전적
     plate: u.plate || null,                  // 장착 명패
     table: u.table || null,                  // 장착 테이블 스킨
@@ -117,8 +118,10 @@ function profileOf(u) {
 // ── API ──
 // __proto__/constructor 등 예약어 차단 — 객체 키로 쓰이므로 프로토타입 오염 방지
 const RESERVED_KEY = /^(__proto__|constructor|prototype|hasownproperty|tostring|valueof)$/i;
+// 욕설·비하 닉네임 차단 (강한 표현 위주 — 오탐 최소화)
+const BADWORDS = /시발|씨발|씨빨|쉬발|시빨|ㅅㅂ|병신|븅신|빙신|지랄|새끼|색기|섹스|좆|존나|니미|애미|에미|느금|보지|자지|걸레|창녀|fuck|shit|bitch|nigg|sex|porn|운영자|관리자|admin|gm/i;
 function validId(id)   { return /^[A-Za-z0-9_]{3,16}$/.test(id || '') && !RESERVED_KEY.test(id); }
-function validNick(n)  { const s = String(n || '').trim(); return s.length >= 1 && s.length <= 12 && !RESERVED_KEY.test(s); }
+function validNick(n)  { const s = String(n || '').trim(); return s.length >= 1 && s.length <= 12 && !RESERVED_KEY.test(s) && !BADWORDS.test(s.replace(/[\s._-]/g, '')); }
 
 const TOKEN_TTL = 30 * 24 * 3600 * 1000;   // 토큰 30일 만료
 // 신규 계정 창단 보너스 — 코인 200 + '창단 멤버' 칭호 (플래그로 1회만)
@@ -411,8 +414,20 @@ const TITLES = {
   t_betray: { name: '배신의 달인',   icon: '⚔️', color: '#ff8a8a', cond: '졸개의 배신 5회',     goalKey: 'betray',     goal: 5 },
   t_expert: { name: '전문가 사냥꾼', icon: '🎯', color: '#ffd94a', cond: '전문가 AI 10승',      goalKey: 'expertWins', goal: 10 },
   t_multi:  { name: '경매왕',        icon: '👑', color: '#c39bff', cond: '멀티플레이 20승',     goalKey: 'multiWins',  goal: 20 },
+  t_debut:  { name: '온라인 데뷔',   icon: '🌐', color: '#7ab8ff', cond: '첫 멀티플레이 승리',  goalKey: 'multiWins',  goal: 1 },
+  t_daily7: { name: '성실한 단골',   icon: '📅', color: '#8fe08a', cond: '7일 연속 출석',       goalKey: 'loginStreak', goal: 7 },
+  t_lv10:   { name: '숙련된 승부사', icon: '🎖️', color: '#ffab5e', cond: '레벨 10 달성',        goalKey: 'level',      goal: 10 },
+  t_rich:   { name: '큰손',          icon: '💰', color: '#ffd94a', cond: '코인 2,000 보유',     goalKey: 'coins',      goal: 2000 },
+  t_vet:    { name: '백전노장',      icon: '🛡️', color: '#c8a86a', cond: '누적 50판 플레이',    goalKey: 'games',      goal: 50 },
 };
-function statOf(u, key) { return key === 'wins' ? (u.wins || 0) : ((u.stats || {})[key] || 0); }
+function statOf(u, key) {
+  if (key === 'wins') return u.wins || 0;
+  if (key === 'level') return levelOf(u.xp);
+  if (key === 'coins') return u.coins || 0;
+  if (key === 'games') return (u.wins || 0) + (u.losses || 0);
+  if (key === 'loginStreak') return u.loginStreak || 0;
+  return (u.stats || {})[key] || 0;
+}
 function checkTitles(u) {   // 새로 획득한 칭호 목록 반환
   u.titles = u.titles || {};
   const newly = [];
@@ -425,21 +440,39 @@ function checkTitles(u) {   // 새로 획득한 칭호 목록 반환
   return newly;
 }
 
-// ── 일일 미션 (자동 수령) ──
+// ── 일일 미션 (자동 수령) — 8종 풀에서 매일 3개 로테이션 ──
 const MISSIONS = {
-  m_play3:  { name: '아무 대전 3판 플레이',  goal: 3, reward: 30, ev: 'play' },
-  m_win1:   { name: '1승 거두기',            goal: 1, reward: 40, ev: 'win' },
-  m_multi1: { name: '멀티플레이 1판',        goal: 1, reward: 50, ev: 'multi_play' },
-  m_betray: { name: '졸개의 배신 성공하기',  goal: 1, reward: 80, ev: 'betray' },
+  m_play3:   { name: '아무 대전 3판 플레이',   goal: 3, reward: 30, ev: 'play' },
+  m_play5:   { name: '아무 대전 5판 플레이',   goal: 5, reward: 50, ev: 'play' },
+  m_win1:    { name: '1승 거두기',             goal: 1, reward: 40, ev: 'win' },
+  m_win3:    { name: '3승 거두기',             goal: 3, reward: 80, ev: 'win' },
+  m_multi1:  { name: '멀티플레이 1판',         goal: 1, reward: 50, ev: 'multi_play' },
+  m_expert1: { name: '전문가 AI와 1판',        goal: 1, reward: 40, ev: 'expert_play' },
+  m_streak2: { name: '2연승 달성하기',         goal: 1, reward: 60, ev: 'streak2' },
+  m_betray:  { name: '졸개의 배신 성공하기',   goal: 1, reward: 80, ev: 'betray' },
 };
-function missionState(u) {   // 날짜 바뀌면 자동 리셋
+// 오늘의 미션 3개 — 날짜 시드로 결정 (모든 유저 동일, 매일 교체)
+function dailyMissionIds() {
+  const keys = Object.keys(MISSIONS);
+  let seed = kstDayIndex();
+  const pick = [];
+  const pool = keys.slice();
+  for (let i = 0; i < 3 && pool.length; i++) {
+    seed = (seed * 48271 + 11) % 2147483647;             // 단순 LCG
+    pick.push(pool.splice(seed % pool.length, 1)[0]);
+  }
+  return pick;
+}
+function missionState(u) {   // 날짜 바뀌면 자동 리셋 + 오늘의 미션 세트 배정
   const day = todayStr();
-  if (!u.missions || u.missions.day !== day) u.missions = { day, prog: {}, claimed: {} };
+  if (!u.missions || u.missions.day !== day) u.missions = { day, set: dailyMissionIds(), prog: {}, claimed: {} };
+  if (!u.missions.set) u.missions.set = dailyMissionIds();   // 구버전 데이터 마이그레이션
   return u.missions;
 }
 function missionEvent(u, ev) {   // 진행도 +1, 목표 달성 시 즉시 코인 지급 → 완료 목록 반환
   const m = missionState(u); const done = [];
-  for (const [id, def] of Object.entries(MISSIONS)) {
+  for (const id of m.set) {
+    const def = MISSIONS[id]; if (!def) continue;
     if (def.ev !== ev || m.claimed[id]) continue;
     m.prog[id] = (m.prog[id] || 0) + 1;
     if (m.prog[id] >= def.goal) {
@@ -476,10 +509,10 @@ function missionList(token) {
   const m = missionState(u);
   return {
     ok: true,
-    list: Object.entries(MISSIONS).map(([id, def]) => ({
+    list: m.set.filter(id => MISSIONS[id]).map(id => { const def = MISSIONS[id]; return {
       id, name: def.name, goal: def.goal, reward: def.reward,
       prog: Math.min(m.prog[id] || 0, def.goal), claimed: !!m.claimed[id],
-    })),
+    }; }),
   };
 }
 // 칭호 현황 (진행도 포함)
@@ -517,8 +550,9 @@ function claimDaily(token) {
   const plateBonus = u.plate === 'np_daily' ? PLATE_DAILY_BONUS : 0;   // 🍀 행운의 명패
   const amount = DAILY_LOGIN + streakBonus + plateBonus;
   u.coins = (u.coins || 0) + amount;
+  const titles = checkTitles(u);   // 연속출석·큰손 등 출석 시점 달성 칭호
   persist(idl);
-  return { claimed: true, amount, plateBonus, streak: u.loginStreak, streakBonus, decay, profile: profileOf(u) };
+  return { claimed: true, amount, plateBonus, streak: u.loginStreak, streakBonus, decay, titles, profile: profileOf(u) };
 }
 
 // ── 친구 초대 보상 — 초대받은 신규 계정과 초대자 둘 다 +100 (플래그 1회) ──
@@ -588,7 +622,9 @@ function recordResult(token, result, opts = {}) {
   const missions = [];
   missions.push(...missionEvent(u, 'play'));
   if (!opts.vsBot) missions.push(...missionEvent(u, 'multi_play'));
+  if (opts.vsBot && opts.difficulty === 'expert') missions.push(...missionEvent(u, 'expert_play'));
   if (result === 'win') missions.push(...missionEvent(u, 'win'));
+  if (winnable && u.winStreak === 2) missions.push(...missionEvent(u, 'streak2'));
 
   let coins = base.coins || 0, xp = base.xp || 0, rp = base.rp || 0;
   let firstWin = 0, streak = 0;

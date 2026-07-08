@@ -939,6 +939,41 @@ io.on('connection', (socket) => {
     if (room.rematch[0] && room.rematch[1]) restartGame(socket.roomId);
   });
 
+  // 관전자 → 승자에게 도전 (관전→대전 전환)
+  socket.on('spec_challenge', ({ nick } = {}) => {
+    const room = rooms[socket.roomId];
+    if (!room || !socket.isSpec || room.challenger) return socket.emit('spec_challenge_fail');
+    const targetSid = room.players[(room.lastWinner || 1) - 1] || room.players.find(Boolean);
+    const ts = targetSid && io.sockets.sockets.get(targetSid);
+    if (!ts) return socket.emit('spec_challenge_fail');
+    room.challenger = { sid: socket.id, pid: socket.pid || null, nick: cleanNick(nick), token: socket.token || null };
+    ts.emit('challenged', { nick: room.challenger.nick });
+  });
+  socket.on('challenge_accept', () => {
+    const roomId = socket.roomId, room = rooms[roomId];
+    if (!room || !room.challenger) return;
+    const ch = room.challenger; delete room.challenger;
+    const cs = io.sockets.sockets.get(ch.sid);
+    if (!cs) return socket.emit('error', '도전자가 이미 떠났어요.');
+    const myNick = room.nicks ? room.nicks[socket.playerIndex] : null;
+    // 기존 방 정리 (남은 플레이어·다른 관전자에게 알림)
+    room.players.forEach(sid => { if (sid && sid !== socket.id) io.to(sid).emit('opponent_left'); });
+    (room.specs || []).forEach(sid => { if (sid !== ch.sid) io.to(sid).emit('opponent_left'); });
+    endClock(room); delete rooms[roomId];
+    socket.leave(roomId); cs.leave(roomId);
+    socket.roomId = null; cs.roomId = null; cs.isSpec = false;
+    broadcastRooms();
+    startMatch({ sid: cs.id, pid: ch.pid, nick: ch.nick, token: ch.token },
+               { sid: socket.id, pid: socket.pid || null, nick: myNick, token: socket.token || null });
+  });
+  socket.on('challenge_decline', () => {
+    const room = rooms[socket.roomId];
+    if (!room || !room.challenger) return;
+    const cs = io.sockets.sockets.get(room.challenger.sid);
+    delete room.challenger;
+    if (cs) cs.emit('spec_challenge_fail');
+  });
+
   // ── 관전 입장 ──
   socket.on('spectate', ({ roomId } = {}) => {
     const room = rooms[roomId];
@@ -1160,6 +1195,7 @@ function settle(roomId) {
 
 // 로그인 유저의 전적/랭크/레벨/코인 반영 + 갱신된 프로필·보상 전송
 function finishStats(room, winner, forfeit = false) {
+  room.lastWinner = winner;   // 관전자 도전 대상
   if (!room.tokens) return;
   stats.bump('games');
   if (room.botMatch) stats.bump('botmatch');
