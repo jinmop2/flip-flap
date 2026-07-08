@@ -933,11 +933,11 @@
     .card.selected { transform:translateY(-16px) scale(1.08); box-shadow:0 18px 34px rgba(200,160,0,.5); z-index:20!important; border-color:var(--gold); }
 
     @keyframes dealIn { from{opacity:0; transform:translateY(-40px) scale(.7) rotate(8deg)} to{opacity:1; transform:none} }
-    @keyframes flipReveal { 0%{transform:rotateY(0)} 45%{transform:rotateY(90deg) scale(.9)} 55%{transform:rotateY(-90deg) scale(.9)} 100%{transform:rotateY(0)} }
+    @keyframes flipReveal { from{ transform:perspective(600px) rotateY(-90deg); } to{ transform:perspective(600px) rotateY(0); } }   /* 한 번만 자연스럽게 젖혀지는 반턴 */
     @keyframes winBounce { 0%,100%{transform:none} 30%{transform:translateY(-16px) scale(1.1)} 60%{transform:translateY(-7px) scale(1.05)} }
     @keyframes drawIn { from{opacity:0; transform:translateX(-150px) rotateY(80deg) scale(.85)} to{opacity:1; transform:none} }
     .card.anim-deal { animation:dealIn .34s cubic-bezier(.34,1.4,.64,1) both; }
-    .card.anim-reveal { animation:flipReveal .55s ease-in-out both; }
+    .card.anim-reveal { animation:flipReveal .38s cubic-bezier(.3,1.15,.5,1) both; }
     .card.anim-win { animation:winBounce .6s ease-in-out both; }
     .card.anim-draw { animation:drawIn .5s cubic-bezier(.34,1.4,.64,1) both; }
     /* 세트 완성 특수효과 */
@@ -1040,7 +1040,7 @@
     /* 정산 카드 비행 — ① 낙찰품→승자 더미 ② 배팅 교환 (순차) */
     .fly-card {
       position:fixed; z-index:60; pointer-events:none; margin:0;
-      transition:transform .5s cubic-bezier(.3,.7,.3,1), opacity .5s ease;
+      transition:transform .45s cubic-bezier(.45,.05,.4,.96), opacity .45s ease;   /* 한 호흡에 부드럽게 도착 */
       box-shadow:0 5px 14px rgba(0,0,0,.4);
       will-change:transform;
     }

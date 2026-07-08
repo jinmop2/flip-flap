@@ -1256,7 +1256,10 @@ function playSettleFlight(legs) {
     let scale = destEl ? Math.max(tr.width / leg.from.width, 0.4) : 0.8;
     const fade = !destEl;
     if (fade) { dx *= 0.45; dy *= 0.45; }             // 내 배팅: 상대 손 방향으로 밀려나며 페이드 — 화면 가로지르는 교차 제거
-    if (destEl) destEl.style.visibility = 'hidden';   // 도착 카드는 착지까지 숨김 (이중 표시 방지)
+    if (destEl) {
+      destEl.style.visibility = 'hidden';             // 도착 카드는 착지까지 숨김 (이중 표시 방지)
+      destEl.style.animation = 'none';                // 자체 낙하·바운스(acquireIn) 취소 — 비행이 도착을 대신함
+    }
     active.push({ ghost, destEl, delay, dx, dy, scale, fade });
   }
   if (!active.length) return;
@@ -1265,7 +1268,11 @@ function playSettleFlight(legs) {
     f.ghost.style.transitionDelay = `${f.delay}ms`;
     f.ghost.style.transform = `translate(${f.dx}px, ${f.dy}px) scale(${f.scale})`;
     if (f.fade) f.ghost.style.opacity = '0';
-    setTimeout(() => { if (f.destEl) f.destEl.style.visibility = ''; f.ghost.remove(); }, f.delay + 560);
+    // 비행이 끝나는 그 프레임에 실제 카드로 교체 — 멈칫거림 없이 이어짐
+    let done = false;
+    const finish = () => { if (done) return; done = true; if (f.destEl) f.destEl.style.visibility = ''; f.ghost.remove(); };
+    f.ghost.addEventListener('transitionend', finish, { once: true });
+    setTimeout(finish, f.delay + 700);                // 안전망 (탭 전환 등으로 이벤트 유실 시)
   }
   playSound('deal');
   setTimeout(() => playSound('deal'), 440);           // 교환 박자에 맞춰 한 번 더
