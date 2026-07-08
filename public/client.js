@@ -1213,53 +1213,62 @@ function localSet(acq) {
   return null;
 }
 
-// ── 정산 카드 비행 애니메이션 — 낙찰품→승자 더미, 배팅 카드→서로 교환 ──
+// ── 정산 카드 비행 — 2단계 연출: ① 낙찰품→승자 더미 ② 배팅 카드 교환 ──
 function captureSettleFlight(old) {
   const a = old.auction;
   if (!a || !a.myBid || !a.oppBid) return null;
   const rectOf = sel => { const el = document.querySelector(sel); if (!el) return null; const r = el.getBoundingClientRect(); return r.width ? r : null; };
   const iWin = myBidWins(a.myBid, a.oppBid);
   const legs = [];
-  // 경매품 2장 (중앙 매트) → 승자 더미
+  // 1단계 — 경매품 2장 (중앙 매트) → 승자 더미
   const prizeEls = document.querySelectorAll('#auctionItems .card');
   const prizeCards = [a.centerCard, a.offeredCard];
   prizeEls.forEach((el, i) => {
     const r = el.getBoundingClientRect();
-    if (r.width && prizeCards[i]) legs.push({ card: prizeCards[i], from: r, destSel: `#${iWin ? 'myAcq' : 'oppAcq'} .card[data-id="${prizeCards[i].id}"]`, fallback: iWin ? '#myAcq' : '#oppAcq' });
+    if (r.width && prizeCards[i]) legs.push({ kind: 'prize', card: prizeCards[i], from: r, destSel: `#${iWin ? 'myAcq' : 'oppAcq'} .card[data-id="${prizeCards[i].id}"]`, fallback: iWin ? '#myAcq' : '#oppAcq' });
   });
-  // 상대 배팅 → 내 손으로 / 내 배팅 → 상대 손으로 (교환)
+  // 2단계 — 배팅 카드 교환 (상대 배팅→내 손 / 내 배팅→상대 손)
   const oppR = rectOf('#oppBid .card'), myR = rectOf('#myBid .card');
-  if (oppR) legs.push({ card: a.oppBid, from: oppR, destSel: `#myHand .card[data-id="${a.oppBid.id}"]`, fallback: '#myHand' });
-  if (myR) legs.push({ card: a.myBid, from: myR, destSel: null, fallback: '#oppHand' });
+  if (oppR) legs.push({ kind: 'bid', card: a.oppBid, from: oppR, destSel: `#myHand .card[data-id="${a.oppBid.id}"]`, fallback: '#myHand' });
+  if (myR) legs.push({ kind: 'bid', card: a.myBid, from: myR, destSel: null, fallback: '#oppHand' });
   return legs.length ? legs : null;
 }
 function playSettleFlight(legs) {
-  legs.forEach((leg, i) => {
+  if (document.hidden) return;                        // 백그라운드 탭 — 연출 스킵 (최적화)
+  // 모든 고스트를 먼저 만들어 붙이고 (리플로우 1회) transition-delay로 순차 출발
+  const active = [];
+  let prizeN = 0;
+  for (const leg of legs) {
     const destEl = leg.destSel && document.querySelector(leg.destSel);
     const target = destEl || document.querySelector(leg.fallback);
-    if (!target) return;
+    if (!target) continue;
     const tr = target.getBoundingClientRect();
-    if (!tr.width && !tr.height) return;
-    if (destEl) destEl.style.visibility = 'hidden';          // 도착 카드는 비행 끝날 때까지 숨김
+    if (!tr.width && !tr.height) continue;
     const ghost = makeCard(leg.card);
     ghost.classList.add('fly-card');
     ghost.style.left = leg.from.left + 'px'; ghost.style.top = leg.from.top + 'px';
     ghost.style.width = leg.from.width + 'px'; ghost.style.height = leg.from.height + 'px';
     document.body.appendChild(ghost);
-    const scale = destEl ? (tr.width / leg.from.width) : 0.6;
-    const dx = (tr.left + tr.width / 2) - (leg.from.left + leg.from.width / 2);
-    const dy = (tr.top + tr.height / 2) - (leg.from.top + leg.from.height / 2);
-    setTimeout(() => {
-      void ghost.offsetWidth;
-      ghost.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
-      if (!destEl) ghost.style.opacity = '0.15';             // 손패 속으로 사라지듯
-    }, 40 + i * 90);                                          // 카드별 시차
-    setTimeout(() => {
-      if (destEl) destEl.style.visibility = '';
-      ghost.remove();
-    }, 760 + i * 90);
-  });
-  if (legs.length) playSound('deal');
+    // 1박자: 낙찰품 2장 나란히(0·80ms) → 2박자: 배팅 교환(430ms, 동시 대칭)
+    const delay = leg.kind === 'prize' ? (prizeN++) * 80 : 430;
+    let dx = (tr.left + tr.width / 2) - (leg.from.left + leg.from.width / 2);
+    let dy = (tr.top + tr.height / 2) - (leg.from.top + leg.from.height / 2);
+    let scale = destEl ? Math.max(tr.width / leg.from.width, 0.4) : 0.8;
+    const fade = !destEl;
+    if (fade) { dx *= 0.45; dy *= 0.45; }             // 내 배팅: 상대 손 방향으로 밀려나며 페이드 — 화면 가로지르는 교차 제거
+    if (destEl) destEl.style.visibility = 'hidden';   // 도착 카드는 착지까지 숨김 (이중 표시 방지)
+    active.push({ ghost, destEl, delay, dx, dy, scale, fade });
+  }
+  if (!active.length) return;
+  void document.body.offsetWidth;                     // 시작 위치 확정 (리플로우 1회)
+  for (const f of active) {
+    f.ghost.style.transitionDelay = `${f.delay}ms`;
+    f.ghost.style.transform = `translate(${f.dx}px, ${f.dy}px) scale(${f.scale})`;
+    if (f.fade) f.ghost.style.opacity = '0';
+    setTimeout(() => { if (f.destEl) f.destEl.style.visibility = ''; f.ghost.remove(); }, f.delay + 560);
+  }
+  playSound('deal');
+  setTimeout(() => playSound('deal'), 440);           // 교환 박자에 맞춰 한 번 더
 }
 
 // ── 전적 (localStorage) ─────────────────────────────────────

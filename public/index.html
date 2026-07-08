@@ -1037,13 +1037,14 @@
     .btn-row { display:flex; gap:8px; }
     .hint-text { font-size:.74rem; color:rgba(255,255,255,.4); text-align:center; }
 
-    /* 정산 카드 비행 (낙찰품→더미, 배팅→교환) */
+    /* 정산 카드 비행 — ① 낙찰품→승자 더미 ② 배팅 교환 (순차) */
     .fly-card {
       position:fixed; z-index:60; pointer-events:none; margin:0;
-      transition:transform .68s cubic-bezier(.45,.05,.25,1), opacity .68s ease;
-      box-shadow:0 10px 26px rgba(0,0,0,.55);
+      transition:transform .5s cubic-bezier(.3,.7,.3,1), opacity .5s ease;
+      box-shadow:0 5px 14px rgba(0,0,0,.4);
       will-change:transform;
     }
+    @media (prefers-reduced-motion: reduce) { .fly-card { display:none; } }
 
     /* 경매 결과 배너 */
     .result-banner {
