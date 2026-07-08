@@ -5,6 +5,7 @@ const io = require('socket.io')(http);
 const path = require('path');
 const accounts = require('./accounts');
 const expert3 = require('./expert3');   // 전문가 AI v3 (카운팅+몬테카를로+종반탐색)
+const stats = require('./stats');       // 방문·활동 통계 (자체 수집)
 
 app.set('trust proxy', 1);
 app.use(require('compression')());   // gzip — html/js/json 전송량 ~75% 절감
@@ -14,7 +15,29 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  // 방문 통계 (메인 페이지 로드만 집계)
+  if (req.method === 'GET' && (req.path === '/' || req.path === '/index.html')) {
+    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'x').split(',')[0].trim();
+    stats.pageview(ip);
+  }
   next();
+});
+
+// 통계 대시보드 — Render 환경변수 STATS_KEY 필요 (예: /stats?key=내키)
+app.get('/stats', (req, res) => {
+  const KEY = process.env.STATS_KEY;
+  if (!KEY) return res.status(403).send('Render 환경변수에 STATS_KEY를 설정한 뒤 /stats?key=<키>로 접속하세요.');
+  if (req.query.key !== KEY) return res.status(403).send('잘못된 키입니다.');
+  const rows = stats.report(30);
+  const td = v => `<td>${v ?? 0}</td>`;
+  res.send(`<!DOCTYPE html><meta charset="utf-8"><title>FLIP FLAP 통계</title>
+<style>body{font-family:sans-serif;background:#22090e;color:#e8dfc8;padding:24px}table{border-collapse:collapse;width:100%;max-width:760px}
+th,td{border:1px solid #5a3a20;padding:6px 12px;text-align:right}th{background:#3a1018;color:#ffd94a}td:first-child,th:first-child{text-align:left}
+tr:nth-child(even){background:rgba(255,255,255,.03)}h1{color:#ffd94a;font-size:1.3rem}</style>
+<h1>📊 FLIP FLAP — 최근 30일</h1>
+<table><tr><th>날짜</th><th>페이지뷰</th><th>방문자</th><th>가입</th><th>게임</th><th>멀티</th><th>봇매치</th><th>튜토리얼</th><th>동접피크</th></tr>
+${rows.map(r => `<tr><td>${r.day}</td>${td(r.pv)}${td(r.uv)}${td(r.signups)}${td(r.games)}${td(r.multi)}${td(r.botmatch)}${td(r.tutorial)}${td(r.peak)}</tr>`).join('')}
+</table>`);
 });
 app.get('/health', (req, res) => res.json({ ok: true, rooms: Object.keys(rooms).length, uptime: Math.round(process.uptime()) }));
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -40,13 +63,13 @@ function rateLimit(max) {
 setInterval(() => { const now = Date.now(); for (const [k, e] of rlMap) if (now - e.ts > 120000) rlMap.delete(k); }, 120000);
 
 // ── 인증 API ───────────────────────────────────────────────
-app.post('/api/signup', rateLimit(20), (req, res) => { const { id, password, nick } = req.body || {}; res.json(accounts.signup(id, password, nick)); });
+app.post('/api/signup', rateLimit(20), (req, res) => { const { id, password, nick } = req.body || {}; const out = accounts.signup(id, password, nick); if (out.ok) stats.bump('signups'); res.json(out); });
 app.post('/api/login',  rateLimit(30), (req, res) => { const { id, password } = req.body || {}; res.json(accounts.login(id, password)); });
 app.post('/api/me',     rateLimit(90), (req, res) => { const { token } = req.body || {}; res.json(accounts.meByToken(token)); });
 app.post('/api/nick',   rateLimit(20), (req, res) => { const { token, nick } = req.body || {}; res.json(accounts.setNick(token, nick)); });
 app.post('/api/daily',  rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.claimDaily(token) || { error: '로그인이 필요해요.' }); });
 app.post('/api/missions', rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.missionList(token)); });
-app.post('/api/tutorial-done', rateLimit(20), (req, res) => { const { token } = req.body || {}; res.json(accounts.claimTutorial(token)); });
+app.post('/api/tutorial-done', rateLimit(20), (req, res) => { const { token } = req.body || {}; const out = accounts.claimTutorial(token); if (out.claimed) stats.bump('tutorial'); res.json(out); });
 app.post('/api/refer', rateLimit(10), (req, res) => { const { token, ref } = req.body || {}; res.json(accounts.applyReferral(token, ref)); });
 app.post('/api/titles',   rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.titleList(token)); });
 app.post('/api/equip-title', rateLimit(30), (req, res) => { const { token, titleId } = req.body || {}; res.json(accounts.equipTitle(token, titleId || null)); });
@@ -88,6 +111,7 @@ app.get('/auth/google/callback', rateLimit(30), async (req, res) => {
     if (!gu.id) { console.error('구글 유저 조회 실패:', JSON.stringify(gu)); return res.redirect('/#kerr=' + encodeURIComponent('구글 정보를 가져오지 못했어요')); }
     const nick = gu.name || (gu.email ? gu.email.split('@')[0] : '플레이어');
     const out = accounts.googleLogin(gu.id, nick);
+    if (out.isNew) stats.bump('signups');
     res.redirect('/#ktoken=' + out.token + (out.isNew ? '&knew=1' : ''));
   } catch (e) { console.error('구글 콜백 오류:', e.message); res.redirect('/#kerr=' + encodeURIComponent('구글 로그인 중 오류가 났어요')); }
 });
@@ -114,6 +138,7 @@ app.get('/auth/kakao/callback', rateLimit(30), async (req, res) => {
     const nick = (ku.kakao_account && ku.kakao_account.profile && ku.kakao_account.profile.nickname) || (ku.properties && ku.properties.nickname) || '플레이어';
     const out = accounts.kakaoLogin(ku.id, nick);
     // 토큰은 URL 프래그먼트로 전달 (서버 로그·리퍼러에 안 남음) — 클라가 저장 후 지움
+    if (out.isNew) stats.bump('signups');
     res.redirect('/#ktoken=' + out.token + (out.isNew ? '&knew=1' : ''));   // 첫 로그인이면 닉 설정 유도
   } catch (e) { console.error('카카오 콜백 오류:', e.message); res.redirect('/#kerr=' + encodeURIComponent('카카오 로그인 중 오류가 났어요')); }
 });
@@ -620,7 +645,7 @@ function broadcastRooms() {
 }
 const cleanNick = n => (String(n || '').trim().slice(0, 12)) || '게스트';
 // 현재 접속 인원 브로드캐스트 (5초 주기 + 접속/해제 시)
-function broadcastOnline() { io.emit('online', io.engine.clientsCount); }
+function broadcastOnline() { stats.peak(io.engine.clientsCount); io.emit('online', io.engine.clientsCount); }
 setInterval(broadcastOnline, 5000);
 const MAX_ROOMS = 800;               // 서버 전체 방 상한
 const MAX_CONN_PER_IP = 8;           // IP당 소켓 연결 상한
@@ -1136,6 +1161,9 @@ function settle(roomId) {
 // 로그인 유저의 전적/랭크/레벨/코인 반영 + 갱신된 프로필·보상 전송
 function finishStats(room, winner, forfeit = false) {
   if (!room.tokens) return;
+  stats.bump('games');
+  if (room.botMatch) stats.bump('botmatch');
+  else if (!room.vsBot) stats.bump('multi');
   // 같은 IP 멀티 대전 감지 (자기 계정끼리 코인 파밍 방지)
   let sameIp = false;
   if (!room.vsBot && room.players[0] && room.players[1]) {
