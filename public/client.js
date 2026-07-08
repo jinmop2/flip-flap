@@ -942,11 +942,23 @@ let tutorial = false, tutSeen = {}, tutTarget = null;
 const TUT_STEPS = [
   { id: 'cards1', when: s => s.phase === 'pick',
     pos: 'bot',
-    text: '환영해요! 🎓 먼저 <b>카드 읽는 법</b>부터.<br>가운데 <b>큰 숫자 = 종류</b>(모아야 하는 장수), 왼쪽 위 <b>작은 숫자 = 등급</b>(작을수록 강함)',
-    cards: '<div class="tut-cards"><span class="tcard k6"><i>1</i>6</span><span class="tvs">=</span><span class="twin">6짜리 · 등급 1</span></div>' },
+    text: '환영해요! 🎩 먼저 <b>카드 읽는 법</b>부터 볼까요?',
+    cards: `<div class="tut-anno">
+      <span class="tcard k6 big"><i>1</i>6<em class="pt pt1">①</em><em class="pt pt2">②</em></span>
+      <div class="tut-legend">
+        <div class="tl-row"><span class="tl-no">①</span><b>등급</b><small>같은 종류끼리의 서열 — 1등급이 최강</small></div>
+        <div class="tl-row"><span class="tl-no">②</span><b>종류</b><small>이 숫자만큼 모으면 승리!</small></div>
+      </div></div>` },
   { id: 'cards2', when: s => s.phase === 'pick',
     pos: 'bot',
-    text: '🎯 목표는 하나 — <b>같은 종류를 그 숫자만큼</b> 모으면 즉시 승리! (2는 2장, 6은 6장)<br>숫자가 작을수록 장수는 적지만 <b>배팅에서 강해요</b> (2 &gt; 3 &gt; 4 &gt; 6)' },
+    text: '🏆 <b>승리 조건</b> — 같은 종류를 <b>그 숫자만큼</b> 모으면 그 자리에서 승리!',
+    cards: `<div class="tut-cards"><span class="tcard k3"><i>1</i>3</span><span class="tcard k3"><i>2</i>3</span><span class="tcard k3"><i>4</i>3</span><span class="tvs">=</span><span class="twin">3짜리 3장 → 승리!</span></div>
+      <div class="tut-cards" style="margin-top:7px"><span class="tcard k2"><i>1</i>2</span><span class="tcard k2"><i>2</i>2</span><span class="tvs">=</span><span class="twin">2짜리는 단 2장이면 끝!</span></div>` },
+  { id: 'cards3', when: s => s.phase === 'pick',
+    pos: 'bot',
+    text: '⚔️ <b>어느 카드가 셀까?</b><br>종류 숫자가 <b>작을수록</b> 강하고, 같은 종류라면 <b>등급이 높을수록</b>(1등급 쪽) 이겨요.',
+    cards: `<div class="tut-cards"><span class="tcard k2"><i>2</i>2</span><span class="tvs">&gt;</span><span class="tcard k6"><i>1</i>6</span><span class="twin">2짜리가 6짜리를 이김</span></div>
+      <div class="tut-cards" style="margin-top:7px"><span class="tcard k4"><i>1</i>4</span><span class="tvs">&gt;</span><span class="tcard k4"><i>7</i>4</span><span class="twin">같은 4끼리는 1등급 승</span></div>` },
   { id: 'pick', when: s => s.phase === 'pick' && s.pick && s.pick.myChoice == null,
     pos: 'bot', target: '#auctionItems',
     text: '이제 <b>선공 뽑기</b>!',
@@ -956,12 +968,12 @@ const TUT_STEPS = [
     text: '카드 공개! <b>숫자가 작을수록 강해요</b> (2 &gt; 3 &gt; 4 &gt; 6). 이긴 쪽이 첫 <b>경매 진행자</b>가 돼요.' },
   { id: 'draw_me', when: s => s.phase === 'draw' && s.auctioneer === s.myIndex,
     pos: 'bot', target: '#deckStack',
-    text: '내가 <b>진행자</b>예요. 진행자는 경매에 내놓을 상품을 공개해요.',
+    text: '이번 턴 <b>경매 진행자</b>는 나! 진행자는 매 턴 <b>번갈아</b> 맡아요. 진행자가 경매 상품을 공개합니다.',
     act:  '왼쪽 <b>덱을 클릭</b>!' },
   { id: 'offer_me', when: s => s.phase === 'offer' && s.auctioneer === s.myIndex,
     pos: 'top', target: '#myHand',
-    text: '경매 상품은 항상 <b>2장</b> — 방금 공개한 카드 + 내 손패 1장.',
-    act:  '아래 손패에서 <b>필요 없는 카드</b>를 클릭해 내놓으세요' },
+    text: '경매 상품은 항상 <b>2장</b> — 방금 공개한 카드 + 내 손패 1장. 어떤 카드를 내놓을지가 <b>전략</b>이에요!',
+    act:  '아래 손패에서 <b>내놓을 카드</b>를 클릭하세요' },
   { id: 'type_me', when: s => s.phase === 'choose_type' && s.auctioneer === s.myIndex,
     pos: 'top', target: '#actionArea',
     text: '경매 방식 선택!<br>👁 <b>오픈</b> = 상품 공개, 배팅은 비밀<br>🙈 <b>클로즈</b> = 상품 비밀, 배팅은 공개',

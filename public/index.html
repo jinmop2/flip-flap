@@ -472,8 +472,28 @@
     .tcard i { position:absolute; top:1px; left:4px; font-size:.55rem; font-style:normal; opacity:.95; font-family:'Fredoka'; font-weight:700; }
     .tcard.k6 { background:linear-gradient(160deg,var(--ink-d),var(--ink)); }
     .tcard.k2 { background:linear-gradient(160deg,var(--red-d),var(--red)); }
+    .tcard.k3 { background:linear-gradient(160deg,#1d4568,#2e6595); }
+    .tcard.k4 { background:linear-gradient(160deg,#7a5c14,#b08a24); }
     .tvs { color:#ffd94a; font-weight:800; }
     .twin { color:#7dd87d; font-weight:800; font-size:.82rem; }
+    /* 카드 읽는 법 — 실제 카드에 ①② 표지 달아 부위 설명 */
+    .tut-anno { display:flex; align-items:center; justify-content:center; gap:18px; margin-top:12px; }
+    .tcard.big { width:68px; height:94px; font-size:2.6rem; border-radius:10px; border-width:2px; }
+    .tcard.big i { font-size:.8rem; top:4px; left:6px; background:rgba(0,0,0,.45); border-radius:6px; padding:0 5px; }
+    .tcard .pt {
+      position:absolute; font-style:normal; font-family:'Fredoka'; font-weight:800; font-size:.72rem;
+      width:19px; height:19px; display:flex; align-items:center; justify-content:center;
+      color:#241008; background:linear-gradient(180deg,#ffd97a,#c8912e); border:1px solid #8a5a12; border-radius:99px;
+      box-shadow:0 2px 5px rgba(0,0,0,.55); z-index:2;
+    }
+    .tcard .pt1 { top:-9px; left:-10px; }                                  /* ① 등급(좌상단) */
+    .tcard .pt2 { top:50%; right:-10px; transform:translateY(-50%); }      /* ② 종류(중앙 큰 숫자) */
+    .tut-legend { display:flex; flex-direction:column; gap:9px; text-align:left; max-width:200px; }
+    .tut-legend .tl-row { font-size:.8rem; line-height:1.45; color:#e8dfc8; }
+    .tut-legend .tl-row small { color:#c8a86a; display:block; font-size:.72rem; }
+    .tut-legend .tl-no { display:inline-flex; width:17px; height:17px; align-items:center; justify-content:center;
+      font-size:.66rem; font-weight:800; color:#241008; background:linear-gradient(180deg,#ffd97a,#c8912e);
+      border:1px solid #8a5a12; border-radius:99px; margin-right:5px; vertical-align:-3px; }
     /* AI 난이도 — 프로필 카드 아래 */
     .pc-diff {
       margin-top:3px; font-size:.62rem; font-weight:700; color:#ffd94a;
