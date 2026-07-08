@@ -307,25 +307,46 @@ function showRewards() {
               : '보상 지급 제외';
     add('bd-warn', `⚠️ ${msg}`, d); d += 250;
   }
-  // 진행도 노출 — 다음 레벨·다음 랭크까지 얼마나 남았는지 ("한 판 더" 유도)
+  // 진행도 노출 — 이전→이후 게이지 상승 모션 (scaleX = GPU 합성 전용, 리플로우 없음)
   if (myAccount && !myAccount.guest) {
     const RANK_STEPS = [[0, '브론즈'], [100, '실버'], [250, '골드'], [500, '플래티넘'], [900, '다이아'], [1500, '마스터']];
+    const need = myAccount.xpNeeded || 100;
+    const xpAfter = Math.min(1, (myAccount.xpInLevel || 0) / need);
+    const xpBefore = r.levelUp ? 0 : Math.max(0, ((myAccount.xpInLevel || 0) - (r.xp || 0)) / need);
     let html = `<div class="rw-prog">
       <div class="rwp-row"><span class="rwp-lbl">Lv.${myAccount.level}</span>
-        <div class="rwp-bar"><div class="rwp-fill" data-w="${xpPct(myAccount)}"></div></div>
-        <span class="rwp-val">XP ${myAccount.xpInLevel}/${myAccount.xpNeeded}</span></div>`;
-    const rp = myAccount.rp || 0;
+        <div class="rwp-bar"><div class="rwp-fill" id="rwpXp"></div></div>
+        <span class="rwp-val">XP ${myAccount.xpInLevel}/${myAccount.xpNeeded}${r.xp ? ` <b style="color:#7dd87d">+${r.xp}</b>` : ''}</span></div>`;
+    const rp = myAccount.rp || 0, rpBeforeTotal = rp - (r.rp || 0);
     const next = RANK_STEPS.find(([t]) => t > rp);
+    let rpAfter = 1, rpBefore = 1;
     if (next) {
       const prev = [...RANK_STEPS].reverse().find(([t]) => t <= rp)[0];
-      const pct = Math.round((rp - prev) / (next[0] - prev) * 100);
+      rpAfter = Math.max(0, Math.min(1, (rp - prev) / (next[0] - prev)));
+      rpBefore = r.rankUp ? 0 : Math.max(0, Math.min(1, (rpBeforeTotal - prev) / (next[0] - prev)));
       html += `<div class="rwp-row"><span class="rwp-lbl" style="color:${myAccount.rankColor}">${myAccount.rankIcon} ${esc(myAccount.rank)}</span>
-        <div class="rwp-bar"><div class="rwp-fill rk" data-w="${pct}"></div></div>
-        <span class="rwp-val">${next[0] - rp} RP → ${next[1]}</span></div>`;
+        <div class="rwp-bar"><div class="rwp-fill rk" id="rwpRp"></div></div>
+        <span class="rwp-val">${next[0] - rp} RP → ${next[1]}${r.rp ? ` <b style="color:${r.rp > 0 ? '#7dd87d' : '#ff8a8a'}">${r.rp > 0 ? '+' : ''}${r.rp}</b>` : ''}</span></div>`;
     }
     html += '</div>';
     el.insertAdjacentHTML('beforeend', html);
-    setTimeout(() => el.querySelectorAll('.rwp-fill').forEach(f => { f.style.width = f.dataset.w + '%'; }), 80);
+    // 게이지 모션: 이전 값에서 시작 → 획득분만큼 차오름. 레벨업/승급은 꽉 채우고 반짝 → 새 게이지
+    const gauge = (id, from, to, promoted) => {
+      const f = document.getElementById(id); if (!f) return;
+      f.style.transform = `scaleX(${from})`;
+      setTimeout(() => {
+        if (promoted) {
+          f.style.transform = 'scaleX(1)'; f.classList.add('burst');
+          setTimeout(() => {
+            f.style.transition = 'none'; f.style.transform = 'scaleX(0)'; void f.offsetWidth;
+            f.style.transition = ''; f.style.transform = `scaleX(${to})`;
+            setTimeout(() => f.classList.remove('burst'), 700);
+          }, 620);
+        } else f.style.transform = `scaleX(${to})`;
+      }, 420);
+    };
+    gauge('rwpXp', xpBefore, xpAfter, !!r.levelUp);
+    gauge('rwpRp', rpBefore, rpAfter, !!r.rankUp);
   }
   pendingRewards = null;
 }
@@ -1396,16 +1417,15 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
       }).catch(() => {});
       tip += '<br><span style="color:#ffd94a">🎁 완료 보상 🪙 100 지급!</span>';
     }
-    tutShow({ pos: 'top', text: tip });
-    tutOpen = false;   // 완료 인사는 '알겠어요'로 닫히게
+    tutShow({ pos: 'top', text: tip });   // 아무 곳이나 탭(블로커)·알겠어요 둘 다 tutConfirm으로 닫힘
   }
   const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
   let delay = 500;
   if (winner === 0) {
-    title.textContent = '무승부'; title.style.color = '#888';
+    title.textContent = '무승부'; title.style.color = '#c8a86a'; title.style.textShadow = 'none';
     desc.textContent = '세트 근접도가 완전히 같아요!';
   } else if (winner === mi) {
-    title.textContent = '🏆 승리!'; title.style.color = '#c8a000';
+    title.textContent = '🏆 승리!'; title.style.color = '#ffd94a'; title.style.textShadow = '0 0 24px rgba(255,215,80,.45)';
     desc.textContent = forfeit ? '상대가 게임을 떠났어요 — 몰수승!'
       : timeout ? '상대 시간 초과!'
       : byProgress ? `세트 근접 승리! (${setKind}짜리에 가장 가까웠어요)`
@@ -1414,7 +1434,7 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
     if (setKind && !byProgress && !forfeit) { celebrateSet('myAcq', setKind); playSound('setwin'); delay = 1400; }
     else animateWinCards();
   } else {
-    title.textContent = '패배...'; title.style.color = '#6a5a70';
+    title.textContent = '패배...'; title.style.color = '#9a8a90'; title.style.textShadow = 'none';
     desc.textContent = forfeit ? '접속이 끊겨 몰수패 처리됐어요.'
       : timeout ? '시간 초과...'
       : byProgress ? '상대가 세트에 더 가까웠어요.'
