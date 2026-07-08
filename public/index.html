@@ -511,10 +511,11 @@
       border-radius:6px; padding:1px 7px; text-align:center; width:fit-content;
     }
     /* 지금 클릭할 곳 강조 */
-    .tut-glow { border-radius:14px; animation:tutGlow 1.3s ease-in-out infinite; }
-    @keyframes tutGlow {
-      0%,100% { box-shadow:0 0 0 2px rgba(255,215,80,.45), 0 0 10px 2px rgba(255,215,80,.25); }
-      50%     { box-shadow:0 0 0 3px rgba(255,215,80,.9), 0 0 28px 8px rgba(255,215,80,.45); }
+    .tut-glow { position:relative; border-radius:14px; }
+    .tut-glow::before {
+      content:''; position:absolute; inset:-4px; border-radius:14px; pointer-events:none;
+      box-shadow:0 0 0 3px rgba(255,215,80,.9), 0 0 28px 8px rgba(255,215,80,.45);
+      animation:glowFade 1.3s ease-in-out infinite; will-change:opacity;
     }
     @media (max-width:600px) {
       #tutBox.pos-bot { bottom:185px; }
@@ -1114,19 +1115,26 @@
     .result-banner.win  { background:rgba(51,204,153,.16); color:#5cd69c; border:1px solid rgba(51,204,153,.35); }
     .result-banner.lose { background:rgba(255,96,96,.12); color:#ff8a8a; border:1px solid rgba(255,96,96,.3); }
 
+    /* 발광 강조 — 그림자를 매 프레임 다시 그리지 않고, 미리 그린 오버레이의 불투명도만 애니 (GPU 합성) */
+    @keyframes glowFade { 0%,100%{ opacity:.12; } 50%{ opacity:1; } }
+    .pile-group.reach .card, .pile-group.complete .card, .card.pickable { position:relative; }
+    .pile-group.reach .card::before, .pile-group.complete .card::before, .card.pickable::before {
+      content:''; position:absolute; inset:-2px; border-radius:inherit; pointer-events:none;
+      animation:glowFade 1.3s ease-in-out infinite; will-change:opacity;
+    }
     /* 리치(세트 1장 전) 강조 */
-    @keyframes reachGlow { 0%,100%{ box-shadow:0 2px 5px rgba(0,0,0,.45); } 50%{ box-shadow:0 2px 5px rgba(0,0,0,.45), 0 0 14px 2px rgba(255,154,60,.7); } }
-    .pile-group.reach .card { animation:reachGlow 1.3s ease-in-out infinite; border-color:#ff9a3c !important; }
+    .pile-group.reach .card { border-color:#ff9a3c !important; }
+    .pile-group.reach .card::before { box-shadow:0 0 14px 2px rgba(255,154,60,.7); }
     .pile-count.reach { color:#ff9a3c !important; font-weight:700; }
 
     /* 선공 뽑기 카드 발광 */
-    @keyframes pickPulse { 0%,100%{ box-shadow:0 3px 8px rgba(0,0,0,.4); } 50%{ box-shadow:0 3px 8px rgba(0,0,0,.4), 0 0 20px 4px rgba(200,160,0,.6); } }
-    .card.pickable { animation:pickPulse 1.2s ease-in-out infinite; cursor:pointer; }
+    .card.pickable { cursor:pointer; }
+    .card.pickable::before { box-shadow:0 0 20px 4px rgba(200,160,0,.6); animation-duration:1.2s; }
     .card.pickable:hover { transform:translateY(-10px) scale(1.08); }
 
     /* 세트 완성 강조 */
-    @keyframes completeGlow { 0%,100%{ box-shadow:0 2px 5px rgba(0,0,0,.45); } 50%{ box-shadow:0 2px 5px rgba(0,0,0,.45), 0 0 18px 4px rgba(255,215,64,.9); } }
-    .pile-group.complete .card { animation:completeGlow 1s ease-in-out infinite; border-color:var(--gold) !important; }
+    .pile-group.complete .card { border-color:var(--gold) !important; }
+    .pile-group.complete .card::before { box-shadow:0 0 18px 4px rgba(255,215,64,.9); animation-duration:1s; }
     .pile-count.complete { color:#ffe9a8 !important; font-weight:700; text-shadow:0 0 8px rgba(255,215,64,.6); }
 
     /* 카드 획득 시 날아드는 연출 */
