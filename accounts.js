@@ -274,6 +274,7 @@ function buyItem(token, itemId) {
   } finally { buyLocks.delete(idl); }
 }
 function doBuy(idl, u, itemId) {
+  if (!Object.prototype.hasOwnProperty.call(SHOP, itemId)) return { error: '없는 상품이에요.' };
   const it = SHOP[itemId]; if (!it) return { error: '없는 상품이에요.' };
   u.items = u.items || {}; u.coins = u.coins || 0;
   // 희귀 염색약 확정권 사용 (레벨20 보상 티켓 소모)
@@ -320,7 +321,7 @@ function equipItem(token, itemId, kind) {
 function equipTitle(token, titleId) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
-  if (titleId && !((u.titles || {})[titleId])) return { error: '아직 획득하지 못한 칭호예요.' };
+  if (titleId && !(Object.prototype.hasOwnProperty.call(u.titles || {}, titleId) && u.titles[titleId])) return { error: '아직 획득하지 못한 칭호예요.' };
   u.title = titleId || null;
   persist(idl);
   return { ok: true, profile: profileOf(u) };
@@ -562,6 +563,8 @@ function applyReferral(token, refCode) {
   if (!u) return { error: '로그인이 필요해요.' };
   if (u.referredBy) return { error: '이미 초대 보상을 받았어요.' };
   const refl = String(refCode || '').trim().toLowerCase();
+  // hasOwnProperty로 조회 — db.users['__proto__'] 등이 Object.prototype을 반환해 오염되는 것 차단
+  if (!Object.prototype.hasOwnProperty.call(db.users, refl)) return { error: '유효하지 않은 초대 코드예요.' };
   const ref = db.users[refl];
   if (!ref || refl === idl) return { error: '유효하지 않은 초대 코드예요.' };
   if (Date.now() - (u.createdAt || 0) > 72 * 3600 * 1000) return { error: '가입 3일 이내에만 등록할 수 있어요.' };
@@ -626,7 +629,7 @@ function recordResult(token, result, opts = {}) {
   if (result === 'win') missions.push(...missionEvent(u, 'win'));
   if (winnable && u.winStreak === 2) missions.push(...missionEvent(u, 'streak2'));
 
-  let coins = base.coins || 0, xp = base.xp || 0, rp = base.rp || 0;
+  let coins = base.coins || 0, xp = base.xp || 0, rp = opts.noRank ? 0 : (base.rp || 0);   // 봇매치 등은 RP 미반영
   let firstWin = 0, streak = 0;
 
   if (blocked) {

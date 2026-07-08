@@ -1219,6 +1219,7 @@ function finishStats(room, winner, forfeit = false) {
     const out = accounts.recordResult(tok, result, {
       vsBot: room.vsBot, difficulty: room.difficulty, oppLabel,
       sameIp, friendly, turns, playtimeSec, oppUid, forfeit,
+      noRank: !!room.botMatch,   // 위장 봇 매치는 코인·XP만, RP는 랭킹 무결성 위해 미반영
     });
     if (out && room.players[i]) io.to(room.players[i]).emit('profile', { profile: out.profile, result, rewards: out.rewards });
   });
