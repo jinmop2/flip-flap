@@ -813,6 +813,22 @@ function toggleBGM() {   // 마스터 음소거 토글 (BGM + 효과음 전체) 
 }
 window.addEventListener('DOMContentLoaded', applySoundBtn);   // 저장된 상태 반영
 
+// ── 턴 안내(가이드라인) 온오프 — 매턴 지시문(statusBar) 숨기기 토글 ──
+let guideOff = localStorage.getItem('ff_guide') === 'off';
+function applyGuideBtn() {
+  const sb = document.getElementById('statusBar'); if (sb) sb.style.display = guideOff ? 'none' : '';
+  const b = document.getElementById('guideBtn'); if (!b) return;
+  b.title = guideOff ? '턴 안내 켜기' : '턴 안내 끄기';
+  b.style.opacity = guideOff ? '.55' : '1';
+}
+function toggleGuide() {
+  guideOff = !guideOff;
+  localStorage.setItem('ff_guide', guideOff ? 'off' : 'on');
+  applyGuideBtn();
+  toast(guideOff ? '💡 턴 안내를 숨겼어요' : '💡 턴 안내를 다시 보여요', 1500);
+}
+window.addEventListener('DOMContentLoaded', applyGuideBtn);
+
 // ── 게임 설명서 ─────────────────────────────────────────────
 function toggleRules(show) {
   document.getElementById('rulesModal').style.display = show ? 'flex' : 'none';
@@ -1249,8 +1265,8 @@ function playSettleFlight(legs) {
     ghost.style.left = leg.from.left + 'px'; ghost.style.top = leg.from.top + 'px';
     ghost.style.width = leg.from.width + 'px'; ghost.style.height = leg.from.height + 'px';
     document.body.appendChild(ghost);
-    // 1박자: 낙찰품 2장 나란히(0·80ms) → 2박자: 배팅 교환(430ms, 동시 대칭)
-    const delay = leg.kind === 'prize' ? (prizeN++) * 80 : 430;
+    // 1박자: 낙찰품 2장 나란히(0·80ms, ~530ms 완료) → 완전히 끝난 뒤 2박자: 배팅 교환(620ms~)
+    const delay = leg.kind === 'prize' ? (prizeN++) * 80 : 620;
     let dx = (tr.left + tr.width / 2) - (leg.from.left + leg.from.width / 2);
     let dy = (tr.top + tr.height / 2) - (leg.from.top + leg.from.height / 2);
     let scale = destEl ? Math.max(tr.width / leg.from.width, 0.4) : 0.8;
@@ -1275,7 +1291,7 @@ function playSettleFlight(legs) {
     setTimeout(finish, f.delay + 700);                // 안전망 (탭 전환 등으로 이벤트 유실 시)
   }
   playSound('deal');
-  setTimeout(() => playSound('deal'), 440);           // 교환 박자에 맞춰 한 번 더
+  setTimeout(() => playSound('deal'), 630);           // 교환 박자에 맞춰 한 번 더
 }
 
 // ── 전적 (localStorage) ─────────────────────────────────────
