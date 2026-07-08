@@ -197,7 +197,7 @@ function createGame() {
     p2Hand: deck.slice(18, 24),
     p1Acquired: [], p2Acquired: [],
     turn: 1, phase: 'pick', auctioneer: 1, auction: null,
-    time: { 1: 420, 2: 420 },   // 체스 시계: 각 7분(초)
+    time: { 1: 300, 2: 300 },   // 체스 시계: 각 5분(초)
     pick: { cards: pickCards, choices: [null, null], revealed: false },  // 선공 결정
   };
   return game;
