@@ -980,7 +980,7 @@ const TUT_STEPS = [
     act:  '마음에 드는 방식을 클릭' },
   { id: 'bid_me', when: s => s.phase === 'bidding' && s.auction && !s.auction.myBid && (s.auctioneer === s.myIndex || s.auction.oppBidSubmitted),
     pos: 'top', target: '#myHand',
-    text: '<b>배팅!</b> 강한 카드가 상품 2장을 다 가져가요. ⚠️ 단, 배팅한 카드는 <b>상대 손으로</b> 넘어가요 — 세게 쓸수록 손해도 커요!',
+    text: '<b>배팅!</b> 강한 카드를 배팅한 사람이 상품 2장을 다 가져가요. ⚠️ 단, 배팅한 카드는 <b>서로 교환</b>해요.',
     act:  '손패에서 카드 클릭 → <b>배팅 확정</b> 버튼' },
   { id: 'reveal', when: s => s.phase === 'reveal',
     pos: 'top',
