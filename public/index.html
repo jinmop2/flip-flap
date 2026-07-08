@@ -339,6 +339,14 @@
     .bd-level  { background:rgba(120,180,255,.16); color:#9ad0ff; border:1px solid rgba(120,180,255,.4); }
     .bd-rank   { background:rgba(200,139,255,.16); color:#d8b0ff; border:1px solid rgba(200,139,255,.45); }
     .bd-warn   { background:rgba(255,120,120,.14); color:#ff9a9a; border:1px solid rgba(255,120,120,.35); font-size:.74rem; }
+    /* 게임 종료 진행도 바 (다음 레벨·랭크까지) */
+    .rw-prog { margin-top:11px; display:flex; flex-direction:column; gap:6px; width:100%; max-width:320px; margin-left:auto; margin-right:auto; }
+    .rwp-row { display:flex; align-items:center; gap:8px; font-size:.7rem; }
+    .rwp-lbl { font-weight:800; color:#ffe9a8; min-width:62px; text-align:right; white-space:nowrap; }
+    .rwp-bar { flex:1; height:8px; border-radius:99px; background:rgba(0,0,0,.4); border:1px solid rgba(200,160,0,.25); overflow:hidden; }
+    .rwp-fill { height:100%; width:0; border-radius:99px; background:linear-gradient(90deg,#c8912e,#ffd97a); transition:width .9s cubic-bezier(.3,.8,.3,1); }
+    .rwp-fill.rk { background:linear-gradient(90deg,#7ab8ff,#c39bff); }
+    .rwp-val { color:#c8a86a; min-width:78px; font-weight:600; text-align:left; white-space:nowrap; }
     /* ── 염색약 뽑기 연출 ── */
     #dyeRoll { display:none; position:fixed; inset:0; z-index:90; background:rgba(5,3,8,.82); align-items:center; justify-content:center; }
     #dyeRoll.show { display:flex; animation:fadeIn .2s; }
@@ -1754,7 +1762,7 @@
     <div id="goStats"></div>
     <div id="rematchNote"></div>
     <div style="display:flex; gap:8px; justify-content:center;">
-      <button class="btn btn-gold" id="rematchBtn" style="width:auto" onclick="rematch(this)">🔄 재대결</button>
+      <button class="btn btn-gold" id="rematchBtn" style="width:auto" onclick="rematch(this)">🔄 한 판 더!</button>
       <button class="btn btn-outline" style="width:auto" onclick="goLobby()">로비로</button>
     </div>
     <button class="btn btn-kakao btn-sm" style="width:100%;margin-top:8px" onclick="challengeFriend()">💬 친구에게 도전장 보내기</button>

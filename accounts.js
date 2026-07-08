@@ -510,12 +510,36 @@ function claimDaily(token) {
   const today = kstDayIndex();
   const decay = applyRankDecay(u, today);   // 접속 전 랭크 감소 정산
   if (u.lastLoginIdx === today) { if (decay) persist(idl); return { claimed: false, decay, profile: profileOf(u) }; }
+  // 연속 출석: 어제도 접속했으면 스택+1, 끊기면 1부터 (스택당 +10, 최대 +70 → 총 30~100)
+  u.loginStreak = (u.lastLoginIdx === today - 1) ? (u.loginStreak || 1) + 1 : 1;
   u.lastLoginIdx = today;
+  const streakBonus = Math.min((u.loginStreak - 1) * 10, 70);
   const plateBonus = u.plate === 'np_daily' ? PLATE_DAILY_BONUS : 0;   // 🍀 행운의 명패
-  const amount = DAILY_LOGIN + plateBonus;
+  const amount = DAILY_LOGIN + streakBonus + plateBonus;
   u.coins = (u.coins || 0) + amount;
   persist(idl);
-  return { claimed: true, amount, plateBonus, decay, profile: profileOf(u) };
+  return { claimed: true, amount, plateBonus, streak: u.loginStreak, streakBonus, decay, profile: profileOf(u) };
+}
+
+// ── 친구 초대 보상 — 초대받은 신규 계정과 초대자 둘 다 +100 (플래그 1회) ──
+const REFER_COINS = 100, REFER_CAP = 50;   // 초대자 최대 50회까지 지급
+function applyReferral(token, refCode) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  if (u.referredBy) return { error: '이미 초대 보상을 받았어요.' };
+  const refl = String(refCode || '').trim().toLowerCase();
+  const ref = db.users[refl];
+  if (!ref || refl === idl) return { error: '유효하지 않은 초대 코드예요.' };
+  if (Date.now() - (u.createdAt || 0) > 72 * 3600 * 1000) return { error: '가입 3일 이내에만 등록할 수 있어요.' };
+  u.referredBy = refl;
+  u.coins = (u.coins || 0) + REFER_COINS;
+  if ((ref.refCount || 0) < REFER_CAP) {   // 초대자 남용 방지 상한
+    ref.refCount = (ref.refCount || 0) + 1;
+    ref.coins = (ref.coins || 0) + REFER_COINS;
+    persist(refl);
+  }
+  persist(idl);
+  return { ok: true, amount: REFER_COINS, profile: profileOf(u) };
 }
 
 // 결과 반영 (result: 'win'|'loss'|'draw') → { profile, rewards }
@@ -626,5 +650,5 @@ function myRank(token) {
 module.exports = {
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, claimDaily, myRank,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
-  missionList, titleList, betrayEvent, claimTutorial,
+  missionList, titleList, betrayEvent, claimTutorial, applyReferral,
 };

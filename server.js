@@ -47,6 +47,7 @@ app.post('/api/nick',   rateLimit(20), (req, res) => { const { token, nick } = r
 app.post('/api/daily',  rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.claimDaily(token) || { error: '로그인이 필요해요.' }); });
 app.post('/api/missions', rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.missionList(token)); });
 app.post('/api/tutorial-done', rateLimit(20), (req, res) => { const { token } = req.body || {}; res.json(accounts.claimTutorial(token)); });
+app.post('/api/refer', rateLimit(10), (req, res) => { const { token, ref } = req.body || {}; res.json(accounts.applyReferral(token, ref)); });
 app.post('/api/titles',   rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.titleList(token)); });
 app.post('/api/equip-title', rateLimit(30), (req, res) => { const { token, titleId } = req.body || {}; res.json(accounts.equipTitle(token, titleId || null)); });
 app.post('/api/myrank', rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json({ ok: true, me: accounts.myRank(token) }); });
@@ -454,7 +455,10 @@ function maybeCpuAct(roomId) {
           oppHandLen: (ci === 0 ? g.p2Hand : g.p1Hand).length,
         }, room.aiMem || (room.aiMem = expert3.createMem()));
       } else if (room.difficulty === 'easy') {
-        bid = cpuDecideBid(hand, prize, acq, 'easy');
+        // 루키 모드: 항상 최약 카드만 배팅 → 첫 판은 사실상 승리 보장
+        bid = room.rookie
+          ? [...hand].sort((a, b) => strength(b) - strength(a))[0]
+          : cpuDecideBid(hand, prize, acq, 'easy');
       } else {
         bid = decideBidX(hand, prize, acq, opp, visOpp, g.centerDeck.length);   // 보통 = 구 전문가
       }
@@ -622,6 +626,46 @@ const MAX_ROOMS = 800;               // 서버 전체 방 상한
 const MAX_CONN_PER_IP = 8;           // IP당 소켓 연결 상한
 const connByIp = new Map();
 let matchQueue = [];                  // 빠른 대전 대기열
+const MATCH_BOT_WAIT = 15000;         // 이 시간 안에 상대 없으면 위장 전문가봇 투입 (빈손 이탈 방지)
+const BOT_NICKS = ['달빛여우', '카드요정', '조용한상어', '느긋한거북', '불꽃토끼', '새벽부엉이', '미소천사', '포커페이스',
+  '골목대장', '한장의승부', '바람의검객', '커피한잔', '야간비행', '슬로우스타터', '럭키세븐', '초코우유'];
+function randomBotNick() {
+  const base = BOT_NICKS[Math.floor(Math.random() * BOT_NICKS.length)];
+  return Math.random() < 0.5 ? base : base + (2 + Math.floor(Math.random() * 97));
+}
+// 대기열 제거 (봇 투입 타이머까지 정리)
+function dequeue(sid) {
+  matchQueue = matchQueue.filter(q => {
+    if (q.sid !== sid) return true;
+    clearTimeout(q.botTimer);
+    return false;
+  });
+}
+// 15초 매칭 실패 → 전문가봇이 일반 유저처럼 입장 (멀티 보상 그대로)
+function startBotMatch(entry) {
+  dequeue(entry.sid);
+  const s = io.sockets.sockets.get(entry.sid);
+  if (!s || (s.roomId && rooms[s.roomId])) return;
+  if (Object.keys(rooms).length >= MAX_ROOMS) return s.emit('error', '서버가 혼잡해요.');
+  const u = entry.token && accounts.byToken(entry.token);
+  const prof = u ? accounts.profileOf(u) : { nick: cleanNick(entry.nick), guest: true };
+  const roomId = makeRoomId();
+  rooms[roomId] = {
+    players: [entry.sid, null], pids: [entry.pid || null, null], nicks: [prof.nick, randomBotNick()],
+    profiles: [prof, null], tokens: [entry.token || null, null],
+    name: '빠른 대전', game: null, vsBot: false, difficulty: 'expert',   // 보상은 멀티 기준
+    secret: false, password: '', cpuIndex: 1, botMatch: true,
+    aiMem: expert3.createMem(),
+  };
+  rooms[roomId].profiles[1] = { nick: rooms[roomId].nicks[1], guest: true };   // 게스트 유저처럼 보이게
+  s.leave('lobby'); s.join(roomId); s.roomId = roomId; s.playerIndex = 0; s.pid = entry.pid;
+  rooms[roomId].game = createGame();
+  rooms[roomId].startedAt = Date.now();
+  io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles });
+  broadcast(roomId);
+  startClock(roomId);
+  setTimeout(() => maybeCpuAct(roomId), 800);
+}
 
 // ── 소켓 ───────────────────────────────────────────────────
 
@@ -690,6 +734,9 @@ io.on('connection', (socket) => {
     };
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
     if (vsBot) {
+      // 첫 승 보장: 튜토리얼이거나, 쉬움 난이도의 무전적 유저(신규·게스트)면 AI가 봐줌
+      const u0 = socket.token && accounts.byToken(socket.token);
+      rooms[roomId].rookie = !!tutorial || (difficulty === 'easy' && (!u0 || (u0.wins || 0) === 0));
       rooms[roomId].cpuIndex = 1;
       rooms[roomId].nicks[1] = 'AI';
       rooms[roomId].profiles[1] = { nick: 'AI', guest: true, bot: true };
@@ -748,14 +795,17 @@ io.on('connection', (socket) => {
   // 빠른 대전 (자동 매칭)
   socket.on('quick_match', ({ pid, nick } = {}) => {
     if (socket.roomId && rooms[socket.roomId]) return;
-    matchQueue = matchQueue.filter(q => q.sid !== socket.id);
+    dequeue(socket.id);
     let opp = null;
-    while (matchQueue.length) { const c = matchQueue.shift(); if (c.sid !== socket.id && io.sockets.sockets.get(c.sid)) { opp = c; break; } }
+    while (matchQueue.length) { const c = matchQueue.shift(); if (c.sid !== socket.id && io.sockets.sockets.get(c.sid)) { opp = c; break; } else clearTimeout(c.botTimer); }
     const me = { sid: socket.id, pid, nick, token: socket.token };
-    if (opp) startMatch(opp, me);
-    else { matchQueue.push(me); socket.emit('queued'); }
+    if (opp) { clearTimeout(opp.botTimer); startMatch(opp, me); }
+    else {
+      me.botTimer = setTimeout(() => startBotMatch(me), MATCH_BOT_WAIT);   // 15초 후 위장봇 투입
+      matchQueue.push(me); socket.emit('queued');
+    }
   });
-  socket.on('cancel_match', () => { matchQueue = matchQueue.filter(q => q.sid !== socket.id); socket.emit('unqueued'); });
+  socket.on('cancel_match', () => { dequeue(socket.id); socket.emit('unqueued'); });
 
   // 선공 뽑기: 중앙 카드 2장 중 하나 선택
   socket.on('pick_card', ({ slot } = {}) => {
@@ -857,7 +907,7 @@ io.on('connection', (socket) => {
   socket.on('rematch', () => {
     const room = rooms[socket.roomId];
     if (!room) return socket.emit('opponent_left');
-    if (room.vsBot) return restartGame(socket.roomId);
+    if (room.vsBot || room.cpuIndex !== undefined) return restartGame(socket.roomId);   // 봇(위장 포함)은 즉시 재대국
     room.rematch = room.rematch || [false, false];
     room.rematch[socket.playerIndex] = true;
     room.players.forEach((s, i) => { if (s && i !== socket.playerIndex) io.to(s).emit('rematch_wanted'); });
@@ -913,7 +963,7 @@ io.on('connection', (socket) => {
     const c = (connByIp.get(ip) || 1) - 1;   // IP 연결 카운트 감소
     if (c <= 0) connByIp.delete(ip); else connByIp.set(ip, c);
     if (socket.accountId && accountSockets.get(socket.accountId) === socket.id) accountSockets.delete(socket.accountId);
-    matchQueue = matchQueue.filter(q => q.sid !== socket.id);  // 매칭 대기열에서 제거
+    dequeue(socket.id);  // 매칭 대기열에서 제거 (봇 타이머 포함)
     const roomId = socket.roomId;
     const room = roomId && rooms[roomId];
     if (!room) return;

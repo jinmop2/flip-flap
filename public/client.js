@@ -143,14 +143,29 @@ async function restoreSession() {
   if (r.ok) { myAccount = r.profile; renderAccount(); claimDaily(); }
   else localStorage.removeItem('ff_auth');
 }
-// 1일 접속 보상 수령
+// 1일 접속 보상 수령 (연속 출석 스택 표시)
 async function claimDaily() {
   const d = await apiPost('/api/daily', { token: localStorage.getItem('ff_auth') });
   if (d && d.claimed) {
     myAccount = d.profile; renderAccount();
-    toast(`🎁 출석 보상 <b style="color:#ffd94a">🪙 +${d.amount}</b> 받았어요!${d.plateBonus ? ' <span style="color:#4ade80">(🍀 명패 +' + d.plateBonus + ' 포함)</span>' : ''}`);
+    const streakTxt = d.streak >= 2 ? ` <span style="color:#ff9a3c">🔥 ${d.streak}일 연속!</span>` : '';
+    toast(`🎁 출석 보상 <b style="color:#ffd94a">🪙 +${d.amount}</b>${streakTxt}${d.plateBonus ? ' <span style="color:#4ade80">(🍀 명패 포함)</span>' : ''}`, 3200);
+  }
+  claimReferral();   // 저장된 초대 코드가 있으면 자동 등록
+}
+// 친구 초대 보상 — ?ref= 링크로 들어와 가입하면 양쪽 +100
+async function claimReferral() {
+  const ref = localStorage.getItem('ff_ref');
+  if (!ref || !myAccount || myAccount.guest) return;
+  const r = await apiPost('/api/refer', { token: localStorage.getItem('ff_auth'), ref });
+  localStorage.removeItem('ff_ref');   // 성공/실패 무관 1회 시도
+  if (r && r.ok) {
+    myAccount = r.profile; renderAccount();
+    toast(`🤝 친구 초대 보상 <b style="color:#ffd94a">🪙 +${r.amount}</b>! 초대한 친구도 받았어요`, 3500);
   }
 }
+// 초대 링크(?ref=아이디)로 접속 시 코드 보관
+try { const rp = new URLSearchParams(location.search).get('ref'); if (rp) localStorage.setItem('ff_ref', rp); } catch (_) {}
 const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
 const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby' };
 const xpPct = p => Math.max(0, Math.min(100, Math.round((p.xpInLevel || 0) / (p.xpNeeded || 100) * 100)));
@@ -264,7 +279,9 @@ function countUp(el, to, prefix = '', ms = 800) {
 function showRewards() {
   const el = document.getElementById('goRewards');
   const r = pendingRewards;
-  if (!el || !r || !(r.coins || r.xp || r.rp)) { if (el) el.style.display = 'none'; return; }
+  // 보상이 0이어도 차단 사유·진행도 바는 보여줌 (로그인 유저)
+  const worth = r && ((r.coins || r.xp || r.rp) || r.blocked || (myAccount && !myAccount.guest));
+  if (!el || !worth) { if (el) el.style.display = 'none'; return; }
   el.style.display = 'block';
   el.innerHTML = `<div class="rw-row">
       <span class="rw-coin">🪙 <b id="rwCoin">0</b></span>
@@ -289,6 +306,26 @@ function showRewards() {
               : r.reason === 'repeat' ? '같은 상대 반복 대전 — 보상 없음'
               : '보상 지급 제외';
     add('bd-warn', `⚠️ ${msg}`, d); d += 250;
+  }
+  // 진행도 노출 — 다음 레벨·다음 랭크까지 얼마나 남았는지 ("한 판 더" 유도)
+  if (myAccount && !myAccount.guest) {
+    const RANK_STEPS = [[0, '브론즈'], [100, '실버'], [250, '골드'], [500, '플래티넘'], [900, '다이아'], [1500, '마스터']];
+    let html = `<div class="rw-prog">
+      <div class="rwp-row"><span class="rwp-lbl">Lv.${myAccount.level}</span>
+        <div class="rwp-bar"><div class="rwp-fill" data-w="${xpPct(myAccount)}"></div></div>
+        <span class="rwp-val">XP ${myAccount.xpInLevel}/${myAccount.xpNeeded}</span></div>`;
+    const rp = myAccount.rp || 0;
+    const next = RANK_STEPS.find(([t]) => t > rp);
+    if (next) {
+      const prev = [...RANK_STEPS].reverse().find(([t]) => t <= rp)[0];
+      const pct = Math.round((rp - prev) / (next[0] - prev) * 100);
+      html += `<div class="rwp-row"><span class="rwp-lbl" style="color:${myAccount.rankColor}">${myAccount.rankIcon} ${esc(myAccount.rank)}</span>
+        <div class="rwp-bar"><div class="rwp-fill rk" data-w="${pct}"></div></div>
+        <span class="rwp-val">${next[0] - rp} RP → ${next[1]}</span></div>`;
+    }
+    html += '</div>';
+    el.insertAdjacentHTML('beforeend', html);
+    setTimeout(() => el.querySelectorAll('.rwp-fill').forEach(f => { f.style.width = f.dataset.w + '%'; }), 80);
   }
   pendingRewards = null;
 }
@@ -1125,10 +1162,13 @@ function shareKakao(btn) {
     });
   } catch (e) { console.warn('카카오 공유 실패:', e); shareInvite(btn); }
 }
-// 로비 친구 초대 — 카톡(우선)/공유 시트로 사이트 링크 보내기
+// 로비 친구 초대 — 카톡(우선)/공유 시트로 사이트 링크 보내기 (내 초대 코드 포함 → 둘 다 +100)
 function inviteFriend() {
-  const url = `${location.origin}${location.pathname}`;
-  const text = '🃏 FLIP FLAP 같이 한 판 하자!\n경매·블러핑 심리전 카드 보드게임 🎴';
+  const refQ = myAccount && !myAccount.guest ? `?ref=${encodeURIComponent(myAccount.id)}` : '';
+  const url = `${location.origin}${location.pathname}${refQ}`;
+  const text = refQ
+    ? '🃏 FLIP FLAP 같이 한 판 하자!\n내 초대 링크로 가입하면 우리 둘 다 🪙100 코인!'
+    : '🃏 FLIP FLAP 같이 한 판 하자!\n경매·블러핑 심리전 카드 보드게임 🎴';
   if (window.Kakao && Kakao.isInitialized()) {
     try { Kakao.Share.sendDefault({ objectType: 'text', text, link: { mobileWebUrl: url, webUrl: url }, buttonTitle: '게임 하러 가기' }); return; }
     catch (e) { /* 폴백 */ }
