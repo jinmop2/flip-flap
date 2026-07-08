@@ -1037,6 +1037,14 @@
     .btn-row { display:flex; gap:8px; }
     .hint-text { font-size:.74rem; color:rgba(255,255,255,.4); text-align:center; }
 
+    /* 정산 카드 비행 (낙찰품→더미, 배팅→교환) */
+    .fly-card {
+      position:fixed; z-index:60; pointer-events:none; margin:0;
+      transition:transform .68s cubic-bezier(.45,.05,.25,1), opacity .68s ease;
+      box-shadow:0 10px 26px rgba(0,0,0,.55);
+      will-change:transform;
+    }
+
     /* 경매 결과 배너 */
     .result-banner {
       margin-top:8px; padding:6px 16px; border-radius:10px; text-align:center;

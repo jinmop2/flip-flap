@@ -1181,8 +1181,12 @@ socket.on('state_update', s => {
   const prev = prevPhase;
   const changed = s.phase !== prevPhase;
   drewNow = prev === 'draw' && s.phase === 'offer';
+  // 정산 순간(reveal → 다음): 화면에 있는 카드들의 출발 위치를 렌더 전에 기록
+  const flight = (prev === 'reveal' && s.phase !== 'reveal' && state && state.auction)
+    ? captureSettleFlight(state) : null;
   prevPhase = s.phase; state = s; myIndex = s.myIndex;
   render(changed);
+  if (flight) playSettleFlight(flight);
   tutTick();
   if (changed && s.phase === 'reveal') playSound('reveal');
   if (drewNow) playSound('deal');
@@ -1207,6 +1211,55 @@ function localSet(acq) {
   const c = {}; for (const x of acq) c[x.kind] = (c[x.kind] || 0) + 1;
   for (const k of [2, 3, 4, 6]) if ((c[k] || 0) >= k) return k;
   return null;
+}
+
+// ── 정산 카드 비행 애니메이션 — 낙찰품→승자 더미, 배팅 카드→서로 교환 ──
+function captureSettleFlight(old) {
+  const a = old.auction;
+  if (!a || !a.myBid || !a.oppBid) return null;
+  const rectOf = sel => { const el = document.querySelector(sel); if (!el) return null; const r = el.getBoundingClientRect(); return r.width ? r : null; };
+  const iWin = myBidWins(a.myBid, a.oppBid);
+  const legs = [];
+  // 경매품 2장 (중앙 매트) → 승자 더미
+  const prizeEls = document.querySelectorAll('#auctionItems .card');
+  const prizeCards = [a.centerCard, a.offeredCard];
+  prizeEls.forEach((el, i) => {
+    const r = el.getBoundingClientRect();
+    if (r.width && prizeCards[i]) legs.push({ card: prizeCards[i], from: r, destSel: `#${iWin ? 'myAcq' : 'oppAcq'} .card[data-id="${prizeCards[i].id}"]`, fallback: iWin ? '#myAcq' : '#oppAcq' });
+  });
+  // 상대 배팅 → 내 손으로 / 내 배팅 → 상대 손으로 (교환)
+  const oppR = rectOf('#oppBid .card'), myR = rectOf('#myBid .card');
+  if (oppR) legs.push({ card: a.oppBid, from: oppR, destSel: `#myHand .card[data-id="${a.oppBid.id}"]`, fallback: '#myHand' });
+  if (myR) legs.push({ card: a.myBid, from: myR, destSel: null, fallback: '#oppHand' });
+  return legs.length ? legs : null;
+}
+function playSettleFlight(legs) {
+  legs.forEach((leg, i) => {
+    const destEl = leg.destSel && document.querySelector(leg.destSel);
+    const target = destEl || document.querySelector(leg.fallback);
+    if (!target) return;
+    const tr = target.getBoundingClientRect();
+    if (!tr.width && !tr.height) return;
+    if (destEl) destEl.style.visibility = 'hidden';          // 도착 카드는 비행 끝날 때까지 숨김
+    const ghost = makeCard(leg.card);
+    ghost.classList.add('fly-card');
+    ghost.style.left = leg.from.left + 'px'; ghost.style.top = leg.from.top + 'px';
+    ghost.style.width = leg.from.width + 'px'; ghost.style.height = leg.from.height + 'px';
+    document.body.appendChild(ghost);
+    const scale = destEl ? (tr.width / leg.from.width) : 0.6;
+    const dx = (tr.left + tr.width / 2) - (leg.from.left + leg.from.width / 2);
+    const dy = (tr.top + tr.height / 2) - (leg.from.top + leg.from.height / 2);
+    setTimeout(() => {
+      void ghost.offsetWidth;
+      ghost.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+      if (!destEl) ghost.style.opacity = '0.15';             // 손패 속으로 사라지듯
+    }, 40 + i * 90);                                          // 카드별 시차
+    setTimeout(() => {
+      if (destEl) destEl.style.visibility = '';
+      ghost.remove();
+    }, 760 + i * 90);
+  });
+  if (legs.length) playSound('deal');
 }
 
 // ── 전적 (localStorage) ─────────────────────────────────────
@@ -1327,6 +1380,8 @@ function updateClocks(t1, t2, active) {
   setTimerEl('oppTimer', myIndex === 1 ? t2 : t1, active === oppIdx);
 }
 socket.on('clock', ({ t1, t2, active }) => {
+  // 캐시된 state.time도 동기화 — 카드 클릭 등 로컬 재렌더가 낡은 시간으로 되돌리는 버그 방지
+  if (state && state.time) { state.time[1] = t1; state.time[2] = t2; }
   updateClocks(t1, t2, active);
   const myT = myIndex === 1 ? t1 : t2;
   if (myT <= 10 && myT > 0 && myT !== lastMyT) playSound('tick');
@@ -1374,6 +1429,7 @@ function makeCard(card, opts = {}) {
   }
 
   el.dataset.kind = card.kind;
+  el.dataset.id = card.id;   // 정산 비행 애니메이션의 도착 지점 탐색용
   if (is21(card) || is610(card)) el.classList.add('special');
 
   const top = document.createElement('div');
@@ -1511,6 +1567,12 @@ function oppBackClass() {
 function makeOppBack() {
   const c = makeCard(null);
   const cls = oppBackClass(); if (cls) c.classList.add(cls);
+  return c;
+}
+function makeMyBack() {   // 내 비공개 배팅(오픈 경매) — 내 카드백 스킨
+  const c = makeCard(null);
+  const p = gameProfiles && gameProfiles[myIndex - 1];
+  const cls = p && CB_CLASS[p.cardBack]; if (cls) c.classList.add(cls);
   return c;
 }
 
@@ -1666,12 +1728,12 @@ function renderAuction(changed) {
   }
 }
 // 배팅 카드를 각자 앞에 배치
-function bidSlot(label, card, { back = false, reveal = false } = {}) {
+function bidSlot(label, card, { back = false, reveal = false, mine = false } = {}) {
   const w = document.createElement('div'); w.className = 'bid-slot';
   const l = document.createElement('div'); l.className = 'bid-lbl'; l.textContent = label;
   w.appendChild(l);
   if (card)       w.appendChild(makeCard(card, { reveal }));
-  else if (back)  w.appendChild(makeOppBack());   // 상대의 비공개 배팅 — 상대 카드백 스킨 적용
+  else if (back)  w.appendChild(mine ? makeMyBack() : makeOppBack());   // 비공개 배팅 — 각자 카드백 스킨
   else { const e = document.createElement('div'); e.className = 'bid-empty'; w.appendChild(e); }
   return w;
 }
@@ -1686,9 +1748,11 @@ function renderBids() {
   const myLbl = isSpec ? ((gameNicks && gameNicks[0]) || 'P1') + ' 배팅' : '내 배팅';
   const opLbl = isSpec ? ((gameNicks && gameNicks[1]) || 'P2') + ' 배팅' : '상대 배팅';
 
-  // 내(아래) 배팅 — 내 카드는 항상 앞면(내가 낸 건 나에게 공개). 선택 중이면 미리보기
+  // 내(아래) 배팅 — 오픈 경매는 뒤집어 내는 것: 확정 후엔 내 것도 뒷면, 리빌에서 앞면으로 뒤집힘
   const myTurnBid = !isSpec && s.phase === 'bidding' && !a.myBid && (s.auctioneer === s.myIndex || a.oppBidSubmitted);
-  if (a.myBid)                 my.appendChild(bidSlot(myLbl, a.myBid, { reveal: isReveal && !!a.myBid }));
+  const hideMyBid = a.auctionType === 'open' && !isReveal && !isSpec;
+  if (a.myBid && hideMyBid)    my.appendChild(bidSlot(myLbl + ' ✓', null, { back: true, mine: true }));
+  else if (a.myBid)            my.appendChild(bidSlot(myLbl, a.myBid, { reveal: isReveal && !!a.myBid }));
   else if (myTurnBid && selectedBidCard) my.appendChild(bidSlot('내 배팅 (선택 중)', selectedBidCard, {}));
   else if (isSpec && a.myBidSubmitted) my.appendChild(bidSlot(myLbl + ' ✓', null, { back: true }));
   else                         my.appendChild(bidSlot(myLbl, null));
