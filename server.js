@@ -1108,7 +1108,7 @@ function resolveBidding(roomId) {
   if (g.auction.p1Submitted && g.auction.p2Submitted) {
     g.phase = 'reveal';
     broadcast(roomId);
-    setTimeout(() => tutGate(roomId, () => settle(roomId)), 2200);
+    setTimeout(() => tutGate(roomId, () => settle(roomId)), 2500);
   } else {
     broadcast(roomId);
     setTimeout(() => maybeCpuAct(roomId), 200);
@@ -1186,12 +1186,20 @@ function settle(roomId) {
     room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_over', { winner, setKind, byProgress: true, myIndex: i + 1 }); });
     return;
   }
-  g.turn++;
-  g.auctioneer = g.auctioneer === 1 ? 2 : 1;
-  startTurn(g);
+  // 정산 결과를 눈으로 확인할 시간 — 카드가 승자 더미로 날아가 안착하고, 늘어난 세트를 본 뒤 다음 턴
+  g.phase = 'settled';
   broadcast(roomId);
-  setTimeout(() => maybeCpuAct(roomId), 400);
+  setTimeout(() => tutGate(roomId, () => {
+    const rm = rooms[roomId]; if (!rm || !rm.game) return;
+    const gg = rm.game;
+    gg.turn++;
+    gg.auctioneer = gg.auctioneer === 1 ? 2 : 1;
+    startTurn(gg);
+    broadcast(roomId);
+    setTimeout(() => maybeCpuAct(roomId), 500);
+  }), SETTLE_PAUSE);
 }
+const SETTLE_PAUSE = 1600;   // reveal(결과공개) 뒤 정산 카드 이동·더미 확인 시간
 
 // 로그인 유저의 전적/랭크/레벨/코인 반영 + 갱신된 프로필·보상 전송
 function finishStats(room, winner, forfeit = false) {

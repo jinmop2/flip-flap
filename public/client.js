@@ -1649,7 +1649,7 @@ function render(changed = false) {
     offer:       mine ? '중앙 카드 공개 — 출품할 카드를 선택하세요' : (isVsBot ? think('AI 생각 중') : '상대가 출품 중...'),
     choose_type: mine ? '경매 방식 선택 — 출품카드는 다른 손패 클릭 시 교체돼요' : (isVsBot ? think('AI 생각 중') : '상대가 방식 선택 중...'),
     bidding:     biddingMsg(),
-    reveal: '결과 공개!', game_over: '게임 종료',
+    reveal: '결과 공개!', settled: '카드 정산 중…', game_over: '게임 종료',
   };
   const bar = document.getElementById('statusBar');
   let msg = msgs[s.phase] ?? s.phase;
