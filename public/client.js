@@ -716,7 +716,10 @@ function tone(freq, type, vol, dur, delay = 0) {
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
   o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur);
 }
-let soundOff = localStorage.getItem('ff_sound') === 'off';   // 마스터 음소거 (저장됨)
+// 사운드 설정 — BGM·효과음 개별 (기존 ff_sound=off는 둘 다 끈 것으로 마이그레이션)
+const _legacyOff = localStorage.getItem('ff_sound') === 'off';
+let bgmOff = localStorage.getItem('ff_bgm') != null ? localStorage.getItem('ff_bgm') === 'off' : _legacyOff;
+let sfxOff = localStorage.getItem('ff_sfx') != null ? localStorage.getItem('ff_sfx') === 'off' : _legacyOff;
 // 재즈 징글용 헬퍼 (BGM과 독립적으로 AC.destination에 바로 출력)
 function jbrass(freq, delay, dur, vol, bendTo) {   // 뮤트 트럼펫 (원하면 끝에 피치 벤드)
   const t = AC.currentTime + delay;
@@ -740,7 +743,7 @@ function jcym(delay, freq, dur, vol) {   // 심벌 크래시/히트
   s.connect(bp); bp.connect(g); g.connect(AC.destination); s.start(t); s.stop(t + dur + 0.05);
 }
 function playSound(n) {
-  if (soundOff) return;
+  if (sfxOff) return;
   try { AC.resume(); } catch(_) {}
   switch (n) {
     case 'select': tone(900,'sine',.06,.08); break;
@@ -787,9 +790,9 @@ function startBGM() {
     AC.resume();
     const src = AC.createMediaElementSource(bgmAudio);
     bgmGain = AC.createGain();
-    bgmGain.gain.value = soundOff ? 0 : BGM_VOL;
+    bgmGain.gain.value = bgmOff ? 0 : BGM_VOL;
     src.connect(bgmGain); bgmGain.connect(AC.destination);
-  } catch (e) { bgmAudio.volume = soundOff ? 0 : BGM_VOL; }   // 폴백: 엘리먼트 볼륨
+  } catch (e) { bgmAudio.volume = bgmOff ? 0 : BGM_VOL; }   // 폴백: 엘리먼트 볼륨
   const tryPlay = () => bgmAudio.play().catch(() => {});
   tryPlay();
   if (bgmAudio.paused) {   // 자동재생 차단 → 첫 상호작용에서 재생
@@ -797,37 +800,38 @@ function startBGM() {
     document.addEventListener('pointerdown', kick, { once: true });
   }
 }
-const SVG_VOL_ON  = '<svg class="svgi" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>';
-const SVG_VOL_OFF = '<svg class="svgi" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
-function applySoundBtn() {
-  const b = document.getElementById('bgmBtn'); if (!b) return;
-  b.querySelector('.ci').innerHTML = soundOff ? SVG_VOL_OFF : SVG_VOL_ON;
-  b.title = soundOff ? '소리 켜기' : '소리 끄기';
-  b.style.opacity = soundOff ? '.55' : '1';
-}
-function toggleBGM() {   // 마스터 음소거 토글 (BGM + 효과음 전체) — 설정 저장
-  soundOff = !soundOff;
-  localStorage.setItem('ff_sound', soundOff ? 'off' : 'on');
-  setBgmVolume(soundOff ? 0 : BGM_VOL);
-  applySoundBtn();
-}
-window.addEventListener('DOMContentLoaded', applySoundBtn);   // 저장된 상태 반영
-
-// ── 턴 안내(가이드라인) 온오프 — 매턴 지시문(statusBar) 숨기기 토글 ──
+// ── 인게임 설정 패널 (배경음악 / 효과음 / 가이드) ──
 let guideOff = localStorage.getItem('ff_guide') === 'off';
-function applyGuideBtn() {
+function applySettings() {   // 저장된 상태를 화면·오디오에 반영
+  setBgmVolume(bgmOff ? 0 : BGM_VOL);
   const sb = document.getElementById('statusBar'); if (sb) sb.style.display = guideOff ? 'none' : '';
-  const b = document.getElementById('guideBtn'); if (!b) return;
-  b.title = guideOff ? '턴 안내 켜기' : '턴 안내 끄기';
-  b.style.opacity = guideOff ? '.55' : '1';
+  const set = (id, on) => { const t = document.getElementById(id); if (t) t.classList.toggle('on', on); };
+  set('togBgm', !bgmOff); set('togSfx', !sfxOff); set('togGuide', !guideOff);
+}
+function toggleSettings(force) {
+  const p = document.getElementById('settingsPanel'); if (!p) return;
+  const show = force === undefined ? !p.classList.contains('show') : force;
+  p.classList.toggle('show', show);
+  if (show) applySettings();
+}
+function toggleBgm() {
+  bgmOff = !bgmOff; localStorage.setItem('ff_bgm', bgmOff ? 'off' : 'on');
+  setBgmVolume(bgmOff ? 0 : BGM_VOL); applySettings();
+}
+function toggleSfx() {
+  sfxOff = !sfxOff; localStorage.setItem('ff_sfx', sfxOff ? 'off' : 'on');
+  applySettings(); if (!sfxOff) playSound('select');   // 켤 때 미리듣기
 }
 function toggleGuide() {
-  guideOff = !guideOff;
-  localStorage.setItem('ff_guide', guideOff ? 'off' : 'on');
-  applyGuideBtn();
-  toast(guideOff ? '💡 턴 안내를 숨겼어요' : '💡 턴 안내를 다시 보여요', 1500);
+  guideOff = !guideOff; localStorage.setItem('ff_guide', guideOff ? 'off' : 'on');
+  applySettings();
 }
-window.addEventListener('DOMContentLoaded', applyGuideBtn);
+// 패널 바깥 클릭 시 닫기
+document.addEventListener('pointerdown', e => {
+  const p = document.getElementById('settingsPanel');
+  if (p && p.classList.contains('show') && !e.target.closest('#settingsPanel') && !e.target.closest('#settingsBtn')) toggleSettings(false);
+});
+window.addEventListener('DOMContentLoaded', applySettings);   // 저장된 상태 반영
 
 // ── 게임 설명서 ─────────────────────────────────────────────
 function toggleRules(show) {
