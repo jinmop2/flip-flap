@@ -943,12 +943,12 @@ const TUT_STEPS = [
   { id: 'cards1', when: s => s.phase === 'pick',
     pos: 'bot',
     text: '환영해요! 🎩 먼저 <b>카드 읽는 법</b>부터 볼까요?',
-    cards: `<div class="tut-anno">
-      <span class="tcard k6 big"><i>1</i>6<em class="pt pt1">①</em><em class="pt pt2">②</em></span>
-      <div class="tut-legend">
-        <div class="tl-row"><span class="tl-no">①</span><b>등급</b><small>같은 종류끼리의 서열 — 1등급이 최강</small></div>
-        <div class="tl-row"><span class="tl-no">②</span><b>종류</b><small>이 숫자만큼 모으면 승리!</small></div>
-      </div></div>` },
+    cards: `<div class="tut-arrows">
+      <span class="ta-card">
+        <span class="tcard k6 big"><i>1</i>6</span>
+        <span class="ta-note ta-grade"><span class="ta-txt"><b>작은 숫자 = 등급</b><small>1등급이 최강</small></span></span>
+        <span class="ta-note ta-kind"><span class="ta-txt"><b>큰 숫자 = 종류</b><small>이만큼 모으면 승리!</small></span></span>
+      </span></div>` },
   { id: 'cards2', when: s => s.phase === 'pick',
     pos: 'bot',
     text: '🏆 <b>승리 조건</b> — 같은 종류를 <b>그 숫자만큼</b> 모으면 그 자리에서 승리!',
