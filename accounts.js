@@ -95,7 +95,7 @@ function profileOf(u) {
   const total = u.wins + u.losses;
   return {
     id: u.id, nick: u.nick, guest: false,
-    nickLocked: !(u.provider === 'kakao' && !u.nickSet),   // false면 아직 닉 설정 기회 남음
+    nickLocked: !!u.nickSet,   // false면 아직 무료 닉 설정 기회 남음 (소셜 첫 로그인 — provider 무관)
     level: levelOf(u.xp), xp: u.xp, xpInLevel: xpInLevel(u.xp), xpNeeded: levelInfo(u.xp).need,
     rp: u.rp, rank: rank.name, rankIcon: rank.icon, rankColor: rank.color,
     wins: u.wins, losses: u.losses,
@@ -171,11 +171,14 @@ function meByToken(token) { const u = byToken(token); return u ? { ok: true, pro
 function setNick(token, nick) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '세션이 만료됐어요. 다시 로그인해주세요.' };
-  const freeSet = u.provider === 'kakao' && !u.nickSet;
+  const freeSet = !u.nickSet;                              // 소셜 첫 설정(카카오·구글)은 provider 무관 무료 1회
   const hasTicket = ((u.items || {}).nick_change || 0) > 0;
   if (!freeSet && !hasTicket) return { error: '닉네임 변경권이 필요해요. (상점에서 구매)' };
   nick = String(nick || '').trim();
-  if (!validNick(nick)) return { error: '닉네임은 1~12자예요.' };
+  const cleaned = nick.replace(/[\s._-]/g, '');
+  if (nick.length < 1 || nick.length > 12) return { error: '닉네임은 1~12자예요.' };
+  if (BADWORDS.test(cleaned) || RESERVED_KEY.test(nick)) return { error: '사용할 수 없는 닉네임이에요.' };
+  if (!validNick(nick)) return { error: '사용할 수 없는 닉네임이에요.' };
   const nl = nick.toLowerCase();
   if (db.nickTaken[nl] && db.nickTaken[nl] !== idl) return { error: '이미 사용 중인 닉네임이에요.' };
   if (u.nick) delete db.nickTaken[u.nick.toLowerCase()];
