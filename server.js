@@ -626,7 +626,7 @@ const MAX_ROOMS = 800;               // 서버 전체 방 상한
 const MAX_CONN_PER_IP = 8;           // IP당 소켓 연결 상한
 const connByIp = new Map();
 let matchQueue = [];                  // 빠른 대전 대기열
-const MATCH_BOT_WAIT = 15000;         // 이 시간 안에 상대 없으면 위장 전문가봇 투입 (빈손 이탈 방지)
+const MATCH_BOT_WAIT = 10000;         // 이 시간 안에 상대 없으면 위장 전문가봇 투입 (빈손 이탈 방지)
 const BOT_NICKS = ['달빛여우', '카드요정', '조용한상어', '느긋한거북', '불꽃토끼', '새벽부엉이', '미소천사', '포커페이스',
   '골목대장', '한장의승부', '바람의검객', '커피한잔', '야간비행', '슬로우스타터', '럭키세븐', '초코우유'];
 function randomBotNick() {
