@@ -121,6 +121,15 @@ function validId(id)   { return /^[A-Za-z0-9_]{3,16}$/.test(id || '') && !RESERV
 function validNick(n)  { const s = String(n || '').trim(); return s.length >= 1 && s.length <= 12 && !RESERVED_KEY.test(s); }
 
 const TOKEN_TTL = 30 * 24 * 3600 * 1000;   // 토큰 30일 만료
+// 신규 계정 창단 보너스 — 코인 200 + '창단 멤버' 칭호 (플래그로 1회만)
+const FOUNDER_COINS = 200, TUTORIAL_COINS = 100;
+function grantFounder(u) {
+  if (u.founder) return;
+  u.founder = true;
+  u.coins = (u.coins || 0) + FOUNDER_COINS;
+  u.titles = u.titles || {};
+  u.titles.t_founder = true;
+}
 function signup(id, pw, nick) {
   id = String(id || '').trim(); nick = String(nick || '').trim();
   if (!validId(id)) return { error: '아이디는 영문/숫자 3~16자예요.' };
@@ -133,6 +142,7 @@ function signup(id, pw, nick) {
   const salt = crypto.randomBytes(12).toString('hex');
   const token = makeToken();
   const u = { id, nick, nickSet: true, salt, hash: hashPw(pw, salt), token, tokenExp: Date.now() + TOKEN_TTL, wins: 0, losses: 0, xp: 0, rp: 0, createdAt: Date.now() };   // 일반 가입은 폼에서 닉 확정
+  grantFounder(u);
   db.users[idl] = u; db.nickTaken[nickl] = idl; tokenIndex[token] = idl; persist(idl);
   return { ok: true, token, profile: profileOf(u) };
 }
@@ -332,6 +342,7 @@ function socialLogin(provider, extId, extNick) {
   if (!u) {
     const nick = uniqueNick(extNick);
     u = { id: idl, nick, nickSet: false, provider, token: makeToken(), tokenExp: Date.now() + TOKEN_TTL, wins: 0, losses: 0, xp: 0, rp: 0, createdAt: Date.now() };   // 닉은 첫 로그인 모달에서 확정
+    grantFounder(u);
     db.users[idl] = u; db.nickTaken[nick.toLowerCase()] = idl; tokenIndex[u.token] = idl; persist(idl);
     return { ok: true, token: u.token, profile: profileOf(u), isNew: true };
   }
@@ -394,6 +405,7 @@ setInterval(() => { const day = kstDayIndex(); for (const [k, e] of matchLogs) i
 
 // ── 칭호 (조건 달성 시 자동 획득) ──
 const TITLES = {
+  t_founder:{ name: '창단 멤버',     icon: '🏛️', color: '#ffd94a', cond: '초기 가입자',        goalKey: '__never',    goal: Infinity },   // 가입 시 수동 지급
   t_tutor:  { name: '새내기 졸업',   icon: '🎓', color: '#7dd87d', cond: '첫 승리',            goalKey: 'wins',       goal: 1 },
   t_streak: { name: '연승 제조기',   icon: '🔥', color: '#ffab5e', cond: '5연승 달성',          goalKey: 'bestStreak', goal: 5 },
   t_betray: { name: '배신의 달인',   icon: '⚔️', color: '#ff8a8a', cond: '졸개의 배신 5회',     goalKey: 'betray',     goal: 5 },
@@ -446,6 +458,16 @@ function betrayEvent(token) {
   pend.missions.push(...missionEvent(u, 'betray'));
   pend.titles.push(...checkTitles(u));
   persist(idl);
+}
+// 튜토리얼 완료 보상 — 코인 100 (플래그로 1회만)
+function claimTutorial(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  if (u.tutorialDone) return { claimed: false, profile: profileOf(u) };
+  u.tutorialDone = true;
+  u.coins = (u.coins || 0) + TUTORIAL_COINS;
+  persist(idl);
+  return { claimed: true, amount: TUTORIAL_COINS, profile: profileOf(u) };
 }
 // 미션 현황 (클라 표시용)
 function missionList(token) {
@@ -604,5 +626,5 @@ function myRank(token) {
 module.exports = {
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, claimDaily, myRank,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
-  missionList, titleList, betrayEvent,
+  missionList, titleList, betrayEvent, claimTutorial,
 };

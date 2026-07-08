@@ -1343,9 +1343,20 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
     return;
   }
   clearSession(); stopTitleBlink(); hideGrace(); recordResult(winner, mi);
-  if (tutorial) {   // 튜토리얼 마무리 인사
+  if (tutorial) {   // 튜토리얼 마무리 인사 + 완료 보상(코인 100, 1회)
     tutorial = false; tutQueue = []; tutOpen = false; tutClearGlow();
-    tutShow({ pos: 'top', text: '🎓 <b>튜토리얼 완료!</b> 이제 규칙을 다 배웠어요. 💡 마지막 팁: 덱이 다 떨어지면 <b>세트에 가장 가까운 사람</b>이 이겨요. 실전에서 친구와 붙어보세요!' });
+    let tip = '🎓 <b>튜토리얼 완료!</b> 이제 규칙을 다 배웠어요. 💡 덱이 다 떨어지면 <b>세트에 가장 가까운 사람</b>이 이겨요. 실전에서 친구와 붙어보세요!';
+    const tk = localStorage.getItem('ff_auth');
+    if (tk) {
+      apiPost('/api/tutorial-done', { token: tk }).then(r => {
+        if (r && r.claimed) {
+          if (r.profile) { myAccount = r.profile; renderAccount(); }
+          toast(`🎁 튜토리얼 완료 보상 <b style="color:#ffd94a">🪙 +${r.amount}</b>!`, 3500);
+        } else if (r && r.profile) { myAccount = r.profile; renderAccount(); }
+      }).catch(() => {});
+      tip += '<br><span style="color:#ffd94a">🎁 완료 보상 🪙 100 지급!</span>';
+    }
+    tutShow({ pos: 'top', text: tip });
     tutOpen = false;   // 완료 인사는 '알겠어요'로 닫히게
   }
   const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
