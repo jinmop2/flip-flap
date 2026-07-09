@@ -738,12 +738,14 @@
     /* ── 인게임 프로필 카드 (컴팩트, 클릭하면 전적) ── */
     .game-pcard {
       position:absolute; z-index:6; cursor:pointer;
-      background:rgba(0,0,0,.4); border:1px solid rgba(200,160,0,.22); border-radius:11px;
-      padding:5px 10px; width:max-content; max-width:180px; transition:border-color .15s;
+      background:linear-gradient(180deg, rgba(58,16,24,.92), rgba(30,10,14,.92));
+      border:1px solid rgba(185,141,52,.5); border-radius:11px;
+      box-shadow:inset 0 1px 0 rgba(255,215,120,.14), 0 4px 12px rgba(0,0,0,.4);
+      padding:5px 11px; width:max-content; max-width:180px; transition:border-color .15s, box-shadow .15s;
     }
     #myProfile { text-align:right; }
     #myProfile .pc-body, #myProfile .pc-diff, #myProfile .pc-stats { margin-left:auto; }
-    .game-pcard:hover { border-color:rgba(200,160,0,.5); }
+    .game-pcard:hover { border-color:rgba(200,160,0,.75); box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 4px 14px rgba(0,0,0,.5); }
     #oppProfile { top:14px; right:16px; }
     #myProfile  { bottom:14px; right:16px; }
     /* 프로필 옆 시간: 상대는 프로필 아래, 나는 프로필 위 */
@@ -945,11 +947,11 @@
 
     /* ─── 카드 ─── */
     .card {
-      width:64px; height:90px; border-radius:9px; flex-shrink:0;
+      width:70px; height:98px; border-radius:10px; flex-shrink:0;
       display:inline-flex; flex-direction:column; justify-content:space-between;
       padding:6px 6px 5px; position:relative; cursor:default; user-select:none;
-      border:2px solid transparent; overflow:hidden;
-      box-shadow:0 3px 8px rgba(0,0,0,.4);
+      border:2.5px solid transparent; overflow:hidden;
+      box-shadow:0 3px 9px rgba(0,0,0,.45);
       transition:transform .16s cubic-bezier(.34,1.56,.64,1), box-shadow .16s, border-color .16s;
     }
     .card[data-kind="2"] { background:linear-gradient(160deg,var(--red-d),var(--red)); border-color:#e05055; }
@@ -961,15 +963,16 @@
     .card { justify-content:flex-start; }
     .card .c-top { display:flex; justify-content:space-between; align-items:flex-start; position:relative; z-index:1; }
     .card .c-rank {
-      font-family:'Fredoka'; font-weight:700; font-size:1.05rem; color:#fff; line-height:1;
-      background:rgba(0,0,0,.45); border-radius:7px; padding:2px 8px; min-width:24px; text-align:center;
+      font-family:'Fredoka'; font-weight:700; font-size:1.2rem; color:#fff; line-height:1;
+      background:rgba(0,0,0,.5); border-radius:7px; padding:2px 8px; min-width:26px; text-align:center;
+      text-shadow:0 1px 2px rgba(0,0,0,.6); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
     }
-    .card.special .c-rank { background:var(--gold); color:#1a1008; }
-    .card .c-mark { font-size:.72rem; }
+    .card.special .c-rank { background:var(--gold); color:#1a1008; text-shadow:none; }
+    .card .c-mark { font-size:.76rem; }
     .card .c-num {
       flex:1; display:flex; align-items:center; justify-content:center;
-      font-family:'Bangers',cursive; font-size:3.1rem; line-height:.8; color:#fff;
-      position:relative; z-index:1; text-shadow:0 2px 7px rgba(0,0,0,.5); padding-bottom:6px;
+      font-family:'Bangers',cursive; font-size:3.35rem; line-height:.8; color:#fff;
+      position:relative; z-index:1; text-shadow:0 2px 8px rgba(0,0,0,.55), 0 1px 1px rgba(0,0,0,.4); padding-bottom:6px;
     }
 
     /* 뒷면 = FLIP FLAP 로고 */
@@ -1168,6 +1171,20 @@
     /* 게임오버 */
     #gameOver { display:none; position:fixed; inset:0; background:rgba(8,2,5,.88); flex-direction:column; align-items:center; justify-content:center; z-index:20; animation:fadeIn .4s; }
     @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    /* 화면 전체 승패/낙찰 이펙트 */
+    #screenFx { position:fixed; inset:0; z-index:19; pointer-events:none; opacity:0; }
+    #screenFx.fx-win  { animation:fxWin 1.1s ease-out; background:radial-gradient(circle at 50% 45%, rgba(255,215,90,.45), rgba(255,180,40,.12) 55%, transparent 75%); }
+    #screenFx.fx-lose { animation:fxLose .8s ease-out; background:radial-gradient(circle at 50% 55%, rgba(20,5,10,.6), rgba(10,2,5,.35) 60%, transparent 80%); }
+    #screenFx.fx-auc-win { animation:fxAuc .5s ease-out; background:radial-gradient(circle at 50% 45%, rgba(255,215,90,.3), transparent 60%); }
+    #screenFx.fx-reveal  { animation:fxAuc .45s ease-out; background:radial-gradient(circle at 50% 45%, rgba(255,255,255,.14), transparent 62%); }
+    @keyframes fxWin  { 0%{opacity:0} 15%{opacity:1} 45%{opacity:.7} 100%{opacity:0} }
+    @keyframes fxLose { 0%{opacity:0} 20%{opacity:1} 100%{opacity:0} }
+    @keyframes fxAuc  { 0%{opacity:0} 25%{opacity:1} 100%{opacity:0} }
+    @keyframes shakeWin  { 0%,100%{transform:translate(0,0)} 20%{transform:translate(-4px,2px)} 40%{transform:translate(4px,-2px)} 60%{transform:translate(-3px,1px)} 80%{transform:translate(2px,-1px)} }
+    @keyframes shakeLose { 0%,100%{transform:translate(0,0)} 25%{transform:translate(3px,0)} 50%{transform:translate(-3px,0)} 75%{transform:translate(2px,0)} }
+    #game.shake-win  { animation:shakeWin .6s ease-in-out; }
+    #game.shake-lose { animation:shakeLose .5s ease-in-out; }
+    @media (prefers-reduced-motion: reduce) { #game.shake-win, #game.shake-lose { animation:none; } #screenFx { display:none; } }
     @keyframes slideDown { from{opacity:0;transform:translateY(-30px)} to{opacity:1;transform:none} }
     /* 결과 창 — 버건디 가죽 + 골드 스티치 (게임 테마) */
     #goBox {
@@ -1198,9 +1215,9 @@
       #game::before { inset:8px; border-radius:10px; }
 
       /* 카드 축소 */
-      .card { width:50px; height:70px; border-radius:8px; padding:4px 4px 3px; }
-      .card .c-num { font-size:2.1rem; }
-      .card .c-rank { font-size:.82rem; padding:1px 5px; min-width:17px; }
+      .card { width:55px; height:77px; border-radius:9px; padding:4px 4px 3px; }
+      .card .c-num { font-size:2.3rem; }
+      .card .c-rank { font-size:.95rem; padding:1px 6px; min-width:19px; }
       .card.back .bf.flip, .card.back .bf.flap { font-size:.8rem; }
 
       /* 덱 스택: 화면 안쪽 왼쪽에 고정 (탭 가능하도록) */
@@ -1227,7 +1244,7 @@
       /* 부채꼴 높이 */
       .fan { min-height:82px; }
       .fan.top { min-height:46px; }
-      .fan.top .card { width:33px; height:46px; border-radius:5px; }
+      .fan.top .card { width:36px; height:50px; border-radius:5px; }
       .fan.top .card.back .bf { font-size:.48rem; }
 
       /* 라벨·타이머 */

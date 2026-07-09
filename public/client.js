@@ -771,6 +771,23 @@ function renderRoomList(list) {
 
 // ── 사운드 (Web Audio) ──────────────────────────────────────
 const AC = new (window.AudioContext || window.webkitAudioContext)();
+// mp3 원샷 샘플 (카드 내는 소리 등) — 디코드해서 낮은 지연으로 재생
+const samples = {};
+function loadSample(key, url) {
+  fetch(url).then(r => r.arrayBuffer()).then(b => AC.decodeAudioData(b))
+    .then(buf => { samples[key] = buf; }).catch(() => {});
+}
+loadSample('cardPlace', '/card-place.mp3?v=1');
+function playSample(key, vol = 0.9, rate = 1) {
+  const buf = samples[key]; if (!buf) return false;
+  try {
+    const s = AC.createBufferSource(); s.buffer = buf;
+    s.playbackRate.value = rate + (Math.random() * 0.06 - 0.03);   // 살짝 랜덤 — 반복 시 기계적이지 않게
+    const g = AC.createGain(); g.gain.value = vol;
+    s.connect(g); g.connect(AC.destination); s.start();
+    return true;
+  } catch (_) { return false; }
+}
 function tone(freq, type, vol, dur, delay = 0) {
   const t = AC.currentTime + delay;
   const o = AC.createOscillator(), g = AC.createGain();
@@ -809,17 +826,21 @@ function playSound(n) {
   try { AC.resume(); } catch(_) {}
   switch (n) {
     case 'select': tone(900,'sine',.06,.08); break;
-    case 'place':  tone(320,'triangle',.12,.12); tone(240,'triangle',.08,.1,.06); break;
-    case 'flip':   tone(520,'sine',.1,.1); tone(680,'sine',.08,.09,.08); break;
-    case 'reveal': tone(440,'sawtooth',.06,.05); tone(660,'sine',.14,.18,.06); tone(880,'sine',.1,.2,.15); break;
+    case 'place':  if (!playSample('cardPlace', .95)) { tone(320,'triangle',.12,.12); tone(240,'triangle',.08,.1,.06); } break;   // 실제 카드 내는 소리(mp3)
+    case 'flip':   if (!playSample('cardPlace', .7, 1.15)) { tone(520,'sine',.1,.1); tone(680,'sine',.08,.09,.08); } break;      // 뒤집기 = 같은 샘플 조금 높게
+    // 결과 공개 — 드럼롤 긴장 + 밝은 상행 팡파레 스탭 (강화)
+    case 'reveal': jcym(0,3000,.18,.05); [523,659,784].forEach((f,i)=>tone(f,'triangle',.1,.16,.04+i*.05));
+                   jbrass(880,.18,.35,.13); tone(1318,'sine',.09,.35,.2); break;
     // 졸개의 배신 — 살금살금 크로매틱 워크 + 날카로운 스탭 ("걸렸어" 느낌)
     case 'special':[110,116.5,123.5,130.8].forEach((f,i)=>tone(f,'triangle',.14,.1,i*.08));
                    jbrass(587.33,.34,.5,.16); jcym(.34,6000,.35,.06); break;
-    // 승리 — 블루지 상행 릭 + 밝은 6/9 스탭
-    case 'victory':[440,523,659,784].forEach((f,i)=>jbrass(f,i*.1,.16,.12));
-                   jbrass(880,.4,.7,.16); [440,554,659,740].forEach(f=>tone(f,'sine',.08,.6,.42)); break;
-    // 패배 — 뮤트 트럼펫 하강 + 마지막 음 처지는 벤드 (와-와)
-    case 'defeat': jbrass(392,0,.4,.12); jbrass(349,.28,.4,.12); jbrass(294,.56,.9,.13,220); break;
+    // 승리 — 팡파레 상행 릭 + 심벌 크래시 + 밝은 6/9 코드 (강화)
+    case 'victory':jcym(0,7000,.4,.09); [523,659,784,1047].forEach((f,i)=>jbrass(f,i*.09,.17,.14));
+                   jbrass(1318,.36,.8,.18); jcym(.36,9000,.3,.06);
+                   [523,659,784,988].forEach(f=>tone(f,'sine',.08,.7,.4)); break;
+    // 패배 — 뮤트 트럼펫 하강 + 저음 임팩트 + 마지막 처지는 벤드 (강화)
+    case 'defeat': tone(90,'sine',.22,.5,0); jbrass(392,.05,.4,.13); jbrass(349,.32,.4,.13);
+                   jbrass(262,.62,1,.14,175); break;
     case 'deal':   tone(280,'sine',.05,.07); break;
     case 'bell':   [0,0.45].forEach(off => [1568,2093].forEach((f,i)=>tone(f,'sine',.2,1.2, off+i*.02))); break;
     case 'tick':   tone(1400,'square',.06,.05); break;
@@ -1304,7 +1325,7 @@ socket.on('state_update', s => {
   render(changed);
   if (flight) playSettleFlight(flight);
   tutTick();
-  if (changed && s.phase === 'reveal') playSound('reveal');
+  if (changed && s.phase === 'reveal') { playSound('reveal'); if (!isSpec && s.auction) screenFx(myBidWins(s.auction.myBid, s.auction.oppBid) ? 'auc-win' : 'reveal'); }
   if (drewNow) playSound('deal');
   // 세트 완성이 보드에 나타나는 순간 강조 (결과창은 서버가 잠시 뒤 띄움)
   if (s.phase === 'game_over' && !boardCelebrated) {
@@ -1456,6 +1477,7 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
       : byProgress ? `세트 근접 승리! (${setKind}짜리에 가장 가까웠어요)`
       : `${setKind}짜리 세트 완성!`;
     playSound('victory');
+    screenFx('win');
     if (setKind && !byProgress && !forfeit) { celebrateSet('myAcq', setKind); playSound('setwin'); delay = 1400; }
     else animateWinCards();
   } else {
@@ -1465,6 +1487,7 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
       : byProgress ? '상대가 세트에 더 가까웠어요.'
       : `상대가 ${setKind}짜리 세트를 완성했어요.`;
     playSound('defeat');
+    screenFx('lose');
     if (setKind && !byProgress && !forfeit) { celebrateSet('oppAcq', setKind); delay = 1400; }
   }
   renderGameOverStats(winner, byProgress ? null : setKind, mi);
@@ -1544,6 +1567,17 @@ function myBidWins(my, opp) {
   if (is610(my) && is21(opp)) return true;
   if (is610(opp) && is21(my)) return false;
   return (my.kind * 100 + my.grade) < (opp.kind * 100 + opp.grade);
+}
+// 화면 전체 이펙트 — 승리(골드 플래시+반짝), 패배(어두워짐), 경매낙찰(짧은 플래시)
+let _fxEl = null;
+function screenFx(kind) {
+  if (!_fxEl) { _fxEl = document.createElement('div'); _fxEl.id = 'screenFx'; document.body.appendChild(_fxEl); }
+  const el = _fxEl;
+  el.className = ''; void el.offsetWidth;
+  el.className = 'fx-' + kind;
+  const g = document.getElementById('game');
+  if (g) { g.classList.remove('shake-win', 'shake-lose'); void g.offsetWidth; g.classList.add(kind === 'win' ? 'shake-win' : kind === 'lose' ? 'shake-lose' : 'shake-win'); setTimeout(() => g.classList.remove('shake-win', 'shake-lose'), 700); }
+  setTimeout(() => { el.className = ''; }, kind === 'win' ? 1100 : 800);
 }
 function resultReason(my, opp) {
   if ((is610(my) && is21(opp)) || (is610(opp) && is21(my))) return '⚔ 졸개의 배신!';
@@ -1769,19 +1803,23 @@ function renderPile(id, cards) {
 function fanRow(container, isTop) {
   const slots = [...container.children];
   const n = slots.length; if (!n) return;
-  const stepMax = 6.5;
-  const spread = Math.min((n - 1) * stepMax, 36);
+  // 상대(위) 손패는 더 촘촘하고 완만한 아치, 내(아래) 손패는 넓고 시원한 부채꼴
+  const stepMax = isTop ? 5 : 6.5;
+  const spreadCap = isTop ? 26 : 36;
+  const liftUnit = isTop ? 3.4 : 5;
+  const overlap = isTop ? -9 : -7;
+  const spread = Math.min((n - 1) * stepMax, spreadCap);
   const step = n > 1 ? spread / (n - 1) : 0;
   const mid = (n - 1) / 2;
   slots.forEach((slot, i) => {
     const ang = (-spread / 2 + i * step) * (isTop ? -1 : 1);
     const dist = Math.abs(i - mid);
-    const lift = (mid - dist) * 5;                 // 중앙 카드가 더 솟음
+    const lift = (mid - dist) * liftUnit;          // 중앙 카드가 더 솟음
     const y = isTop ? lift : -lift;
     slot.style.transformOrigin = isTop ? 'center top' : 'center bottom';
     slot.style.transform = `rotate(${ang}deg) translateY(${y}px)`;
     slot.style.zIndex = String(20 - Math.round(dist));
-    slot.style.margin = '0 -7px';
+    slot.style.margin = '0 ' + overlap + 'px';
   });
 }
 function renderAuction(changed) {
