@@ -1094,8 +1094,9 @@
     /* 배팅 카드 = 각자 앞에 놓임 */
     .bid-area { min-height:78px; display:flex; justify-content:center; align-items:center; margin:6px 0; }
     .bid-slot { display:flex; flex-direction:column; align-items:center; gap:4px; position:relative; }
-    /* 이긴 배팅 카드 강조 + WIN 스탬프 */
-    .bid-slot.bid-winner .card { box-shadow:0 0 0 2px #ffd94a, 0 0 16px 3px rgba(255,215,80,.55); }
+    /* 이긴 배팅 카드 강조 + WIN 스탬프 — 글로우도 WIN과 동시(1.3s 지연)에 켜짐 */
+    .bid-slot.bid-winner .card { animation:bidWinGlow .4s ease-out 1.3s forwards; }
+    @keyframes bidWinGlow { from { box-shadow:0 3px 9px rgba(0,0,0,.45); } to { box-shadow:0 0 0 2px #ffd94a, 0 0 18px 4px rgba(255,215,80,.6); } }
     .win-stamp {
       position:absolute; top:50%; left:calc(100% + 6px);
       transform:translateY(-50%) rotate(-11deg) scale(0); transform-origin:left center;
