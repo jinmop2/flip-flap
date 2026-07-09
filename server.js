@@ -336,6 +336,16 @@ function cpuChooseOffer(hand, acquired) {
   const pool = nonTarget.length ? nonTarget : hand;
   return [...pool].sort((a, b) => strength(b) - strength(a))[0];
 }
+// 튜토리얼 전용 — 사람(oppAcq)이 가장 많이 모은 종류의 카드를 우선 출품해 세트 완성을 도움
+function tutorialOffer(hand, humanAcq) {
+  const cnt = {};
+  for (const c of humanAcq) cnt[c.kind] = (cnt[c.kind] || 0) + 1;
+  // 사람이 이미 모으는 종류를 손에 갖고 있으면 그걸 내줌 (진행도 높은 순)
+  const helpful = hand.filter(c => cnt[c.kind])
+    .sort((a, b) => (cnt[b.kind] - cnt[a.kind]) || (strength(a) - strength(b)));
+  if (helpful.length) return helpful[0];
+  return cpuChooseOffer(hand, []);   // 도울 게 없으면 그냥 약한 카드
+}
 
 // ══ 개선 전문가 AI (상대 견제 + 실현가능 목표 + 최소 승리 배팅) ══
 const TOTAL = { 2: 2, 3: 5, 4: 7, 6: 10 };
@@ -420,7 +430,10 @@ function maybeCpuAct(roomId) {
       const acq  = ci === 0 ? g.p1Acquired : g.p2Acquired;
       const opp  = ci === 0 ? g.p2Acquired : g.p1Acquired;
       // 난이도별 AI: expert=v3(카운팅·MC) / 보통(hard·normal)=구 전문가 / easy=기존 유지
-      const card = room.difficulty === 'expert'
+      // 튜토리얼: 사람이 모으는 종류를 출품해 세트 완성을 도움 (최대한 이기게)
+      const card = room.tutorial
+        ? tutorialOffer(hand, opp)
+        : room.difficulty === 'expert'
         ? expert3.offerV3({ hand, myAcq: acq, oppAcq: opp, center: g.auction.centerCard,
             deckLeft: g.centerDeck.length, oppHandLen: (ci === 0 ? g.p2Hand : g.p1Hand).length }, room.aiMem || (room.aiMem = expert3.createMem()))
         : room.difficulty === 'easy' ? cpuChooseOffer(hand, acq)

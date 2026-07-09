@@ -115,11 +115,18 @@ async function submitAuth() {
     ? await apiPost('/api/signup', { id, password, nick })
     : await apiPost('/api/login', { id, password });
   if (res.error) { err.textContent = '⚠️ ' + res.error; return; }
+  const isSignup = authMode === 'signup';
   localStorage.setItem('ff_auth', res.token);
   localStorage.setItem('ff_lastid', id);   // 아이디 기억
   myAccount = res.profile;
   socket.emit('auth', { token: res.token });
   closeAuth(); renderAccount();
+  if (isSignup) {   // 가입 직후 — 튜토리얼로 갈지 선택
+    setTimeout(() => askConfirm(
+      { icon: '🎓', title: 'FLIP FLAP에 오신 걸 환영해요!', desc: '30초면 배우는 튜토리얼을 해볼까요? (완료하면 🪙100 보상!)', yes: '튜토리얼 시작', no: '나중에 (건너뛰기)' },
+      () => startTutorial()),
+    350);
+  }
 }
 function logout() {
   localStorage.removeItem('ff_auth'); myAccount = null;
