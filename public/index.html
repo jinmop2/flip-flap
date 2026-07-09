@@ -1097,14 +1097,14 @@
     /* 이긴 배팅 카드 강조 + WIN 스탬프 */
     .bid-slot.bid-winner .card { box-shadow:0 0 0 2px #ffd94a, 0 0 16px 3px rgba(255,215,80,.55); }
     .win-stamp {
-      position:absolute; top:calc(50% + 3px); left:50%;
-      transform:translate(-50%,-50%) rotate(-11deg) scale(0);
+      position:absolute; top:50%; left:calc(100% + 6px);
+      transform:translateY(-50%) rotate(-11deg) scale(0); transform-origin:left center;
       font-family:'Bangers',cursive; font-size:1.5rem; letter-spacing:2px; color:#ffe14a;
       -webkit-text-stroke:1.5px #7a3a00; text-stroke:1.5px #7a3a00;
       text-shadow:0 2px 5px rgba(0,0,0,.7); pointer-events:none; z-index:5; white-space:nowrap;
       animation:winStamp .45s cubic-bezier(.2,1.5,.5,1) .15s forwards;
     }
-    @keyframes winStamp { to { transform:translate(-50%,-50%) rotate(-11deg) scale(1); } }
+    @keyframes winStamp { to { transform:translateY(-50%) rotate(-11deg) scale(1); } }
     .bid-lbl { font-size:.6rem; color:rgba(255,220,150,.55); text-transform:uppercase; letter-spacing:1.5px; font-weight:700; }
     .bid-empty {
       width:64px; height:90px; border-radius:9px; border:2px dashed rgba(200,160,0,.28);
