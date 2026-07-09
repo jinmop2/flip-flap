@@ -1578,11 +1578,6 @@ function screenFx(kind) {
   if (g) { g.classList.remove('shake-win', 'shake-lose'); void g.offsetWidth; g.classList.add(kind === 'win' ? 'shake-win' : kind === 'lose' ? 'shake-lose' : 'shake-win'); setTimeout(() => g.classList.remove('shake-win', 'shake-lose'), 700); }
   setTimeout(() => { el.className = ''; }, kind === 'win' ? 1100 : 800);
 }
-function resultReason(my, opp) {
-  if ((is610(my) && is21(opp)) || (is610(opp) && is21(my))) return '⚔ 졸개의 배신!';
-  if (my.kind !== opp.kind) return `종류 ${my.kind} vs ${opp.kind} → 작은 쪽 승리`;
-  return `등급 ${my.grade} vs ${opp.grade} → 낮은 쪽 승리`;
-}
 
 // 내 테이블/카드앞면 스킨을 게임 화면에 적용 (내 시야 기준 코스메틱)
 const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest' };
@@ -1900,14 +1895,6 @@ function renderAuction(changed) {
     action.appendChild(btn);
   }
 
-  // reveal: 경매 결과 안내 (낙찰/패배 + 이유)
-  if (isReveal && a.myBid && a.oppBid) {
-    const win = myBidWins(a.myBid, a.oppBid);
-    const rb = document.createElement('div');
-    rb.className = 'result-banner ' + (win ? 'win' : 'lose');
-    rb.innerHTML = `<b>${win ? '낙찰! 🏆' : '패배'}</b> <span>${resultReason(a.myBid, a.oppBid)}</span>`;
-    action.appendChild(rb);
-  }
 }
 // 배팅 카드를 각자 앞에 배치
 function bidSlot(label, card, { back = false, reveal = false, mine = false } = {}) {
@@ -1944,6 +1931,17 @@ function renderBids() {
   if (a.oppBid)            opp.appendChild(bidSlot(ol, a.oppBid, { reveal: isReveal }));
   else if (a.oppBidSubmitted) opp.appendChild(bidSlot(ol, null, { back: true }));
   else                    opp.appendChild(bidSlot(opLbl, null));
+
+  // 공개 시 이긴 쪽 배팅 카드에 WIN 스탬프
+  if (isReveal && a.myBid && a.oppBid) {
+    const iWin = myBidWins(a.myBid, a.oppBid);
+    const slot = (iWin ? my : opp).querySelector('.bid-slot');
+    if (slot) {
+      slot.classList.add('bid-winner');
+      const st = document.createElement('span'); st.className = 'win-stamp'; st.textContent = 'WIN';
+      slot.appendChild(st);
+    }
+  }
 }
 
 function renderHand() {
