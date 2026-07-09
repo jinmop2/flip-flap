@@ -831,19 +831,15 @@ function playSound(n) {
     case 'place':  tone(320,'triangle',.12,.12); tone(240,'triangle',.08,.1,.06); break;   // 원래 카드 놓는 신스음
     case 'flip':   tone(520,'sine',.1,.1); tone(680,'sine',.08,.09,.08); break;
     case 'card':   if (!playSample('cardPlace', .9)) { tone(320,'triangle',.12,.12); } break;   // 실제 카드 mp3 — 경매 방식 선택 시
-    // 결과 공개 — 드럼롤 긴장 + 밝은 상행 팡파레 스탭 (강화)
-    case 'reveal': jcym(0,3000,.18,.05); [523,659,784].forEach((f,i)=>tone(f,'triangle',.1,.16,.04+i*.05));
-                   jbrass(880,.18,.35,.13); tone(1318,'sine',.09,.35,.2); break;
+    case 'reveal': tone(440,'sawtooth',.06,.05); tone(660,'sine',.14,.18,.06); tone(880,'sine',.1,.2,.15); break;
     // 졸개의 배신 — 살금살금 크로매틱 워크 + 날카로운 스탭 ("걸렸어" 느낌)
     case 'special':[110,116.5,123.5,130.8].forEach((f,i)=>tone(f,'triangle',.14,.1,i*.08));
                    jbrass(587.33,.34,.5,.16); jcym(.34,6000,.35,.06); break;
-    // 승리 — 팡파레 상행 릭 + 심벌 크래시 + 밝은 6/9 코드 (강화)
-    case 'victory':jcym(0,7000,.4,.09); [523,659,784,1047].forEach((f,i)=>jbrass(f,i*.09,.17,.14));
-                   jbrass(1318,.36,.8,.18); jcym(.36,9000,.3,.06);
-                   [523,659,784,988].forEach(f=>tone(f,'sine',.08,.7,.4)); break;
-    // 패배 — 뮤트 트럼펫 하강 + 저음 임팩트 + 마지막 처지는 벤드 (강화)
-    case 'defeat': tone(90,'sine',.22,.5,0); jbrass(392,.05,.4,.13); jbrass(349,.32,.4,.13);
-                   jbrass(262,.62,1,.14,175); break;
+    // 승리 — 블루지 상행 릭 + 밝은 6/9 스탭 (원래 버전)
+    case 'victory':[440,523,659,784].forEach((f,i)=>jbrass(f,i*.1,.16,.12));
+                   jbrass(880,.4,.7,.16); [440,554,659,740].forEach(f=>tone(f,'sine',.08,.6,.42)); break;
+    // 패배 — 뮤트 트럼펫 하강 + 마지막 음 처지는 벤드 (원래 버전)
+    case 'defeat': jbrass(392,0,.4,.12); jbrass(349,.28,.4,.12); jbrass(294,.56,.9,.13,220); break;
     case 'deal':   tone(280,'sine',.05,.07); break;
     case 'bell':   [0,0.45].forEach(off => [1568,2093].forEach((f,i)=>tone(f,'sine',.2,1.2, off+i*.02))); break;
     case 'tick':   tone(1400,'square',.06,.05); break;
@@ -1479,6 +1475,7 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
       : timeout ? '상대 시간 초과!'
       : byProgress ? `세트 근접 승리! (${setKind}짜리에 가장 가까웠어요)`
       : `${setKind}짜리 세트 완성!`;
+    playSound('victory');
     screenFx('win');
     if (setKind && !byProgress && !forfeit) { celebrateSet('myAcq', setKind); playSound('setwin'); delay = 1400; }
     else animateWinCards();
@@ -1488,6 +1485,7 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
       : timeout ? '시간 초과...'
       : byProgress ? '상대가 세트에 더 가까웠어요.'
       : `상대가 ${setKind}짜리 세트를 완성했어요.`;
+    playSound('defeat');
     screenFx('lose');
     if (setKind && !byProgress && !forfeit) { celebrateSet('oppAcq', setKind); delay = 1400; }
   }
