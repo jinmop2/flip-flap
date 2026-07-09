@@ -1649,6 +1649,7 @@ function render(changed = false) {
   if (!state) return;
   const s = state, mine = s.auctioneer === s.myIndex, a = s.auction;
   document.getElementById('turnInfo').textContent = `턴 ${s.turn}`;
+  document.getElementById('game').classList.toggle('showdown', s.phase === 'showdown');
   if (s.time) updateClocks(s.time[1], s.time[2], s.active);
   // 닉네임 + 프로필 표시
   if (gameNicks) {
@@ -1682,7 +1683,7 @@ function render(changed = false) {
     offer:       mine ? '중앙 카드 공개 — 출품할 카드를 선택하세요' : (isVsBot ? think('AI 생각 중') : '상대가 출품 중...'),
     choose_type: mine ? '경매 방식 선택 — 출품카드는 다른 손패 클릭 시 교체돼요' : (isVsBot ? think('AI 생각 중') : '상대가 방식 선택 중...'),
     bidding:     biddingMsg(),
-    reveal: '결과 공개!', settled: '카드 정산 중…', game_over: '게임 종료',
+    showdown: '⚔️ 배팅 완료 — 곧 공개!', reveal: '결과 공개!', settled: '카드 정산 중…', game_over: '게임 종료',
   };
   const bar = document.getElementById('statusBar');
   let msg = msgs[s.phase] ?? s.phase;
@@ -1690,7 +1691,7 @@ function render(changed = false) {
     const an = (gameNicks && gameNicks[s.auctioneer - 1]) || '진행자';
     msg = ({ pick: '👁 선공 뽑는 중…', pick_reveal: `⚡ ${an} 선공!`, draw: `👁 ${an} 카드 뽑는 중`,
       offer: `👁 ${an} 출품 중`, choose_type: `👁 ${an} 경매 방식 선택 중`, bidding: '👁 배팅 중…',
-      reveal: '결과 공개!', game_over: '게임 종료' })[s.phase] || '👁 관전 중';
+      showdown: '⚔️ 배팅 완료 — 곧 공개!', reveal: '결과 공개!', game_over: '게임 종료' })[s.phase] || '👁 관전 중';
   }
   if (lastSig.status !== msg) {   // 같은 문구면 건드리지 않음 (깜빡임·리플로우 방지)
     lastSig.status = msg;
@@ -1922,7 +1923,7 @@ function renderBids() {
   const s = state, a = s.auction;
   const my = document.getElementById('myBid'), opp = document.getElementById('oppBid');
   my.innerHTML = ''; opp.innerHTML = '';
-  if (!a || (s.phase !== 'bidding' && s.phase !== 'reveal')) return;
+  if (!a || (s.phase !== 'bidding' && s.phase !== 'showdown' && s.phase !== 'reveal')) return;
   const isReveal = s.phase === 'reveal';
 
   // 라벨: 관전이면 닉네임, 아니면 내/상대

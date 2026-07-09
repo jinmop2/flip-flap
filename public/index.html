@@ -1116,6 +1116,10 @@
     }
     @media (prefers-reduced-motion: reduce) { .fly-card { display:none; } }
 
+    /* 공개 직전(showdown) 긴장 — 뒤집힌 배팅 카드가 살짝 맥동 */
+    #game.showdown .bid-area .card { animation:showPulse .5s ease-in-out infinite alternate; }
+    @keyframes showPulse { from{ transform:scale(1); } to{ transform:scale(1.06) translateY(-2px); } }
+
     /* 경매 결과 배너 */
     .result-banner {
       margin-top:8px; padding:6px 16px; border-radius:10px; text-align:center;

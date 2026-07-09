@@ -1106,9 +1106,15 @@ function resolveBidding(roomId) {
   const g = room.game;
   if (g.phase !== 'bidding' || !g.auction) return;   // 이미 처리됨(이중 정산 방지)
   if (g.auction.p1Submitted && g.auction.p2Submitted) {
-    g.phase = 'reveal';
+    // 긴장 브레이크 — 배팅 완료 후 한 템포(뒤집힌 채 대치) 쉬고 나서 공개
+    g.phase = 'showdown';
     broadcast(roomId);
-    setTimeout(() => tutGate(roomId, () => settle(roomId)), 2500);
+    setTimeout(() => tutGate(roomId, () => {
+      const rm = rooms[roomId]; if (!rm || !rm.game || rm.game.phase !== 'showdown') return;
+      rm.game.phase = 'reveal';
+      broadcast(roomId);
+      setTimeout(() => tutGate(roomId, () => settle(roomId)), 2500);
+    }), 1100);
   } else {
     broadcast(roomId);
     setTimeout(() => maybeCpuAct(roomId), 200);
