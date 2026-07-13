@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>FLIP FLAP — 경매·블러핑 심리전 카드 보드게임</title>
   <meta name="description" content="2인 실시간 경매·블러핑 심리전 카드 보드게임. 설치 없이 브라우저에서 바로, 친구와 링크 하나로 대전!">
   <!-- 링크 공유 미리보기 (커뮤니티·카톡·SNS) -->
@@ -26,6 +26,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
+      --safe-b: env(safe-area-inset-bottom, 0px);   /* 갤럭시·아이폰 하단 네비/제스처 바 회피 */
       --red:#c1272d; --red-d:#7a1a1e; --blue:#1a5276; --blue-d:#0f2e42;
       --yel:#c9962c; --yel-d:#8a6f1f; --ink:#4a3728; --ink-d:#2e2118;
       --gold:#c8a000; --paper:#f7f5f2;
@@ -747,11 +748,11 @@
     #myProfile .pc-body, #myProfile .pc-diff, #myProfile .pc-stats { margin-left:auto; }
     .game-pcard:hover { border-color:rgba(200,160,0,.75); box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 4px 14px rgba(0,0,0,.5); }
     #oppProfile { top:14px; right:16px; }
-    #myProfile  { bottom:14px; right:16px; }
+    #myProfile  { bottom:calc(14px + var(--safe-b)); right:16px; }
     /* 프로필 옆 시간: 상대는 프로필 아래, 나는 프로필 위 */
     .pc-timer { position:absolute; z-index:6; margin:0; }
     #oppTimer { top:64px; right:16px; }
-    #myTimer  { bottom:64px; right:16px; }
+    #myTimer  { bottom:calc(64px + var(--safe-b)); right:16px; }
     .pc-body { display:flex; align-items:center; gap:6px; min-width:0; }
     .pc-body .gp-rank { font-size:1.1rem; line-height:1; flex-shrink:0; }
     .pc-body .gp-nick { font-size:.82rem; font-weight:700; color:#f0ead8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -761,7 +762,7 @@
     .game-pcard.show-stats .pc-stats { max-height:20px; opacity:1; margin-top:4px; }
 
     /* 이모트 버튼 — 내 시간 위 (우측 하단) */
-    #emoteWrap { position:absolute; bottom:100px; right:16px; z-index:7; }
+    #emoteWrap { position:absolute; bottom:calc(100px + var(--safe-b)); right:16px; z-index:7; }
     .emote-fab {
       width:36px; height:36px; border-radius:50%; cursor:pointer;
       background:linear-gradient(135deg,#3a2a48,#241a2e); border:1px solid rgba(200,160,0,.4);
@@ -938,7 +939,7 @@
     .zone { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; }
     #oppZone { padding-top:0; margin-top:-6px; }   /* 상대 손패 좀 더 위로 */
     #centerZone { flex:1; justify-content:center; gap:10px; }
-    #myZone { justify-content:flex-end; padding-bottom:40px; }   /* 손패를 위로 올려 프로필/닉이 안 가리게 */
+    #myZone { justify-content:flex-end; padding-bottom:calc(40px + var(--safe-b)); }   /* 손패를 프로필/네비바 위로 */
 
     .zone-label {
       font-size:.6rem; letter-spacing:2px; text-transform:uppercase;
@@ -1054,6 +1055,13 @@
     .fan.top .card.back .bf { font-size:.62rem; letter-spacing:.5px; }   /* 소형 카드에 맞춘 뒷면 로고 */
     .fan.top .card.back .bf.flap { margin-top:-1px; }
     .fan-slot { transition:transform .18s cubic-bezier(.34,1.4,.64,1); }
+    /* 게임 시작 딜 — 덱(좌상단)에서 한 장씩 날아와 자리잡음 */
+    .fan-slot.dealing { animation:dealFly .32s cubic-bezier(.25,.9,.35,1) both; }
+    @keyframes dealFly {
+      from { opacity:0; transform:translate(-52vw, -62vh) scale(.5) rotate(-18deg); }
+      70%  { opacity:1; }
+      to   { opacity:1; transform:none; }
+    }
     .fan-slot:hover { z-index:40 !important; }
 
     /* ─── 획득 더미 (종류별 겹침) ─── */
@@ -1095,7 +1103,7 @@
     .bid-area { min-height:78px; display:flex; justify-content:center; align-items:center; margin:6px 0; }
     .bid-slot { display:flex; flex-direction:column; align-items:center; gap:4px; position:relative; }
     /* 이긴 배팅 카드 강조 + WIN 스탬프 — 글로우도 WIN과 동시(1.3s 지연)에 켜짐 */
-    .bid-slot.bid-winner .card { animation:bidWinGlow .4s ease-out 1.3s forwards; }
+    .bid-slot.bid-winner .card { animation:bidWinGlow .4s ease-out 1.05s forwards; }
     @keyframes bidWinGlow { from { box-shadow:0 3px 9px rgba(0,0,0,.45); } to { box-shadow:0 0 0 2px #ffd94a, 0 0 18px 4px rgba(255,215,80,.6); } }
     .win-stamp {
       position:absolute; top:50%; left:calc(100% + 6px);
@@ -1103,7 +1111,7 @@
       font-family:'Bangers',cursive; font-size:1.5rem; letter-spacing:2px; color:#ffe14a;
       -webkit-text-stroke:1.5px #7a3a00; text-stroke:1.5px #7a3a00;
       text-shadow:0 2px 5px rgba(0,0,0,.7); pointer-events:none; z-index:5; white-space:nowrap;
-      animation:winStamp .4s cubic-bezier(.2,1.5,.5,1) 1.3s forwards;   /* 카드 공개(뒤집기 0.85s) 후 잠깐 볼 틈 주고 등장 */
+      animation:winStamp .4s cubic-bezier(.2,1.5,.5,1) 1.05s forwards;   /* 카드 공개(뒤집기 0.85s) 후 잠깐 볼 틈 주고 등장 */
     }
     @keyframes winStamp { to { transform:translateY(-50%) rotate(-11deg) scale(1); } }
     .bid-lbl { font-size:.6rem; color:rgba(255,220,150,.55); text-transform:uppercase; letter-spacing:1.5px; font-weight:700; }
@@ -1225,8 +1233,10 @@
     /* ═══ 모바일 반응형 ═══ */
     @media (max-width: 600px) {
       #game {
-        height:100dvh; max-height:none; overflow-y:auto;
-        border-width:5px; outline-width:1px; border-radius:14px; padding:8px 10px; gap:6px;
+        height:100dvh; max-height:none; overflow:hidden;   /* 한 화면 고정 — 스크롤 없음 */
+        box-sizing:border-box;
+        border-width:5px; outline-width:1px; border-radius:14px;
+        padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px; gap:6px;
       }
       #game::before { inset:8px; border-radius:10px; }
 
@@ -1278,8 +1288,8 @@
       /* 프로필·시간 모바일 위치 */
       #oppProfile { top:8px; right:10px; }
       #oppTimer { top:52px; right:10px; }
-      #myProfile { bottom:10px; right:10px; left:auto; }
-      #myTimer { bottom:56px; right:10px; left:auto; }
+      #myProfile { bottom:calc(10px + var(--safe-b)); right:10px; left:auto; }
+      #myTimer { bottom:calc(56px + var(--safe-b)); right:10px; left:auto; }
       #emoteWrap { bottom:92px; right:10px; left:auto; }
       #oppZone { padding-top:56px; margin-top:0; }   /* 상대 손패가 프로필·컨트롤 아래로 */
 

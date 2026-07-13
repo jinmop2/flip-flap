@@ -1295,6 +1295,7 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spe
   const rb = document.getElementById('rematchBtn'); if (rb) { rb.disabled = false; rb.style.opacity = '1'; }
   prevPhase = null; selectedBidCard = null; prevMyAction = false; stopTitleBlink();
   seenAcq.myAcq = new Set(); seenAcq.oppAcq = new Set(); boardCelebrated = false; lastSig = {};
+  needsDeal = !isSpec;   // 게임 시작 시 손패를 한 장씩 나눠주는 딜 모션 (1회)
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('game').style.display = 'flex';
   document.body.classList.add('ingame');   // 게임 중 화면 스크롤 잠금
@@ -1349,6 +1350,7 @@ socket.on('state_update', s => {
   prevMyAction = mine;
 });
 let boardCelebrated = false;
+let needsDeal = false;   // 게임 시작 딜 모션 1회 플래그
 function localSet(acq) {
   if (!acq) return null;
   const c = {}; for (const x of acq) c[x.kind] = (c[x.kind] || 0) + 1;
@@ -1533,8 +1535,13 @@ socket.on('opponent_left', () => { clearSession(); alert('상대가 나갔어요
 
 // 세트 완성 카드 특수효과
 function celebrateSet(containerId, kind) {
-  const cards = document.querySelectorAll(`#${containerId} .pile-group[data-kind="${kind}"] .card`);
-  cards.forEach((c, i) => setTimeout(() => c.classList.add('set-win'), i * 70));
+  // 정산 비행이 끝나 승리 카드가 전부 자리에 놓인 뒤 효과 — 일부만 반짝이던 문제 해결
+  const run = () => {
+    const cards = document.querySelectorAll(`#${containerId} .pile-group[data-kind="${kind}"] .card`);
+    cards.forEach((c, i) => { c.style.visibility = ''; setTimeout(() => c.classList.add('set-win'), i * 70); });
+  };
+  run();                    // 즉시 (이미 도착한 카드)
+  setTimeout(run, 750);     // 비행 착지 후 재적용 (늦게 도착한 마지막 카드까지 전부)
 }
 
 // ── 체스 시계 표시 ──────────────────────────────────────────
@@ -1975,8 +1982,9 @@ function renderHand() {
   // 손패·상호작용·선택 상태 그대로면 재생성 스킵
   const sig = hand.map(c => c.id).join(',') + '|' + (offer ? 'o' : '') + (bidding ? 'b' : '') + '|' + (selectedBidCard ? selectedBidCard.id : '');
   if (lastSig.hand === sig) return; lastSig.hand = sig;
+  const deal = needsDeal && hand.length >= 6;   // 첫 손패 완성 시 딜 모션
   el.innerHTML = '';
-  hand.forEach(card => {
+  hand.forEach((card, i) => {
     let cardEl;
     if (offer)
       cardEl = makeCard(card, { selectable: true, onClick: c => { playSound('place'); socket.emit('offer_card', { cardId: c.id }); } });
@@ -1985,9 +1993,14 @@ function renderHand() {
     else
       cardEl = makeCard(card);
     const slot = document.createElement('div'); slot.className = 'fan-slot';
+    if (deal) { slot.classList.add('dealing'); slot.style.animationDelay = (i * 75) + 'ms'; }   // 한 장씩 빠르게
     slot.appendChild(cardEl); el.appendChild(slot);
   });
   fanRow(el, false);
+  if (deal) {
+    needsDeal = false;
+    for (let i = 0; i < hand.length; i++) setTimeout(() => playSound('deal'), 60 + i * 75);   // 딜 사운드도 스태거
+  }
 }
 function animateWinCards() {
   document.querySelectorAll('#myAcq .card').forEach((c, i) => {
@@ -2006,13 +2019,18 @@ if ('serviceWorker' in navigator) {
 let deferredInstall = null;
 const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
+const isAndroid = () => /Android/.test(navigator.userAgent);
+const isSamsung = () => /SamsungBrowser/.test(navigator.userAgent);
+const showInstallBtn = () => { if (!isStandalone()) { const b = document.getElementById('installBtn'); if (b) b.style.display = ''; } };
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredInstall = e;
-  if (!isStandalone()) { const b = document.getElementById('installBtn'); if (b) b.style.display = ''; }
+  showInstallBtn();
 });
-(function initInstallBtn() {   // iOS는 이벤트가 안 오므로 직접 노출
-  if (isIOS() && !isStandalone()) { const b = document.getElementById('installBtn'); if (b) b.style.display = ''; }
+(function initInstallBtn() {
+  // 설치 안 된 상태면 항상 버튼 노출 — 갤럭시(삼성인터넷)는 beforeinstallprompt가
+  // 아예 안 오거나 늦게 와서, 이벤트만 기다리면 버튼이 영영 안 뜸
+  if (!isStandalone()) showInstallBtn();
 })();
 async function installApp() {
   const b = document.getElementById('installBtn');
@@ -2022,9 +2040,13 @@ async function installApp() {
     deferredInstall = null;
     if (outcome === 'accepted' && b) b.style.display = 'none';
   } else if (isIOS()) {
-    alert('아이폰 설치 방법 📲\n\n1. Safari 하단의 공유 버튼(⬆️)을 누르고\n2. "홈 화면에 추가"를 선택하세요!\n\n홈 화면에 FLIP FLAP 앱이 생겨요.');
+    alert('아이폰 설치 방법 📲\n\n1. Safari 아래쪽 공유 버튼(⬆️)을 누르고\n2. "홈 화면에 추가"를 선택하세요!\n\n홈 화면에 FLIP FLAP 앱이 생겨요.');
+  } else if (isSamsung()) {
+    alert('갤럭시 설치 방법 📲\n\n1. 화면 아래 메뉴(≡) 버튼을 누르고\n2. "현재 페이지 추가" → "홈 화면"을 선택하세요!\n\n(또는 주소창 오른쪽 다운로드 아이콘을 눌러도 돼요)');
+  } else if (isAndroid()) {
+    alert('안드로이드 설치 방법 📲\n\n브라우저 메뉴(⋮)를 누르고\n"앱 설치" 또는 "홈 화면에 추가"를 선택하세요!');
   } else {
-    alert('브라우저 메뉴(⋮)에서 "앱 설치"를 눌러 설치할 수 있어요!');
+    alert('브라우저 메뉴에서 "앱 설치"를 눌러 설치할 수 있어요!');
   }
 }
 window.addEventListener('appinstalled', () => {
