@@ -781,7 +781,7 @@
     .game-pcard.show-stats .pc-stats { max-height:20px; opacity:1; margin-top:4px; }
 
     /* 이모트 버튼 — 내 시간 위 (우측 하단) */
-    #emoteWrap { position:absolute; bottom:calc(100px + var(--safe-b)); right:16px; z-index:7; }
+    #emoteWrap { position:absolute; bottom:calc(64px + var(--safe-b)); left:16px; z-index:7; }
     .emote-fab {
       width:36px; height:36px; border-radius:50%; cursor:pointer;
       background:linear-gradient(135deg,#3a2a48,#241a2e); border:1px solid rgba(200,160,0,.4);
@@ -789,7 +789,7 @@
     }
     .emote-fab:hover { transform:scale(1.12) translateY(-1px); }
     #emotePicker {
-      display:none; position:absolute; bottom:46px; right:0; z-index:9;
+      display:none; position:absolute; bottom:46px; left:0; z-index:9;
       background:#1c1424; border:1px solid #2a1c30; border-radius:14px; padding:8px;
       grid-template-columns:repeat(4,1fr); gap:4px; box-shadow:0 8px 24px rgba(0,0,0,.5);
       animation:slideDown .2s ease;
@@ -1309,7 +1309,7 @@
       #oppTimer { top:52px; right:10px; }
       #myProfile { bottom:calc(10px + var(--safe-b)); right:10px; left:auto; }
       #myTimer { bottom:calc(56px + var(--safe-b)); right:10px; left:auto; }
-      #emoteWrap { bottom:92px; right:10px; left:auto; }
+      #emoteWrap { bottom:calc(56px + var(--safe-b)); left:10px; right:auto; }
       #oppZone { padding-top:56px; margin-top:0; }   /* 상대 손패가 프로필·컨트롤 아래로 */
 
       /* 워터마크 로고 축소 */

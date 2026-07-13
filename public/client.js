@@ -121,12 +121,17 @@ async function submitAuth() {
   myAccount = res.profile;
   socket.emit('auth', { token: res.token });
   closeAuth(); renderAccount();
-  if (isSignup) {   // 가입 직후 — 튜토리얼로 갈지 선택
-    setTimeout(() => askConfirm(
-      { icon: '🎓', title: 'FLIP FLAP에 오신 걸 환영해요!', desc: '30초면 배우는 튜토리얼을 해볼까요? (완료하면 🪙100 보상!)', yes: '튜토리얼 시작', no: '나중에 (건너뛰기)' },
-      () => startTutorial()),
-    350);
-  }
+  if (isSignup) offerTutorial();   // 가입 직후 — 튜토리얼로 유도
+}
+// 최초 이용자 튜토리얼 유도 (가입·소셜 첫 로그인 공통) — 1회만
+function offerTutorial() {
+  if (localStorage.getItem('ff_tut_offered')) return;
+  localStorage.setItem('ff_tut_offered', '1');
+  setTimeout(() => askConfirm(
+    { icon: '🎓', title: 'FLIP FLAP에 오신 걸 환영해요!', desc: '30초면 규칙을 다 배워요. 튜토리얼을 해볼까요? (완료하면 🪙100 보상!)',
+      yes: '🎓 튜토리얼 하기', no: '건너뛰기 (Skip)' },
+    () => startTutorial()),
+  350);
 }
 function logout() {
   localStorage.removeItem('ff_auth'); myAccount = null;
@@ -383,6 +388,7 @@ async function submitNick() {
   if (r.error) { err.textContent = '⚠️ ' + r.error; return; }
   myAccount = r.profile; renderAccount(); closeNickModal();
   socket.emit('auth', { token: tk });   // 게임 서버에도 새 닉 반영
+  if (kakaoFirstLogin) { kakaoFirstLogin = false; offerTutorial(); }   // 소셜 첫 로그인 → 닉 설정 후 튜토리얼 유도
 }
 
 // ── 카카오 로그인 콜백 처리 (#ktoken=… / #kerr=…) ──
@@ -953,11 +959,17 @@ socket.on('emote', ({ emoji }) => { if (!emoteMuted) showEmote(emoji, 'opp'); })
 socket.on('emote_cooldown', () => { lastEmoteSent = Date.now(); });   // 서버 쿨타임 동기화
 function showEmote(emoji, side) {
   playSound('emote');
-  const anchor = document.getElementById(side === 'me' ? 'myHand' : 'oppHand');
   const b = document.createElement('div');
   b.className = 'emote-bubble'; b.textContent = emoji;
   let x = window.innerWidth / 2, y = side === 'me' ? window.innerHeight - 160 : 120;
-  if (anchor) { const r = anchor.getBoundingClientRect(); if (r.width) { x = r.left + r.width / 2; y = side === 'me' ? r.top - 20 : r.bottom + 10; } }
+  // 내 이모티콘은 이모트 버튼 바로 위에서 뜸 (중앙 X). 상대 것은 상대 손패 근처
+  const anchor = side === 'me'
+    ? document.getElementById('emoteBtn')
+    : document.getElementById('oppHand');
+  if (anchor) {
+    const r = anchor.getBoundingClientRect();
+    if (r.width) { x = r.left + r.width / 2; y = side === 'me' ? r.top - 44 : r.bottom + 10; }
+  }
   b.style.left = (x - 20) + 'px'; b.style.top = y + 'px';
   document.body.appendChild(b);
   setTimeout(() => b.remove(), 3100);
