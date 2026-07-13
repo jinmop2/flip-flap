@@ -1032,61 +1032,86 @@ function soloPlay(d) { closeModePanels(); difficulty = d; createRoom(true); }
 // 원칙: 한 번에 한 가지만, 짧게, "지금 뭘 클릭할지"를 반짝임으로 표시
 let tutorial = false, tutSeen = {}, tutTarget = null;
 const TUT_STEPS = [
-  { id: 'cards1', when: s => s.phase === 'pick',
-    pos: 'bot',
-    text: '환영해요! 🎩 먼저 <b>카드 읽는 법</b>부터 볼까요?',
+  // ── 1부: 게임 소개 (대형 안내 — 화면 중앙) ──
+  { id: 'intro', when: s => s.phase === 'pick', big: true,
+    text: `<div class="tut-h">FLIP FLAP에 온 걸 환영해요! 🎩</div>
+      <b>경매</b>로 카드를 모아 <b>세트</b>를 먼저 완성하면 승리하는 게임이에요.`,
+    cards: `<div class="tut-cards" style="margin-top:14px"><span class="tcard k3"><i>1</i>3</span><span class="tcard k3"><i>2</i>3</span><span class="tcard k3"><i>4</i>3</span><span class="tvs">=</span><span class="twin">3짜리 3장 모으면 승리! 🏆</span></div>` },
+  { id: 'cards1', when: s => s.phase === 'pick', big: true,
+    text: `<div class="tut-h">카드 읽는 법 🃏</div>`,
     cards: `<div class="tut-arrows">
       <span class="ta-card">
         <span class="tcard k6 big"><i>1</i>6</span>
         <span class="ta-note ta-grade"><span class="ta-txt"><b>작은 숫자 = 등급</b><small>1등급이 최강</small></span></span>
         <span class="ta-note ta-kind"><span class="ta-txt"><b>큰 숫자 = 종류</b><small>이만큼 모으면 승리!</small></span></span>
       </span></div>` },
-  { id: 'cards2', when: s => s.phase === 'pick',
-    pos: 'bot',
-    text: '🏆 <b>승리 조건</b> — 같은 종류를 <b>그 숫자만큼</b> 모으면 그 자리에서 승리!',
-    cards: `<div class="tut-cards"><span class="tcard k3"><i>1</i>3</span><span class="tcard k3"><i>2</i>3</span><span class="tcard k3"><i>4</i>3</span><span class="tvs">=</span><span class="twin">3짜리 3장 → 승리!</span></div>
-      <div class="tut-cards" style="margin-top:7px"><span class="tcard k2"><i>1</i>2</span><span class="tcard k2"><i>2</i>2</span><span class="tvs">=</span><span class="twin">2짜리는 단 2장이면 끝!</span></div>` },
-  { id: 'cards3', when: s => s.phase === 'pick',
-    pos: 'bot',
-    text: '⚔️ <b>어느 카드가 셀까?</b><br>종류 숫자가 <b>작을수록</b> 강하고, 같은 종류라면 <b>등급이 높을수록</b>(1등급 쪽) 이겨요.',
-    cards: `<div class="tut-cards"><span class="tcard k2"><i>2</i>2</span><span class="tvs">&gt;</span><span class="tcard k6"><i>1</i>6</span><span class="twin">2짜리가 6짜리를 이김</span></div>
-      <div class="tut-cards" style="margin-top:7px"><span class="tcard k4"><i>1</i>4</span><span class="tvs">&gt;</span><span class="tcard k4"><i>7</i>4</span><span class="twin">같은 4끼리는 1등급 승</span></div>` },
+  { id: 'cards2', when: s => s.phase === 'pick', big: true,
+    text: `<div class="tut-h">카드는 4종류, 총 24장 🗂</div>
+      숫자가 <b>작을수록 강하고 희귀</b>해요. 2짜리는 단 2장만 모으면 이기지만, 세상에 2장뿐!`,
+    cards: `<div class="tut-cards" style="margin-top:12px">
+        <span class="tcard k2"><i>1</i>2</span><span class="tcard k3"><i>1</i>3</span><span class="tcard k4"><i>1</i>4</span><span class="tcard k6"><i>1</i>6</span></div>
+      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2장</span><span style="margin-left:18px">5장</span><span style="margin-left:18px">7장</span><span style="margin-left:18px">10장</span></div>
+      <div class="tut-cards" style="margin-top:8px"><span class="tcard k2"><i>1</i>2</span><span class="tvs">&gt;</span><span class="tcard k6"><i>1</i>6</span><span class="twin">배팅에선 2가 6을 이겨요</span></div>` },
+  { id: 'flow', when: s => s.phase === 'pick', big: true,
+    text: `<div class="tut-h">게임은 이렇게 흘러가요 🔄</div>
+      <div class="tut-steps">
+        <div>1️⃣ <b>진행자</b>가 중앙덱에서 카드 1장 공개</div>
+        <div>2️⃣ 진행자가 손패 1장을 추가로 출품 → <b>경매품 2장</b></div>
+        <div>3️⃣ 두 사람 모두 손패에서 1장씩 <b>배팅</b></div>
+        <div>4️⃣ 더 <b>강한 카드</b>를 낸 사람이 경매품을 다 가져감!</div>
+        <div>5️⃣ 이렇게 <b>낙찰받은 카드로만</b> 세트 완성 (손패는 세트 불인정!)</div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">직접 해보면 금방 알아요. 시작!</div>` },
+  // ── 2부: 실전 연계 (액션 안내) ──
   { id: 'pick', when: s => s.phase === 'pick' && s.pick && s.pick.myChoice == null,
     pos: 'bot', target: '#auctionItems',
-    text: '이제 <b>선공 뽑기</b>!',
-    act:  '반짝이는 두 장 중 <b>한 장을 클릭</b>하세요. 강한 카드를 뽑으면 선공!' },
+    text: '먼저 <b>선공 뽑기</b>!',
+    act:  '반짝이는 두 장 중 <b>한 장을 탭</b>하세요 — 강한 카드를 뽑으면 선공!' },
   { id: 'pickr', when: s => s.phase === 'pick_reveal',
     pos: 'bot',
-    text: '카드 공개! <b>숫자가 작을수록 강해요</b> (2 &gt; 3 &gt; 4 &gt; 6). 이긴 쪽이 첫 <b>경매 진행자</b>가 돼요.' },
+    text: '카드 공개! 강한 카드를 뽑은 쪽이 첫 <b>경매 진행자</b>가 돼요. (진행자는 매 턴 교대)' },
   { id: 'draw_me', when: s => s.phase === 'draw' && s.auctioneer === s.myIndex,
     pos: 'bot', target: '#deckStack',
-    text: '이번 턴 <b>경매 진행자</b>는 나! 진행자는 매 턴 <b>번갈아</b> 맡아요. 진행자가 경매 상품을 공개합니다.',
-    act:  '왼쪽 <b>덱을 클릭</b>!' },
+    text: '이번 턴 진행자는 <b>나</b>! 경매품부터 공개해볼까요?',
+    act:  '왼쪽 <b>덱을 탭</b>!' },
   { id: 'offer_me', when: s => s.phase === 'offer' && s.auctioneer === s.myIndex,
     pos: 'top', target: '#myHand',
-    text: '경매 상품은 항상 <b>2장</b> — 방금 공개한 카드 + 내 손패 1장. 어떤 카드를 내놓을지가 <b>전략</b>이에요!',
-    act:  '아래 손패에서 <b>내놓을 카드</b>를 클릭하세요' },
+    text: '중앙 카드가 공개됐어요! 이제 <b>내 손패 1장</b>을 추가로 출품 — 이 2장이 경매품이 돼요.',
+    act:  '아래 손패에서 <b>내놓을 카드를 탭</b> (내가 안 모으는 종류가 좋아요)' },
+  { id: 'type_big', when: s => s.phase === 'choose_type' && s.auctioneer === s.myIndex, big: true,
+    text: `<div class="tut-h">경매 방식을 골라요 🎭</div>
+      <div class="tut-two">
+        <div class="tt-p"><b>👁 오픈</b><br>경매품 <b>공개</b><br>배팅 <b>비밀</b><br><small>서로 얼마 낼지 몰라 눈치싸움</small></div>
+        <div class="tt-p"><b>🙈 클로즈</b><br>출품카드 <b>비밀</b><br>배팅 <b>공개</b><br><small>뭐가 걸렸는지 몰라 도박</small></div>
+      </div>` },
   { id: 'type_me', when: s => s.phase === 'choose_type' && s.auctioneer === s.myIndex,
     pos: 'top', target: '#actionArea',
-    text: '경매 방식 선택!<br>👁 <b>오픈</b> = 상품 공개, 배팅은 비밀<br>🙈 <b>클로즈</b> = 상품 비밀, 배팅은 공개',
-    act:  '마음에 드는 방식을 클릭' },
+    act:  '원하는 방식을 <b>탭</b>하세요', text: '' },
   { id: 'bid_me', when: s => s.phase === 'bidding' && s.auction && !s.auction.myBid && (s.auctioneer === s.myIndex || s.auction.oppBidSubmitted),
     pos: 'top', target: '#myHand',
-    text: '<b>배팅!</b> 강한 카드를 배팅한 사람이 상품 2장을 다 가져가요. ⚠️ 단, 배팅한 카드는 <b>서로 교환</b>해요.',
-    act:  '손패에서 카드 클릭 → <b>배팅 확정</b> 버튼' },
+    text: '<b>배팅!</b> 강한 카드를 낸 사람이 경매품 2장을 다 가져가요. ⚠️ 배팅한 카드는 <b>서로 교환</b>돼요.',
+    act:  '손패에서 카드 탭 → <b>배팅 확정</b>' },
   { id: 'reveal', when: s => s.phase === 'reveal',
     pos: 'top',
-    text: '결과! 이긴 쪽이 상품 2장을 <b>자기 앞에</b> 깔아요. 🎯 <b>앞에 깔린 카드만</b> 세트로 인정 — 손에 든 건 소용 없어요.' },
+    text: '두구두구… 결과 공개! 이긴 쪽이 경매품을 <b>자기 앞에</b> 깔아요.' },
+  { id: 'acquired', when: s => tutSeen.reveal && ((s.myAcq || []).length > 0 || (s.oppAcq || []).length > 0) && s.phase !== 'reveal',
+    pos: 'top',
+    text: '🎯 방금 딴 카드가 <b>테이블 앞에</b> 깔렸죠? <b>이렇게 깔린 카드로만</b> 세트를 만들 수 있어요 — 손에 든 카드는 세트가 안 돼요!' },
   { id: 'draw_opp', when: s => s.phase === 'draw' && s.auctioneer !== s.myIndex,
     pos: 'bot',
-    text: '이번 턴 진행자는 <b>상대</b> — 진행자는 매 턴 번갈아요. 상대가 상품을 걸면 곧 배팅 차례가 와요. 잠깐 기다려요 ☕' },
-  { id: 'betray',   // 실제로 6-10이나 2-1이 내 손에 들어온 순간에만 시연
-    when: s => tutSeen.bid_me && (s.myHand || []).some(c => (c.kind === 6 && c.grade === 10) || (c.kind === 2 && c.grade === 1)),
+    text: '이번 턴 진행자는 <b>상대</b>예요. 곧 배팅 차례가 오니 잠깐만 ☕' },
+  // ── 3부: 비밀 병기 (마지막 규칙) ──
+  { id: 'betray_rule', when: s => tutSeen.reveal && s.turn >= 2, big: true,
+    text: `<div class="tut-h">마지막 비밀 하나 ⚔️</div>
+      가장 약한 <b>6-10</b>이 딱 하나, 가장 강한 <b>2-1</b>만은 이겨요.<br>이름하여 <b>졸개의 배신</b>!`,
+    cards: `<div class="tut-cards" style="margin-top:12px"><span class="tcard k6"><i>10</i>6</span><span class="tvs">⚔</span><span class="tcard k2"><i>1</i>2</span><span class="tvs">→</span><span class="twin">6-10 승리!</span></div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">상대가 에이스를 낼 타이밍에 노려보세요 😏</div>` },
+  { id: 'betray',   // 실제로 6-10이나 2-1이 내 손에 들어온 순간 리마인드
+    when: s => tutSeen.betray_rule && (s.myHand || []).some(c => (c.kind === 6 && c.grade === 10) || (c.kind === 2 && c.grade === 1)),
     pos: 'top',
     text: (s => (s.myHand || []).some(c => c.kind === 6 && c.grade === 10)
-      ? '👀 지금 손에 있는 <b>6-10</b> — 최약체지만 최강 <b>2-1</b>만은 이겨요. <b>졸개의 배신!</b> 상대가 에이스를 낼 타이밍에 노려보세요.'
-      : '👀 지금 손에 있는 <b>2-1</b>은 최강 카드지만 단 하나, 최약체 <b>6-10</b>한테만 져요 — <b>졸개의 배신</b>을 조심!')
-      , cards: '<div class="tut-cards"><span class="tcard k6"><i>10</i>6</span><span class="tvs">⚔</span><span class="tcard k2"><i>1</i>2</span><span class="tvs">→</span><span class="twin">6-10 승!</span></div>' },
+      ? '👀 지금 손에 <b>6-10</b>이 있어요 — 상대가 2-1을 낼 것 같으면 <b>배신</b>을 노려보세요!'
+      : '👀 지금 손에 <b>2-1</b>이 있어요 — 최강이지만 <b>6-10</b>한테만 져요. 조심!') },
 ];
 function startTutorial() {
   tutorial = true; tutSeen = {};
@@ -1113,8 +1138,9 @@ function tutShow(st) {
   document.getElementById('tutText').innerHTML = text
     + (st.cards || '')
     + (st.act ? `<div class="tut-do">👉 ${st.act}</div>` : '');
-  box.classList.remove('pos-top', 'pos-bot', 'pop');
-  box.classList.add('pos-' + (st.pos || 'top'));
+  box.classList.remove('pos-top', 'pos-bot', 'pop', 'big');
+  if (st.big) box.classList.add('big');
+  else box.classList.add('pos-' + (st.pos || 'top'));
   box.style.display = 'block';
   void box.offsetWidth;           // 애니메이션 재시작
   box.classList.add('pop');
@@ -1122,17 +1148,18 @@ function tutShow(st) {
   tutGlowFor(st);
   // 체크포인트: 확인 누를 때까지 서버 진행 보류 + 게임 입력 차단
   socket.emit('tut_hold');
-  tutBlock(true);
+  tutBlock(true, !!st.big);
 }
 // 설명 읽는 동안 게임판 클릭 방지 (박스의 버튼은 눌림)
-function tutBlock(on) {
+function tutBlock(on, dark) {
   let b = document.getElementById('tutBlocker');
   if (!b) {
     b = document.createElement('div'); b.id = 'tutBlocker';
-    b.style.cssText = 'position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.15);cursor:pointer';
+    b.style.cssText = 'position:fixed;inset:0;z-index:50;cursor:pointer;transition:background .25s';
     b.onclick = () => tutConfirm();   // 아무 곳이나 탭해도 다음으로
     document.body.appendChild(b);
   }
+  b.style.background = dark ? 'rgba(5,2,4,.6)' : 'rgba(0,0,0,.15)';   // 대형 안내는 배경 집중
   b.style.display = on ? 'block' : 'none';
 }
 function tutGlowFor(st) {

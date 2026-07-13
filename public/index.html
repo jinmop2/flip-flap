@@ -472,14 +472,33 @@
     #tutBox.pos-bot { top:auto; bottom:235px; }
     #tutBox.pop { animation:tutIn .3s cubic-bezier(.34,1.3,.64,1); }
     @keyframes tutIn { from { opacity:0; transform:translateX(-50%) translateY(8px) scale(.97); } to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }
-    .tut-tag { font-size:.66rem; font-weight:700; color:var(--gold); letter-spacing:2px; margin-bottom:4px; }
+    .tut-tag { font-size:.66rem; font-weight:700; color:var(--gold); letter-spacing:2px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; }
     #tutText { font-size:.84rem; line-height:1.55; color:#e8dfc8; }
     #tutText b { color:#ffe9a8; }
     .tut-do { margin-top:7px; font-weight:700; color:#ffd94a; font-size:.84rem; }
-    .tut-actions { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
-    .tut-actions .btn { width:auto; padding:6px 16px; font-size:.8rem; }
-    .tut-quit { background:none; border:none; color:#6a5a70; font-family:'Fredoka'; font-size:.72rem; cursor:pointer; }
+    .tut-quit { background:none; border:none; color:#6a5a70; font-family:'Fredoka'; font-size:.7rem; cursor:pointer; letter-spacing:0; }
     .tut-quit:hover { color:#c8bcc4; }
+    /* 탭해서 계속 힌트 (맥동) */
+    .tut-next { margin-top:9px; text-align:center; font-size:.72rem; font-weight:700; color:#c8a86a; animation:tutNextPulse 1.4s ease-in-out infinite; }
+    @keyframes tutNextPulse { 0%,100%{ opacity:.45; } 50%{ opacity:1; } }
+    /* 대형 안내 — 중요·긴 설명은 화면 중앙에 크게 */
+    #tutBox.big {
+      top:50%; bottom:auto; transform:translate(-50%,-50%);
+      width:min(400px, calc(100vw - 24px)); padding:20px 20px 14px;
+      background:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/><feColorMatrix type='matrix' values='0 0 0 0 0.28 0 0 0 0 0.08 0 0 0 0 0.10 0 0 0 0.28 0'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>"),
+        linear-gradient(180deg,#3a1018,#22090e);
+      border-width:1.5px; border-radius:18px;
+      box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 20px 50px rgba(0,0,0,.75);
+    }
+    #tutBox.big #tutText { font-size:.94rem; line-height:1.65; text-align:center; }
+    #tutBox.big.pop { animation:tutBigIn .32s cubic-bezier(.34,1.3,.64,1); }
+    @keyframes tutBigIn { from { opacity:0; transform:translate(-50%,-50%) scale(.92); } to { opacity:1; transform:translate(-50%,-50%) scale(1); } }
+    .tut-h { font-family:'Fredoka'; font-size:1.15rem; font-weight:800; color:#ffe9a8; margin-bottom:8px; }
+    .tut-steps { text-align:left; display:flex; flex-direction:column; gap:7px; margin-top:10px; font-size:.85rem; }
+    .tut-two { display:flex; gap:10px; margin-top:12px; }
+    .tt-p { flex:1; background:rgba(0,0,0,.28); border:1px solid rgba(200,160,0,.3); border-radius:12px; padding:10px 8px; font-size:.8rem; line-height:1.5; }
+    .tt-p small { color:#c8a86a; font-size:.68rem; display:block; margin-top:4px; }
     /* 튜토리얼 미니 카드 (졸개의 배신 시연) */
     .tut-cards { display:flex; align-items:center; gap:9px; justify-content:center; margin-top:9px; }
     .tcard {
@@ -1714,17 +1733,20 @@
       <div class="r-step"><span class="r-ico">🎯</span>배팅 카드 1장씩 제출 <b>(진행자가 먼저!)</b></div>
       <div class="r-step"><span class="r-ico">🏆</span>이긴 사람이 경매품 2장 획득</div>
       <div class="r-step"><span class="r-ico">🔁</span>배팅에 쓴 카드는 <b>서로 상대에게</b> 넘어감</div>
+      <div class="r-step"><span class="r-ico">🎯</span><b>낙찰받아 앞에 깐 카드만</b> 세트로 인정 — 손패로는 세트 불가!</div>
     </div>
 
     <h3>🎭 오픈 vs 클로즈</h3>
     <div class="r-two">
       <div class="r-panel open">
         <div class="r-ptitle">오픈 경매</div>
-        경매품 👁 <b>공개</b><br>배팅 🙈 <b>비공개</b><br>(얼마 낼지 서로 모름)
+        경매품 👁 <b>공개</b><br>배팅 🙈 <b>비공개</b><br>(얼마 낼지 서로 모름)<br>
+        <span style="color:#8fe08a;font-size:.74rem">💡 꼭 갖고 싶은 판에 — 내 강배팅을 숨겨요</span>
       </div>
       <div class="r-panel closed">
         <div class="r-ptitle">클로즈 경매</div>
-        경매품 🙈 <b>비공개</b><br>배팅 👁 <b>공개</b><br>(뭐가 걸렸는지 모름)
+        경매품 🙈 <b>비공개</b><br>배팅 👁 <b>공개</b><br>(뭐가 걸렸는지 모름)<br>
+        <span style="color:#b89cfe;font-size:.74rem">💡 출품을 숨겨 상대를 헷갈리게 해요</span>
       </div>
     </div>
 
@@ -1823,12 +1845,9 @@
 
 <!-- 튜토리얼 코치 -->
 <div id="tutBox" onclick="tutConfirm()" style="cursor:pointer">
-  <div class="tut-tag">🎓 튜토리얼 <span style="float:right;font-size:.68rem;color:#8a7a80;font-weight:400">아무 곳이나 탭 →</span></div>
+  <div class="tut-tag">🎓 튜토리얼 <button class="tut-quit" onclick="event.stopPropagation(); endTutorial()">종료 ×</button></div>
   <div id="tutText"></div>
-  <div class="tut-actions">
-    <button class="btn btn-gold" onclick="event.stopPropagation(); tutConfirm()">알겠어요!</button>
-    <button class="tut-quit" onclick="event.stopPropagation(); endTutorial()">튜토리얼 종료</button>
-  </div>
+  <div class="tut-next">▸ 화면을 탭하면 계속</div>
 </div>
 
 <div id="gameOver">
