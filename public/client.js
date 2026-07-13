@@ -965,10 +965,10 @@ function showEmote(emoji, side) {
   // 내 이모티콘은 이모트 버튼 바로 위에서 뜸 (중앙 X). 상대 것은 상대 손패 근처
   const anchor = side === 'me'
     ? document.getElementById('emoteBtn')
-    : document.getElementById('oppHand');
+    : document.getElementById('oppProfile');   // 상대 것도 프로필 쪽 사이드에 (중앙 X)
   if (anchor) {
     const r = anchor.getBoundingClientRect();
-    if (r.width) { x = r.left + r.width / 2; y = side === 'me' ? r.top - 44 : r.bottom + 10; }
+    if (r.width) { x = r.left + r.width / 2; y = side === 'me' ? r.top - 44 : r.bottom + 8; }
   }
   b.style.left = (x - 20) + 'px'; b.style.top = y + 'px';
   document.body.appendChild(b);
@@ -1417,8 +1417,10 @@ function captureSettleFlight(old) {
   if (myR) legs.push({ kind: 'bid', card: a.myBid, from: myR, destSel: null, fallback: '#oppHand' });
   return legs.length ? legs : null;
 }
+let flightUntil = 0;   // 정산 비행이 끝나는 시각 — 세트 축하는 이 뒤에
 function playSettleFlight(legs) {
   if (document.hidden) return;                        // 백그라운드 탭 — 연출 스킵 (최적화)
+  flightUntil = Date.now() + 850;
   // 모든 고스트를 먼저 만들어 붙이고 (리플로우 1회) transition-delay로 순차 출발
   const active = [];
   let prizeN = 0;
@@ -1524,7 +1526,6 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
       : byProgress ? `세트 근접 승리! (${setKind}짜리에 가장 가까웠어요)`
       : `${setKind}짜리 세트 완성!`;
     playSound('victory');
-    screenFx('win');
     if (setKind && !byProgress && !forfeit) { celebrateSet('myAcq', setKind); playSound('setwin'); delay = 1400; }
     else animateWinCards();
   } else {

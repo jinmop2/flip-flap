@@ -596,7 +596,8 @@ function recordResult(token, result, opts = {}) {
   //    단, 탈주 패배는 페널티(RP-13)를 그대로 부과해야 하므로 예외
   const tooShort = (opts.turns || 0) < MIN_TURNS || (opts.playtimeSec || 0) < MIN_PLAYTIME;
   const forfeitLoss = opts.forfeit && result === 'loss';
-  if (tooShort && !forfeitLoss) { blocked = true; reason = 'short'; }
+  const quickBotWin = opts.vsBot && result === 'win';   // AI전 승리는 빨리 이겨도 인정 (실력)
+  if (tooShort && !forfeitLoss && !quickBotWin) { blocked = true; reason = 'short'; }
   // 3. 자만추/저격 방지 (PvP 한정): 같은 IP·친선전, 또는 같은 상대와 하루 3판 초과
   if (!opts.vsBot && !blocked) {
     if (opts.sameIp || opts.friendly) { blocked = true; reason = 'friendly'; }
