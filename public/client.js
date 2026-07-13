@@ -1077,7 +1077,7 @@ const TUT_STEPS = [
   { id: 'offer_me', when: s => s.phase === 'offer' && s.auctioneer === s.myIndex,
     pos: 'top', target: '#myHand',
     text: '중앙 카드가 공개됐어요! 이제 <b>내 손패 1장</b>을 추가로 출품 — 이 2장이 경매품이 돼요.',
-    act:  '아래 손패에서 <b>내놓을 카드를 탭</b> (내가 안 모으는 종류가 좋아요)' },
+    act:  '아래 손패에서 <b>내놓을 카드를 탭</b>하세요' },
   { id: 'type_big', when: s => s.phase === 'choose_type' && s.auctioneer === s.myIndex, big: true,
     text: `<div class="tut-h">경매 방식을 골라요 🎭</div>
       <div class="tut-two">
@@ -2021,7 +2021,10 @@ function renderHand() {
       cardEl = makeCard(card);
     const slot = document.createElement('div'); slot.className = 'fan-slot';
     // 딜 애니는 카드(내부)에 — slot의 부채꼴 transform을 덮어쓰지 않게
-    if (deal) { cardEl.classList.add('dealing'); cardEl.style.animationDelay = (i * 75) + 'ms'; }
+    if (deal) {
+      cardEl.classList.add('dealing'); cardEl.style.animationDelay = (i * 70) + 'ms';
+      cardEl.addEventListener('animationend', () => { cardEl.classList.remove('dealing'); cardEl.style.animationDelay = ''; }, { once: true });   // 끝나면 정리(합성 레이어 해제)
+    }
     slot.appendChild(cardEl); el.appendChild(slot);
   });
   fanRow(el, false);
