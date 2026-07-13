@@ -40,6 +40,23 @@ ${rows.map(r => `<tr><td>${r.day}</td>${td(r.pv)}${td(r.uv)}${td(r.signups)}${td
 </table>`);
 });
 app.get('/health', (req, res) => res.json({ ok: true, rooms: Object.keys(rooms).length, uptime: Math.round(process.uptime()) }));
+
+// Android TWA(Play스토어) 검증 — 앱 서명 SHA256 지문을 Render 환경변수 TWA_FINGERPRINT에 넣으면 자동 제공
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  const fp = process.env.TWA_FINGERPRINT || '';
+  res.json([{
+    relation: ['delegate_permission/common.handle_all_urls'],
+    target: {
+      namespace: 'android_app',
+      package_name: process.env.TWA_PACKAGE || 'com.mongdung.flipflap',
+      sha256_cert_fingerprints: fp ? fp.split(',').map(s => s.trim()) : [],
+    },
+  }]);
+});
+// iOS 유니버설 링크(선택)
+app.get('/.well-known/apple-app-site-association', (req, res) => {
+  res.json({ applinks: { apps: [], details: [] } });
+});
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders(res, fp) {
     if (fp.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-cache');                       // SW 갱신 즉시 감지
