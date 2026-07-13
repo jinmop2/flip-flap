@@ -1055,8 +1055,8 @@
     .fan.top .card.back .bf { font-size:.62rem; letter-spacing:.5px; }   /* 소형 카드에 맞춘 뒷면 로고 */
     .fan.top .card.back .bf.flap { margin-top:-1px; }
     .fan-slot { transition:transform .18s cubic-bezier(.34,1.4,.64,1); }
-    /* 게임 시작 딜 — 덱(좌상단)에서 한 장씩 날아와 자리잡음 */
-    .fan-slot.dealing { animation:dealFly .32s cubic-bezier(.25,.9,.35,1) both; }
+    /* 게임 시작 딜 — 덱(좌상단)에서 한 장씩 날아와 자리잡음 (카드에 적용, slot 부채꼴 유지) */
+    .card.dealing { animation:dealFly .32s cubic-bezier(.25,.9,.35,1) backwards; will-change:transform, opacity; }
     @keyframes dealFly {
       from { opacity:0; transform:translate(-52vw, -62vh) scale(.5) rotate(-18deg); }
       70%  { opacity:1; }

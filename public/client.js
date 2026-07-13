@@ -1827,7 +1827,7 @@ function fanRow(container, isTop) {
     const y = isTop ? lift : -lift;
     slot.style.transformOrigin = isTop ? 'center top' : 'center bottom';
     slot.style.transform = `rotate(${ang}deg) translateY(${y}px)`;
-    slot.style.zIndex = String(20 - Math.round(dist));
+    slot.style.zIndex = String(i + 1);   // 오른쪽 카드가 항상 왼쪽 카드 위에 (자연스러운 손패 겹침)
     slot.style.margin = '0 ' + overlap + 'px';
   });
 }
@@ -1993,7 +1993,8 @@ function renderHand() {
     else
       cardEl = makeCard(card);
     const slot = document.createElement('div'); slot.className = 'fan-slot';
-    if (deal) { slot.classList.add('dealing'); slot.style.animationDelay = (i * 75) + 'ms'; }   // 한 장씩 빠르게
+    // 딜 애니는 카드(내부)에 — slot의 부채꼴 transform을 덮어쓰지 않게
+    if (deal) { cardEl.classList.add('dealing'); cardEl.style.animationDelay = (i * 75) + 'ms'; }
     slot.appendChild(cardEl); el.appendChild(slot);
   });
   fanRow(el, false);
