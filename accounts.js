@@ -67,7 +67,7 @@ function makeToken() { return crypto.randomBytes(24).toString('hex'); }
 // ── 레벨 / 랭크 ──
 // 현재 레벨에서 다음 레벨까지 필요한 XP (누진 곡선)
 function xpForNext(level) {
-  if (level < 10) return level * 50 + 50;
+  if (level < 10) return level * 25 + 25;   // 초반(1~10렙) 완화 — 빠른 성취감
   if (level < 20) return level * 100;
   return level * 150;
 }

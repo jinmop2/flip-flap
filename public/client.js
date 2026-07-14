@@ -296,10 +296,10 @@ function showRewards() {
   const worth = r && ((r.coins || r.xp || r.rp) || r.blocked || (myAccount && !myAccount.guest));
   if (!el || !worth) { if (el) el.style.display = 'none'; return; }
   el.style.display = 'block';
-  el.innerHTML = `<div class="rw-row">
-      <span class="rw-coin">🪙 <b id="rwCoin">0</b></span>
-      <span class="rw-xp">XP +${r.xp}</span>
-      ${r.rp ? `<span class="rw-rp">RP ${r.rp > 0 ? '+' : ''}${r.rp}</span>` : ''}
+  el.innerHTML = `<div class="rw-tiles">
+      <div class="rw-tile t-coin"><span class="rw-ic">🪙</span><b id="rwCoin">0</b><small>코인</small></div>
+      <div class="rw-tile t-xp"><span class="rw-ic">✨</span><b>+${r.xp}</b><small>경험치</small></div>
+      ${r.rp ? `<div class="rw-tile t-rp"><span class="rw-ic">${r.rp > 0 ? '🏆' : '📉'}</span><b>${r.rp > 0 ? '+' : ''}${r.rp}</b><small>랭크점수</small></div>` : ''}
     </div>
     <div id="rwBadges" class="rw-badges"></div>`;
   countUp(document.getElementById('rwCoin'), r.coins, '');
