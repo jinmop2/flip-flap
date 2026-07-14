@@ -615,6 +615,8 @@
     }
     .btn:hover { opacity:.9; transform:translateY(-2px); }
     .btn:active { transform:translateY(1px); }
+    .btn:has(.btni) { display:inline-flex; align-items:center; justify-content:center; gap:7px; }
+    .btni { width:1.05em; height:1.05em; flex-shrink:0; vertical-align:-2px; }
     .btn-gold { background:linear-gradient(135deg,var(--gold),var(--yel)); color:#1a1008; }
     .btn-outline { background:transparent; border:2px solid var(--gold); color:var(--gold); }
     .btn-ink { background:#241a2e; border:2px solid #6a5a8e; color:#b8a8de; }
@@ -1875,10 +1877,10 @@
     <div id="goStats"></div>
     <div id="rematchNote"></div>
     <div style="display:flex; gap:8px; justify-content:center;">
-      <button class="btn btn-gold" id="rematchBtn" style="width:auto" onclick="rematch(this)">🔄 한 판 더!</button>
+      <button class="btn btn-gold" id="rematchBtn" style="width:auto" onclick="rematch(this)"><svg class="btni" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M21 3v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>한 판 더!</button>
       <button class="btn btn-outline" style="width:auto" onclick="goLobby()">로비로</button>
     </div>
-    <button class="btn btn-kakao btn-sm" style="width:100%;margin-top:8px" onclick="challengeFriend()">💬 친구에게 도전장 보내기</button>
+    <button class="btn btn-kakao btn-sm" style="width:100%;margin-top:8px" onclick="challengeFriend()"><svg class="btni" viewBox="0 0 24 24"><path d="M4 21V4a1 1 0 0 1 1-1h11l-2.5 3.5L17 10H5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>친구에게 도전장 보내기</button>
   </div>
 </div>
 
