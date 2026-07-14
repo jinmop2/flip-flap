@@ -289,6 +289,11 @@ function countUp(el, to, prefix = '', ms = 800) {
     if (p < 1) requestAnimationFrame(step);
   })(performance.now());
 }
+// 정산 화면 커스텀 SVG 아이콘 (골드 테마 — 이모지 대체)
+const ICON_COIN = `<svg class="rwi" viewBox="0 0 32 32"><defs><radialGradient id="rgC" cx="38%" cy="34%" r="72%"><stop offset="0" stop-color="#ffe89a"/><stop offset="55%" stop-color="#f2c94c"/><stop offset="100%" stop-color="#b8860b"/></radialGradient></defs><circle cx="16" cy="16" r="13" fill="url(#rgC)" stroke="#8a5a12" stroke-width="1.5"/><circle cx="16" cy="16" r="9.5" fill="none" stroke="#8a5a12" stroke-width="1.2" opacity=".55"/><path d="M12 20l4-9 4 9M13.2 17.2h5.6" stroke="#7a4a0e" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="12.5" cy="11.5" rx="3" ry="2" fill="#fff" opacity=".45"/></svg>`;
+const ICON_XP = `<svg class="rwi" viewBox="0 0 32 32"><defs><linearGradient id="rgX" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bfe4ff"/><stop offset="100%" stop-color="#5aa8ff"/></linearGradient></defs><path d="M16 3l3.2 8.8L28 15l-8.8 3.2L16 27l-3.2-8.8L4 15l8.8-3.2z" fill="url(#rgX)" stroke="#2a6bd0" stroke-width="1.2" stroke-linejoin="round"/><circle cx="24.5" cy="8" r="1.8" fill="#cfe9ff"/><circle cx="7" cy="23" r="1.3" fill="#cfe9ff"/></svg>`;
+const ICON_RP = `<svg class="rwi" viewBox="0 0 32 32"><defs><linearGradient id="rgR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe89a"/><stop offset="100%" stop-color="#d9a520"/></linearGradient></defs><path d="M9 6h14v4a7 7 0 0 1-14 0z" fill="url(#rgR)" stroke="#8a5a12" stroke-width="1.3" stroke-linejoin="round"/><path d="M9 7H6.5a2.5 2.5 0 0 0 3 4M23 7h2.5a2.5 2.5 0 0 1-3 4" fill="none" stroke="#8a5a12" stroke-width="1.3" stroke-linecap="round"/><path d="M16 17v4M12 24h8l-1-3h-6z" fill="url(#rgR)" stroke="#8a5a12" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
+const ICON_RP_DOWN = `<svg class="rwi" viewBox="0 0 32 32"><path d="M16 24l-7-8h4V7h6v9h4z" fill="#ff8a8a" stroke="#b03030" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
 function showRewards() {
   const el = document.getElementById('goRewards');
   const r = pendingRewards;
@@ -297,9 +302,9 @@ function showRewards() {
   if (!el || !worth) { if (el) el.style.display = 'none'; return; }
   el.style.display = 'block';
   el.innerHTML = `<div class="rw-tiles">
-      <div class="rw-tile t-coin"><span class="rw-ic">🪙</span><b id="rwCoin">0</b><small>코인</small></div>
-      <div class="rw-tile t-xp"><span class="rw-ic">✨</span><b>+${r.xp}</b><small>경험치</small></div>
-      ${r.rp ? `<div class="rw-tile t-rp"><span class="rw-ic">${r.rp > 0 ? '🏆' : '📉'}</span><b>${r.rp > 0 ? '+' : ''}${r.rp}</b><small>랭크점수</small></div>` : ''}
+      <div class="rw-tile t-coin"><span class="rw-ic">${ICON_COIN}</span><b id="rwCoin">0</b><small>코인</small></div>
+      <div class="rw-tile t-xp"><span class="rw-ic">${ICON_XP}</span><b>+${r.xp}</b><small>경험치</small></div>
+      ${r.rp ? `<div class="rw-tile t-rp"><span class="rw-ic">${r.rp > 0 ? ICON_RP : ICON_RP_DOWN}</span><b>${r.rp > 0 ? '+' : ''}${r.rp}</b><small>랭크점수</small></div>` : ''}
     </div>
     <div id="rwBadges" class="rw-badges"></div>`;
   countUp(document.getElementById('rwCoin'), r.coins, '');
@@ -1575,13 +1580,17 @@ socket.on('opponent_left', () => { clearSession(); alert('상대가 나갔어요
 
 // 세트 완성 카드 특수효과
 function celebrateSet(containerId, kind) {
-  // 정산 비행이 끝나 승리 카드가 전부 자리에 놓인 뒤 효과 — 일부만 반짝이던 문제 해결
-  const run = () => {
-    const cards = document.querySelectorAll(`#${containerId} .pile-group[data-kind="${kind}"] .card`);
-    cards.forEach((c, i) => { c.style.visibility = ''; setTimeout(() => c.classList.add('set-win'), i * 70); });
+  // 세트에 필요한 카드가 전부 도착(정산 비행 착지)할 때까지 기다렸다가 한 번에 반짝
+  const need = { 2: 2, 3: 3, 4: 4, 6: 6 }[kind] || kind;
+  const sel = () => document.querySelectorAll(`#${containerId} .pile-group[data-kind="${kind}"] .card`);
+  const fire = cards => cards.forEach((c, i) => { c.style.visibility = ''; setTimeout(() => c.classList.add('set-win'), i * 70); });
+  let tries = 0;
+  const poll = () => {
+    const cards = sel();
+    if (cards.length >= need || tries >= 20) { fire(cards); return; }   // 다 왔으면 즉시 / 최대 2초 대기
+    tries++; setTimeout(poll, 100);
   };
-  run();                    // 즉시 (이미 도착한 카드)
-  setTimeout(run, 750);     // 비행 착지 후 재적용 (늦게 도착한 마지막 카드까지 전부)
+  poll();
 }
 
 // ── 체스 시계 표시 ──────────────────────────────────────────
