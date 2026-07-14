@@ -24,7 +24,7 @@ app.use((req, res, next) => {
 });
 
 // 통계 대시보드 — Render 환경변수 STATS_KEY 필요 (예: /stats?key=내키)
-app.get('/stats', (req, res) => {
+app.get('/stats', rateLimit(20), (req, res) => {   // 키 무차별 대입 방지
   const KEY = process.env.STATS_KEY;
   if (!KEY) return res.status(403).send('Render 환경변수에 STATS_KEY를 설정한 뒤 /stats?key=<키>로 접속하세요.');
   if (req.query.key !== KEY) return res.status(403).send('잘못된 키입니다.');
