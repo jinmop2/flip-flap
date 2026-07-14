@@ -37,7 +37,7 @@ function hideSplash() {
   if (splashHidden) return; splashHidden = true;
   const s = document.getElementById('splash'); if (!s) return;
   const wait = Math.max(0, SPLASH_MIN - (Date.now() - SPLASH_START));
-  setTimeout(() => s.classList.add('hide'), wait);
+  setTimeout(() => { s.classList.add('hide'); setTimeout(() => { s.style.display = 'none'; }, 700); }, wait);   // 페이드 후 완전 제거 — 숨은 무한 스피너 정지
 }
 setTimeout(hideSplash, 8000);
 // 내부 이동용 새로고침 (스플래시 없이)
@@ -71,7 +71,7 @@ socket.on('dup_login', () => {   // 다른 기기에서 같은 계정 로그인 
 });
 socket.on('disconnect', () => setConn('연결 끊김 — 재접속 중…', 'bad'));
 socket.on('connect_error', (e) => { setConn('서버 연결 실패', 'bad'); console.error('socket connect_error:', e && e.message); });
-socket.on('rejoin_failed', () => { clearSession(); });
+socket.on('rejoin_failed', () => { clearSession(); toast('⚠️ 이전 게임이 끝나 로비로 돌아가요', 2400); setTimeout(fastReload, 1500); });
 function showGrace(left) {
   document.getElementById('graceCount').textContent = Math.max(0, left ?? 60);
   document.getElementById('graceOverlay').classList.add('show');
@@ -94,7 +94,7 @@ let myAccount = null;   // 로그인 프로필 (null=게스트)
 let authMode = 'login';
 async function apiPost(url, body) {
   try { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
-  catch (_) { return { error: '서버 연결 실패' }; }
+  catch (_) { return { error: '서버 연결 실패', netFail: true }; }
 }
 // 로그인 요청 → 타이틀 화면(구글/카카오/게스트)로 통일 (아이디/비번 로그인은 제거)
 function openAuth() { if (typeof showTitle === 'function') showTitle(); }
@@ -153,7 +153,8 @@ async function restoreSession() {
   const tk = localStorage.getItem('ff_auth'); if (!tk) return;
   const r = await apiPost('/api/me', { token: tk });
   if (r.ok) { myAccount = r.profile; renderAccount(); claimDaily(); }
-  else localStorage.removeItem('ff_auth');
+  else if (r.netFail) { toast('⚠️ 서버 연결이 늦어지고 있어요 — 잠시 후 새로고침해 주세요', 3200); }   // 콜드스타트/오프라인: 유효 토큰 지키기
+  else localStorage.removeItem('ff_auth');   // 서버가 명시적으로 거부한 경우만 로그아웃
 }
 // 1일 접속 보상 수령 (연속 출석 스택 표시)
 async function claimDaily() {

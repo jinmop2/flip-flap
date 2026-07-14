@@ -132,7 +132,7 @@
       background-size:200% 100%;
       -webkit-background-clip:text; background-clip:text;
       -webkit-text-fill-color:transparent; color:transparent !important;
-      animation:ncRainbow 3s linear infinite;
+      animation:ncRainbow 3s steps(30) infinite;   /* 매 프레임 → 초당 10프레임 리페인트로 축소 */
     }
     @keyframes ncRainbow { to { background-position:200% 0; } }
     /* ── 카드백 스킨 ── */

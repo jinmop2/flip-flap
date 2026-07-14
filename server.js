@@ -649,6 +649,23 @@ setInterval(() => {
         continue;
       }
     }
+    // 선공 뽑기(pick)는 시계가 흐르지 않음 → 45초 방치 시 자동 선택 (방 무기한 점유 방지)
+    if (g.phase === 'pick' && g.pick) {
+      room.pickIdle = (room.pickIdle || 0) + 1;
+      if (room.pickIdle >= 45) {
+        room.pickIdle = 0;
+        const pk = g.pick;
+        [0, 1].forEach(pi => { if (pk.choices[pi] === null) pk.choices[pi] = pk.choices[1 - pi] === 0 ? 1 : (pk.choices[1 - pi] === 1 ? 0 : pi); });
+        resolvePick(g);
+        broadcast(roomId);
+        const rid = roomId;
+        setTimeout(() => tutGate(rid, () => {
+          const rm = rooms[rid]; if (!rm || !rm.game || rm.game.phase !== 'pick_reveal') return;
+          startTurn(rm.game); broadcast(rid);
+          setTimeout(() => maybeCpuAct(rid), 400);
+        }), 2200);
+      }
+    } else room.pickIdle = 0;
     const clk = { t1: g.time[1], t2: g.time[2], active: ap };
     room.players.forEach(sid => { if (sid) io.to(sid).emit('clock', clk); });
     (room.specs || []).forEach(sid => io.to(sid).emit('clock', clk));
@@ -743,8 +760,30 @@ io.on('connection', (socket) => {
   socket.join('lobby');
 
   function leaveOldRoom() {
-    const old = socket.roomId && rooms[socket.roomId];
-    if (old) { endClock(old); delete rooms[socket.roomId]; socket.roomId = null; broadcastRooms(); }
+    const roomId = socket.roomId, old = roomId && rooms[roomId];
+    if (!old) return;
+    // 관전자였다면 관전 목록에서만 빠짐 — 남의 진행 중인 방을 삭제하면 안 됨
+    if (socket.isSpec) {
+      old.specs = (old.specs || []).filter(sid => sid !== socket.id);
+      socket.leave(roomId); socket.roomId = null; socket.isSpec = false;
+      broadcastRooms(); return;
+    }
+    if (old.graceTimer) { clearInterval(old.graceTimer); old.graceTimer = null; }
+    endClock(old);
+    const slot = old.players.indexOf(socket.id);
+    const g = old.game;
+    if (g && g.phase !== 'game_over' && !old.vsBot && slot !== -1) {
+      // 진행 중 멀티를 두고 나감 → leave_room과 동일하게 몰수패 처리 + 상대 통보
+      const winner = slot === 0 ? 2 : 1;
+      g.phase = 'game_over';
+      finishStats(old, winner, true);
+      old.players.forEach((sid, i) => { if (sid && i !== slot) io.to(sid).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
+    } else {
+      old.players.forEach(sid => { if (sid && sid !== socket.id) io.to(sid).emit('opponent_left'); });
+    }
+    (old.specs || []).forEach(sid => io.to(sid).emit('opponent_left'));
+    socket.leave(roomId);
+    delete rooms[roomId]; socket.roomId = null; broadcastRooms();
   }
 
   // 로그인 토큰 연결 (계정 프로필)
