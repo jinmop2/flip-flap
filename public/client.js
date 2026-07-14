@@ -1456,7 +1456,13 @@ function playSettleFlight(legs) {
     if (f.fade) f.ghost.style.opacity = '0';
     // 비행이 끝나는 그 프레임에 실제 카드로 교체 — 멈칫거림 없이 이어짐
     let done = false;
-    const finish = () => { if (done) return; done = true; if (f.destEl) f.destEl.style.visibility = ''; f.ghost.remove(); };
+    const finish = () => { if (done) return; done = true;
+      if (f.destEl) {
+        f.destEl.style.visibility = '';
+        f.destEl.classList.remove('anim-acquire');   // 낙하 애니 클래스 제거 후
+        f.destEl.style.animation = '';               // 인라인 none 해제 — 이게 남으면 .set-win 클래스 애니가 무시됨(세트 일부만 반짝이던 원인)
+      }
+      f.ghost.remove(); };
     f.ghost.addEventListener('transitionend', finish, { once: true });
     setTimeout(finish, f.delay + 700);                // 안전망 (탭 전환 등으로 이벤트 유실 시)
   }
@@ -1575,14 +1581,21 @@ socket.on('opponent_left', () => { clearSession(); alert('상대가 나갔어요
 
 // 세트 완성 카드 특수효과
 function celebrateSet(containerId, kind) {
-  // 세트에 필요한 카드가 전부 도착(정산 비행 착지)할 때까지 기다렸다가 한 번에 반짝
+  // 세트 카드가 전부 '착지해 보이는' 상태가 된 뒤 전체를 한 번에 반짝
   const need = { 2: 2, 3: 3, 4: 4, 6: 6 }[kind] || kind;
-  const sel = () => document.querySelectorAll(`#${containerId} .pile-group[data-kind="${kind}"] .card`);
-  const fire = cards => cards.forEach((c, i) => { c.style.visibility = ''; setTimeout(() => c.classList.add('set-win'), i * 70); });
   let tries = 0;
   const poll = () => {
-    const cards = sel();
-    if (cards.length >= need || tries >= 20) { fire(cards); return; }   // 다 왔으면 즉시 / 최대 2초 대기
+    const cards = [...document.querySelectorAll(`#${containerId} .pile-group[data-kind="${kind}"] .card`)];
+    const landed = cards.filter(c => c.style.visibility !== 'hidden');   // 비행 중(숨김)인 카드는 아직
+    if (landed.length >= need || tries >= 25) {
+      cards.forEach((c, i) => {
+        c.style.visibility = '';
+        c.classList.remove('anim-acquire');
+        c.style.animation = '';                     // 인라인 none 잔재 해제 (클래스 애니 차단 방지)
+        if (!c.classList.contains('set-win')) setTimeout(() => c.classList.add('set-win'), i * 70);
+      });
+      return;
+    }
     tries++; setTimeout(poll, 100);
   };
   poll();
