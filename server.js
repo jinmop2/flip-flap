@@ -652,7 +652,7 @@ setInterval(() => {
     // 선공 뽑기(pick)는 시계가 흐르지 않음 → 45초 방치 시 자동 선택 (방 무기한 점유 방지)
     if (g.phase === 'pick' && g.pick) {
       room.pickIdle = (room.pickIdle || 0) + 1;
-      if (room.pickIdle >= 45) {
+      if (room.pickIdle >= 10) {
         room.pickIdle = 0;
         const pk = g.pick;
         [0, 1].forEach(pi => { if (pk.choices[pi] === null) pk.choices[pi] = pk.choices[1 - pi] === 0 ? 1 : (pk.choices[1 - pi] === 1 ? 0 : pi); });

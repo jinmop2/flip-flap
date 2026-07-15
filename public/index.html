@@ -2,6 +2,31 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <!-- 카카오톡·SNS 인앱브라우저 → 외부 브라우저(크롬/사파리)로 탈출. 앱 로드 전에 실행 -->
+  <script>
+  (function(){
+    var ua = navigator.userAgent || '';
+    var isKakao = /KAKAOTALK/i.test(ua);
+    var isInApp = isKakao || /FBAN|FBAV|Instagram|Line\/|NAVER\(inapp|DaumApps|; wv\)/i.test(ua);
+    if (!isInApp) return;
+    try { if (sessionStorage.getItem('ff_esc')) return; sessionStorage.setItem('ff_esc','1'); } catch(e){}
+    var url = location.href;
+    if (isKakao) { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url); return; }
+    if (/Android/i.test(ua)) {
+      location.href = 'intent://' + url.replace(/^https?:\/\//,'') + '#Intent;scheme=https;package=com.android.chrome;end';
+      return;
+    }
+    // iOS 기타 인앱: 자동 불가 → 안내 배너
+    document.addEventListener('DOMContentLoaded', function(){
+      var b = document.createElement('div');
+      b.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#22090e;color:#f0e2c8;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;font-family:sans-serif;line-height:1.7';
+      b.innerHTML = '<div style="font-size:1.4rem;font-weight:800;color:#ffd94a;margin-bottom:14px">🌐 브라우저에서 열어주세요</div>'
+        + '<div style="font-size:.95rem">원활한 플레이를 위해<br><b>Safari·크롬 등 브라우저</b>로 열어주세요.</div>'
+        + '<div style="font-size:.85rem;color:#c8a86a;margin-top:18px">우측 상단 <b>···</b> 또는 <b>공유</b> 버튼 →<br>"<b>다른 브라우저로 열기</b>" / "<b>Safari로 열기</b>"</div>';
+      document.body.appendChild(b);
+    });
+  })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>FLIP FLAP — 경매·블러핑 심리전 카드 보드게임</title>
   <meta name="description" content="2인 실시간 경매·블러핑 심리전 카드 보드게임. 설치 없이 브라우저에서 바로, 친구와 링크 하나로 대전!">
