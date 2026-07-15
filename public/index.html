@@ -809,11 +809,11 @@
     #myProfile { text-align:right; }
     #myProfile .pc-body, #myProfile .pc-diff, #myProfile .pc-stats { margin-left:auto; }
     .game-pcard:hover { border-color:rgba(200,160,0,.75); box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 4px 14px rgba(0,0,0,.5); }
-    #oppProfile { top:calc(14px + var(--safe-t)); right:16px; }
+    #oppProfile { top:calc(6px + var(--safe-t)); right:16px; }
     #myProfile  { bottom:calc(14px + var(--safe-b)); right:16px; }
     /* 프로필 옆 시간: 상대는 프로필 아래, 나는 프로필 위 */
     .pc-timer { position:absolute; z-index:6; margin:0; }
-    #oppTimer { top:calc(64px + var(--safe-t)); right:16px; }
+    #oppTimer { top:calc(56px + var(--safe-t)); right:16px; }
     #myTimer  { bottom:calc(64px + var(--safe-b)); right:16px; }
     .pc-body { display:flex; align-items:center; gap:6px; min-width:0; }
     .pc-body .gp-rank { font-size:1.1rem; line-height:1; flex-shrink:0; }
@@ -824,7 +824,7 @@
     .game-pcard.show-stats .pc-stats { max-height:20px; opacity:1; margin-top:4px; }
 
     /* 이모트 버튼 — 내 시간 위 (우측 하단) */
-    #emoteWrap { position:absolute; bottom:calc(64px + var(--safe-b)); left:16px; z-index:7; }
+    #emoteWrap { position:absolute; bottom:calc(104px + var(--safe-b)); right:16px; z-index:7; }
     .emote-fab {
       width:36px; height:36px; border-radius:50%; cursor:pointer;
       background:linear-gradient(135deg,#3a2a48,#241a2e); border:1px solid rgba(200,160,0,.4);
@@ -832,7 +832,7 @@
     }
     .emote-fab:hover { transform:scale(1.12) translateY(-1px); }
     #emotePicker {
-      display:none; position:absolute; bottom:46px; left:0; z-index:9;
+      display:none; position:absolute; bottom:46px; right:0; z-index:9;
       background:#1c1424; border:1px solid #2a1c30; border-radius:14px; padding:8px;
       grid-template-columns:repeat(4,1fr); gap:4px; box-shadow:0 8px 24px rgba(0,0,0,.5);
       animation:slideDown .2s ease;
@@ -1348,11 +1348,11 @@
       .ctrl-btn .ci { font-size:1.05rem; }
       .ctrl-btn .cl { font-size:.52rem; }
       /* 프로필·시간 모바일 위치 */
-      #oppProfile { top:calc(8px + var(--safe-t)); right:10px; }
-      #oppTimer { top:calc(52px + var(--safe-t)); right:10px; }
+      #oppProfile { top:calc(4px + var(--safe-t)); right:10px; }
+      #oppTimer { top:calc(46px + var(--safe-t)); right:10px; }
       #myProfile { bottom:calc(10px + var(--safe-b)); right:10px; left:auto; }
       #myTimer { bottom:calc(56px + var(--safe-b)); right:10px; left:auto; }
-      #emoteWrap { bottom:calc(56px + var(--safe-b)); left:10px; right:auto; }
+      #emoteWrap { bottom:calc(96px + var(--safe-b)); right:10px; left:auto; }
       #oppZone { padding-top:56px; margin-top:0; }   /* 상대 손패가 프로필·컨트롤 아래로 */
 
       /* 워터마크 로고 축소 */
