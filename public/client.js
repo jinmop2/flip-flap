@@ -138,6 +138,34 @@ function logout() {
   socket.emit('auth', { token: null }); renderAccount();
   if (typeof showTitle === 'function') showTitle();   // 로그아웃 → 타이틀 화면으로
 }
+// 계정 영구 삭제 — 구글플레이 정책상 앱 내 삭제 수단 필수.
+// 실수 방지를 위해 2단계 확인, 비번 계정은 비밀번호 재확인까지 거침.
+function askDeleteAccount() {
+  const token = localStorage.getItem('ff_auth');
+  if (!token || !myAccount) { toast('로그인 상태에서만 삭제할 수 있어요.'); return; }
+  askConfirm(
+    { icon: '⚠️', title: '정말 계정을 삭제할까요?',
+      desc: '전적·레벨·코인·아이템·칭호가 모두 영구 삭제되며 복구할 수 없어요.',
+      yes: '삭제하기', no: '취소' },
+    () => setTimeout(() => askConfirm(
+      { icon: '🗑️', title: '마지막 확인이에요', desc: '이 작업은 되돌릴 수 없습니다. 정말 진행할까요?',
+        yes: '영구 삭제', no: '돌아가기' },
+      () => doDeleteAccount(token)), 250));
+}
+async function doDeleteAccount(token, password) {
+  const r = await apiPost('/api/delete-account', { token, password });
+  if (r && r.needPw) {   // 아이디/비번 계정 — 본인 확인
+    const pw = prompt('본인 확인을 위해 비밀번호를 입력해주세요.');
+    if (pw) doDeleteAccount(token, pw);
+    return;
+  }
+  if (!r || !r.ok) { toast('⚠️ ' + ((r && r.error) || '삭제에 실패했어요.')); return; }
+  closeMyInfo();
+  localStorage.removeItem('ff_auth'); myAccount = null;
+  socket.emit('auth', { token: null }); renderAccount();
+  toast('계정이 삭제됐어요. 이용해주셔서 감사합니다.');
+  if (typeof showTitle === 'function') showTitle();
+}
 // 범용 토스트 (화면 상단 중앙에 잠깐 떴다 사라짐)
 let toastTimer = null;
 function toast(html, ms = 2600) {

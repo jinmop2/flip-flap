@@ -458,6 +458,15 @@
       border-radius:8px; padding:6px 10px; font-family:'Fredoka'; font-size:.7rem; cursor:pointer; transition:.15s;
     }
     .pc-logout:hover { border-color:#c05050; color:#ff9a9a; }
+
+    /* 내 정보 하단 위험 구역 — 계정 삭제 (구글플레이 필수) */
+    .mi-danger { margin:14px 0 10px; padding-top:12px; border-top:1px solid rgba(255,255,255,.09); text-align:center; }
+    .mi-del {
+      background:none; border:1px solid rgba(200,80,80,.5); color:#e08a8a;
+      border-radius:8px; padding:7px 16px; font-size:13px; font-family:inherit; cursor:pointer;
+    }
+    .mi-del:hover { border-color:#c05050; color:#ff9a9a; background:rgba(200,80,80,.08); }
+    .mi-danger span { display:block; margin-top:7px; font-size:11px; color:#8a7a7e; line-height:1.5; }
     /* 솔로/멀티 모드 카드 */
     .mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; }
     .mode-card {
@@ -1873,6 +1882,10 @@
     <div id="miTitles" class="title-list"></div>
     <div class="mi-sec">📜 최근 전적</div>
     <div id="miHist" class="hist-list" style="max-height:180px"></div>
+    <div class="mi-danger">
+      <button class="mi-del" onclick="askDeleteAccount()">계정 삭제</button>
+      <span>탈퇴 시 전적·코인·아이템이 모두 사라지며 되돌릴 수 없어요.</span>
+    </div>
     <button class="btn btn-outline" onclick="closeMyInfo()">닫기</button>
   </div>
 </div>

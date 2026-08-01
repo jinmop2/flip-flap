@@ -56,6 +56,13 @@ function persist(idl) {
       .catch(e => console.error('DB 저장 실패:', e.message));
   } else saveFile();
 }
+// 특정 유저를 저장소에서 영구 삭제 (계정 삭제 — 구글플레이 필수 정책)
+function purge(idl) {
+  if (pool) {
+    pool.query('DELETE FROM ff_users WHERE idl = $1', [idl])
+      .catch(e => console.error('DB 삭제 실패:', e.message));
+  } else saveFile();
+}
 
 loadFileSync();          // 로컬은 즉시
 if (pool) loadFromDB();  // DB 있으면 덮어씀 (비동기)
@@ -166,6 +173,23 @@ function byToken(token) {
   return u;
 }
 function meByToken(token) { const u = byToken(token); return u ? { ok: true, profile: profileOf(u) } : { error: '세션 만료' }; }
+
+// 계정 영구 삭제 — 구글플레이 정책(계정 생성 앱은 삭제 수단 제공 의무).
+// 일반 계정은 비밀번호 재확인, 소셜 계정은 토큰만으로 삭제. 되돌릴 수 없음.
+function deleteAccount(token, password) {
+  const idl = tokenIndex[token];
+  const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '세션이 만료됐어요. 다시 로그인해주세요.' };
+  if (u.hash) {   // 비번 계정은 본인 확인 (공용 기기에서의 오·악의적 삭제 방지)
+    if (!password) return { error: '비밀번호를 입력해주세요.', needPw: true };
+    if (u.hash !== hashPw(password, u.salt)) return { error: '비밀번호가 틀렸어요.', needPw: true };
+  }
+  if (u.token) delete tokenIndex[u.token];
+  if (u.nick) delete db.nickTaken[String(u.nick).toLowerCase()];
+  delete db.users[idl];
+  purge(idl);
+  return { ok: true };
+}
 
 // 닉네임 설정 — 카카오 첫 설정은 무료 1회, 이후엔 닉네임 변경권 소모
 function setNick(token, nick) {
@@ -693,5 +717,5 @@ function myRank(token) {
 module.exports = {
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, claimDaily, myRank,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
-  missionList, titleList, betrayEvent, claimTutorial, applyReferral,
+  missionList, titleList, betrayEvent, claimTutorial, applyReferral, deleteAccount,
 };
