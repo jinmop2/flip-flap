@@ -88,6 +88,90 @@ app.post('/api/delete-account', rateLimit(10), (req, res) => {   // 구글플레
   const { token, password } = req.body || {};
   res.json(accounts.deleteAccount(token, password));
 });
+
+// ── 친구 ──
+// accounts.js는 소켓을 모르므로, 접속 여부는 서버에서 덧붙인다.
+function withOnline(list) {
+  return (list || []).map(f => ({ ...f, online: accountSockets.has(f.idl) }));
+}
+function notifyIdl(idl, event, payload) {   // 해당 계정이 접속 중이면 실시간 알림
+  const sid = accountSockets.get(idl);
+  if (sid) io.to(sid).emit(event, payload);
+}
+app.post('/api/friends', rateLimit(60), (req, res) => {
+  const r = accounts.friendList((req.body || {}).token);
+  if (!r.ok) return res.json(r);
+  res.json({ ok: true, friends: withOnline(r.friends), reqIn: r.reqIn, reqOut: r.reqOut });
+});
+app.post('/api/friend-add', rateLimit(20), (req, res) => {
+  const { token, nick } = req.body || {};
+  const r = accounts.sendFriendReq(token, nick);
+  if (r.ok && r.toIdl) notifyIdl(r.toIdl, 'friend_req', { nick: accounts.meByToken(token)?.profile?.nick || '' });
+  if (r.ok && r.friendIdl) notifyIdl(r.friendIdl, 'friend_added', { nick: accounts.meByToken(token)?.profile?.nick || '' });
+  res.json(r);
+});
+app.post('/api/friend-accept', rateLimit(30), (req, res) => {
+  const { token, idl } = req.body || {};
+  const r = accounts.acceptFriendReq(token, idl);
+  if (r.ok && r.friendIdl) notifyIdl(r.friendIdl, 'friend_added', { nick: accounts.meByToken(token)?.profile?.nick || '' });
+  res.json(r);
+});
+app.post('/api/friend-decline', rateLimit(30), (req, res) => {
+  const { token, idl } = req.body || {};
+  res.json(accounts.declineFriendReq(token, idl));
+});
+app.post('/api/friend-cancel', rateLimit(30), (req, res) => {
+  const { token, idl } = req.body || {};
+  res.json(accounts.cancelFriendReq(token, idl));
+});
+app.post('/api/friend-remove', rateLimit(30), (req, res) => {
+  const { token, idl } = req.body || {};
+  res.json(accounts.removeFriend(token, idl));
+});
+
+// ── 클랜 ──
+app.post('/api/clan',        rateLimit(60), (req, res) => res.json(accounts.myClan((req.body || {}).token)));
+app.post('/api/clan-list',   rateLimit(60), (req, res) => res.json(accounts.clanList(30, (req.body || {}).token)));
+app.post('/api/clan-create', rateLimit(10), (req, res) => {
+  const { token, name, tag } = req.body || {};
+  res.json(accounts.createClan(token, name, tag));
+});
+app.post('/api/clan-apply', rateLimit(20), (req, res) => {
+  const { token, clanId } = req.body || {};
+  const r = accounts.applyClan(token, clanId);
+  if (r.ok && r.ownerIdl) notifyIdl(r.ownerIdl, 'clan_apply', { nick: accounts.meByToken(token)?.profile?.nick || '' });
+  res.json(r);
+});
+app.post('/api/clan-cancel-apply', rateLimit(20), (req, res) => {
+  const { token, clanId } = req.body || {};
+  res.json(accounts.cancelApply(token, clanId));
+});
+app.post('/api/clan-decide', rateLimit(30), (req, res) => {
+  const { token, idl, accept } = req.body || {};
+  const r = accounts.decideApplicant(token, idl, !!accept);
+  if (r.ok && r.accepted && r.targetIdl) notifyIdl(r.targetIdl, 'clan_joined', { clan: r.clanName });
+  res.json(r);
+});
+app.post('/api/clan-kick', rateLimit(20), (req, res) => {
+  const { token, idl } = req.body || {};
+  const r = accounts.kickMember(token, idl);
+  if (r.ok && r.targetIdl) notifyIdl(r.targetIdl, 'clan_kicked', { clan: r.clanName });
+  res.json(r);
+});
+app.post('/api/clan-transfer', rateLimit(10), (req, res) => {
+  const { token, idl } = req.body || {};
+  res.json(accounts.transferOwner(token, idl));
+});
+app.post('/api/clan-notice', rateLimit(20), (req, res) => {
+  const { token, notice } = req.body || {};
+  res.json(accounts.setClanNotice(token, notice));
+});
+app.post('/api/clan-leave',   rateLimit(20), (req, res) => res.json(accounts.leaveClan((req.body || {}).token)));
+app.post('/api/clan-disband', rateLimit(10), (req, res) => {
+  const r = accounts.disbandClan((req.body || {}).token);
+  if (r.ok) for (const m of r.members) notifyIdl(m, 'clan_disbanded', {});
+  res.json(r);
+});
 app.post('/api/daily',  rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.claimDaily(token) || { error: '로그인이 필요해요.' }); });
 app.post('/api/missions', rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.missionList(token)); });
 app.post('/api/tutorial-done', rateLimit(20), (req, res) => { const { token } = req.body || {}; const out = accounts.claimTutorial(token); if (out.claimed) stats.bump('tutorial'); res.json(out); });
@@ -812,6 +896,25 @@ io.on('connection', (socket) => {
   }
 
   socket.on('enter_lobby', () => { socket.join('lobby'); socket.emit('rooms', openRoomList()); });
+
+  // 친구에게 도전장 — 내가 만든 비밀방 코드를 접속 중인 친구에게 실시간 전달
+  socket.on('challenge_friend', ({ idl, roomId } = {}) => {
+    if (!socket.token) return;
+    const me = accounts.byToken(socket.token);
+    if (!me) return;
+    const myIdl = String(me.id).toLowerCase();
+    idl = String(idl || '').toLowerCase();
+    // 실제 친구인지 서버가 검증 (클라이언트 목록을 신뢰하지 않음)
+    // 이벤트명 주의: 'challenged'/'challenge_*'는 관전자→승자 도전 기능이 이미 쓰고 있다. 반드시 분리한다.
+    // 실패도 generic 'error'(클라이언트가 native alert로 띄움) 대신 전용 이벤트 → 토스트로 표시.
+    if (!accounts.friendIdlsOf(myIdl).includes(idl)) return socket.emit('friend_challenge_fail', '친구가 아니에요.');
+    const room = rooms[roomId];
+    if (!room || room.players[0] !== socket.id) return socket.emit('friend_challenge_fail', '방 정보가 올바르지 않아요.');
+    const sid = accountSockets.get(idl);
+    if (!sid) return socket.emit('friend_challenge_fail', '상대가 지금 접속 중이 아니에요.');
+    io.to(sid).emit('friend_challenge', { from: me.nick, roomId, password: room.password || '' });
+    socket.emit('friend_challenge_sent', { nick: accounts.nickOfIdl(idl) });
+  });
 
   // 튜토리얼 체크포인트 — 설명 창이 떠 있는 동안 게임 진행 보류
   socket.on('tut_hold',    () => { const r = rooms[socket.roomId]; if (r && r.tutorial) r.tutHold = true; });

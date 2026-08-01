@@ -63,7 +63,10 @@ socket.on('connect', () => {
   else if (sess) socket.emit('rejoin', { roomId: sess, pid: PID });
   else           socket.emit('enter_lobby');
 });
-socket.on('auth_ok', ({ profile }) => { myAccount = profile; renderAccount(); });
+socket.on('auth_ok', ({ profile }) => {
+  myAccount = profile; renderAccount();
+  if (typeof updateSocialBadges === 'function') updateSocialBadges();   // 친구요청·가입신청 알림 표시
+});
 socket.on('dup_login', () => {   // 다른 기기에서 같은 계정 로그인 → 이 세션 종료
   clearSession();
   alert('다른 기기(또는 창)에서 같은 계정으로 접속했어요.\n이 창의 연결을 종료합니다.');
@@ -529,6 +532,310 @@ async function openMissions() {
   });
 }
 function closeMissions() { document.getElementById('missionModal').classList.remove('show'); }
+
+// ══════════════════════════════════════════════════════════
+//  친구
+// ══════════════════════════════════════════════════════════
+let _friendData = { friends: [], reqIn: [], reqOut: [] };
+
+function needLogin(what) {
+  if (myAccount) return false;
+  alert(what + '은(는) 로그인하면 이용할 수 있어요!');
+  openAuth('login');
+  return true;
+}
+const authToken = () => localStorage.getItem('ff_auth');
+
+function openFriends() {
+  if (needLogin('친구')) return;
+  document.getElementById('friendsModal').classList.add('show');
+  friendTab('list');
+  loadFriends();
+}
+function closeFriends() { document.getElementById('friendsModal').classList.remove('show'); }
+
+function friendTab(which) {
+  for (const t of ['list', 'req', 'find']) {
+    document.getElementById('ftab-' + t).classList.toggle('active', t === which);
+    document.getElementById('fpane-' + t).style.display = t === which ? '' : 'none';
+  }
+  if (which === 'find') setTimeout(() => document.getElementById('friendNickInput').focus(), 60);
+}
+
+async function loadFriends() {
+  const box = document.getElementById('friendListBox');
+  box.innerHTML = '<div class="soc-empty">불러오는 중…</div>';
+  const r = await apiPost('/api/friends', { token: authToken() });
+  if (!r.ok) { box.innerHTML = `<div class="soc-empty">${esc(r.error || '불러오기 실패')}</div>`; return; }
+  _friendData = r;
+  renderFriends();
+  updateSocialBadges();
+}
+
+// 친구 한 줄 — 온라인이면 초록 점 + 도전장 버튼
+function friendRow(f, kind) {
+  const clan = f.clan ? `<span class="soc-clan">[${esc(f.clan.tag)}]</span>` : '';
+  const acts = {
+    friend: `${f.online ? `<button class="soc-btn good" onclick="challengeFriendInApp('${esc(f.idl)}')">도전장</button>` : ''}
+             <button class="soc-btn bad" onclick="confirmRemoveFriend('${esc(f.idl)}','${esc(f.nick)}')">삭제</button>`,
+    in:     `<button class="soc-btn good" onclick="respondFriend('${esc(f.idl)}',true)">수락</button>
+             <button class="soc-btn bad" onclick="respondFriend('${esc(f.idl)}',false)">거절</button>`,
+    out:    `<button class="soc-btn bad" onclick="cancelFriend('${esc(f.idl)}')">취소</button>`,
+  }[kind];
+  return `<div class="soc-item">
+    ${kind === 'friend' ? `<span class="soc-dot ${f.online ? 'on' : ''}"></span>` : ''}
+    <div class="soc-info">
+      <div class="soc-nick">${clan}${esc(f.nick)}</div>
+      <div class="soc-meta">Lv.${f.level} · ${f.rankIcon} ${esc(f.rank)} · ${f.rp} RP${kind === 'friend' ? (f.online ? ' · 접속 중' : '') : ''}</div>
+    </div>
+    <div class="soc-acts">${acts}</div>
+  </div>`;
+}
+
+function renderFriends() {
+  const { friends, reqIn, reqOut } = _friendData;
+  const box = document.getElementById('friendListBox');
+  box.innerHTML = friends.length
+    ? friends.slice().sort((a, b) => (b.online - a.online) || (b.rp - a.rp)).map(f => friendRow(f, 'friend')).join('')
+    : '<div class="soc-empty">아직 친구가 없어요.<br>「친구찾기」에서 닉네임으로 추가해보세요!</div>';
+  document.getElementById('friendReqIn').innerHTML = reqIn.length
+    ? reqIn.map(f => friendRow(f, 'in')).join('') : '<div class="soc-empty">받은 요청이 없어요.</div>';
+  document.getElementById('friendReqOut').innerHTML = reqOut.length
+    ? reqOut.map(f => friendRow(f, 'out')).join('') : '<div class="soc-empty">보낸 요청이 없어요.</div>';
+}
+
+async function submitFriendAdd() {
+  const input = document.getElementById('friendNickInput');
+  const msg = document.getElementById('friendAddMsg');
+  const nick = input.value.trim();
+  if (!nick) { msg.textContent = '닉네임을 입력해주세요.'; return; }
+  msg.textContent = '요청 중…';
+  const r = await apiPost('/api/friend-add', { token: authToken(), nick });
+  if (!r.ok) { msg.innerHTML = `⚠️ ${esc(r.error || '실패했어요.')}`; return; }
+  input.value = '';
+  msg.innerHTML = r.friendIdl
+    ? `🎉 <b>${esc(nick)}</b>님과 친구가 되었어요!`   // 상대도 나를 요청한 상태였음
+    : `✅ <b>${esc(nick)}</b>님에게 요청을 보냈어요.`;
+  loadFriends();
+}
+
+async function respondFriend(idl, accept) {
+  const r = await apiPost(accept ? '/api/friend-accept' : '/api/friend-decline', { token: authToken(), idl });
+  if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.'));
+  if (accept) toast(`🎉 ${esc(r.nick || '')}님과 친구가 되었어요!`);
+  loadFriends();
+}
+async function cancelFriend(idl) {
+  await apiPost('/api/friend-cancel', { token: authToken(), idl });
+  loadFriends();
+}
+function confirmRemoveFriend(idl, nick) {
+  askConfirm({ icon: '👋', title: `${nick}님을 삭제할까요?`, desc: '친구 목록에서 서로 사라져요.', yes: '삭제', no: '취소' },
+    async () => { await apiPost('/api/friend-remove', { token: authToken(), idl }); loadFriends(); });
+}
+
+// 도전장 — 목록에 안 뜨는 방(secret, 비번 없음)을 만들고 방 코드를 친구에게 실시간 전송.
+// 방이 실제로 만들어진 뒤(room_created)에 보내야 하므로 대상만 기억해둔다.
+// ※ 이름 주의: 카카오 공유용 challengeFriend()가 이 파일 아래쪽에 이미 있다. 겹치면 덮어써진다.
+let _pendingChallenge = null;
+function challengeFriendInApp(idl) {
+  closeFriends();
+  _pendingChallenge = idl;
+  isVsBot = false;
+  toast('방을 만드는 중…', 1200);
+  socket.emit('create_room', { vsBot: false, pid: PID, nick: getNick(), name: '친구 대전', secret: true, password: '' });
+}
+
+// ══════════════════════════════════════════════════════════
+//  클랜
+// ══════════════════════════════════════════════════════════
+let _clanTab = 'my';
+
+function openClan() {
+  if (needLogin('클랜')) return;
+  document.getElementById('clanModal').classList.add('show');
+  loadClan();
+}
+function closeClan() { document.getElementById('clanModal').classList.remove('show'); }
+
+async function loadClan() {
+  const body = document.getElementById('clanBody');
+  body.innerHTML = '<div class="soc-empty">불러오는 중…</div>';
+  const r = await apiPost('/api/clan', { token: authToken() });
+  if (!r.ok) { body.innerHTML = `<div class="soc-empty">${esc(r.error || '불러오기 실패')}</div>`; return; }
+  if (r.clan) renderMyClan(r.clan);
+  else renderClanBrowse(r.cost, r.coins);
+  updateSocialBadges();
+}
+
+function renderMyClan(c) {
+  const memberRow = m => `<div class="soc-item">
+    <div class="soc-info">
+      <div class="soc-nick">${m.isOwner ? '👑' : ''}${esc(m.nick)}</div>
+      <div class="soc-meta">Lv.${m.level} · ${m.rankIcon} ${esc(m.rank)} · ${m.rp} RP</div>
+    </div>
+    ${c.isOwner && !m.isOwner ? `<div class="soc-acts">
+      <button class="soc-btn" onclick="clanTransfer('${esc(m.idl)}','${esc(m.nick)}')">위임</button>
+      <button class="soc-btn bad" onclick="clanKick('${esc(m.idl)}','${esc(m.nick)}')">추방</button>
+    </div>` : ''}
+  </div>`;
+  const applicantRow = m => `<div class="soc-item">
+    <div class="soc-info">
+      <div class="soc-nick">${esc(m.nick)}</div>
+      <div class="soc-meta">Lv.${m.level} · ${m.rankIcon} ${esc(m.rank)} · ${m.rp} RP</div>
+    </div>
+    <div class="soc-acts">
+      <button class="soc-btn good" onclick="clanDecide('${esc(m.idl)}',true)">수락</button>
+      <button class="soc-btn bad" onclick="clanDecide('${esc(m.idl)}',false)">거절</button>
+    </div>
+  </div>`;
+
+  document.getElementById('clanBody').innerHTML = `
+    <div class="clan-head">
+      <div class="clan-name"><span class="clan-tag">${esc(c.tag)}</span>${esc(c.name)}</div>
+      <div class="clan-stats">
+        <div class="clan-stat"><b>${c.memberCount}/${c.max}</b><span>클랜원</span></div>
+        <div class="clan-stat"><b>${c.totalRp}</b><span>총 RP</span></div>
+        <div class="clan-stat"><b>${c.totalWins}</b><span>총 승리</span></div>
+      </div>
+      ${c.notice ? `<div class="clan-notice">📢 ${esc(c.notice)}</div>` : ''}
+    </div>
+    ${c.isOwner && c.applicants.length ? `<div class="soc-sec">가입 신청 ${c.applicants.length}건</div>
+      <div class="soc-list">${c.applicants.map(applicantRow).join('')}</div>` : ''}
+    <div class="soc-sec">클랜원</div>
+    <div class="soc-list">${c.members.map(memberRow).join('')}</div>
+    <div class="soc-row" style="margin-top:12px">
+      ${c.isOwner ? `<button class="soc-btn" style="flex:1" onclick="clanEditNotice()">공지 수정</button>` : ''}
+      <button class="soc-btn bad" style="flex:1" onclick="clanLeave(${c.isOwner})">${c.isOwner && c.memberCount > 1 ? '탈퇴(위임)' : '탈퇴'}</button>
+    </div>`;
+}
+
+async function renderClanBrowse(cost, coins) {
+  const body = document.getElementById('clanBody');
+  body.innerHTML = `
+    <div class="soc-tabs">
+      <button class="soc-tab ${_clanTab === 'my' ? 'active' : ''}" onclick="clanSwitch('my')">클랜 찾기</button>
+      <button class="soc-tab ${_clanTab === 'new' ? 'active' : ''}" onclick="clanSwitch('new')">클랜 만들기</button>
+    </div>
+    <div id="clanPane" style="margin-top:10px"><div class="soc-empty">불러오는 중…</div></div>`;
+  const pane = document.getElementById('clanPane');
+
+  if (_clanTab === 'new') {
+    pane.innerHTML = `
+      <p class="auth-hint" style="margin:0 0 9px">클랜을 만들면 클랜장이 됩니다. 클랜원은 최대 30명이에요.</p>
+      <div class="soc-row" style="margin-bottom:7px">
+        <input id="clanNameInput" class="soc-input" maxlength="12" placeholder="클랜 이름 (2~12자)" autocomplete="off">
+      </div>
+      <div class="soc-row">
+        <input id="clanTagInput" class="soc-input" maxlength="4" placeholder="태그 (영문·숫자 2~4자)" autocomplete="off" style="text-transform:uppercase">
+        <button class="btn btn-gold btn-sm" onclick="submitClanCreate()">만들기</button>
+      </div>
+      <div class="clan-cost">창설 비용 🪙${cost} · 보유 🪙${coins}</div>
+      <p class="auth-hint" id="clanCreateMsg" style="margin:8px 0 0"></p>`;
+    return;
+  }
+
+  const r = await apiPost('/api/clan-list', { token: authToken() });
+  if (!r.ok || !r.clans.length) {
+    pane.innerHTML = '<div class="soc-empty">아직 만들어진 클랜이 없어요.<br>첫 번째 클랜을 만들어보세요!</div>';
+    return;
+  }
+  pane.innerHTML = `<div class="soc-list">${r.clans.map((c, i) => `
+    <div class="soc-item">
+      <div class="soc-info">
+        <div class="soc-nick"><span class="soc-clan">#${i + 1}</span><span class="clan-tag">${esc(c.tag)}</span>${esc(c.name)}</div>
+        <div class="soc-meta">${c.memberCount}/${c.max}명 · ${c.totalRp} RP · 클랜장 ${esc(c.ownerNick || '-')}</div>
+      </div>
+      <div class="soc-acts">${c.applied
+        ? `<button class="soc-btn bad" onclick="clanCancelApply('${esc(c.id)}')">신청취소</button>`
+        : `<button class="soc-btn good" onclick="clanApply('${esc(c.id)}')">가입신청</button>`}</div>
+    </div>`).join('')}</div>`;
+}
+
+function clanSwitch(tab) { _clanTab = tab; loadClan(); }
+
+async function submitClanCreate() {
+  const name = document.getElementById('clanNameInput').value.trim();
+  const tag = document.getElementById('clanTagInput').value.trim().toUpperCase();
+  const msg = document.getElementById('clanCreateMsg');
+  msg.textContent = '만드는 중…';
+  const r = await apiPost('/api/clan-create', { token: authToken(), name, tag });
+  if (!r.ok) { msg.innerHTML = `⚠️ ${esc(r.error || '실패했어요.')}`; return; }
+  toast(`🛡️ [${esc(tag)}] ${esc(name)} 클랜을 만들었어요!`);
+  if (myAccount) myAccount.coins = r.coins;
+  renderAccount();
+  loadClan();
+}
+
+async function clanApply(clanId) {
+  const r = await apiPost('/api/clan-apply', { token: authToken(), clanId });
+  if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.'));
+  toast(`✅ ${esc(r.clanName || '')} 클랜에 가입을 신청했어요.`);
+  loadClan();
+}
+async function clanCancelApply(clanId) {
+  await apiPost('/api/clan-cancel-apply', { token: authToken(), clanId });
+  loadClan();
+}
+async function clanDecide(idl, accept) {
+  const r = await apiPost('/api/clan-decide', { token: authToken(), idl, accept });
+  if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.'));
+  if (r.accepted) toast(`🎉 ${esc(r.nick || '')}님이 클랜에 합류했어요!`);
+  loadClan();
+}
+function clanKick(idl, nick) {
+  askConfirm({ icon: '⚠️', title: `${nick}님을 추방할까요?`, desc: '클랜에서 즉시 제외됩니다.', yes: '추방', no: '취소' },
+    async () => { const r = await apiPost('/api/clan-kick', { token: authToken(), idl });
+      if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.')); loadClan(); });
+}
+function clanTransfer(idl, nick) {
+  askConfirm({ icon: '👑', title: `${nick}님에게 클랜장을 넘길까요?`, desc: '이후에는 클랜을 관리할 수 없게 됩니다.', yes: '위임', no: '취소' },
+    async () => { const r = await apiPost('/api/clan-transfer', { token: authToken(), idl });
+      if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.'));
+      toast(`👑 ${esc(nick)}님이 새 클랜장이 되었어요.`); loadClan(); });
+}
+function clanEditNotice() {
+  const cur = (document.querySelector('.clan-notice')?.textContent || '').replace(/^📢\s*/, '');
+  const n = prompt('클랜 공지 (최대 60자)', cur);
+  if (n === null) return;
+  apiPost('/api/clan-notice', { token: authToken(), notice: n }).then(r => {
+    if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.'));
+    loadClan();
+  });
+}
+function clanLeave(isOwner) {
+  askConfirm({ icon: '🚪', title: '클랜에서 탈퇴할까요?',
+    desc: isOwner ? '클랜장 자리는 남은 클랜원 중 RP가 가장 높은 사람에게 넘어가요. 혼자라면 클랜이 해체됩니다.' : '언제든 다시 가입 신청할 수 있어요.',
+    yes: '탈퇴', no: '취소' },
+    async () => {
+      const r = await apiPost('/api/clan-leave', { token: authToken() });
+      if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.'));
+      toast(r.disbanded ? '클랜이 해체되었어요.' : '클랜에서 탈퇴했어요.');
+      _clanTab = 'my'; loadClan();
+    });
+}
+
+// 로비 버튼의 알림 배지 (받은 친구요청 / 클랜 가입신청)
+async function updateSocialBadges() {
+  if (!myAccount) {
+    for (const id of ['friendBadge', 'clanBadge']) { const e = document.getElementById(id); if (e) e.style.display = 'none'; }
+    return;
+  }
+  const setBadge = (id, n) => {
+    const e = document.getElementById(id); if (!e) return;
+    e.textContent = n > 99 ? '99+' : n;
+    e.style.display = n > 0 ? '' : 'none';
+  };
+  const [f, c] = await Promise.all([
+    apiPost('/api/friends', { token: authToken() }),
+    apiPost('/api/clan', { token: authToken() }),
+  ]);
+  const nIn = f.ok ? f.reqIn.length : 0;
+  setBadge('friendBadge', nIn);
+  const tb = document.getElementById('ftabBadge');
+  if (tb) { tb.textContent = nIn; tb.style.display = nIn > 0 ? '' : 'none'; }
+  setBadge('clanBadge', (c.ok && c.clan && c.clan.isOwner) ? c.clan.applicantCount : 0);
+}
 
 // ── 칭호 (내 정보에서 관리) ──
 async function renderMyTitles() {
@@ -1253,7 +1560,29 @@ socket.on('room_created', ({ roomId, name }) => {
   document.getElementById('waitCard').style.display = 'flex';
   document.getElementById('waitCode').textContent = roomId;
   document.getElementById('waitRoomName').textContent = name || '내 방';
+  // 친구에게 도전장을 보내려던 참이면 방 코드가 나온 지금 전송
+  if (_pendingChallenge) {
+    socket.emit('challenge_friend', { idl: _pendingChallenge, roomId });
+    _pendingChallenge = null;
+  }
 });
+
+// ── 친구·클랜 실시간 알림 ──
+// ※ 이벤트명 주의: 'challenged'/'challenge_*'는 관전자→승자 도전이 이미 사용 중이라 friend_ 접두어로 분리했다.
+socket.on('friend_challenge_sent', ({ nick }) => toast(`⚔️ ${esc(nick || '친구')}님에게 도전장을 보냈어요!`));
+socket.on('friend_challenge_fail', msg => toast('⚠️ ' + esc(msg || '도전장을 보내지 못했어요.')));
+socket.on('friend_challenge', ({ from, roomId, password }) => {
+  playSound('ping');
+  askConfirm(
+    { icon: '⚔️', title: `${from}님의 도전장!`, desc: '친구가 대전을 신청했어요. 지금 바로 대결할까요?', yes: '수락하고 입장', no: '나중에' },
+    () => socket.emit('join_room', { roomId, pid: PID, nick: getNick(), password: password || '' }));
+});
+socket.on('friend_req',   ({ nick }) => { toast(`👥 ${esc(nick || '')}님이 친구 요청을 보냈어요!`); updateSocialBadges(); });
+socket.on('friend_added', ({ nick }) => { toast(`🎉 ${esc(nick || '')}님과 친구가 되었어요!`); updateSocialBadges(); });
+socket.on('clan_apply',   ({ nick }) => { toast(`🛡️ ${esc(nick || '')}님이 클랜 가입을 신청했어요!`); updateSocialBadges(); });
+socket.on('clan_joined',  ({ clan }) => { toast(`🎉 ${esc(clan || '')} 클랜에 가입되었어요!`); updateSocialBadges(); });
+socket.on('clan_kicked',  ({ clan }) => { toast(`😢 ${esc(clan || '')} 클랜에서 추방되었어요.`); updateSocialBadges(); });
+socket.on('clan_disbanded', () => { toast('클랜이 해체되었어요.'); updateSocialBadges(); });
 function copyText(text, btn) {
   const done = () => { const o = btn.textContent; btn.textContent = '✓ 복사됨'; setTimeout(() => btn.textContent = o, 1400); };
   if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done).catch(() => prompt('복사하세요:', text));

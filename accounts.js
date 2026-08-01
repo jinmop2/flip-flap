@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const FILE = path.join(__dirname, 'data', 'accounts.json');
-let db = { users: {}, nickTaken: {} };
+let db = { users: {}, nickTaken: {}, clans: {} };
 let tokenIndex = {};
 
 // DATABASE_URL 있으면 Postgres, 없으면 파일 저장 (로컬)
@@ -27,17 +27,20 @@ function rebuildIndex() {
   }
 }
 function loadFileSync() {
-  try { db = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch (_) { db = { users: {}, nickTaken: {} }; }
-  db.users ||= {}; rebuildIndex();
+  try { db = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch (_) { db = { users: {}, nickTaken: {}, clans: {} }; }
+  db.users ||= {}; db.clans ||= {}; rebuildIndex();
 }
 async function loadFromDB() {
   try {
     await pool.query('CREATE TABLE IF NOT EXISTS ff_users (idl TEXT PRIMARY KEY, data JSONB)');
+    await pool.query('CREATE TABLE IF NOT EXISTS ff_clans (cid TEXT PRIMARY KEY, data JSONB)');
     const { rows } = await pool.query('SELECT idl, data FROM ff_users');
-    db = { users: {}, nickTaken: {} };
+    const clanRows = (await pool.query('SELECT cid, data FROM ff_clans')).rows;
+    db = { users: {}, nickTaken: {}, clans: {} };
     for (const r of rows) db.users[r.idl] = r.data;
+    for (const r of clanRows) db.clans[r.cid] = r.data;
     rebuildIndex();
-    console.log('계정 ' + rows.length + '개 DB에서 로드됨');
+    console.log('계정 ' + rows.length + '개, 클랜 ' + clanRows.length + '개 DB에서 로드됨');
   } catch (e) { console.error('DB 로드 실패, 파일로 대체:', e.message); pool = null; loadFileSync(); }
 }
 let saveTimer = null;
@@ -61,6 +64,20 @@ function purge(idl) {
   if (pool) {
     pool.query('DELETE FROM ff_users WHERE idl = $1', [idl])
       .catch(e => console.error('DB 삭제 실패:', e.message));
+  } else saveFile();
+}
+// 클랜 저장 / 삭제 (파일 모드에서는 db 전체가 직렬화되므로 saveFile 한 번이면 충분)
+function persistClan(cid) {
+  if (pool) {
+    const c = db.clans[cid]; if (!c) return;
+    pool.query('INSERT INTO ff_clans(cid, data) VALUES($1, $2) ON CONFLICT(cid) DO UPDATE SET data = excluded.data', [cid, c])
+      .catch(e => console.error('클랜 저장 실패:', e.message));
+  } else saveFile();
+}
+function purgeClan(cid) {
+  if (pool) {
+    pool.query('DELETE FROM ff_clans WHERE cid = $1', [cid])
+      .catch(e => console.error('클랜 삭제 실패:', e.message));
   } else saveFile();
 }
 
@@ -184,6 +201,17 @@ function deleteAccount(token, password) {
     if (!password) return { error: '비밀번호를 입력해주세요.', needPw: true };
     if (u.hash !== hashPw(password, u.salt)) return { error: '비밀번호가 틀렸어요.', needPw: true };
   }
+  // 친구·클랜에 남는 유령 참조 정리 (탈퇴자가 남의 목록에 계속 뜨는 것 방지)
+  for (const other of [...(u.friends || []), ...(u.freqIn || []), ...(u.freqOut || [])]) {
+    const o = Object.prototype.hasOwnProperty.call(db.users, other) ? db.users[other] : null;
+    if (!o) continue;
+    if (Array.isArray(o.friends)) o.friends = o.friends.filter(x => x !== idl);
+    if (Array.isArray(o.freqIn))  o.freqIn  = o.freqIn.filter(x => x !== idl);
+    if (Array.isArray(o.freqOut)) o.freqOut = o.freqOut.filter(x => x !== idl);
+    persist(other);
+  }
+  if (u.clan) leaveClanByIdl(idl);   // 클랜장이면 위임 또는 해체까지 처리
+
   if (u.token) delete tokenIndex[u.token];
   if (u.nick) delete db.nickTaken[String(u.nick).toLowerCase()];
   delete db.users[idl];
@@ -714,8 +742,354 @@ function myRank(token) {
   return { no: pos + 1, total: sorted.length, nick: p.nick, nickColor: p.nickColor, rank: p.rank, rankIcon: p.rankIcon, rankColor: p.rankColor, rp: p.rp, wins: p.wins, losses: p.losses };
 }
 
+// ══════════════════════════════════════════════════════════
+//  친구
+// ══════════════════════════════════════════════════════════
+const MAX_FRIENDS = 50;
+const MAX_REQS = 30;
+
+// 친구/요청 배열을 안전하게 꺼낸다 (기존 계정엔 필드가 없으므로 지연 초기화)
+function farr(u, key) { if (!Array.isArray(u[key])) u[key] = []; return u[key]; }
+function userByNick(nick) {
+  const idl = db.nickTaken[String(nick || '').trim().toLowerCase()];
+  return idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+}
+// 친구 목록에 넣을 요약 정보
+function friendCard(idl) {
+  const u = Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return null;
+  const r = rankOf(u.rp);
+  return { idl, nick: u.nick, level: levelOf(u.xp), rank: r.name, rankIcon: r.icon, rankColor: r.color,
+           rp: u.rp, nickColor: u.nickColor || null, clan: clanTagOf(u) };
+}
+
+function friendList(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const map = a => a.map(friendCard).filter(Boolean);
+  return { ok: true, me: idl,
+    friends: map(farr(u, 'friends')),
+    reqIn:   map(farr(u, 'freqIn')),
+    reqOut:  map(farr(u, 'freqOut')) };
+}
+
+function sendFriendReq(token, nick) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const t = userByNick(nick);
+  if (!t) return { error: '그런 닉네임의 유저가 없어요.' };
+  const tid = String(t.id).toLowerCase();
+  if (tid === idl) return { error: '자기 자신은 추가할 수 없어요.' };
+  if (farr(u, 'friends').includes(tid)) return { error: '이미 친구예요.' };
+  if (farr(u, 'freqOut').includes(tid)) return { error: '이미 요청을 보냈어요.' };
+  if (farr(u, 'friends').length >= MAX_FRIENDS) return { error: `친구는 최대 ${MAX_FRIENDS}명까지예요.` };
+  if (farr(t, 'freqIn').length >= MAX_REQS) return { error: '상대의 요청함이 가득 찼어요.' };
+
+  // 상대가 이미 나에게 보낸 요청이 있으면 바로 친구 성립
+  if (farr(u, 'freqIn').includes(tid)) return acceptFriendReq(token, tid);
+
+  farr(u, 'freqOut').push(tid);
+  farr(t, 'freqIn').push(idl);
+  persist(idl); persist(tid);
+  return { ok: true, sent: t.nick, toIdl: tid };
+}
+
+function acceptFriendReq(token, fromIdl) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  fromIdl = String(fromIdl || '').toLowerCase();
+  if (!farr(u, 'freqIn').includes(fromIdl)) return { error: '받은 요청이 아니에요.' };
+  const t = Object.prototype.hasOwnProperty.call(db.users, fromIdl) ? db.users[fromIdl] : null;
+  // 요청은 어느 경우든 목록에서 제거 (상대가 탈퇴했어도 정리)
+  u.freqIn = farr(u, 'freqIn').filter(x => x !== fromIdl);
+  if (!t) { persist(idl); return { error: '상대가 탈퇴했어요.' }; }
+  t.freqOut = farr(t, 'freqOut').filter(x => x !== idl);
+  if (farr(u, 'friends').length >= MAX_FRIENDS) { persist(idl); persist(fromIdl); return { error: `친구는 최대 ${MAX_FRIENDS}명까지예요.` }; }
+  if (!farr(u, 'friends').includes(fromIdl)) farr(u, 'friends').push(fromIdl);
+  if (!farr(t, 'friends').includes(idl)) farr(t, 'friends').push(idl);
+  persist(idl); persist(fromIdl);
+  return { ok: true, nick: t.nick, friendIdl: fromIdl };
+}
+
+function declineFriendReq(token, fromIdl) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  fromIdl = String(fromIdl || '').toLowerCase();
+  u.freqIn = farr(u, 'freqIn').filter(x => x !== fromIdl);
+  const t = Object.prototype.hasOwnProperty.call(db.users, fromIdl) ? db.users[fromIdl] : null;
+  if (t) { t.freqOut = farr(t, 'freqOut').filter(x => x !== idl); persist(fromIdl); }
+  persist(idl);
+  return { ok: true };
+}
+
+function cancelFriendReq(token, toIdl) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  toIdl = String(toIdl || '').toLowerCase();
+  u.freqOut = farr(u, 'freqOut').filter(x => x !== toIdl);
+  const t = Object.prototype.hasOwnProperty.call(db.users, toIdl) ? db.users[toIdl] : null;
+  if (t) { t.freqIn = farr(t, 'freqIn').filter(x => x !== idl); persist(toIdl); }
+  persist(idl);
+  return { ok: true };
+}
+
+function removeFriend(token, otherIdl) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  otherIdl = String(otherIdl || '').toLowerCase();
+  u.friends = farr(u, 'friends').filter(x => x !== otherIdl);
+  const t = Object.prototype.hasOwnProperty.call(db.users, otherIdl) ? db.users[otherIdl] : null;
+  if (t) { t.friends = farr(t, 'friends').filter(x => x !== idl); persist(otherIdl); }
+  persist(idl);
+  return { ok: true };
+}
+
+// 소켓 알림 대상 조회용 — 특정 유저의 친구 idl 배열
+function friendIdlsOf(idl) {
+  const u = Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  return u ? farr(u, 'friends').slice() : [];
+}
+function nickOfIdl(idl) {
+  const u = Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  return u ? u.nick : null;
+}
+
+// ══════════════════════════════════════════════════════════
+//  클랜
+// ══════════════════════════════════════════════════════════
+const CLAN_COST = 300;          // 창설 비용 (코인)
+const CLAN_MAX_MEMBERS = 30;
+const CLAN_NAME_RE = /^[가-힣a-zA-Z0-9 ]{2,12}$/;
+const CLAN_TAG_RE  = /^[A-Z0-9]{2,4}$/;
+
+function clanOf(u) {
+  const cid = u && u.clan;
+  return cid && Object.prototype.hasOwnProperty.call(db.clans, cid) ? db.clans[cid] : null;
+}
+function clanTagOf(u) { const c = clanOf(u); return c ? { tag: c.tag, name: c.name } : null; }
+function clanNameTaken(name) {
+  const n = String(name).trim().toLowerCase();
+  return Object.values(db.clans).some(c => c.name.toLowerCase() === n);
+}
+function clanTagTaken(tag) {
+  const t = String(tag).trim().toUpperCase();
+  return Object.values(db.clans).some(c => c.tag === t);
+}
+function newClanId() {
+  let id; do { id = crypto.randomBytes(5).toString('hex'); } while (Object.prototype.hasOwnProperty.call(db.clans, id));
+  return id;
+}
+// 클랜 총 RP·인원 (탈퇴/탈퇴계정 정리 포함)
+function clanStats(c) {
+  const members = c.members.filter(m => Object.prototype.hasOwnProperty.call(db.users, m));
+  const rp = members.reduce((s, m) => s + (db.users[m].rp || 0), 0);
+  const wins = members.reduce((s, m) => s + (db.users[m].wins || 0), 0);
+  return { count: members.length, rp, wins };
+}
+function clanView(c, viewerIdl) {
+  const st = clanStats(c);
+  const isOwner = c.owner === viewerIdl;
+  return {
+    id: c.id, name: c.name, tag: c.tag, notice: c.notice || '',
+    owner: c.owner, ownerNick: nickOfIdl(c.owner),
+    createdAt: c.createdAt, memberCount: st.count, totalRp: st.rp, totalWins: st.wins,
+    max: CLAN_MAX_MEMBERS, isOwner,
+    members: c.members.map(m => {
+      const card = friendCard(m); if (!card) return null;
+      return { ...card, isOwner: m === c.owner };
+    }).filter(Boolean).sort((a, b) => (b.isOwner - a.isOwner) || (b.rp - a.rp)),
+    // 가입 신청자는 클랜장에게만 보임
+    applicants: isOwner ? (c.applicants || []).map(friendCard).filter(Boolean) : [],
+    applicantCount: (c.applicants || []).length,
+  };
+}
+
+function createClan(token, name, tag) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  if (clanOf(u)) return { error: '이미 클랜에 소속되어 있어요.' };
+  name = String(name || '').trim(); tag = String(tag || '').trim().toUpperCase();
+  if (!CLAN_NAME_RE.test(name)) return { error: '클랜 이름은 한글·영문·숫자 2~12자예요.' };
+  if (!CLAN_TAG_RE.test(tag))  return { error: '태그는 영문 대문자·숫자 2~4자예요.' };
+  if (BADWORDS.test(name.replace(/[\s._-]/g, '')) || BADWORDS.test(tag)) return { error: '사용할 수 없는 이름이에요.' };
+  if (clanNameTaken(name)) return { error: '이미 있는 클랜 이름이에요.' };
+  if (clanTagTaken(tag))   return { error: '이미 사용 중인 태그예요.' };
+  if ((u.coins || 0) < CLAN_COST) return { error: `창설 비용 🪙${CLAN_COST}이 필요해요. (보유 ${u.coins || 0})` };
+
+  u.coins -= CLAN_COST;
+  const id = newClanId();
+  const c = { id, name, tag, owner: idl, members: [idl], applicants: [], notice: '', createdAt: Date.now() };
+  db.clans[id] = c;
+  u.clan = id;
+  persistClan(id); persist(idl);
+  return { ok: true, clan: clanView(c, idl), coins: u.coins };
+}
+
+function myClan(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const c = clanOf(u);
+  if (!c) return { ok: true, clan: null, cost: CLAN_COST, coins: u.coins || 0 };
+  return { ok: true, clan: clanView(c, idl), cost: CLAN_COST, coins: u.coins || 0 };
+}
+
+// 클랜 랭킹 — 총 RP 순
+function clanList(limit = 30, token) {
+  const idl = token ? tokenIndex[token] : null;
+  const myCid = idl && db.users[idl] ? db.users[idl].clan : null;
+  const rows = Object.values(db.clans).map(c => {
+    const st = clanStats(c);
+    return { id: c.id, name: c.name, tag: c.tag, memberCount: st.count, max: CLAN_MAX_MEMBERS,
+             totalRp: st.rp, ownerNick: nickOfIdl(c.owner), mine: c.id === myCid,
+             applied: !!(idl && (c.applicants || []).includes(idl)) };
+  });
+  rows.sort((a, b) => (b.totalRp - a.totalRp) || (b.memberCount - a.memberCount));
+  return { ok: true, clans: rows.slice(0, limit) };
+}
+
+function applyClan(token, clanId) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  if (clanOf(u)) return { error: '이미 클랜에 소속되어 있어요.' };
+  clanId = String(clanId || '');
+  if (!Object.prototype.hasOwnProperty.call(db.clans, clanId)) return { error: '없는 클랜이에요.' };
+  const c = db.clans[clanId];
+  c.applicants ||= [];
+  if (c.applicants.includes(idl)) return { error: '이미 가입을 신청했어요.' };
+  if (clanStats(c).count >= CLAN_MAX_MEMBERS) return { error: '정원이 가득 찼어요.' };
+  if (c.applicants.length >= 50) return { error: '신청자가 너무 많아요. 나중에 시도해주세요.' };
+  c.applicants.push(idl);
+  persistClan(clanId);
+  return { ok: true, ownerIdl: c.owner, clanName: c.name };
+}
+
+function cancelApply(token, clanId) {
+  const idl = tokenIndex[token]; if (!idl) return { error: '로그인이 필요해요.' };
+  clanId = String(clanId || '');
+  if (!Object.prototype.hasOwnProperty.call(db.clans, clanId)) return { error: '없는 클랜이에요.' };
+  const c = db.clans[clanId];
+  c.applicants = (c.applicants || []).filter(x => x !== idl);
+  persistClan(clanId);
+  return { ok: true };
+}
+
+// 클랜장 전용 — 가입 승인 / 거절
+function decideApplicant(token, targetIdl, accept) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const c = clanOf(u);
+  if (!c) return { error: '클랜이 없어요.' };
+  if (c.owner !== idl) return { error: '클랜장만 할 수 있어요.' };
+  targetIdl = String(targetIdl || '').toLowerCase();
+  if (!(c.applicants || []).includes(targetIdl)) return { error: '신청자가 아니에요.' };
+  c.applicants = c.applicants.filter(x => x !== targetIdl);
+
+  if (!accept) { persistClan(c.id); return { ok: true, accepted: false }; }
+  const t = Object.prototype.hasOwnProperty.call(db.users, targetIdl) ? db.users[targetIdl] : null;
+  if (!t) { persistClan(c.id); return { error: '탈퇴한 유저예요.' }; }
+  if (t.clan) { persistClan(c.id); return { error: '이미 다른 클랜에 가입했어요.' }; }
+  if (clanStats(c).count >= CLAN_MAX_MEMBERS) { persistClan(c.id); return { error: '정원이 가득 찼어요.' }; }
+  if (!c.members.includes(targetIdl)) c.members.push(targetIdl);
+  t.clan = c.id;
+  persistClan(c.id); persist(targetIdl);
+  return { ok: true, accepted: true, nick: t.nick, targetIdl, clanName: c.name };
+}
+
+function kickMember(token, targetIdl) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const c = clanOf(u);
+  if (!c) return { error: '클랜이 없어요.' };
+  if (c.owner !== idl) return { error: '클랜장만 할 수 있어요.' };
+  targetIdl = String(targetIdl || '').toLowerCase();
+  if (targetIdl === idl) return { error: '자기 자신은 추방할 수 없어요.' };
+  if (!c.members.includes(targetIdl)) return { error: '클랜원이 아니에요.' };
+  c.members = c.members.filter(x => x !== targetIdl);
+  const t = Object.prototype.hasOwnProperty.call(db.users, targetIdl) ? db.users[targetIdl] : null;
+  if (t) { delete t.clan; persist(targetIdl); }
+  persistClan(c.id);
+  return { ok: true, targetIdl, clanName: c.name };
+}
+
+// 클랜장 위임
+function transferOwner(token, targetIdl) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const c = clanOf(u);
+  if (!c) return { error: '클랜이 없어요.' };
+  if (c.owner !== idl) return { error: '클랜장만 할 수 있어요.' };
+  targetIdl = String(targetIdl || '').toLowerCase();
+  if (!c.members.includes(targetIdl)) return { error: '클랜원이 아니에요.' };
+  if (!Object.prototype.hasOwnProperty.call(db.users, targetIdl)) return { error: '탈퇴한 유저예요.' };
+  c.owner = targetIdl;
+  persistClan(c.id);
+  return { ok: true, nick: nickOfIdl(targetIdl) };
+}
+
+function setClanNotice(token, notice) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const c = clanOf(u);
+  if (!c) return { error: '클랜이 없어요.' };
+  if (c.owner !== idl) return { error: '클랜장만 할 수 있어요.' };
+  const n = String(notice || '').trim().slice(0, 60);
+  if (n && BADWORDS.test(n.replace(/[\s._-]/g, ''))) return { error: '사용할 수 없는 문구예요.' };
+  c.notice = n;
+  persistClan(c.id);
+  return { ok: true, notice: n };
+}
+
+// 탈퇴 — 클랜장이 나가면 남은 사람 중 RP 최고에게 자동 위임, 아무도 없으면 해체
+function leaveClan(token) {
+  const idl = tokenIndex[token];
+  if (!idl || !db.users[idl]) return { error: '로그인이 필요해요.' };
+  if (!clanOf(db.users[idl])) return { error: '클랜이 없어요.' };
+  return leaveClanByIdl(idl);
+}
+// 계정 삭제에서도 쓰이므로 토큰이 아니라 idl 기준으로 동작한다.
+function leaveClanByIdl(idl) {
+  const u = Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '없는 유저예요.' };
+  const c = clanOf(u);
+  if (!c) return { error: '클랜이 없어요.' };
+  c.members = c.members.filter(x => x !== idl);
+  c.applicants = (c.applicants || []).filter(x => x !== idl);
+  delete u.clan;
+  const alive = c.members.filter(m => Object.prototype.hasOwnProperty.call(db.users, m));
+  if (!alive.length) {
+    delete db.clans[c.id]; purgeClan(c.id); persist(idl);
+    return { ok: true, disbanded: true };
+  }
+  if (c.owner === idl) {
+    alive.sort((a, b) => (db.users[b].rp || 0) - (db.users[a].rp || 0));
+    c.owner = alive[0];
+  }
+  persistClan(c.id); persist(idl);
+  return { ok: true, newOwner: c.owner === idl ? null : nickOfIdl(c.owner) };
+}
+
+function disbandClan(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const c = clanOf(u);
+  if (!c) return { error: '클랜이 없어요.' };
+  if (c.owner !== idl) return { error: '클랜장만 해체할 수 있어요.' };
+  const members = c.members.slice();
+  for (const m of members) {
+    if (Object.prototype.hasOwnProperty.call(db.users, m)) { delete db.users[m].clan; persist(m); }
+  }
+  delete db.clans[c.id]; purgeClan(c.id);
+  return { ok: true, members };
+}
+
 module.exports = {
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, claimDaily, myRank,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   missionList, titleList, betrayEvent, claimTutorial, applyReferral, deleteAccount,
+  // 친구
+  friendList, sendFriendReq, acceptFriendReq, declineFriendReq, cancelFriendReq, removeFriend,
+  friendIdlsOf, nickOfIdl,
+  // 클랜
+  createClan, myClan, clanList, applyClan, cancelApply, decideApplicant,
+  kickMember, transferOwner, setClanNotice, leaveClan, disbandClan,
 };
