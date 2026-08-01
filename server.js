@@ -65,14 +65,17 @@ app.use(express.static(path.join(__dirname, 'public'), {
   },
 }));
 
-// 간단 rate limit (IP당 분당 N회) — 무차별 대입 방지
+// 간단 rate limit (IP·엔드포인트당 분당 N회) — 무차별 대입 방지
+// 주의: 카운터를 IP만으로 잡으면 모든 API가 한 카운터를 공유해, 실효 한도가 가장 낮은
+//      엔드포인트 값으로 떨어진다(예: 목록 몇 번 조회하면 클랜 생성이 막힘). 경로까지 키에 포함한다.
 const rlMap = new Map();
 function rateLimit(max) {
   return (req, res, next) => {
-    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'x').split(',')[0];
+    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'x').split(',')[0].trim();
+    const key = ip + '|' + req.path;
     const now = Date.now();
-    let e = rlMap.get(ip);
-    if (!e || now - e.ts > 60000) { e = { count: 0, ts: now }; rlMap.set(ip, e); }
+    let e = rlMap.get(key);
+    if (!e || now - e.ts > 60000) { e = { count: 0, ts: now }; rlMap.set(key, e); }
     if (++e.count > max) return res.status(429).json({ error: '요청이 너무 많아요. 잠시 후 다시 시도하세요.' });
     next();
   };
