@@ -5,6 +5,7 @@ const io = require('socket.io')(http);
 const path = require('path');
 const accounts = require('./accounts');
 const expert3 = require('./expert3');   // 전문가 AI v3 (카운팅+몬테카를로+종반탐색)
+const items = require('./items');       // 아이템전(이벤트 모드) 아이템 12종
 const stats = require('./stats');       // 방문·활동 통계 (자체 수집)
 
 app.set('trust proxy', 1);
@@ -319,9 +320,13 @@ function startTurn(game) {
     special: false,
   };
   game.phase = 'draw';
+  if (game.itemMode) {   // 이번 경매 한정 효과·사용권은 턴마다 초기화
+    game.fx = items.freshFx();
+    game.itemUsed = { 1: false, 2: false };
+  }
 }
 
-function createGame() {
+function createGame(itemMode = false) {
   const deck = initDeck();
   // 선공 뽑기용 카드 2장 (덱과 별개 컨셉 카드)
   const all = initDeck();
@@ -335,6 +340,12 @@ function createGame() {
     time: { 1: 300, 2: 300 },   // 체스 시계: 각 5분(초)
     pick: { cards: pickCards, choices: [null, null], revealed: false },  // 선공 결정
   };
+  if (itemMode) {
+    game.itemMode = true;
+    game.items = { 1: [], 2: [] };       // 보유 아이템 (최대 3)
+    game.itemUsed = { 1: false, 2: false };  // 턴당 1개 제한
+    game.fx = items.freshFx();           // 이번 경매에만 걸리는 효과
+  }
   return game;
 }
 
@@ -522,11 +533,103 @@ function decideBidX(hand, prize, myAcq, oppAcq, visOpp, deckLeft) {
   return byStrong[byStrong.length - 1];
 }
 
+// ── AI 아이템 사용 ─────────────────────────────────────────
+// 상황에 맞는 아이템만 고르고, 난이도가 낮을수록 덜 쓴다(캐주얼 모드라 과하면 짜증).
+const AI_USE_RATE = { easy: 0.35, normal: 0.55, hard: 0.7, expert: 0.85 };
+
+function cpuPickItem(g, me, room) {
+  const held = (g.items[me] || []).filter(id => !items.canUse(g, me, id));
+  if (!held.length) return null;
+  const opp = me === 1 ? 2 : 1;
+  const myAcq = me === 1 ? g.p1Acquired : g.p2Acquired;
+  const opAcq = opp === 1 ? g.p1Acquired : g.p2Acquired;
+  const behind = items.isBehind(g, me);
+
+  // 상황 점수 — 높은 것 하나를 고른다
+  const score = id => {
+    switch (id) {
+      case 'tyrant':     return g.auctioneer !== me ? 9 : -1;          // 진행권은 언제나 이득
+      case 'steal':      return opAcq.length >= 2 ? (behind ? 10 : 5) : -1;
+      case 'copy':       return myAcq.length >= 2 ? 8 : -1;
+      case 'dice':       return g.centerDeck.length >= 2 ? (behind ? 6 : 2) : -1;
+      case 'flip':       return 5;                                     // 약한 손패일수록 좋지만 단순화
+      case 'discount':   return 5;
+      case 'smoke':      return g.phase !== 'draw' ? 4 : -1;
+      case 'pickpocket': return 4;
+      case 'magnify':    return 3;
+      case 'swap':       return g.centerDeck.length ? 2 : -1;
+      case 'hourglass':  return 1;
+      default:           return 0;
+    }
+  };
+  const best = held.map(id => ({ id, s: score(id) })).filter(x => x.s > 0).sort((a, b) => b.s - a.s)[0];
+  return best ? best.id : null;
+}
+
+function cpuMaybeUseItem(roomId) {
+  const room = rooms[roomId];
+  if (!room?.game || room.cpuIndex === undefined) return false;
+  const g = room.game;
+  if (!g.itemMode || g.itemUsed[room.cpuIndex + 1]) return false;
+  if (Math.random() > (AI_USE_RATE[room.difficulty] ?? 0.6)) return false;
+  const me = room.cpuIndex + 1;
+  const id = cpuPickItem(g, me, room);
+  if (!id) return false;
+  // 손바꿈은 대상 카드가 필요 — 세트에 안 쓰는 카드를 낸다
+  let arg;
+  if (id === 'swap') {
+    const hand = me === 1 ? g.p1Hand : g.p2Hand;
+    const acq = me === 1 ? g.p1Acquired : g.p2Acquired;
+    const kinds = new Set(acq.map(c => c.kind));
+    arg = (hand.find(c => !kinds.has(c.kind)) || hand[0] || {}).id;
+    if (!arg) return false;
+  }
+  const out = items.use(g, me, id, arg);
+  if (out.error) return false;
+  const human = room.players[room.cpuIndex === 0 ? 1 : 0];
+  if (human) io.to(human).emit('item_used', { byMe: false, itemId: id, name: out.name, icon: out.icon, msg: out.msg, reveal: null });
+  broadcast(roomId);
+  return true;
+}
+
+// 재경매는 결과 공개(reveal) 시점에만 쓸 수 있어 일반 행동 흐름에 걸리지 않는다.
+// 따로 처리하지 않으면 AI 인벤토리에 영원히 남아 슬롯만 차지한다.
+function cpuMaybeRedo(roomId) {
+  const room = rooms[roomId];
+  if (!room?.game || room.cpuIndex === undefined) return;
+  const g = room.game;
+  if (!g.itemMode || g.phase !== 'reveal' || !g.auction) return;
+  const me = room.cpuIndex + 1;
+  if (g.itemUsed[me] || !(g.items[me] || []).includes('redo')) return;
+  const p1W = g.fx.reverse ? strength(g.auction.p1Bid) > strength(g.auction.p2Bid)
+                           : aBeatsB(g.auction.p1Bid, g.auction.p2Bid);
+  if ((p1W ? 1 : 2) === me) return;                 // 이긴 경매는 다시 하지 않는다
+  if (Math.random() > 0.75) return;
+  const out = items.use(g, me, 'redo');
+  if (out.error) return;
+  g.settleSeq = (g.settleSeq || 0) + 1;             // 이전 경매의 공개·정산 타이머 무효화
+  const human = room.players[room.cpuIndex === 0 ? 1 : 0];
+  if (human) io.to(human).emit('item_used', { byMe: false, itemId: 'redo', name: out.name, icon: out.icon, msg: out.msg, reveal: null });
+  broadcast(roomId);
+  setTimeout(() => maybeCpuAct(roomId), 900);
+}
+
 // AI가 행동할 차례인지 확인하고 실행
 function maybeCpuAct(roomId) {
   const room = rooms[roomId];
   if (!room?.game || room.cpuIndex === undefined) return;
   const g = room.game, ci = room.cpuIndex;
+
+  // 아이템전: 자기 차례가 오면 먼저 아이템을 쓸지 판단 (연출을 볼 시간을 주고 이어서 행동)
+  if (g.itemMode && !g.itemUsed[ci + 1] && ['draw', 'offer', 'choose_type', 'bidding'].includes(g.phase)) {
+    const myTurn = ['draw', 'offer', 'choose_type'].includes(g.phase)
+      ? g.auctioneer === ci + 1
+      : !(ci === 0 ? g.auction?.p1Submitted : g.auction?.p2Submitted);
+    if (myTurn && cpuMaybeUseItem(roomId)) {
+      setTimeout(() => maybeCpuAct(roomId), 1500);   // 아이템 연출 뒤 원래 행동
+      return;
+    }
+  }
 
   if (g.phase === 'draw' && g.auctioneer === ci + 1) {
     delay(roomId, () => { if (g.phase !== 'draw') return; drawCenter(g); broadcast(roomId); maybeCpuAct(roomId); }, 600, 500);
@@ -646,11 +749,15 @@ function stateFor(game, pi) {
     // 오픈=비공개배팅(공개 안됨, reveal에서만) / 클로즈=공개배팅(제출 즉시 공개)
     const showOpp = game.phase === 'reveal' || (a.auctionType === 'closed' && oppSubmitted);
     // 출품카드 공개: 오픈이거나, reveal이거나, 방식 선택 중(choose_type)엔 진행자 본인만
-    const showOffered = a.auctionType === 'open' || game.phase === 'reveal'
+    let showOffered = a.auctionType === 'open' || game.phase === 'reveal'
                       || (game.phase === 'choose_type' && isAuctioneer);
+    // 연막탄 — 걸린 쪽은 경매품 자체를 못 본다 (공개되는 reveal 단계는 예외)
+    const smoked = game.itemMode && game.fx && game.fx.smokeAgainst === pi + 1 && game.phase !== 'reveal';
+    if (smoked) showOffered = false;
     auction = {
-      centerCard: a.centerCard,
+      centerCard: smoked ? null : a.centerCard,
       offeredCard: showOffered ? a._offeredCard : null,
+      smoked,
       auctionType: a.auctionType,
       myBid:           isP1 ? a.p1Bid : a.p2Bid,
       oppBidSubmitted: oppSubmitted,
@@ -666,7 +773,7 @@ function stateFor(game, pi) {
       cards: game.pick.revealed ? game.pick.cards : [null, null],
     };
   }
-  return {
+  const base = {
     phase: game.phase, turn: game.turn, auctioneer: game.auctioneer,
     centerDeckSize: game.centerDeck.length,
     myHand: isP1 ? game.p1Hand : game.p2Hand,
@@ -676,6 +783,21 @@ function stateFor(game, pi) {
     auction, pick, myIndex: pi + 1,
     time: game.time, active: activePlayer(game),
   };
+  if (game.itemMode) {
+    const me = pi + 1;
+    base.itemMode = true;
+    base.myItems = (game.items[me] || []).slice();
+    base.oppItemCount = (game.items[me === 1 ? 2 : 1] || []).length;
+    base.itemUsed = !!game.itemUsed[me];
+    base.fx = {
+      reverse: game.fx.reverse,
+      smokedMe: game.fx.smokeAgainst === me,
+      smokedOpp: game.fx.smokeAgainst === (me === 1 ? 2 : 1),
+      noSwapMe: !!game.fx.noSwap[me],
+      peek: game.fx.peek[me] || null,   // 돋보기로 훔쳐본 상대 카드 (나에게만)
+    };
+  }
+  return base;
 }
 
 // 관전자용 상태 — 공개 정보만 (양쪽 손패 내용은 숨김)
@@ -923,7 +1045,7 @@ io.on('connection', (socket) => {
   socket.on('tut_hold',    () => { const r = rooms[socket.roomId]; if (r && r.tutorial) r.tutHold = true; });
   socket.on('tut_release', () => { const r = rooms[socket.roomId]; if (r) r.tutHold = false; });
 
-  socket.on('create_room', ({ vsBot = false, difficulty = 'hard', pid, name, nick, secret, password, tutorial } = {}) => {
+  socket.on('create_room', ({ vsBot = false, difficulty = 'hard', pid, name, nick, secret, password, tutorial, itemMode } = {}) => {
     if (Object.keys(rooms).length >= MAX_ROOMS) return socket.emit('error', '서버가 혼잡해요. 잠시 후 시도하세요.');
     leaveOldRoom();
     socket.leave('lobby');
@@ -935,6 +1057,7 @@ io.on('connection', (socket) => {
       name: String(name || '').trim().slice(0, 20), game: null, vsBot, difficulty,
       secret: !vsBot && !!secret, password: String(password || '').slice(0, 12),
       tutorial: vsBot && !!tutorial,   // 튜토리얼 모드: 확인 누를 때까지 진행 보류 + 시계 없음
+      itemMode: vsBot && !!itemMode && !tutorial,   // 아이템전(이벤트 모드) — 현재 AI 대전 전용
     };
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
     if (vsBot) {
@@ -944,10 +1067,10 @@ io.on('connection', (socket) => {
       rooms[roomId].cpuIndex = 1;
       rooms[roomId].nicks[1] = 'AI';
       rooms[roomId].profiles[1] = { nick: 'AI', guest: true, bot: true };
-      rooms[roomId].game = createGame();
+      rooms[roomId].game = createGame(rooms[roomId].itemMode);
       rooms[roomId].startedAt = Date.now();
       rooms[roomId].aiMem = expert3.createMem();   // 전문가 AI 카운팅 메모리
-      socket.emit('game_start', { vsBot: true, difficulty, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles });
+      socket.emit('game_start', { vsBot: true, difficulty, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles, itemMode: rooms[roomId].itemMode });
       broadcast(roomId);
       startClock(roomId);
       setTimeout(() => maybeCpuAct(roomId), 600);
@@ -1088,7 +1211,8 @@ io.on('connection', (socket) => {
       if (!aucBid) return;
     }
     const hand = isP1 ? g.p1Hand : g.p2Hand;
-    const idx = hand.findIndex(c => c.id === cardId); if (idx === -1) return;
+    const idx = hand.findIndex(c => c.id === cardId);
+    if (idx === -1) return;
     if (isP1 && g.auction.p1Submitted) return;
     if (!isP1 && g.auction.p2Submitted) return;
     const card = hand.splice(idx, 1)[0];
@@ -1098,6 +1222,35 @@ io.on('connection', (socket) => {
   });
 
   // 이모트 전달 (입력 제한)
+  // 아이템 사용 — 검증·효과 계산은 전부 서버에서. 클라이언트는 무엇을 썼는지만 보낸다.
+  socket.on('use_item', ({ itemId, cardId } = {}) => {
+    const room = rooms[socket.roomId]; if (!room?.game) return;
+    const g = room.game;
+    if (!g.itemMode) return;
+    const me = socket.playerIndex + 1;
+    if (socket.isSpec || !me) return;
+    // 재경매는 '진 쪽'만 쓸 수 있다 (이긴 사람이 물려서 판을 끄는 것 방지)
+    if (itemId === 'redo' && g.phase === 'reveal' && g.auction) {
+      const rev = !!g.fx.reverse;
+      const p1W = rev ? strength(g.auction.p1Bid) > strength(g.auction.p2Bid) : aBeatsB(g.auction.p1Bid, g.auction.p2Bid);
+      if ((p1W ? 1 : 2) === me) return socket.emit('item_fail', '이긴 경매는 다시 할 수 없어요.');
+    }
+    const out = items.use(g, me, itemId, cardId);
+    if (out.error) return socket.emit('item_fail', out.error);
+    // 양쪽에 알림 — 뭘 당했는지 모르면 억울하기만 하다
+    room.players.forEach((sid, i) => {
+      if (!sid) return;
+      io.to(sid).emit('item_used', {
+        byMe: i + 1 === me, itemId, name: out.name, icon: out.icon,
+        msg: out.msg, reveal: (i + 1 === me) ? out.reveal || null : null,
+      });
+    });
+    // 재경매로 배팅 단계로 돌아갔다면 이전 경매의 공개·정산 타이머를 즉시 무효화한다
+    if (out.rebid) g.settleSeq = (g.settleSeq || 0) + 1;
+    broadcast(socket.roomId);
+    if (out.rebid) setTimeout(() => maybeCpuAct(socket.roomId), 700);   // 재경매 → AI 다시 배팅
+  });
+
   socket.on('emote', ({ emoji } = {}) => {
     const room = rooms[socket.roomId]; if (!room) return;
     const e = String(emoji || '').slice(0, 8); if (!e) return;
@@ -1249,11 +1402,11 @@ function forfeitPlayer(roomId, slot) {
 // 같은 방 새 게임 시작
 function restartGame(roomId) {
   const room = rooms[roomId]; if (!room) return;
-  room.game = createGame();
+  room.game = createGame(room.itemMode);
   room.startedAt = Date.now();
   room.aiMem = expert3.createMem();   // 새 판 → AI 메모리 초기화
   room.rematch = [false, false];
-  room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks, profiles: room.profiles }); });
+  room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks, profiles: room.profiles, itemMode: room.itemMode }); });
   broadcast(roomId);
   startClock(roomId);
   if (room.cpuIndex !== undefined) setTimeout(() => maybeCpuAct(roomId), 600);
@@ -1285,14 +1438,22 @@ function resolveBidding(roomId) {
   const g = room.game;
   if (g.phase !== 'bidding' || !g.auction) return;   // 이미 처리됨(이중 정산 방지)
   if (g.auction.p1Submitted && g.auction.p2Submitted) {
-    // 긴장 브레이크 — 배팅 완료 후 한 템포(뒤집힌 채 대치) 쉬고 나서 공개
+    // 긴장 브레이크 — 배팅 완료 후 한 템포(뒤집힌 채 대치) 쉬고 나서 공개.
+    // 재경매 아이템으로 배팅 단계로 되돌아가면 이 타이머들이 고아가 되어 다음 경매를 건드린다.
+    // 경매마다 일련번호를 붙여, 번호가 바뀌었으면 옛 타이머는 스스로 물러나게 한다.
     g.phase = 'showdown';
+    const seq = (g.settleSeq = (g.settleSeq || 0) + 1);
+    const alive = () => { const rm = rooms[roomId]; const gg = rm && rm.game; return gg && gg.settleSeq === seq ? gg : null; };
     broadcast(roomId);
     setTimeout(() => tutGate(roomId, () => {
-      const rm = rooms[roomId]; if (!rm || !rm.game || rm.game.phase !== 'showdown') return;
-      rm.game.phase = 'reveal';
+      const gg = alive(); if (!gg || gg.phase !== 'showdown') return;
+      gg.phase = 'reveal';
       broadcast(roomId);
-      setTimeout(() => tutGate(roomId, () => settle(roomId)), 2500);
+      if (gg.itemMode) setTimeout(() => cpuMaybeRedo(roomId), 800);   // 공개 직후 AI가 재경매를 쓸 수 있는 창
+      setTimeout(() => tutGate(roomId, () => {
+        const g2 = alive(); if (!g2 || g2.phase !== 'reveal') return;
+        settle(roomId);
+      }), 2500);
     }), 1100);
   } else {
     broadcast(roomId);
@@ -1303,10 +1464,13 @@ function resolveBidding(roomId) {
 function settle(roomId) {
   const room = rooms[roomId]; if (!room?.game) return;
   const g = room.game;
+  if (g.phase !== 'reveal' || !g.auction) return;   // 재경매 아이템으로 되돌아간 경우 등
   const p1Bid = g.auction.p1Bid, p2Bid = g.auction.p2Bid;
-  const items = [g.auction.centerCard, g.auction._offeredCard];
+  const prize = [g.auction.centerCard, g.auction._offeredCard];
 
-  const p1Wins = aBeatsB(p1Bid, p2Bid);
+  // 뒤집개(반전) — 이번 경매만 약한 카드가 이긴다. 배신 규칙은 무시하고 순수 강함으로 비교.
+  const reversed = !!(g.itemMode && g.fx.reverse);
+  const p1Wins = reversed ? strength(p1Bid) > strength(p2Bid) : aBeatsB(p1Bid, p2Bid);
 
   // 전문가 AI 카운팅 메모리 갱신 (리빌에서 전부 공개되는 정보만 — 치팅 아님)
   if (room.cpuIndex !== undefined && room.difficulty === 'expert' && room.aiMem) {
@@ -1315,16 +1479,16 @@ function settle(roomId) {
     const humanAcq = ci === 0 ? g.p2Acquired : g.p1Acquired;
     const aiAcq = ci === 0 ? g.p1Acquired : g.p2Acquired;
     const oppValEst = Math.max(
-      expert3.wantValue(items, humanAcq, expert3.feasibleTarget(humanAcq, aiAcq)),
-      expert3.denyValue(items, aiAcq));
+      expert3.wantValue(prize, humanAcq, expert3.feasibleTarget(humanAcq, aiAcq)),
+      expert3.denyValue(prize, aiAcq));
     expert3.noteSettle(room.aiMem, {
       myBid: aiBidCard, oppBid: humanBid, offered: g.auction._offeredCard,
       offeredByMe: g.auctioneer === ci + 1, oppValEst,
     });
   }
 
-  // 졸개의 배신 발동 감지
-  const special = (is610(p1Bid) && is21(p2Bid)) || (is610(p2Bid) && is21(p1Bid));
+  // 졸개의 배신 발동 감지 (반전 중에는 강약이 뒤집히므로 배신 연출 없음)
+  const special = !reversed && ((is610(p1Bid) && is21(p2Bid)) || (is610(p2Bid) && is21(p1Bid)));
   if (special) {
     room.players.forEach(sid => { if (sid) io.to(sid).emit('special', {}); });
     // 배신 성공자(6-10을 낸 승자) 미션·칭호 반영
@@ -1332,10 +1496,24 @@ function settle(roomId) {
     if (room.tokens && room.tokens[actor]) accounts.betrayEvent(room.tokens[actor]);
   }
 
-  if (p1Wins) g.p1Acquired.push(...items); else g.p2Acquired.push(...items);
-  // 배팅 카드 교환
-  g.p2Hand.push(p1Bid); g.p1Hand.push(p2Bid);
+  if (p1Wins) g.p1Acquired.push(...prize); else g.p2Acquired.push(...prize);
+  // 배팅 카드 교환 — 에누리가 걸리면 교환 자체가 무효가 되어 각자 자기 카드를 회수한다.
+  // 한쪽만 회수시키면 그쪽은 +2, 상대는 0이 되어 상대 손패가 계속 말라붙는다(진행 불가로 이어짐).
+  const noSwap = !!(g.itemMode && (g.fx.noSwap[1] || g.fx.noSwap[2]));
+  if (noSwap) { g.p1Hand.push(p1Bid); g.p2Hand.push(p2Bid); }
+  else { g.p2Hand.push(p1Bid); g.p1Hand.push(p2Bid); }
   g.auction = null;
+
+  // 경매 패자 위로금 — 진 사람에게 아이템 1개 (뒤진 쪽에만 전설)
+  if (g.itemMode) {
+    const loser = p1Wins ? 2 : 1;
+    const got = items.grant(g, loser);
+    if (got) {
+      const sid = room.players[loser - 1];
+      if (sid) io.to(sid).emit('item_get', got);
+      if (room.cpuIndex === loser - 1) room.cpuItemPending = true;   // AI가 받음
+    }
+  }
 
   // AI가 경매를 이기면 가끔 이모트로 도발
   if (room.cpuIndex !== undefined) {
@@ -1361,8 +1539,9 @@ function settle(roomId) {
     }, 1700);
     return;
   }
-  // 더 뽑을 카드가 없거나 양쪽 손패 소진 → 세트 근접도로 판정 (무승부 최소화)
-  if (g.centerDeck.length === 0 || (g.p1Hand.length === 0 && g.p2Hand.length === 0)) {
+  // 더 뽑을 카드가 없거나, 한쪽이라도 손패가 비면 다음 경매를 진행할 수 없다 → 세트 근접도로 판정.
+  // (배팅은 양쪽 모두 손패 1장이 필요하므로, 한 명만 비어도 교착이다)
+  if (g.centerDeck.length === 0 || g.p1Hand.length === 0 || g.p2Hand.length === 0) {
     g.phase = 'game_over';
     endClock(room);
     const winner = resolveByProgress(g.p1Acquired, g.p2Acquired);
@@ -1412,7 +1591,7 @@ function finishStats(room, winner, forfeit = false) {
     const out = accounts.recordResult(tok, result, {
       vsBot: room.vsBot, difficulty: room.difficulty, oppLabel,
       sameIp, friendly, turns, playtimeSec, oppUid, forfeit,
-      noRank: !!room.botMatch,   // 위장 봇 매치는 코인·XP만, RP는 랭킹 무결성 위해 미반영
+      noRank: !!room.botMatch || !!room.itemMode,   // 위장 봇 매치·아이템전은 코인·XP만, RP는 랭킹 무결성 위해 미반영
     });
     if (out && room.players[i]) io.to(room.players[i]).emit('profile', { profile: out.profile, result, rewards: out.rewards });
   });

@@ -534,6 +534,166 @@ async function openMissions() {
 function closeMissions() { document.getElementById('missionModal').classList.remove('show'); }
 
 // ══════════════════════════════════════════════════════════
+//  아이템전 (이벤트 모드) — AI 대전 전용
+// ══════════════════════════════════════════════════════════
+// 카탈로그는 서버 items.js와 같은 내용을 표시용으로만 들고 있는다.
+// 실제 효과·검증은 전부 서버가 하므로 여기 값을 고쳐도 게임에 영향은 없다.
+const ITEM_INFO = {
+  magnify:    { name: '돋보기',       icon: '🔍', tier: 'common', desc: '상대 손패 2장을 훔쳐본다' },
+  hourglass:  { name: '모래시계',     icon: '⏳', tier: 'common', desc: '상대의 남은 시간을 30초 깎는다' },
+  swap:       { name: '손바꿈',       icon: '🔀', tier: 'common', desc: '내 손패 1장을 덱의 카드와 바꾼다', needsCard: true },
+  smoke:      { name: '연막탄',       icon: '💨', tier: 'rare',   desc: '이번 경매품을 상대에게만 가린다' },
+  flip:       { name: '뒤집개',       icon: '🔄', tier: 'rare',   desc: '이번 경매만 약한 카드가 이긴다' },
+  pickpocket: { name: '소매치기',     icon: '🪝', tier: 'rare',   desc: '상대 손패 1장을 뺏고 내 카드 1장을 넘긴다' },
+  discount:   { name: '에누리',       icon: '💰', tier: 'rare',   desc: '이겨도 배팅 카드를 뺏기지 않는다' },
+  redo:       { name: '재경매',       icon: '📢', tier: 'rare',   desc: '진 경매를 무효로 하고 다시 배팅한다' },
+  steal:      { name: '도둑고양이',   icon: '🐈', tier: 'legend', desc: '상대가 낙찰받은 카드 1장을 훔친다' },
+  copy:       { name: '복사기',       icon: '🖨️', tier: 'legend', desc: '내가 낙찰받은 카드 1장을 복제한다' },
+  tyrant:     { name: '폭군',         icon: '👑', tier: 'legend', desc: '이번 턴 진행자 권한을 뺏는다' },
+  dice:       { name: '운명의 주사위', icon: '🎲', tier: 'legend', desc: '경매품 2장을 새로 뽑아 바꾼다' },
+};
+const TIER_LABEL = { common: '일반', rare: '희귀', legend: '전설' };
+let isItemMode = false;
+let _iuItem = null, _iuCard = null;
+
+// 로비 → 아이템전 시작 (난이도 선택 재사용)
+function openItemMode() {
+  askConfirm(
+    { icon: '🎪', title: '아이템전 (이벤트)',
+      desc: '경매에서 지면 아이템을 받아요! 12종 아이템으로 뒤집는 캐주얼 모드예요.\n랭킹에는 반영되지 않고 코인·경험치만 받아요.',
+      yes: '시작하기', no: '취소' },
+    () => startItemGame());
+}
+function startItemGame() {
+  isVsBot = true; isItemMode = true;
+  socket.emit('create_room', { vsBot: true, difficulty: 'normal', pid: PID, nick: getNick(), itemMode: true });
+}
+
+// 슬롯 3칸 렌더 — 지금 쓸 수 있는 것만 밝게
+function renderItems(s) {
+  const bar = document.getElementById('itemBar');
+  const badge = document.getElementById('oppItemBadge');
+  if (!bar) return;
+  if (!s || !s.itemMode) { bar.style.display = 'none'; badge.style.display = 'none'; hideFxBanner(); return; }
+  bar.style.display = '';
+  badge.style.display = '';
+  document.getElementById('oppItemCount').textContent = s.oppItemCount || 0;
+
+  const slots = document.getElementById('itemSlots');
+  const held = s.myItems || [];
+  let html = '';
+  for (let i = 0; i < 3; i++) {
+    const id = held[i];
+    if (!id) { html += '<div class="ib-slot empty"></div>'; continue; }
+    const it = ITEM_INFO[id] || { name: id, icon: '❓', tier: 'common' };
+    const usable = itemUsableNow(id, s);
+    html += `<div class="ib-slot ${it.tier} ${usable ? 'ready' : 'locked'}" title="${esc(it.name)}"
+                  onclick="${usable ? `openItemUse('${id}')` : ''}">${it.icon}</div>`;
+  }
+  slots.innerHTML = html;
+  renderFxBanner(s);
+}
+
+// 클라이언트 쪽 사용 가능 판단 (서버가 최종 판정 — 여기선 버튼을 흐리게 할 뿐)
+function itemUsableNow(id, s) {
+  if (!s || s.itemUsed) return false;
+  const PRE = ['draw', 'offer', 'choose_type', 'bidding'];
+  const phases = id === 'redo' ? ['reveal']
+               : id === 'tyrant' ? ['draw']
+               : id === 'dice' ? ['choose_type', 'bidding']
+               : id === 'smoke' ? ['offer', 'choose_type', 'bidding']
+               : PRE;
+  if (!phases.includes(s.phase)) return false;
+  if (s.phase === 'bidding' && s.auction && s.auction.myBid) return false;   // 배팅 낸 뒤엔 불가
+  if (id === 'tyrant' && s.auctioneer === s.myIndex) return false;
+  return true;
+}
+
+function renderFxBanner(s) {
+  const el = document.getElementById('fxBanner');
+  if (!el) return;
+  const f = s.fx || {};
+  const msgs = [];
+  if (f.reverse) msgs.push('🔄 반전 — 약한 카드가 이긴다');
+  if (f.smokedMe) msgs.push('💨 연막 — 경매품이 안 보인다');
+  if (f.smokedOpp) msgs.push('💨 상대 시야를 가림');
+  if (f.noSwapMe) msgs.push('💰 에누리 — 배팅 카드를 지킨다');
+  let peekHtml = '';
+  if (f.peek && f.peek.length) {
+    peekHtml = ' 🔍 ' + f.peek.map(c =>
+      `<span style="display:inline-block;padding:0 5px;margin:0 1px;border-radius:5px;background:rgba(255,255,255,.22)">${c.kind}<small style="opacity:.75">-${c.grade}</small></span>`).join('');
+  }
+  if (!msgs.length && !peekHtml) { el.style.display = 'none'; return; }
+  el.innerHTML = esc(msgs.join('  ·  ')) + peekHtml;
+  el.style.display = '';
+}
+function hideFxBanner() { const el = document.getElementById('fxBanner'); if (el) el.style.display = 'none'; }
+
+// 사용 확인 모달 (손바꿈만 카드 선택 필요)
+function openItemUse(id) {
+  const it = ITEM_INFO[id]; if (!it) return;
+  _iuItem = id; _iuCard = null;
+  document.getElementById('iuTitle').textContent = `${it.icon} ${it.name}`;
+  document.getElementById('iuIcon').textContent = it.icon;
+  document.getElementById('iuDesc').textContent = it.desc;
+  const handBox = document.getElementById('iuHand');
+  if (it.needsCard) {
+    const hand = (state && state.myHand) || [];
+    handBox.innerHTML = '<div style="width:100%;font-size:.7rem;color:#a08a70;text-align:center;margin-bottom:2px">바꿀 카드를 고르세요</div>'
+      + hand.map(c => `<div class="iu-c" onclick="pickIuCard(this,'${c.id}')">${c.kind}<small>${c.grade}등급</small></div>`).join('');
+    document.getElementById('iuGo').disabled = true;
+  } else {
+    handBox.innerHTML = '';
+    document.getElementById('iuGo').disabled = false;
+  }
+  document.getElementById('itemUseModal').classList.add('show');
+}
+function pickIuCard(el, cardId) {
+  _iuCard = cardId;
+  document.querySelectorAll('#iuHand .iu-c').forEach(e => e.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('iuGo').disabled = false;
+}
+function closeItemUse() { document.getElementById('itemUseModal').classList.remove('show'); _iuItem = null; _iuCard = null; }
+function confirmUseItem() {
+  if (!_iuItem) return;
+  socket.emit('use_item', { itemId: _iuItem, cardId: _iuCard || undefined });
+  closeItemUse();
+}
+
+// 아이템 획득 연출
+function showItemGet(it) {
+  const box = document.getElementById('itemGetFx');
+  document.getElementById('igTier').textContent = TIER_LABEL[it.tier] || '';
+  document.getElementById('igIcon').textContent = it.icon;
+  document.getElementById('igName').textContent = it.name;
+  document.getElementById('igDesc').textContent = it.desc || '';
+  box.style.display = 'flex';
+  playSound(it.tier === 'legend' ? 'setwin' : 'bell');
+  setTimeout(() => { box.style.display = 'none'; }, it.tier === 'legend' ? 1900 : 1300);
+}
+
+socket.on('item_get', it => showItemGet(it));
+socket.on('item_fail', msg => toast('⚠️ ' + esc(msg || '지금은 쓸 수 없어요.')));
+socket.on('item_used', u => {
+  const who = u.byMe ? '' : '상대가 ';
+  toast(`${u.icon} ${who}<b>${esc(u.name)}</b> — ${esc(u.msg || '')}`, 2600);
+  playSound(u.byMe ? 'place' : 'flip');
+  if (u.reveal) showItemReveal(u);
+});
+
+// 내가 쓴 아이템의 결과(엿본 카드·뺏은 카드 등)를 잠깐 보여준다
+function showItemReveal(u) {
+  const r = u.reveal;
+  const cardTag = c => `<span style="display:inline-block;padding:2px 7px;margin:0 2px;border-radius:6px;background:rgba(255,212,121,.2);border:1px solid #ffd479;font-weight:800">${c.kind}<small style="opacity:.7"> ${c.grade}</small></span>`;
+  let html = '';
+  if (r.got && r.gave) html = `얻음 ${cardTag(r.got)} / 넘김 ${cardTag(r.gave)}`;
+  else if (r.got) html = `얻음 ${cardTag(r.got)}`;
+  else if (r.prize) html = `새 경매품 ${r.prize.map(cardTag).join('')}`;
+  if (html) setTimeout(() => toast(html, 2800), 700);
+}
+
+// ══════════════════════════════════════════════════════════
 //  친구
 // ══════════════════════════════════════════════════════════
 let _friendData = { friends: [], reqIn: [], reqOut: [] };
@@ -1674,9 +1834,11 @@ socket.on('spec_challenge_fail', () => {
 });
 
 socket.on('error', msg => alert(msg));
-socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spectate }) => {
+socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spectate, itemMode }) => {
   isVsBot = vsBot;
   isSpec = !!spectate;
+  isItemMode = !!itemMode;
+  document.body.classList.toggle('item-mode', isItemMode);   // 아이템전 전용 톤
   gameNicks = nicks || null;
   gameProfiles = profiles || null;
   if (roomId && !isSpec) saveSession(roomId);   // 관전은 재접속 세션 저장 안 함
@@ -1727,6 +1889,7 @@ socket.on('state_update', s => {
     ? captureSettleFlight(state) : null;
   prevPhase = s.phase; state = s; myIndex = s.myIndex;
   render(changed);
+  renderItems(s);
   if (flight) playSettleFlight(flight);
   tutTick();
   if (changed && s.phase === 'reveal') { playSound('reveal'); if (!isSpec && s.auction) screenFx(myBidWins(s.auction.myBid, s.auction.oppBid) ? 'auc-win' : 'reveal'); }

@@ -459,6 +459,90 @@
     }
     .pc-logout:hover { border-color:#c05050; color:#ff9a9a; }
 
+    /* ══ 아이템전 (이벤트 모드) ══ */
+    /* 클래식(어두운 초록 펠트)과 구분되도록 아이템전은 보랏빛 테이블 */
+    body.item-mode #game { --felt:#4a2a6a; --felt-d:#2c1740; }
+    /* 로비 진입 버튼 — 클래식과 구분되게 밝고 알록달록하게 */
+    .event-pill {
+      width:100%; margin-top:8px; padding:10px 12px; border-radius:14px; cursor:pointer;
+      background:linear-gradient(100deg,#6d3fa0,#a03f7a 45%,#c9563f);
+      border:1.5px solid #ffd479; color:#fff6e0; font-family:inherit; font-size:.86rem; font-weight:700;
+      display:flex; align-items:center; justify-content:center; gap:7px;
+      box-shadow:0 3px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.25);
+      transition:.15s;
+    }
+    .event-pill:hover { filter:brightness(1.12); transform:translateY(-1px); }
+    .ev-badge {
+      background:#ffd479; color:#5a2a10; border-radius:5px; padding:1px 5px;
+      font-size:.58rem; font-weight:800; letter-spacing:.04em;
+    }
+    .ev-sub { font-size:.62rem; opacity:.8; font-weight:600; }
+
+    /* 인게임 아이템 슬롯 — 왼쪽 세로 3칸 */
+    #itemBar { position:absolute; left:10px; bottom:calc(96px + var(--safe-b)); z-index:7; }
+    .ib-slots { display:flex; flex-direction:column; gap:6px; }
+    .ib-slot {
+      width:44px; height:44px; border-radius:11px; cursor:pointer; position:relative;
+      display:flex; align-items:center; justify-content:center; font-size:1.35rem;
+      background:linear-gradient(180deg,#4a2a6a,#2c1740); border:1.5px solid #8f6fc0;
+      box-shadow:0 2px 6px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.18);
+      transition:transform .12s, filter .12s;
+    }
+    .ib-slot.empty { background:rgba(255,255,255,.05); border-style:dashed; border-color:rgba(255,255,255,.18); cursor:default; }
+    .ib-slot.rare   { border-color:#5fb0e8; background:linear-gradient(180deg,#1f4a6b,#12293d); }
+    .ib-slot.legend { border-color:#ffd479; background:linear-gradient(180deg,#7a4a10,#3d2408);
+                      box-shadow:0 0 10px rgba(255,212,121,.45), inset 0 1px 0 rgba(255,255,255,.25); }
+    .ib-slot.ready:active { transform:scale(.92); }
+    .ib-slot.locked { filter:grayscale(.75) brightness(.6); cursor:not-allowed; }
+    .ib-slot .ib-new {
+      position:absolute; top:-4px; right:-4px; width:9px; height:9px; border-radius:50%;
+      background:#4ec36a; box-shadow:0 0 5px #4ec36a;
+    }
+
+    /* 상대 보유 아이템 수 — 상대 시계 바로 아래 (좌상단은 나가기·설명·설정 버튼 자리) */
+    #oppItemBadge {
+      position:absolute; right:16px; top:calc(92px + var(--safe-t)); z-index:7;
+      display:flex; align-items:center; gap:4px; padding:4px 9px; border-radius:11px;
+      background:rgba(74,42,106,.85); border:1px solid #8f6fc0; color:#e8d8ff; font-size:.72rem; font-weight:700;
+    }
+
+    /* 진행 중인 효과 배너 (반전/연막 등) */
+    #fxBanner {
+      position:absolute; left:50%; top:calc(96px + var(--safe-t)); transform:translateX(-50%); z-index:8;
+      padding:5px 13px; border-radius:20px; font-size:.74rem; font-weight:700; white-space:nowrap;
+      background:linear-gradient(100deg,#6d3fa0,#c9563f); border:1px solid #ffd479; color:#fff6e0;
+      box-shadow:0 3px 10px rgba(0,0,0,.45);
+    }
+
+    /* 아이템 획득 연출 */
+    #itemGetFx {
+      position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center;
+      background:rgba(8,2,12,.55); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+      pointer-events:none;
+    }
+    .ig-card {
+      width:190px; padding:20px 16px 18px; border-radius:18px; text-align:center;
+      background:linear-gradient(180deg,#4a2a6a,#26123a); border:2px solid #ffd479;
+      box-shadow:0 0 28px rgba(255,212,121,.5), 0 14px 40px rgba(0,0,0,.6);
+      animation:igPop .5s cubic-bezier(.34,1.5,.64,1);
+    }
+    @keyframes igPop { 0% { opacity:0; transform:scale(.6) translateY(20px); } 100% { opacity:1; transform:none; } }
+    .ig-tier { font-size:.62rem; font-weight:800; letter-spacing:.1em; color:#ffd479; margin-bottom:6px; }
+    .ig-icon { font-size:3rem; line-height:1.1; filter:drop-shadow(0 3px 8px rgba(0,0,0,.5)); }
+    .ig-name { font-size:1.05rem; font-weight:800; color:#fff6e0; margin-top:6px; }
+    .ig-desc { font-size:.7rem; color:#c9b0e0; margin-top:5px; line-height:1.45; }
+
+    /* 아이템 사용 모달 */
+    .iu-icon { font-size:2.6rem; text-align:center; }
+    .iu-hand { display:flex; flex-wrap:wrap; gap:5px; justify-content:center; }
+    .iu-hand .iu-c {
+      min-width:38px; padding:7px 5px; border-radius:8px; cursor:pointer; text-align:center;
+      background:rgba(255,255,255,.06); border:1.5px solid rgba(185,141,52,.45); color:#f0dcc0;
+      font-size:.9rem; font-weight:800;
+    }
+    .iu-hand .iu-c.sel { border-color:#ffd479; background:rgba(255,212,121,.2); }
+    .iu-hand .iu-c small { display:block; font-size:.58rem; opacity:.7; font-weight:600; }
+
     /* ── 친구 · 클랜 ── */
     .top-link.wide { flex-direction:row; gap:6px; padding:10px 4px; font-size:.8rem; }
     .tl-badge {
@@ -1429,6 +1513,9 @@
       #myProfile { bottom:calc(10px + var(--safe-b)); right:10px; left:auto; }
       #myTimer { bottom:calc(56px + var(--safe-b)); right:10px; left:auto; }
       #emoteWrap { bottom:calc(96px + var(--safe-b)); right:10px; left:auto; }
+      #oppItemBadge { top:calc(80px + var(--safe-t)); right:10px; }
+      #itemBar { bottom:calc(88px + var(--safe-b)); left:8px; }
+      .ib-slot { width:40px; height:40px; font-size:1.2rem; }
       #oppZone { padding-top:56px; margin-top:0; }   /* 상대 손패가 프로필·컨트롤 아래로 */
 
       /* 워터마크 로고 축소 */
@@ -1554,6 +1641,7 @@
     </div>
 
     <!-- 친구 초대 -->
+    <button class="event-pill" onclick="openItemMode()"><span class="ev-badge">EVENT</span>🎪 아이템전 <span class="ev-sub">랭킹 미반영 · 코인만</span></button>
     <button class="invite-pill" onclick="inviteFriend()"><svg class="svgi" viewBox="0 0 24 24" style="color:#f5cf6e"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>친구 초대하기</button>
 
     <!-- 앱 설치 (설치 가능할 때만 표시) -->
@@ -1776,6 +1864,37 @@
     <div class="bid-area" id="myBid"></div>
     <div class="pile" id="myAcq"></div>
     <div class="fan" id="myHand"></div>
+  </div>
+
+  <!-- 아이템전 HUD (아이템 모드에서만 표시) -->
+  <div id="itemBar" style="display:none">
+    <div class="ib-slots" id="itemSlots"></div>
+  </div>
+  <div id="oppItemBadge" style="display:none"><span>🎁</span><b id="oppItemCount">0</b></div>
+  <div id="fxBanner" style="display:none"></div>
+</div>
+
+<!-- 아이템 획득 연출 -->
+<div id="itemGetFx" style="display:none">
+  <div class="ig-card">
+    <div class="ig-tier" id="igTier">일반</div>
+    <div class="ig-icon" id="igIcon">🔍</div>
+    <div class="ig-name" id="igName">돋보기</div>
+    <div class="ig-desc" id="igDesc"></div>
+  </div>
+</div>
+
+<!-- 아이템 사용 확인 -->
+<div class="lb-modal" id="itemUseModal" onclick="if(event.target===this)closeItemUse()">
+  <div class="lb-box" style="width:290px">
+    <div class="lb-title" id="iuTitle">아이템 사용</div>
+    <div class="iu-icon" id="iuIcon">🔍</div>
+    <p class="auth-hint" id="iuDesc" style="text-align:center;margin:0"></p>
+    <div id="iuHand" class="iu-hand"></div>
+    <div class="soc-row">
+      <button class="btn btn-gold" style="flex:1" id="iuGo" onclick="confirmUseItem()">사용</button>
+      <button class="btn btn-outline" style="flex:1" onclick="closeItemUse()">취소</button>
+    </div>
   </div>
 </div>
 
