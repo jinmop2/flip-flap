@@ -994,7 +994,10 @@
     /* ─── 테이블 ─── */
     #game {
       display:none; position:relative;
-      width:100%; max-width:780px; height:100vh; max-height:920px;
+      /* --app-h = 실제로 보이는 높이(JS가 visualViewport 기준으로 넣어줌).
+         모바일 브라우저 주소창이 떠 있으면 100vh 가 화면보다 커져 손패가 잘린다.
+         dvh 를 못 쓰는 구형·인앱 브라우저까지 덮기 위해 JS 값을 1순위로 둔다. */
+      width:100%; max-width:780px; height:var(--app-h, 100vh); max-height:920px;
       padding:16px 20px;
       flex-direction:column;
       /* 펠트 테이블 */
@@ -1401,11 +1404,13 @@
     .fan-slot:hover { z-index:40 !important; }
 
     /* ─── 획득 더미 (종류별 겹침) ─── */
-    .pile { display:flex; gap:10px; min-height:56px; align-items:center; justify-content:center; flex-wrap:wrap; }
+    /* 획득 더미는 줄바꿈하지 않는다 — 줄바꿈되면 카드가 쌓일수록 세로로 자라 손패를 화면 밖으로 밀어낸다.
+       카드끼리 겹쳐 쌓이므로 한 줄로도 충분히 들어간다(세트 최대 6장 × 4종). */
+    .pile { display:flex; gap:6px; min-height:56px; align-items:center; justify-content:center; flex-wrap:nowrap; max-width:100%; }
     .pile-group { display:flex; }
     .pile-group .card {
       width:48px; height:66px; padding:4px 4px;
-      margin-left:-26px; box-shadow:0 2px 5px rgba(0,0,0,.45);
+      margin-left:-33px; box-shadow:0 2px 5px rgba(0,0,0,.45);   /* 촘촘히 겹쳐 한 줄 유지 */
     }
     .pile-group .card:first-child { margin-left:0; }
     .pile-group .card .c-num { font-size:2rem; padding-bottom:2px; }
@@ -1569,7 +1574,7 @@
     /* ═══ 모바일 반응형 ═══ */
     @media (max-width: 600px) {
       #game {
-        height:100dvh; max-height:none; overflow:hidden;   /* 한 화면 고정 — 스크롤 없음 */
+        height:var(--app-h, 100dvh); max-height:none; overflow:hidden;   /* 한 화면 고정 — 스크롤 없음 */
         box-sizing:border-box;
         border-width:5px; outline-width:1px; border-radius:14px;
         padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px; gap:6px;
@@ -1599,7 +1604,7 @@
 
       /* 획득 더미 */
       .pile { min-height:44px; gap:6px; }
-      .pile-group .card { width:42px; height:58px; margin-left:-24px; }
+      .pile-group .card { width:42px; height:58px; margin-left:-30px; }   /* 촘촘히 겹쳐 한 줄 유지 (가로 넘침 방지) */
       .pile-group .card .c-num { font-size:1.6rem; }
       .pile-count { font-size:.55rem; }
 
@@ -1655,6 +1660,43 @@
       .card[data-kind] { box-shadow:0 1px 3px rgba(0,0,0,.4); }
       .emote-bubble { filter:none; }
       #tableLogo { opacity:.04; }
+      /* backdrop-filter 는 모바일 GPU에서 값이 비싸다. 배경을 조금 더 진하게 깔아 대체한다. */
+      .lb-modal, #rulesModal, #itemGetFx {
+        backdrop-filter:none; -webkit-backdrop-filter:none;
+        background:rgba(8,2,4,.92);
+      }
+    }
+
+    /* ═══ 세로 공간이 부족할 때 (주소창이 뜬 웹 브라우저·저해상도 폰) ═══
+       획득 카드가 쌓이면 더미가 줄바꿈되며 세로로 자라, 내 손패가 화면 밖으로 밀려난다.
+       zone 이 min-height:auto 라 flex 압축도 안 되므로, 압축을 허용하고 카드를 줄여 실제로 들어가게 한다. */
+    .zone { min-height:0; }
+
+    @media (max-height: 730px) {
+      #game { gap:4px; }
+      .card { width:48px; height:67px; border-radius:8px; padding:3px; }
+      .fan { min-height:86px; }
+      .fan.top { min-height:52px; }
+      .fan.top .card { width:36px; height:50px; }
+      .pile { min-height:44px; gap:5px; }
+      .pile-group .card { width:40px; height:55px; margin-left:-26px; }
+      .pile-group .card .c-num { font-size:1.6rem; }
+      #myZone { padding-bottom:calc(24px + var(--safe-b)); }
+      #oppZone { margin-top:-4px; }
+      #centerZone { gap:6px; }
+    }
+
+    @media (max-height: 640px) {
+      .card { width:42px; height:59px; border-radius:7px; }
+      .fan { min-height:72px; }
+      .fan.top { min-height:44px; }
+      .fan.top .card { width:31px; height:43px; }
+      .pile { min-height:36px; gap:4px; }
+      .pile-group .card { width:34px; height:47px; margin-left:-22px; }
+      .pile-group .card .c-num { font-size:1.35rem; }
+      .pile-group .card .c-rank { font-size:.62rem; min-width:14px; }
+      #myZone { padding-bottom:calc(16px + var(--safe-b)); }
+      #myProfile { transform:scale(.9); transform-origin:bottom right; }
     }
   </style>
 </head>

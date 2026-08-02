@@ -1,4 +1,24 @@
 const socket = io({ transports: ['websocket', 'polling'] });   // 웹소켓 우선 — 폴링 왕복 생략, 연결 빨라짐
+
+// ── 화면 높이 동기화 ──────────────────────────────────────
+// 모바일 브라우저는 주소창이 떠 있어도 100vh 를 "주소창 숨김 기준"으로 계산한다.
+// 그러면 게임판이 화면보다 커져 하단(내 손패·프로필)이 잘린다.
+// dvh 를 못 쓰는 구형 iOS·카톡 인앱 브라우저까지 덮으려면 실제 보이는 높이를 직접 넣는 수밖에 없다.
+// visualViewport 가 있으면 그쪽이 가장 정확하다(키보드·주소창 반영).
+let _appHRaf = 0;
+function syncAppHeight() {
+  if (_appHRaf) return;                                   // 리사이즈 폭주 방지 — 프레임당 한 번만
+  _appHRaf = requestAnimationFrame(() => {
+    _appHRaf = 0;
+    const h = Math.round((window.visualViewport && window.visualViewport.height) || window.innerHeight);
+    if (h > 0) document.documentElement.style.setProperty('--app-h', h + 'px');
+  });
+}
+syncAppHeight();
+addEventListener('resize', syncAppHeight);
+addEventListener('orientationchange', () => setTimeout(syncAppHeight, 250));   // 회전은 값이 늦게 확정된다
+if (window.visualViewport) window.visualViewport.addEventListener('resize', syncAppHeight);
+
 document.addEventListener('dragstart', e => e.preventDefault());   // 카드·이미지 드래그 차단
 document.addEventListener('contextmenu', e => { if (e.target.closest('#game')) e.preventDefault(); });   // 게임 중 길게눌러 메뉴 방지
 let state = null, myIndex = null, selectedBidCard = null;
