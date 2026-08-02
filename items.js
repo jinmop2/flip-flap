@@ -46,7 +46,8 @@ const ITEMS = {
     apply({ g, me, arg }) {
       if (!g.centerDeck.length) return { error: '덱에 카드가 없어요.' };
       const hand = me === 1 ? g.p1Hand : g.p2Hand;
-      const i = hand.findIndex(c => c.id === arg);
+      // 카드 id는 숫자지만 전송 경로에 따라 문자열로 올 수 있다. 타입에 관대하게 비교한다.
+      const i = hand.findIndex(c => String(c.id) === String(arg));
       if (i < 0) return { error: '내 손패의 카드가 아니에요.' };
       const out = hand[i];
       hand[i] = g.centerDeck.shift();
@@ -165,6 +166,9 @@ const ITEMS = {
     phases: ['draw'],            // 중앙 카드를 뽑기 전에만
     apply({ g, me }) {
       if (g.auctioneer === me) return { error: '이미 내가 진행자예요.' };
+      // 진행자는 출품 1장 + 배팅 1장이 필요하다. 2장 미만이면 뺏는 순간 낼 카드가 없어 판이 멈춘다.
+      const myHand = me === 1 ? g.p1Hand : g.p2Hand;
+      if (myHand.length < 2) return { error: '손패가 2장 이상이어야 진행자를 뺏을 수 있어요.' };
       g.auctioneer = me;
       return { ok: true, msg: '진행자 자리를 빼앗았다!' };
     },

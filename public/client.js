@@ -553,6 +553,8 @@ const ITEM_INFO = {
   dice:       { name: '운명의 주사위', icon: '🎲', tier: 'legend', desc: '경매품 2장을 새로 뽑아 바꾼다' },
 };
 const TIER_LABEL = { common: '일반', rare: '희귀', legend: '전설' };
+// 직접 그린 SVG 아이콘 (item-icons.js). 못 불러오면 이모지로 대체.
+const itemArt = id => (typeof ITEM_ICONS !== 'undefined' && ITEM_ICONS[id]) || (ITEM_INFO[id] ? ITEM_INFO[id].icon : '❓');
 let isItemMode = false;
 let _iuItem = null, _iuCard = null;
 
@@ -587,8 +589,9 @@ function renderItems(s) {
     if (!id) { html += '<div class="ib-slot empty"></div>'; continue; }
     const it = ITEM_INFO[id] || { name: id, icon: '❓', tier: 'common' };
     const usable = itemUsableNow(id, s);
+    // 못 쓰는 슬롯도 눌리게 둔다 — 아무 반응이 없으면 뭘 가진 건지조차 알 수 없다
     html += `<div class="ib-slot ${it.tier} ${usable ? 'ready' : 'locked'}" title="${esc(it.name)}"
-                  onclick="${usable ? `openItemUse('${id}')` : ''}">${it.icon}</div>`;
+                  onclick="${usable ? `openItemUse('${id}')` : `explainItem('${id}')`}">${itemArt(id)}</div>`;
   }
   slots.innerHTML = html;
   renderFxBanner(s);
@@ -629,18 +632,41 @@ function renderFxBanner(s) {
 }
 function hideFxBanner() { const el = document.getElementById('fxBanner'); if (el) el.style.display = 'none'; }
 
+// 지금 못 쓰는 아이템을 눌렀을 때 — 무엇이고 언제 쓸 수 있는지 알려준다
+const WHEN_TEXT = {
+  redo:   '경매 결과가 공개된 뒤, 진 쪽만',
+  tyrant: '진행자가 카드를 뽑기 전에 (손패 2장 이상)',
+  dice:   '경매 방식이 정해진 뒤부터 배팅 전까지',
+  smoke:  '경매품이 나온 뒤부터 배팅 전까지',
+};
+function explainItem(id) {
+  const it = ITEM_INFO[id]; if (!it) return;
+  const when = WHEN_TEXT[id] || '내 차례에, 배팅을 내기 전까지';
+  const why = (state && state.itemUsed) ? '이번 턴엔 이미 아이템을 썼어요.' : `사용 시점: ${when}`;
+  toast(`<b>${esc(it.name)}</b> — ${esc(it.desc)}<br><span style="opacity:.75;font-size:.9em">${esc(why)}</span>`, 3200);
+  playSound('select');
+}
+
 // 사용 확인 모달 (손바꿈만 카드 선택 필요)
 function openItemUse(id) {
   const it = ITEM_INFO[id]; if (!it) return;
   _iuItem = id; _iuCard = null;
-  document.getElementById('iuTitle').textContent = `${it.icon} ${it.name}`;
-  document.getElementById('iuIcon').textContent = it.icon;
+  document.getElementById('iuTitle').textContent = it.name;
+  document.getElementById('iuIcon').innerHTML = itemArt(id);
   document.getElementById('iuDesc').textContent = it.desc;
   const handBox = document.getElementById('iuHand');
   if (it.needsCard) {
     const hand = (state && state.myHand) || [];
-    handBox.innerHTML = '<div style="width:100%;font-size:.7rem;color:#a08a70;text-align:center;margin-bottom:2px">바꿀 카드를 고르세요</div>'
-      + hand.map(c => `<div class="iu-c" onclick="pickIuCard(this,'${c.id}')">${c.kind}<small>${c.grade}등급</small></div>`).join('');
+    handBox.innerHTML = '<div style="width:100%;font-size:.7rem;color:#a08a70;text-align:center;margin-bottom:2px">바꿀 카드를 고르세요</div>';
+    // 카드 id는 숫자다(kind*100+grade). onclick 속성에 넣으면 문자열이 되어
+    // 서버의 엄격 비교(c.id === arg)에서 201 === '201' 로 어긋난다. 값을 그대로 넘긴다.
+    hand.forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'iu-c';
+      el.innerHTML = `${c.kind}<small>${c.grade}등급</small>`;
+      el.addEventListener('click', () => pickIuCard(el, c.id));
+      handBox.appendChild(el);
+    });
     document.getElementById('iuGo').disabled = true;
   } else {
     handBox.innerHTML = '';
@@ -657,7 +683,7 @@ function pickIuCard(el, cardId) {
 function closeItemUse() { document.getElementById('itemUseModal').classList.remove('show'); _iuItem = null; _iuCard = null; }
 function confirmUseItem() {
   if (!_iuItem) return;
-  socket.emit('use_item', { itemId: _iuItem, cardId: _iuCard || undefined });
+  socket.emit('use_item', { itemId: _iuItem, cardId: _iuCard ?? undefined });
   closeItemUse();
 }
 
@@ -665,20 +691,129 @@ function confirmUseItem() {
 function showItemGet(it) {
   const box = document.getElementById('itemGetFx');
   document.getElementById('igTier').textContent = TIER_LABEL[it.tier] || '';
-  document.getElementById('igIcon').textContent = it.icon;
+  document.getElementById('igIcon').innerHTML = itemArt(it.id);
   document.getElementById('igName').textContent = it.name;
   document.getElementById('igDesc').textContent = it.desc || '';
   box.style.display = 'flex';
+  // 티어별로 획득감 차등 — 전설은 링·파편까지 터뜨린다
+  const card = box.querySelector('.ig-card');
+  if (card) { card.className = 'ig-card ' + it.tier; }
   playSound(it.tier === 'legend' ? 'setwin' : 'bell');
-  setTimeout(() => { box.style.display = 'none'; }, it.tier === 'legend' ? 1900 : 1300);
+  if (it.tier !== 'common') {
+    fxAdd(`<div class="ifx-ring ${it.tier === 'legend' ? '' : 'r2'}"></div>`, 1000);
+    setTimeout(() => playSound('special'), 120);
+  }
+  if (it.tier === 'legend') {
+    shakeGame('m');
+    const colors = ['#ffd479', '#e06a5a', '#fff6e0'];
+    for (let i = 0; i < 12; i++) {
+      const a = (Math.PI * 2 * i) / 12;
+      const d = 110 + Math.random() * 80;
+      fxAdd(`<div class="ifx-spark" style="--dx:${(Math.cos(a)*d).toFixed(1)}px;--dy:${(Math.sin(a)*d).toFixed(1)}px;background:${colors[i%3]}"></div>`, 1100);
+    }
+  }
+  setTimeout(() => { box.style.display = 'none'; }, it.tier === 'legend' ? 2100 : 1400);
+}
+
+// ── 아이템 사용 연출 ──────────────────────────────────────
+// 티어가 높을수록 세게, 아이템 성격에 맞는 전용 연출을 얹는다.
+// 모든 요소는 애니메이션이 끝나면 제거해 잔여물이 남지 않게 한다.
+let _itemFxEl = null;
+function itemFxLayer() {
+  if (!_itemFxEl || !_itemFxEl.isConnected) {
+    _itemFxEl = document.createElement('div');
+    _itemFxEl.id = 'itemFx';
+    document.body.appendChild(_itemFxEl);
+  }
+  return _itemFxEl;
+}
+function fxAdd(html, ms) {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = html;
+  const node = wrap.firstElementChild;
+  itemFxLayer().appendChild(node);
+  setTimeout(() => node.remove(), ms);
+  return node;
+}
+function shakeGame(level) {
+  const g = document.getElementById('game');
+  if (!g) return;
+  const cls = 'ifx-shake-' + level;
+  g.classList.remove('ifx-shake-s', 'ifx-shake-m', 'ifx-shake-l');
+  void g.offsetWidth;                                   // 리플로우로 애니메이션 재시작
+  g.classList.add(cls);
+  setTimeout(() => g.classList.remove(cls), 900);
+}
+
+const TIER_SHAKE = { common: 's', rare: 'm', legend: 'l' };
+const TIER_MS    = { common: 1100, rare: 1300, legend: 1700 };
+
+function playItemFx(u) {
+  const tier = (ITEM_INFO[u.itemId] || {}).tier || 'common';
+  const mine = !!u.byMe;
+
+  // 1) 화면 플래시 + 충격파 링 (티어가 높을수록 여러 겹)
+  fxAdd(`<div class="ifx-flash ${tier}"></div>`, 900);
+  const rings = tier === 'legend' ? 3 : tier === 'rare' ? 2 : 1;
+  for (let i = 0; i < rings; i++) {
+    fxAdd(`<div class="ifx-ring ${i ? 'r' + (i + 1) : ''} ${mine ? '' : 'opp'}"></div>`, 1000);
+  }
+
+  // 2) 아이콘이 화면에 꽂히는 임팩트 (상대 것은 붉은 테두리로 구분)
+  fxAdd(`<div class="ifx-slam ${tier} ${mine ? 'me' : 'opp'}">
+      ${itemArt(u.itemId)}
+      <div class="ifx-name">${mine ? '' : '상대 '}${esc(u.name)}</div>
+      <div class="ifx-msg">${esc(u.msg || '')}</div>
+    </div>`, TIER_MS[tier]);
+
+  // 3) 전설은 파편까지 흩뿌린다
+  if (tier === 'legend') {
+    const colors = ['#ffd479', '#e06a5a', '#fff6e0', '#b98fe0'];
+    for (let i = 0; i < 14; i++) {
+      const a = (Math.PI * 2 * i) / 14 + Math.random() * 0.4;
+      const d = 130 + Math.random() * 110;
+      fxAdd(`<div class="ifx-spark" style="--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d).toFixed(1)}px;background:${colors[i % colors.length]};animation-delay:${(i % 5) * 0.03}s"></div>`, 1100);
+    }
+  }
+
+  shakeGame(TIER_SHAKE[tier]);
+
+  // 4) 아이템별 성격 연출
+  switch (u.itemId) {
+    case 'smoke':
+      fxAdd('<div class="ifx-smoke"></div>', 2700);
+      break;
+    case 'flip': {
+      const g = document.getElementById('game');
+      if (g) { g.classList.add('ifx-flipboard'); setTimeout(() => g.classList.remove('ifx-flipboard'), 900); }
+      break;
+    }
+    case 'tyrant':
+      fxAdd('<div class="ifx-press"></div>', 1100);
+      break;
+    case 'steal':
+      fxAdd('<div class="ifx-snatch"></div>', 1100);
+      break;
+    case 'hourglass': {
+      const t = document.getElementById(mine ? 'oppTimer' : 'myTimer');   // 시간이 깎이는 쪽
+      if (t) { t.classList.add('ifx-drain'); setTimeout(() => t.classList.remove('ifx-drain'), 1900); }
+      break;
+    }
+  }
+
+  // 5) 소리 — 티어별로 두껍게 겹친다
+  playSound(mine ? 'place' : 'flip');
+  if (tier !== 'common') setTimeout(() => playSound('special'), 90);
+  if (tier === 'legend') { setTimeout(() => playSound('setwin'), 200); setTimeout(() => playSound('bell'), 340); }
 }
 
 socket.on('item_get', it => showItemGet(it));
 socket.on('item_fail', msg => toast('⚠️ ' + esc(msg || '지금은 쓸 수 없어요.')));
 socket.on('item_used', u => {
-  const who = u.byMe ? '' : '상대가 ';
-  toast(`${u.icon} ${who}<b>${esc(u.name)}</b> — ${esc(u.msg || '')}`, 2600);
-  playSound(u.byMe ? 'place' : 'flip');
+  playItemFx(u);
+  const tier = (ITEM_INFO[u.itemId] || {}).tier || 'common';
+  // 연출이 지나간 뒤 무슨 일이 있었는지 글로 한 번 더 (뭘 당했는지 모르면 억울하다)
+  setTimeout(() => toast(`${u.byMe ? '' : '상대가 '}<b>${esc(u.name)}</b> — ${esc(u.msg || '')}`, 2400), TIER_MS[tier] - 300);
   if (u.reveal) showItemReveal(u);
 });
 

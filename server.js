@@ -649,8 +649,11 @@ function maybeCpuAct(roomId) {
             deckLeft: g.centerDeck.length, oppHandLen: (ci === 0 ? g.p2Hand : g.p1Hand).length }, room.aiMem || (room.aiMem = expert3.createMem()))
         : room.difficulty === 'easy' ? cpuChooseOffer(hand, acq)
         : offerX(hand, acq, opp);
-      const idx = hand.findIndex(c => c.id === card.id);
-      if (idx === -1) return;
+      // AI 전략이 손패에 없는 카드를 고르면(과거엔 조용히 멈춰 게임이 교착됐다)
+      // 손패 첫 장으로 대체해 어떻게든 진행시킨다. 손패가 아예 없으면 진행 자체가 불가.
+      if (!hand.length) return endByProgress(roomId);
+      let idx = card ? hand.findIndex(c => String(c.id) === String(card.id)) : -1;
+      if (idx === -1) idx = 0;
       g.auction._offeredCard = hand.splice(idx, 1)[0];
       g.phase = 'choose_type';
       broadcast(roomId);
@@ -669,6 +672,8 @@ function maybeCpuAct(roomId) {
         : room.difficulty === 'easy' ? cpuChooseType(hand, prize, acq, 'easy')
         : typeX(hand, prize, acq, opp);
       g.auction.auctionType = type === 'close' ? 'closed' : type;   // 'open'|'closed'
+      // 배팅은 양쪽 모두 1장이 필요하다. 아이템(폭군 등)으로 손패가 어긋나면 여기서 막힌다.
+      if (!g.p1Hand.length || !g.p2Hand.length) return endByProgress(roomId);
       g.phase = 'bidding';
       broadcast(roomId);
       maybeCpuAct(roomId);
@@ -832,6 +837,7 @@ function stateForSpec(game) {
 function broadcast(roomId) {
   const room = rooms[roomId];
   if (!room) return;
+  room.progressAt = Date.now();   // 교착 감시용 — 판이 마지막으로 움직인 시각
   room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('state_update', stateFor(room.game, i)); });
   if (room.specs && room.specs.length) {
     const sp = stateForSpec(room.game);
@@ -861,6 +867,23 @@ setInterval(() => {
         endClock(room);
         continue;
       }
+    }
+    // 교착 안전장치 — AI전에서 사람 차례가 아닌데 판이 오래 멈춰 있으면 되살린다.
+    // 정상 흐름의 최대 정지는 5초 남짓(쇼다운·공개·정산)이라 오탐 여지가 없다.
+    if (room.vsBot && room.progressAt && g.phase !== 'game_over') {
+      const idle = Date.now() - room.progressAt;
+      const humanTurn = ap && room.cpuIndex !== undefined && ap !== room.cpuIndex + 1;
+      if (!humanTurn && idle > 20000) {
+        if (!room.nudged) {
+          room.nudged = true;
+          console.warn('[교착 감지] 방 %s phase=%s — 복구 시도', roomId, g.phase);
+          // 단계마다 막힌 지점이 다르므로 그에 맞게 되살린다 (AI 재시동만으로는 정산 단계를 못 푼다)
+          if (g.phase === 'settled') advanceTurn(roomId);
+          else if (g.phase === 'reveal') settle(roomId);
+          else if (g.phase === 'showdown') { g.phase = 'reveal'; broadcast(roomId); setTimeout(() => settle(roomId), 2500); }
+          else maybeCpuAct(roomId);
+        } else if (idle > 32000) { console.warn('[교착 지속] 방 %s — 진행도 판정으로 종료', roomId); endByProgress(roomId); }
+      } else if (idle < 3000) room.nudged = false;
     }
     // 선공 뽑기(pick)는 시계가 흐르지 않음 → 45초 방치 시 자동 선택 (방 무기한 점유 방지)
     if (g.phase === 'pick' && g.pick) {
@@ -1195,6 +1218,7 @@ io.on('connection', (socket) => {
     if (g.phase !== 'choose_type' || g.auctioneer !== socket.playerIndex + 1) return;
     if (type !== 'open' && type !== 'closed') return;
     g.auction.auctionType = type;
+    if (!g.p1Hand.length || !g.p2Hand.length) return endByProgress(socket.roomId);   // 배팅 불가 → 진행도 판정
     g.phase = 'bidding';
     broadcast(socket.roomId);
     setTimeout(() => maybeCpuAct(socket.roomId), 300);
@@ -1461,6 +1485,19 @@ function resolveBidding(roomId) {
   }
 }
 
+// 더 진행할 수 없을 때 세트 근접도로 승부를 가른다 (덱 소진·손패 부족 등)
+function endByProgress(roomId) {
+  const room = rooms[roomId]; if (!room?.game) return;
+  const g = room.game;
+  if (g.phase === 'game_over') return;
+  g.phase = 'game_over';
+  endClock(room);
+  const winner = resolveByProgress(g.p1Acquired, g.p2Acquired);
+  const setKind = winner ? progress(winner === 1 ? g.p1Acquired : g.p2Acquired).kind : null;
+  finishStats(room, winner);
+  room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_over', { winner, setKind, byProgress: true, myIndex: i + 1 }); });
+}
+
 function settle(roomId) {
   const room = rooms[roomId]; if (!room?.game) return;
   const g = room.game;
@@ -1539,29 +1576,27 @@ function settle(roomId) {
     }, 1700);
     return;
   }
-  // 더 뽑을 카드가 없거나, 한쪽이라도 손패가 비면 다음 경매를 진행할 수 없다 → 세트 근접도로 판정.
-  // (배팅은 양쪽 모두 손패 1장이 필요하므로, 한 명만 비어도 교착이다)
-  if (g.centerDeck.length === 0 || g.p1Hand.length === 0 || g.p2Hand.length === 0) {
-    g.phase = 'game_over';
-    endClock(room);
-    const winner = resolveByProgress(g.p1Acquired, g.p2Acquired);
-    const setKind = winner ? progress(winner === 1 ? g.p1Acquired : g.p2Acquired).kind : null;
-    finishStats(room, winner);
-    room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_over', { winner, setKind, byProgress: true, myIndex: i + 1 }); });
-    return;
-  }
+  // 다음 턴을 실제로 둘 수 있는지 확인 — 진행자는 출품+배팅으로 2장, 상대는 배팅으로 1장이 필요하다.
+  // 모자란 채로 넘어가면 낼 카드가 없어 조용히 교착된다. 그럴 땐 세트 근접도로 판정.
+  const nextAuc = g.auctioneer === 1 ? 2 : 1;
+  const aucHand = (nextAuc === 1 ? g.p1Hand : g.p2Hand).length;
+  const othHand = (nextAuc === 1 ? g.p2Hand : g.p1Hand).length;
+  if (g.centerDeck.length === 0 || aucHand < 2 || othHand < 1) return endByProgress(roomId);
   // 정산 결과를 눈으로 확인할 시간 — 카드가 승자 더미로 날아가 안착하고, 늘어난 세트를 본 뒤 다음 턴
   g.phase = 'settled';
   broadcast(roomId);
-  setTimeout(() => tutGate(roomId, () => {
-    const rm = rooms[roomId]; if (!rm || !rm.game) return;
-    const gg = rm.game;
-    gg.turn++;
-    gg.auctioneer = gg.auctioneer === 1 ? 2 : 1;
-    startTurn(gg);
-    broadcast(roomId);
-    setTimeout(() => maybeCpuAct(roomId), 500);
-  }), SETTLE_PAUSE);
+  setTimeout(() => tutGate(roomId, () => advanceTurn(roomId)), SETTLE_PAUSE);
+}
+// 정산 화면에서 다음 턴으로 넘긴다. 타이머가 유실돼도 감시견이 이 함수를 다시 부를 수 있도록 분리했다.
+function advanceTurn(roomId) {
+  const rm = rooms[roomId]; if (!rm || !rm.game) return;
+  const gg = rm.game;
+  if (gg.phase !== 'settled') return;   // 이미 넘어갔으면 중복 진행 금지
+  gg.turn++;
+  gg.auctioneer = gg.auctioneer === 1 ? 2 : 1;
+  startTurn(gg);
+  broadcast(roomId);
+  setTimeout(() => maybeCpuAct(roomId), 500);
 }
 const SETTLE_PAUSE = 1600;   // reveal(결과공개) 뒤 정산 카드 이동·더미 확인 시간
 

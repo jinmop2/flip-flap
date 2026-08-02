@@ -411,6 +411,11 @@
     /* ── 상점 카드백 미리보기 ── */
     .shop-cbprev { width:38px; height:53px; flex-shrink:0; padding:4px !important; position:static !important; }
     .shop-cbprev .bf { font-size:.62rem !important; }
+    /* 미리보기는 순수 장식이다. .card 계열의 가상요소가 자기 박스 밖까지 히트 테스트에 걸려
+       카드백 상품의 구매/장착 버튼을 삼키는 문제가 있었으므로 클릭을 통과시킨다. */
+    .shop-cbprev, .shop-cbprev *,
+    .shop-tblprev, .shop-cfprev, .shop-cfprev *,
+    .shop-npprev, .shop-emprev, .shop-dyeprev { pointer-events:none; }
     /* ── 상점 실물 미리보기 (게임 안 모습 그대로) ── */
     .shop-tblprev { width:52px; height:38px; border-radius:10px; border:2.5px solid #2a1c12;
       box-shadow:inset 0 0 8px rgba(0,0,0,.5), inset 0 0 0 1px rgba(200,160,0,.25), 0 2px 5px rgba(0,0,0,.4); }
@@ -527,10 +532,119 @@
       animation:igPop .5s cubic-bezier(.34,1.5,.64,1);
     }
     @keyframes igPop { 0% { opacity:0; transform:scale(.6) translateY(20px); } 100% { opacity:1; transform:none; } }
+    /* 티어별 획득 카드 외형 */
+    .ig-card.rare   { border-color:#b98fe0; box-shadow:0 0 30px rgba(185,143,224,.55), 0 14px 40px rgba(0,0,0,.6); }
+    .ig-card.legend { border-width:3px; box-shadow:0 0 44px rgba(255,212,121,.75), 0 0 90px rgba(224,106,90,.35), 0 14px 40px rgba(0,0,0,.6); }
+    .ig-card.legend .ig-tier { color:#ffd479; letter-spacing:.16em; }
+    .ig-card.rare   .ig-tier { color:#d9b8f5; }
     .ig-tier { font-size:.62rem; font-weight:800; letter-spacing:.1em; color:#ffd479; margin-bottom:6px; }
     .ig-icon { font-size:3rem; line-height:1.1; filter:drop-shadow(0 3px 8px rgba(0,0,0,.5)); }
+    /* 직접 그린 SVG 아이콘 크기 — 슬롯/획득창/사용창에서 각각 맞춘다 */
+    .ib-slot svg { width:30px; height:30px; display:block; }
+    .ig-icon svg { width:62px; height:62px; margin:0 auto; display:block; }
+    .iu-icon svg { width:56px; height:56px; margin:0 auto; display:block; }
     .ig-name { font-size:1.05rem; font-weight:800; color:#fff6e0; margin-top:6px; }
     .ig-desc { font-size:.7rem; color:#c9b0e0; margin-top:5px; line-height:1.45; }
+
+    /* ── 아이템 사용 연출 ──
+       전부 opacity/transform 만 애니메이션해 GPU 합성으로 처리한다.
+       일회성이라 끝나면 요소를 지워 will-change 가 남지 않게 한다. */
+    #itemFx { position:fixed; inset:0; z-index:58; pointer-events:none; overflow:hidden; }
+    /* 아이콘이 화면 중앙으로 꽂히는 임팩트 */
+    .ifx-slam {
+      position:absolute; left:50%; top:44%; transform:translate(-50%,-50%);
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+      animation:ifxSlam .9s cubic-bezier(.2,1.5,.5,1) forwards;
+    }
+    .ifx-slam.legend { animation-duration:1.25s; }
+    .ifx-slam svg { width:104px; height:104px; filter:drop-shadow(0 6px 18px rgba(0,0,0,.65)); }
+    .ifx-slam.legend svg { width:132px; height:132px; }
+    .ifx-name {
+      font-size:1.05rem; font-weight:800; letter-spacing:.02em; color:#fff6e0;
+      text-shadow:0 2px 8px rgba(0,0,0,.8), 0 0 16px rgba(255,212,121,.7);
+      padding:3px 14px; border-radius:20px; background:rgba(20,6,14,.6); border:1.5px solid #ffd479;
+      white-space:nowrap;
+    }
+    .ifx-slam.opp .ifx-name { border-color:#e06a5a; box-shadow:0 0 14px rgba(224,106,90,.5); }
+    .ifx-msg { font-size:.78rem; font-weight:700; color:#ffe9a8; text-shadow:0 2px 6px rgba(0,0,0,.85); white-space:nowrap; }
+    @keyframes ifxSlam {
+      0%   { opacity:0; transform:translate(-50%,-50%) scale(2.4) rotate(-12deg); }
+      16%  { opacity:1; transform:translate(-50%,-50%) scale(.88) rotate(3deg); }
+      28%  { transform:translate(-50%,-50%) scale(1.06) rotate(-1deg); }
+      40%  { transform:translate(-50%,-50%) scale(1) rotate(0); }
+      78%  { opacity:1; transform:translate(-50%,-50%) scale(1); }
+      100% { opacity:0; transform:translate(-50%,-58%) scale(.94); }
+    }
+    /* 충격파 링 — 티어가 높을수록 크고 진하게 */
+    .ifx-ring {
+      position:absolute; left:50%; top:44%; width:120px; height:120px; margin:-60px 0 0 -60px;
+      border-radius:50%; border:3px solid #ffd479; opacity:0;
+      animation:ifxRing .75s ease-out forwards;
+    }
+    .ifx-ring.r2 { animation-delay:.1s; border-color:#b98fe0; }
+    .ifx-ring.r3 { animation-delay:.2s; border-color:#e06a5a; }
+    .ifx-ring.opp { border-color:#e06a5a; }
+    @keyframes ifxRing {
+      0%   { opacity:.85; transform:scale(.3); }
+      100% { opacity:0;   transform:scale(4.2); }
+    }
+    /* 티어별 화면 플래시 */
+    .ifx-flash { position:absolute; inset:0; opacity:0; animation:ifxFlash .5s ease-out forwards; }
+    .ifx-flash.common { background:radial-gradient(circle at 50% 44%, rgba(247,217,138,.30), transparent 62%); }
+    .ifx-flash.rare   { background:radial-gradient(circle at 50% 44%, rgba(185,143,224,.42), transparent 68%); }
+    .ifx-flash.legend { background:radial-gradient(circle at 50% 44%, rgba(255,212,121,.62), rgba(224,106,90,.28) 50%, transparent 78%); animation-duration:.85s; }
+    @keyframes ifxFlash { 0% { opacity:0; } 22% { opacity:1; } 100% { opacity:0; } }
+    /* 튀어 오르는 조각들 (전설 전용) */
+    .ifx-spark { position:absolute; left:50%; top:44%; width:9px; height:9px; border-radius:2px; opacity:0;
+                 animation:ifxSpark .9s ease-out forwards; }
+    @keyframes ifxSpark {
+      0%   { opacity:1; transform:translate(-50%,-50%) scale(1); }
+      100% { opacity:0; transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.3) rotate(240deg); }
+    }
+    /* 화면 흔들기 — 강도 3단계 */
+    #game.ifx-shake-s { animation:ifxShakeS .32s ease-in-out; }
+    #game.ifx-shake-m { animation:ifxShakeM .45s ease-in-out; }
+    #game.ifx-shake-l { animation:ifxShakeL .7s ease-in-out; }
+    @keyframes ifxShakeS { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-3px,2px)} 50%{transform:translate(3px,-2px)} 75%{transform:translate(-2px,-1px)} }
+    @keyframes ifxShakeM { 0%,100%{transform:translate(0,0)} 15%{transform:translate(-7px,4px)} 32%{transform:translate(7px,-4px)} 52%{transform:translate(-5px,-3px)} 72%{transform:translate(4px,3px)} 88%{transform:translate(-2px,1px)} }
+    @keyframes ifxShakeL { 0%,100%{transform:translate(0,0) rotate(0)} 10%{transform:translate(-11px,6px) rotate(-.7deg)} 25%{transform:translate(11px,-7px) rotate(.7deg)} 42%{transform:translate(-9px,-5px) rotate(-.5deg)} 60%{transform:translate(8px,5px) rotate(.4deg)} 78%{transform:translate(-5px,3px) rotate(-.2deg)} 92%{transform:translate(3px,-2px)} }
+
+    /* 아이템별 성격 연출 */
+    /* 연막탄 — 실제로 화면이 뿌옇게 */
+    .ifx-smoke { position:absolute; inset:0; opacity:0; animation:ifxSmoke 2.6s ease-out forwards;
+                 background:radial-gradient(ellipse 80% 60% at 50% 55%, rgba(185,143,224,.72), rgba(60,40,80,.5) 55%, rgba(30,18,45,.25) 80%); }
+    @keyframes ifxSmoke { 0%{opacity:0; transform:scale(1.35)} 18%{opacity:1; transform:scale(1)} 70%{opacity:.85} 100%{opacity:0; transform:scale(1.1)} }
+    /* 뒤집개 — 판이 한 바퀴 뒤집히는 느낌 */
+    #game.ifx-flipboard { animation:ifxFlipBoard .85s cubic-bezier(.5,0,.3,1); }
+    @keyframes ifxFlipBoard {
+      0% { transform:perspective(1200px) rotateX(0); }
+      45%{ transform:perspective(1200px) rotateX(88deg) scale(.94); }
+      55%{ transform:perspective(1200px) rotateX(-88deg) scale(.94); }
+      100%{ transform:perspective(1200px) rotateX(0); }
+    }
+    /* 폭군 — 위에서 내리누르는 압박 */
+    .ifx-press { position:absolute; inset:0; opacity:0; animation:ifxPress 1s ease-out forwards;
+                 background:linear-gradient(180deg, rgba(255,212,121,.55), rgba(224,106,90,.2) 40%, transparent 70%); }
+    @keyframes ifxPress { 0%{opacity:0; transform:translateY(-40%)} 25%{opacity:1; transform:translateY(0)} 100%{opacity:0} }
+    /* 도둑고양이 — 카드가 위에서 아래로 낚아채여 날아옴 */
+    .ifx-snatch {
+      position:absolute; left:50%; top:20%; width:34px; height:48px; margin-left:-17px;
+      border-radius:5px; background:linear-gradient(180deg,#f7d98a,#c99a3a); border:2px solid #2a0a10;
+      animation:ifxSnatch 1s cubic-bezier(.4,.1,.2,1) forwards;
+    }
+    @keyframes ifxSnatch {
+      0%   { opacity:0; transform:translateY(0) scale(.7) rotate(-18deg); }
+      18%  { opacity:1; transform:translateY(0) scale(1.15) rotate(-10deg); }
+      100% { opacity:0; transform:translateY(320px) scale(.8) rotate(22deg); }
+    }
+    /* 시간 압박 — 상대 시계가 붉게 */
+    .timer.ifx-drain { animation:ifxDrain .9s ease-in-out 2; }
+    @keyframes ifxDrain { 0%,100%{ transform:scale(1); filter:none } 50%{ transform:scale(1.18); filter:brightness(1.6) saturate(2) hue-rotate(-25deg) } }
+
+    @media (prefers-reduced-motion: reduce) {
+      #itemFx { display:none; }
+      #game.ifx-shake-s, #game.ifx-shake-m, #game.ifx-shake-l, #game.ifx-flipboard { animation:none; }
+    }
 
     /* 아이템 사용 모달 */
     .iu-icon { font-size:2.6rem; text-align:center; }
@@ -2164,6 +2278,7 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.8.1/kakao.min.js" integrity="sha384-OL+ylM/iuPLtW5U3XcvLSGhE8JzReKDank5InqlHGWPhb4140/yrBw0bg0y7+C9J" crossorigin="anonymous"></script>
+<script src="item-icons.js"></script>
 <script src="client.js"></script>
 </body>
 </html>
