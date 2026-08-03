@@ -235,6 +235,11 @@ const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
 const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby' };
 const xpPct = p => Math.max(0, Math.min(100, Math.round((p.xpInLevel || 0) / (p.xpNeeded || 100) * 100)));
 const npClass = p => p && NP_CLASS[p] ? ' ' + NP_CLASS[p] : '';   // 명패 클래스
+// 랭크 아이콘 — 직접 그린 SVG 우선, 매핑에 없으면 원래 이모지
+const rankIco = e => {
+  const a = (typeof rankArt === 'function') && rankArt(e);
+  return a ? `<span class="rank-art">${a}</span>` : (e || '');
+};
 const titleTag = t => t ? `<span class="title-tag" style="color:${t.color}">${t.icon} ${esc(t.name)}</span>` : '';
 // 하단 고정 프로필 바 (클릭 → 내 정보)
 function renderAccount() {
@@ -246,7 +251,7 @@ function renderAccount() {
     const total = p.wins + p.losses;
     body.innerHTML = `
       <span class="pb-lv">Lv.${p.level}</span>
-      <div class="pb-ava" style="color:${p.rankColor}">${p.rankIcon}</div>
+      <div class="pb-ava" style="color:${p.rankColor}">${rankIco(p.rankIcon)}</div>
       <div class="pb-mid">
         <div class="pb-nickrow"><span class="pb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span>${titleTag(p.titleInfo)}</div>
         <div class="pb-stats">${p.wins}승 ${p.losses}패${total ? ` (${p.winRate}%)` : ''} · <span style="color:${p.rankColor}">${esc(p.rank)}</span></div>
@@ -275,7 +280,7 @@ async function openMyInfo() {
   const canNick = !p.nickLocked || ((p.items || {}).nick_change || 0) > 0;
   document.getElementById('miHeader').innerHTML = `
     <div class="mi-head">
-      <div class="mi-ava" style="color:${p.rankColor}">${p.rankIcon}</div>
+      <div class="mi-ava" style="color:${p.rankColor}">${rankIco(p.rankIcon)}</div>
       <div class="mi-info">
         <div class="mi-nick${ncClass(p.nickColor)}">${esc(p.nick)} ${canNick ? '<button class="pc-icon" onclick="closeMyInfo();openNickModal()" title="닉네임 바꾸기">✏️</button>' : ''}</div>
         <div class="mi-line">Lv.<b>${p.level}</b> (XP ${p.xpInLevel}/${p.xpNeeded}) · <span style="color:${p.rankColor}">${esc(p.rank)}</span> <b>${p.rp} RP</b></div>
@@ -389,7 +394,7 @@ function showRewards() {
       const prev = [...RANK_STEPS].reverse().find(([t]) => t <= rp)[0];
       rpAfter = Math.max(0, Math.min(1, (rp - prev) / (next[0] - prev)));
       rpBefore = r.rankUp ? 0 : Math.max(0, Math.min(1, (rpBeforeTotal - prev) / (next[0] - prev)));
-      html += `<div class="rwp-row"><span class="rwp-lbl" style="color:${myAccount.rankColor}">${myAccount.rankIcon} ${esc(myAccount.rank)}</span>
+      html += `<div class="rwp-row"><span class="rwp-lbl" style="color:${myAccount.rankColor}">${rankIco(myAccount.rankIcon)} ${esc(myAccount.rank)}</span>
         <div class="rwp-bar"><div class="rwp-fill rk" id="rwpRp"></div></div>
         <span class="rwp-val">${next[0] - rp} RP → ${next[1]}${r.rp ? ` <b style="color:${r.rp > 0 ? '#7dd87d' : '#ff8a8a'}">${r.rp > 0 ? '+' : ''}${r.rp}</b>` : ''}</span></div>`;
     }
@@ -503,7 +508,7 @@ async function openLeaderboard() {
       const row = document.createElement('div');
       row.className = 'lb-row' + (myNick && p.nick === myNick ? ' me' : '');
       row.innerHTML = `<span class="lb-no${p.no <= 3 ? ' top' : ''}">${p.no <= 3 ? ['🥇','🥈','🥉'][p.no-1] : p.no}</span>
-        <span class="lb-rank" style="color:${p.rankColor}">${p.rankIcon}</span>
+        <span class="lb-rank" style="color:${p.rankColor}">${rankIco(p.rankIcon)}</span>
         <span class="lb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span>
         <span class="lb-wl">${p.wins}승 ${p.losses}패</span>
         <span class="lb-rp">${p.rp} RP</span>`;
@@ -517,7 +522,7 @@ async function openLeaderboard() {
         const me = mr.me;
         const row = document.createElement('div'); row.className = 'lb-row me lb-mine';
         row.innerHTML = `<span class="lb-no">${me.no}</span>
-          <span class="lb-rank" style="color:${me.rankColor}">${me.rankIcon}</span>
+          <span class="lb-rank" style="color:${me.rankColor}">${rankIco(me.rankIcon)}</span>
           <span class="lb-nick${ncClass(me.nickColor)}">${esc(me.nick)}</span>
           <span class="lb-wl">${me.wins}승 ${me.losses}패</span>
           <span class="lb-rp">${me.rp} RP</span>`;
@@ -901,7 +906,7 @@ function friendRow(f, kind) {
     ${kind === 'friend' ? `<span class="soc-dot ${f.online ? 'on' : ''}"></span>` : ''}
     <div class="soc-info">
       <div class="soc-nick">${clan}${esc(f.nick)}</div>
-      <div class="soc-meta">Lv.${f.level} · ${f.rankIcon} ${esc(f.rank)} · ${f.rp} RP${kind === 'friend' ? (f.online ? ' · 접속 중' : '') : ''}</div>
+      <div class="soc-meta">Lv.${f.level} · ${rankIco(f.rankIcon)} ${esc(f.rank)} · ${f.rp} RP${kind === 'friend' ? (f.online ? ' · 접속 중' : '') : ''}</div>
     </div>
     <div class="soc-acts">${acts}</div>
   </div>`;
@@ -987,7 +992,7 @@ function renderMyClan(c) {
   const memberRow = m => `<div class="soc-item">
     <div class="soc-info">
       <div class="soc-nick">${m.isOwner ? '👑' : ''}${esc(m.nick)}</div>
-      <div class="soc-meta">Lv.${m.level} · ${m.rankIcon} ${esc(m.rank)} · ${m.rp} RP</div>
+      <div class="soc-meta">Lv.${m.level} · ${rankIco(m.rankIcon)} ${esc(m.rank)} · ${m.rp} RP</div>
     </div>
     ${c.isOwner && !m.isOwner ? `<div class="soc-acts">
       <button class="soc-btn" onclick="clanTransfer('${esc(m.idl)}','${esc(m.nick)}')">위임</button>
@@ -997,7 +1002,7 @@ function renderMyClan(c) {
   const applicantRow = m => `<div class="soc-item">
     <div class="soc-info">
       <div class="soc-nick">${esc(m.nick)}</div>
-      <div class="soc-meta">Lv.${m.level} · ${m.rankIcon} ${esc(m.rank)} · ${m.rp} RP</div>
+      <div class="soc-meta">Lv.${m.level} · ${rankIco(m.rankIcon)} ${esc(m.rank)} · ${m.rp} RP</div>
     </div>
     <div class="soc-acts">
       <button class="soc-btn good" onclick="clanDecide('${esc(m.idl)}',true)">수락</button>
@@ -1482,8 +1487,16 @@ const EMOTE_PACKS = {
   emote_battle: ['⚔️','🛡️','😤','🤯','🥶','🎲','🎯','🏆'],
   emote_animal: ['🐶','🐱','🐷','🐸','🦊','🐻','🐤','🦄'],
 };
+function paintEmoteButtons() {
+  document.querySelectorAll('#emotePicker .emo-b').forEach(b => {
+    const e = b.dataset.e;
+    const art = (typeof emoteArt === 'function') && emoteArt(e);
+    b.innerHTML = art || e;
+  });
+}
 function refreshEmotes() {
   const picker = document.getElementById('emotePicker'); if (!picker) return;
+  paintEmoteButtons();
   picker.querySelectorAll('.emote-extra').forEach(b => b.remove());
   if (!myAccount || !myAccount.items) return;
   for (const [pack, emojis] of Object.entries(EMOTE_PACKS)) {
@@ -1523,13 +1536,14 @@ function renderGameProfile(elId, p) {
   if (!body) return;
   if (!p) { body.innerHTML = ''; if (stats) stats.innerHTML = ''; return; }
   if (p.bot) {
-    body.innerHTML = `<span class="gp-rank">🤖</span><span class="gp-nick">AI</span>`;
+    const bot = (typeof AI_AVATAR !== 'undefined') ? AI_AVATAR : '🤖';
+    body.innerHTML = `<span class="gp-rank gp-art">${bot}</span><span class="gp-nick">AI</span>`;
     if (stats) stats.innerHTML = `컴퓨터`;
   } else if (p.guest) {
     body.innerHTML = `<span class="gp-rank">👤</span><span class="gp-nick">${esc(p.nick)}</span>`;
     if (stats) stats.innerHTML = `게스트 (기록 없음)`;
   } else {
-    body.innerHTML = `<span class="gp-rank" style="color:${p.rankColor}">${p.rankIcon}</span><span class="gp-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span><span class="gp-lv">Lv.${p.level}</span>`;
+    body.innerHTML = `<span class="gp-rank gp-art" style="color:${p.rankColor}">${rankIco(p.rankIcon)}</span><span class="gp-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span><span class="gp-lv">Lv.${p.level}</span>`;
     if (stats) stats.innerHTML = (p.titleInfo ? titleTag(p.titleInfo) + ' · ' : '') + `<span style="color:${p.rankColor}">${esc(p.rank)}</span> · <b>${p.wins}승 ${p.losses}패</b> · 승률 ${p.winRate}%`;
   }
 }
@@ -1725,6 +1739,7 @@ document.addEventListener('pointerdown', e => {
   if (p && p.classList.contains('show') && !e.target.closest('#settingsPanel') && !e.target.closest('#settingsBtn')) toggleSettings(false);
 });
 window.addEventListener('DOMContentLoaded', applySettings);   // 저장된 상태 반영
+window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); } catch (_) {} });   // 기본 이모트 아이콘
 
 // ── 게임 설명서 ─────────────────────────────────────────────
 function toggleRules(show) {
@@ -1758,7 +1773,9 @@ socket.on('emote_cooldown', () => { lastEmoteSent = Date.now(); });   // 서버 
 function showEmote(emoji, side) {
   playSound('emote');
   const b = document.createElement('div');
-  b.className = 'emote-bubble'; b.textContent = emoji;
+  b.className = 'emote-bubble';
+  const art = (typeof emoteArt === 'function') && emoteArt(emoji);
+  if (art) b.innerHTML = art; else b.textContent = emoji;   // 상점 팩 등 매핑 없는 건 이모지 그대로
   let x = window.innerWidth / 2, y = side === 'me' ? window.innerHeight - 160 : 120;
   // 내 이모티콘은 이모트 버튼 바로 위에서 뜸 (중앙 X). 상대 것은 상대 손패 근처
   const anchor = side === 'me'
