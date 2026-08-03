@@ -1256,6 +1256,12 @@
     #emotePicker .emo-b svg { width:27px; height:27px; display:block; margin:0 auto; }
     .pc-body .gp-rank.gp-art svg { width:24px; height:24px; display:block; }
     .rank-art svg { width:1.2em; height:1.2em; display:inline-block; vertical-align:-.26em; }
+    /* 상점·인벤토리·칭호·라벨용 아이콘 크기 */
+    .shop-ico svg { width:34px; height:34px; display:block; }
+    .inv-ico svg  { width:26px; height:26px; display:block; }
+    .ti-ico svg   { width:1.05em; height:1.05em; display:inline-block; vertical-align:-.18em; }
+    .tr-art svg   { width:26px; height:26px; display:block; }
+    .lbl-ico svg  { width:1.15em; height:1.15em; display:inline-block; vertical-align:-.2em; }
     @keyframes emoteFloat {
       0%   { opacity:0; transform:translateY(12px) scale(.4); }
       10%  { opacity:1; transform:translateY(-12px) scale(1.35); }
@@ -2007,7 +2013,7 @@
 <!-- 랭킹 -->
 <div class="lb-modal" id="lbModal" onclick="if(event.target===this)closeLb()">
   <div class="lb-box" style="width:340px;">
-    <div class="lb-title">🏆 랭킹 <span class="close-x" onclick="closeLb()">×</span></div>
+    <div class="lb-title"><span data-ico="🏆"></span> 랭킹 <span class="close-x" onclick="closeLb()">×</span></div>
     <div id="lbList" style="display:flex; flex-direction:column; gap:4px; max-height:60vh; overflow-y:auto;"></div>
   </div>
 </div>
@@ -2338,7 +2344,7 @@
 <!-- 일일 미션 -->
 <div class="lb-modal" id="missionModal" onclick="if(event.target===this)closeMissions()">
   <div class="lb-box">
-    <div class="lb-title">🎯 일일 미션</div>
+    <div class="lb-title"><span data-ico="🎯"></span> 일일 미션</div>
     <p class="auth-hint" style="margin:0 0 6px">완료하면 코인이 바로 지급돼요 · 매일 자정 리셋</p>
     <div id="missionList" class="mis-list"></div>
     <button class="btn btn-outline" onclick="closeMissions()">닫기</button>
@@ -2349,15 +2355,15 @@
 <div class="lb-modal" id="myInfoModal" onclick="if(event.target===this)closeMyInfo()">
   <div class="lb-box myinfo-box">
     <div class="lb-title" style="display:flex;justify-content:space-between;align-items:center">
-      <span>👤 내 정보</span>
+      <span><span data-ico="👤"></span> 내 정보</span>
       <button class="pc-logout" onclick="logout();closeMyInfo()">로그아웃</button>
     </div>
     <div id="miHeader"></div>
-    <div class="mi-sec">🎒 인벤토리</div>
+    <div class="mi-sec"><span data-ico="🎒"></span> 인벤토리</div>
     <div id="miInv" class="mi-inv"></div>
-    <div class="mi-sec">🏷️ 칭호</div>
+    <div class="mi-sec"><span data-ico="🏷️"></span> 칭호</div>
     <div id="miTitles" class="title-list"></div>
-    <div class="mi-sec">📜 최근 전적</div>
+    <div class="mi-sec"><span data-ico="📜"></span> 최근 전적</div>
     <div id="miHist" class="hist-list" style="max-height:180px"></div>
     <div class="mi-danger">
       <button class="mi-del" onclick="askDeleteAccount()">계정 삭제</button>
@@ -2370,7 +2376,7 @@
 <!-- 친구 -->
 <div class="lb-modal" id="friendsModal" onclick="if(event.target===this)closeFriends()">
   <div class="lb-box soc-box">
-    <div class="lb-title">👥 친구</div>
+    <div class="lb-title"><span data-ico="👥"></span> 친구</div>
     <div class="soc-tabs">
       <button class="soc-tab active" id="ftab-list" onclick="friendTab('list')">목록</button>
       <button class="soc-tab" id="ftab-req" onclick="friendTab('req')">요청<span class="tl-badge sm" id="ftabBadge" style="display:none">0</span></button>
@@ -2404,7 +2410,7 @@
 <!-- 클랜 -->
 <div class="lb-modal" id="clanModal" onclick="if(event.target===this)closeClan()">
   <div class="lb-box soc-box">
-    <div class="lb-title">🛡️ 클랜</div>
+    <div class="lb-title"><span data-ico="🛡️"></span> 클랜</div>
     <div id="clanBody"></div>
     <button class="btn btn-outline" onclick="closeClan()">닫기</button>
   </div>
@@ -2413,7 +2419,7 @@
 <!-- 최근 전적 -->
 <div class="lb-modal" id="histModal" onclick="if(event.target===this)closeHist()">
   <div class="lb-box">
-    <div class="lb-title">📜 최근 전적</div>
+    <div class="lb-title"><span data-ico="📜"></span> 최근 전적</div>
     <div id="histList" class="hist-list"></div>
     <button class="btn btn-outline" onclick="closeHist()">닫기</button>
   </div>

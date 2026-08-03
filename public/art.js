@@ -144,3 +144,230 @@ const emoteArt = e => EMOTE_ART[e] || null;
 const rankArt  = e => RANK_ART[e]  || null;
 
 if (typeof module !== 'undefined') module.exports = { AI_AVATAR, EMOTE_ART, RANK_ART };
+
+// ══════════════════════════════════════════════════════════
+//  상점·칭호·UI 아이콘
+// ══════════════════════════════════════════════════════════
+// 반복 렌더되는 자리(상점 목록·인벤토리·랭킹)에 들어가므로 그라디언트를 쓰지 않는다.
+// <defs> id 가 중복되면 url(#id) 참조가 깨져 면이 비어 보인다(불꽃에서 겪음).
+const D = '#2a0a10';   // 공통 윤곽
+
+// 카드 모양 헬퍼 — 카드백/카드앞면 상품에 재사용
+const cardShape = (fill, inner = '') =>
+  `<rect x="12" y="7" width="24" height="34" rx="4" fill="${fill}" stroke="${D}" stroke-width="2"/>${inner}`;
+
+const ICON_ART = {
+  // ── 상점: 카드백 ──
+  '🌙': `<svg viewBox="0 0 48 48">${cardShape('#1b2a63',
+    `<path d="M28.5 16 a7.5 7.5 0 1 0 5.5 12 A9 9 0 0 1 28.5 16 z" fill="#d3e0ff"/>
+     <circle cx="19" cy="15" r="1.2" fill="#fff"/><circle cx="17" cy="30" r="1" fill="#fff"/>
+     <circle cx="30" cy="35" r="1.1" fill="#fff"/>`)}</svg>`,
+  '🏆': `<svg viewBox="0 0 48 48">${cardShape('#c99a2a',
+    `<path d="M18 14 h12 v6 a6 6 0 0 1 -12 0 z" fill="#fff4c8" stroke="${D}" stroke-width="1.4"/>
+     <path d="M18 15 h-3 a3 3 0 0 0 3 4 M30 15 h3 a3 3 0 0 1 -3 4" stroke="${D}" stroke-width="1.4" fill="none"/>
+     <path d="M23 26 h2 v4 h-2 z M20 30 h8 v2.4 h-8 z" fill="#fff4c8" stroke="${D}" stroke-width="1.2"/>`)}</svg>`,
+  '🎏': `<svg viewBox="0 0 48 48">${cardShape('#f4efe2',
+    `<path d="M12 11 h24 v5 h-24 z" fill="#c8102e"/><path d="M12 16 h24 v5 h-24 z" fill="#f0a020"/>
+     <path d="M12 26 h24 v5 h-24 z" fill="#1f6fb2"/><path d="M12 31 h24 v5 h-24 z" fill="#2a2118"/>`)}</svg>`,
+  '❤️‍🔥': `<svg viewBox="0 0 48 48">${cardShape('#a51a38',
+    `<path d="M24 34 c-6-4.5-9-7.5-9-11.5 0-2.8 2.1-4.8 4.6-4.8 1.7 0 3.3 .9 4.4 2.4
+              1.1-1.5 2.7-2.4 4.4-2.4 2.5 0 4.6 2 4.6 4.8 0 4-3 7-9 11.5 z"
+           fill="#ff7f96" stroke="${D}" stroke-width="1.4"/>`)}</svg>`,
+  '🌌': `<svg viewBox="0 0 48 48">${cardShape('#2b0f52',
+    `<ellipse cx="26" cy="20" rx="9" ry="6" fill="#7a4ad0" opacity=".7"/>
+     <circle cx="17" cy="14" r="1.3" fill="#fff"/><circle cx="31" cy="13" r="1" fill="#ffe9a8"/>
+     <circle cx="19" cy="31" r="1.4" fill="#bcd0ff"/><circle cx="30" cy="34" r="1.1" fill="#fff"/>
+     <circle cx="24" cy="24" r="1" fill="#fff"/>`)}</svg>`,
+  // ── 상점: 카드 앞면 ──
+  '🃏': `<svg viewBox="0 0 48 48">${cardShape('#14202c',
+    `<text x="24" y="30" font-size="15" font-weight="800" text-anchor="middle" fill="#6ffcff">6</text>`)}</svg>`,
+  '♠️': `<svg viewBox="0 0 48 48">${cardShape('#f0e8d8',
+    `<path d="M24 14 c-4 4-7 6.5-7 9.6 0 2 1.6 3.4 3.4 3.4 1.2 0 2.2-.5 2.8-1.3 l-1 5.3 h3.6 l-1-5.3
+              c.6 .8 1.6 1.3 2.8 1.3 1.8 0 3.4-1.4 3.4-3.4 0-3.1-3-5.6-7-9.6 z" fill="#1c1c22"/>`)}</svg>`,
+  // ── 상점: 염색·티켓 ──
+  '🎨': `<svg viewBox="0 0 48 48">
+    <path d="M24 6 C13 6 5 14 5 24 c0 9 7 14 14 14 3 0 4-1.6 4-3.4 0-1.6-1.2-2.4-1.2-4 0-1.7 1.4-3 3.2-3 H29
+             c8 0 14-5 14-12 C43 11 34 6 24 6 z" fill="#f0e2c8" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="14" cy="20" r="3" fill="#e0544a"/><circle cx="22" cy="14" r="3" fill="#f0b32a"/>
+    <circle cx="31" cy="16" r="3" fill="#5fbdd8"/><circle cx="35" cy="25" r="3" fill="#8f6fc0"/>
+  </svg>`,
+  '✏️': `<svg viewBox="0 0 48 48">
+    <path d="M9 39 l2-8 22-22 6 6 -22 22 z" fill="#f7d98a" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M33 9 l3-3 6 6 -3 3 z" fill="#e06a5a" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M9 39 l2-8 4 4 z" fill="#3a2606" stroke="${D}" stroke-width="1.4" stroke-linejoin="round"/>
+  </svg>`,
+  '💎': `<svg viewBox="0 0 48 48">
+    <path d="M13 10 h22 l9 10 -20 20 -20 -20 z" fill="#8ecbf0" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M4 20 h40 l-20 20 z" fill="#5aa8dd"/><path d="M13 10 h22 l-5 10 h-12 z" fill="#cfeaff"/>
+  </svg>`,
+  // ── 상점: 이모트 팩 ──
+  '🎉': `<svg viewBox="0 0 48 48">
+    <path d="M7 41 L18 16 l14 14 z" fill="#f0a83c" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M7 41 L15 23 l10 10 z" fill="#ffd45e"/>
+    <circle cx="34" cy="10" r="2.4" fill="#e06a5a"/><circle cx="41" cy="18" r="2" fill="#5fd0c0"/>
+    <circle cx="28" cy="7" r="1.8" fill="#8f6fc0"/><circle cx="40" cy="8" r="1.8" fill="#ffd45e"/>
+  </svg>`,
+  '🐾': `<svg viewBox="0 0 48 48">
+    <ellipse cx="24" cy="32" rx="9" ry="7.5" fill="#f0a83c" stroke="${D}" stroke-width="2"/>
+    <ellipse cx="13" cy="21" rx="4" ry="5" fill="#f0a83c" stroke="${D}" stroke-width="1.8"/>
+    <ellipse cx="20" cy="14" rx="4" ry="5" fill="#f0a83c" stroke="${D}" stroke-width="1.8"/>
+    <ellipse cx="28" cy="14" rx="4" ry="5" fill="#f0a83c" stroke="${D}" stroke-width="1.8"/>
+    <ellipse cx="35" cy="21" rx="4" ry="5" fill="#f0a83c" stroke="${D}" stroke-width="1.8"/>
+  </svg>`,
+  '⚔️': `<svg viewBox="0 0 48 48">
+    <path d="M10 6 l6 0 20 26 -3 4 z" fill="#c9c2bd" stroke="${D}" stroke-width="1.9" stroke-linejoin="round"/>
+    <path d="M38 6 l-6 0 -20 26 3 4 z" fill="#e6e0da" stroke="${D}" stroke-width="1.9" stroke-linejoin="round"/>
+    <path d="M8 34 l6 6 M40 34 l-6 6" stroke="#7a4e10" stroke-width="4.5" stroke-linecap="round"/>
+    <circle cx="24" cy="30" r="2.6" fill="#e0b84a" stroke="${D}" stroke-width="1.4"/>
+  </svg>`,
+  // ── 상점: 명패 ──
+  '🪵': `<svg viewBox="0 0 48 48">
+    <rect x="5" y="15" width="38" height="18" rx="5" fill="#a5763f" stroke="${D}" stroke-width="2"/>
+    <ellipse cx="12" cy="24" rx="4.5" ry="8" fill="#c99a5f" stroke="${D}" stroke-width="1.6"/>
+    <ellipse cx="12" cy="24" rx="2" ry="4" fill="#8a5a2a"/>
+    <path d="M22 19 h16 M22 24 h14 M22 29 h16" stroke="#7a4e10" stroke-width="1.6" opacity=".7"/>
+  </svg>`,
+  '💜': `<svg viewBox="0 0 48 48">
+    <path d="M24 40 C11 30 5 24 5 17.5 5 12 9.4 8 14.6 8 c3.6 0 6.9 2 9.4 5.2 C26.5 10 29.8 8 33.4 8
+             38.6 8 43 12 43 17.5 43 24 37 30 24 40 z" fill="#b98fe0" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M15 15 a7 7 0 0 1 5-3" stroke="#e9d5ff" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </svg>`,
+  '🏅': `<svg viewBox="0 0 48 48">
+    <path d="M15 4 h6 l5 14 h-6 z" fill="#5fbdd8" stroke="${D}" stroke-width="1.7" stroke-linejoin="round"/>
+    <path d="M33 4 h-6 l-5 14 h6 z" fill="#e8544a" stroke="${D}" stroke-width="1.7" stroke-linejoin="round"/>
+    <circle cx="24" cy="31" r="12" fill="#f7d15a" stroke="${D}" stroke-width="2"/>
+    <circle cx="24" cy="31" r="8.5" fill="none" stroke="#a8790c" stroke-width="1.8"/>
+    <circle cx="24" cy="31" r="4" fill="#a8790c"/>
+  </svg>`,
+  '🍀': `<svg viewBox="0 0 48 48">
+    <path d="M24 24 c-3-7-10-8-12-4 -1.8 3.6 2 8 12 4 z" fill="#5fb04a" stroke="${D}" stroke-width="1.7"/>
+    <path d="M24 24 c3-7 10-8 12-4 1.8 3.6-2 8-12 4 z" fill="#6fc45a" stroke="${D}" stroke-width="1.7"/>
+    <path d="M24 24 c-7 3-8 10-4 12 3.6 1.8 8-2 4-12 z" fill="#6fc45a" stroke="${D}" stroke-width="1.7"/>
+    <path d="M24 24 c7 3 8 10 4 12 -3.6 1.8-8-2-4-12 z" fill="#5fb04a" stroke="${D}" stroke-width="1.7"/>
+    <path d="M25 26 c2 6 3 10 2 15" stroke="#3a7a2a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  </svg>`,
+  '🎖️': `<svg viewBox="0 0 48 48">
+    <path d="M13 5 h22 v13 l-11 5 -11 -5 z" fill="#e8544a" stroke="${D}" stroke-width="1.9" stroke-linejoin="round"/>
+    <path d="M18 5 h5 v13 h-5 z" fill="#f0e8d8"/><path d="M25 5 h5 v13 h-5 z" fill="#1f6fb2"/>
+    <circle cx="24" cy="32" r="10.5" fill="#f7d15a" stroke="${D}" stroke-width="2"/>
+    <path d="M24 26 l1.9 3.9 4.3 .6 -3.1 3 .7 4.3 -3.8-2 -3.8 2 .7-4.3 -3.1-3 4.3-.6 z" fill="#a8790c"/>
+  </svg>`,
+  // ── 상점: 테이블 ──
+  '🔵': `<svg viewBox="0 0 48 48"><rect x="5" y="12" width="38" height="24" rx="9" fill="#1a3a5a" stroke="${D}" stroke-width="2"/><ellipse cx="24" cy="24" rx="13" ry="7" fill="#255076"/></svg>`,
+  '🟣': `<svg viewBox="0 0 48 48"><rect x="5" y="12" width="38" height="24" rx="9" fill="#3d2350" stroke="${D}" stroke-width="2"/><ellipse cx="24" cy="24" rx="13" ry="7" fill="#54326e"/></svg>`,
+  '🟡': `<svg viewBox="0 0 48 48"><rect x="5" y="12" width="38" height="24" rx="9" fill="#5a4410" stroke="${D}" stroke-width="2"/><ellipse cx="24" cy="24" rx="13" ry="7" fill="#7d5f16"/></svg>`,
+  '🟢': `<svg viewBox="0 0 48 48"><rect x="5" y="12" width="38" height="24" rx="9" fill="#14532d" stroke="${D}" stroke-width="2"/><ellipse cx="24" cy="24" rx="13" ry="7" fill="#1c6e3d"/></svg>`,
+
+  // ── 칭호 ──
+  '🏛️': `<svg viewBox="0 0 48 48">
+    <path d="M24 5 L44 15 H4 z" fill="#f7d98a" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="8" y="17" width="5" height="19" fill="#f0e2c8" stroke="${D}" stroke-width="1.6"/>
+    <rect x="17" y="17" width="5" height="19" fill="#f0e2c8" stroke="${D}" stroke-width="1.6"/>
+    <rect x="26" y="17" width="5" height="19" fill="#f0e2c8" stroke="${D}" stroke-width="1.6"/>
+    <rect x="35" y="17" width="5" height="19" fill="#f0e2c8" stroke="${D}" stroke-width="1.6"/>
+    <rect x="4" y="36" width="40" height="6" rx="2" fill="#c99a3a" stroke="${D}" stroke-width="2"/>
+  </svg>`,
+  '🎓': `<svg viewBox="0 0 48 48">
+    <path d="M24 9 L45 18 L24 27 L3 18 z" fill="#3a2e50" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M12 22 v9 c0 3.4 5.4 6 12 6 s12-2.6 12-6 v-9" fill="#4a3c68" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M42 19.5 v10" stroke="${D}" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="42" cy="32" r="3" fill="#ffd45e" stroke="${D}" stroke-width="1.6"/>
+  </svg>`,
+  '🎯': `<svg viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="18" fill="#f0e2c8" stroke="${D}" stroke-width="2"/>
+    <circle cx="24" cy="24" r="12.5" fill="#e0544a" stroke="${D}" stroke-width="1.6"/>
+    <circle cx="24" cy="24" r="7" fill="#f0e2c8" stroke="${D}" stroke-width="1.4"/>
+    <circle cx="24" cy="24" r="3" fill="#e0544a"/>
+  </svg>`,
+  '🌐': `<svg viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="18" fill="#5fa8dd" stroke="${D}" stroke-width="2"/>
+    <ellipse cx="24" cy="24" rx="8" ry="18" fill="none" stroke="#e8f4ff" stroke-width="1.8"/>
+    <path d="M7 18 h34 M7 30 h34 M24 6 v36" stroke="#e8f4ff" stroke-width="1.8"/>
+  </svg>`,
+  '📅': `<svg viewBox="0 0 48 48">
+    <rect x="6" y="10" width="36" height="32" rx="5" fill="#f0e2c8" stroke="${D}" stroke-width="2"/>
+    <path d="M6 19 h36" stroke="${D}" stroke-width="2"/>
+    <rect x="6" y="10" width="36" height="9" rx="5" fill="#e0544a" stroke="${D}" stroke-width="2"/>
+    <path d="M15 6 v8 M33 6 v8" stroke="${D}" stroke-width="3" stroke-linecap="round"/>
+    <rect x="12" y="24" width="6" height="5" rx="1.4" fill="#c8a86a"/>
+    <rect x="21" y="24" width="6" height="5" rx="1.4" fill="#c8a86a"/>
+    <rect x="30" y="24" width="6" height="5" rx="1.4" fill="#5fb04a"/>
+    <rect x="12" y="32" width="6" height="5" rx="1.4" fill="#c8a86a"/>
+  </svg>`,
+  '💰': `<svg viewBox="0 0 48 48">
+    <path d="M18 12 l-3-5 h18 l-3 5" fill="#7a4e10" stroke="${D}" stroke-width="1.7" stroke-linejoin="round"/>
+    <path d="M18.5 12 h11 c6.5 4 10 10.5 10 17 0 7-5.5 12-15.5 12 S8.5 36 8.5 29 c0-6.5 3.5-13 10-17 z"
+          fill="#f7d98a" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M24 21 v16 M20 25 h8 M20 31 h8" stroke="#7a4e10" stroke-width="2.4" stroke-linecap="round"/>
+  </svg>`,
+  '🛡️': `<svg viewBox="0 0 48 48">
+    <path d="M24 4 L41 10 v13 c0 11-8 18-17 21 -9-3-17-10-17-21 V10 z"
+          fill="#c8a86a" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M24 10 L36 14 v9 c0 8-5.6 13-12 15.4 z" fill="#a5854a"/>
+    <path d="M24 17 l2.6 5.4 5.9 .8 -4.3 4.1 1 5.9 -5.2-2.8 -5.2 2.8 1-5.9 -4.3-4.1 5.9-.8 z" fill="#f7d98a"/>
+  </svg>`,
+
+  // ── UI 라벨 ──
+  '🎒': `<svg viewBox="0 0 48 48">
+    <path d="M17 12 a7 7 0 0 1 14 0" stroke="${D}" stroke-width="2.4" fill="none"/>
+    <rect x="8" y="12" width="32" height="30" rx="8" fill="#5a8ad0" stroke="${D}" stroke-width="2"/>
+    <rect x="14" y="24" width="20" height="12" rx="4" fill="#e8d8b0" stroke="${D}" stroke-width="1.8"/>
+    <path d="M14 30 h20" stroke="${D}" stroke-width="1.6"/>
+  </svg>`,
+  '🏷️': `<svg viewBox="0 0 48 48">
+    <path d="M25 5 H41 a2 2 0 0 1 2 2 V23 L23 43 L5 25 z" fill="#e0b84a" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="34" cy="14" r="3.6" fill="#fff6e0" stroke="${D}" stroke-width="1.8"/>
+  </svg>`,
+  '📜': `<svg viewBox="0 0 48 48">
+    <path d="M11 7 h26 v30 a5 5 0 0 0 5 5 H16 a5 5 0 0 1 -5 -5 z" fill="#f0e2c8" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M6 12 a5 5 0 0 1 5 -5 v30 H6 z" fill="#d8c49a" stroke="${D}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M17 15 h14 M17 21 h14 M17 27 h9" stroke="#8a6a3a" stroke-width="2" stroke-linecap="round"/>
+  </svg>`,
+  '🛒': `<svg viewBox="0 0 48 48">
+    <path d="M4 7 h6 l6 22 h20" stroke="${D}" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12 12 h30 l-4 14 H16 z" fill="#f7d98a" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="19" cy="38" r="3.4" fill="#c99a3a" stroke="${D}" stroke-width="1.8"/>
+    <circle cx="34" cy="38" r="3.4" fill="#c99a3a" stroke="${D}" stroke-width="1.8"/>
+  </svg>`,
+  '👥': `<svg viewBox="0 0 48 48">
+    <circle cx="32" cy="17" r="6.5" fill="#a5854a" stroke="${D}" stroke-width="1.9"/>
+    <path d="M22 40 c0-6 4.4-10 10-10 s10 4 10 10 z" fill="#a5854a" stroke="${D}" stroke-width="1.9" stroke-linejoin="round"/>
+    <circle cx="17" cy="15" r="7.5" fill="#f7d98a" stroke="${D}" stroke-width="2"/>
+    <path d="M5 40 c0-7 5.2-11.5 12-11.5 s12 4.5 12 11.5 z" fill="#f7d98a" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+  </svg>`,
+  '👤': `<svg viewBox="0 0 48 48">
+    <circle cx="24" cy="16" r="8.5" fill="#f7d98a" stroke="${D}" stroke-width="2"/>
+    <path d="M8 42 c0-8.4 7.2-14 16-14 s16 5.6 16 14 z" fill="#f7d98a" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+  </svg>`,
+  '🎪': `<svg viewBox="0 0 48 48">
+    <path d="M24 4 v6" stroke="${D}" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="24" cy="3.5" r="2.2" fill="#ffd45e" stroke="${D}" stroke-width="1.3"/>
+    <path d="M24 9 C34 14 42 22 42 30 H6 C6 22 14 14 24 9 z" fill="#f0e2c8" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M24 9 C20 16 18 23 18 30 H6 C6 22 14 14 24 9 z" fill="#e0544a"/>
+    <path d="M24 9 C28 16 30 23 30 30 h12 C42 22 34 14 24 9 z" fill="#e0544a" opacity=".55"/>
+    <rect x="6" y="30" width="36" height="12" rx="3" fill="#c8a86a" stroke="${D}" stroke-width="2"/>
+    <path d="M19 42 V33 a5 5 0 0 1 10 0 v9 z" fill="#2a1a12" stroke="${D}" stroke-width="1.6"/>
+  </svg>`,
+  '💬': `<svg viewBox="0 0 48 48">
+    <path d="M6 11 a4 4 0 0 1 4 -4 h28 a4 4 0 0 1 4 4 v18 a4 4 0 0 1 -4 4 H20 l-10 8 v-8 a4 4 0 0 1 -4 -4 z"
+          fill="#f0e2c8" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="16" cy="20" r="2.6" fill="#8a6a3a"/><circle cx="24" cy="20" r="2.6" fill="#8a6a3a"/>
+    <circle cx="32" cy="20" r="2.6" fill="#8a6a3a"/>
+  </svg>`,
+  '🚪': `<svg viewBox="0 0 48 48">
+    <rect x="9" y="5" width="24" height="38" rx="3" fill="#a5763f" stroke="${D}" stroke-width="2"/>
+    <rect x="13" y="9" width="16" height="30" rx="2" fill="#8a5a2a"/>
+    <circle cx="28" cy="25" r="2.2" fill="#f7d98a" stroke="${D}" stroke-width="1.3"/>
+    <path d="M37 24 h8 M41 19 l5 5 -5 5" stroke="#5fd0c0" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`,
+  '🎁': `<svg viewBox="0 0 48 48">
+    <rect x="5" y="17" width="38" height="9" rx="2.4" fill="#e0544a" stroke="${D}" stroke-width="2"/>
+    <rect x="8" y="26" width="32" height="16" rx="3" fill="#c8443a" stroke="${D}" stroke-width="2"/>
+    <rect x="20" y="17" width="8" height="25" fill="#ffd45e" stroke="${D}" stroke-width="1.7"/>
+    <path d="M24 17 c-6 0-10-3-10-6 0-2.4 2-4 4.4-4 3.6 0 5.6 4 5.6 10 z" fill="#ffd45e" stroke="${D}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M24 17 c6 0 10-3 10-6 0-2.4-2-4-4.4-4 -3.6 0-5.6 4-5.6 10 z" fill="#ffd45e" stroke="${D}" stroke-width="1.8" stroke-linejoin="round"/>
+  </svg>`,
+};
+
+// 이모지 → SVG (이모트·랭크·일반 아이콘 순서로 찾는다. 없으면 null)
+const iconArt = e => ICON_ART[e] || RANK_ART[e] || EMOTE_ART[e] || null;

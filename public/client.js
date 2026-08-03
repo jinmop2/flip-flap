@@ -235,12 +235,17 @@ const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
 const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby' };
 const xpPct = p => Math.max(0, Math.min(100, Math.round((p.xpInLevel || 0) / (p.xpNeeded || 100) * 100)));
 const npClass = p => p && NP_CLASS[p] ? ' ' + NP_CLASS[p] : '';   // 명패 클래스
+// 이모지 → 직접 그린 SVG (art.js). 매핑에 없으면 원래 이모지 그대로.
+const ico = (e, cls = 'g-ico') => {
+  const a = (typeof iconArt === 'function') && iconArt(e);
+  return a ? `<span class="${cls}">${a}</span>` : (e || '');
+};
 // 랭크 아이콘 — 직접 그린 SVG 우선, 매핑에 없으면 원래 이모지
 const rankIco = e => {
   const a = (typeof rankArt === 'function') && rankArt(e);
   return a ? `<span class="rank-art">${a}</span>` : (e || '');
 };
-const titleTag = t => t ? `<span class="title-tag" style="color:${t.color}">${t.icon} ${esc(t.name)}</span>` : '';
+const titleTag = t => t ? `<span class="title-tag" style="color:${t.color}">${ico(t.icon, 'ti-ico')} ${esc(t.name)}</span>` : '';
 // 하단 고정 프로필 바 (클릭 → 내 정보)
 function renderAccount() {
   const body = document.getElementById('pbBody');
@@ -310,7 +315,7 @@ async function renderMyInv() {
     const on = slot && myAccount[slot] === it.id;
     const cnt = it.type === 'ticket' ? `<span class="cnt">x${items[it.id]}</span>` : '';
     html += `<div class="mi-item${on ? ' equipped' : ''}" ${slot ? `onclick="invEquip('${it.id}', ${on}, '${it.type}')"` : ''} title="${it.name}">
-      ${cnt}<span class="ico">${it.icon}</span><span class="nm">${it.name.replace(' 카드백','')}</span></div>`;
+      ${cnt}<span class="ico">${ico(it.icon, 'inv-ico')}</span><span class="nm">${it.name.replace(' 카드백','')}</span></div>`;
   });
   inv.innerHTML = html || '<div class="mi-empty">아직 아이템이 없어요 — 상점 구경 가기 🛒</div>';
 }
@@ -1319,7 +1324,7 @@ async function renderMyTitles() {
     const on = r.equipped === t.id;
     const el = document.createElement('div');
     el.className = 'title-row' + (t.owned ? '' : ' locked') + (on ? ' on' : '');
-    el.innerHTML = `<span class="tr-ico">${t.icon}</span>
+    el.innerHTML = `<span class="tr-ico">${ico(t.icon, 'tr-art')}</span>
       <div class="tr-info"><div class="tr-name" style="color:${t.owned ? t.color : '#6a5a70'}">${esc(t.name)}</div>
       <div class="tr-cond">${esc(t.cond)}${t.owned ? '' : ` (${t.prog}/${t.goal})`}</div></div>
       <span class="tr-state">${on ? '장착 중 ✓' : t.owned ? '장착' : '🔒'}</span>`;
@@ -1374,7 +1379,7 @@ const shopIcon = it => {
   if (it.type === 'emotes' && EMOTE_PACKS[it.id]) return `<span class="shop-emprev">${EMOTE_PACKS[it.id].slice(0, 3).join('')}</span>`;
   if (it.type === 'dye')      return `<div class="shop-dyeprev"></div>`;
   if (it.type === 'dye_rare') return `<div class="shop-dyeprev rare"></div>`;
-  return it.icon;
+  return ico(it.icon, 'shop-ico');
 };
 // 장착 슬롯: 상점 타입 → 프로필 필드
 const EQUIP_SLOT = { cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace' };
@@ -1492,6 +1497,15 @@ const EMOTE_PACKS = {
   emote_battle: ['⚔️','🛡️','😤','🤯','🥶','🎲','🎯','🏆'],
   emote_animal: ['🐶','🐱','🐷','🐸','🦊','🐻','🐤','🦄'],
 };
+// data-ico="🎒" 같은 표식을 직접 그린 아이콘으로 채운다
+function paintIcons(root) {
+  (root || document).querySelectorAll('[data-ico]').forEach(el => {
+    if (el.dataset.done) return;
+    const a = (typeof iconArt === 'function') && iconArt(el.dataset.ico);
+    if (a) { el.innerHTML = a; el.classList.add('lbl-ico'); el.dataset.done = '1'; }
+    else el.textContent = el.dataset.ico;
+  });
+}
 function paintEmoteButtons() {
   document.querySelectorAll('#emotePicker .emo-b').forEach(b => {
     const e = b.dataset.e;
@@ -1744,7 +1758,7 @@ document.addEventListener('pointerdown', e => {
   if (p && p.classList.contains('show') && !e.target.closest('#settingsPanel') && !e.target.closest('#settingsBtn')) toggleSettings(false);
 });
 window.addEventListener('DOMContentLoaded', applySettings);   // 저장된 상태 반영
-window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); } catch (_) {} });   // 기본 이모트 아이콘
+window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); paintIcons(); } catch (_) {} });   // 기본 이모트·라벨 아이콘
 
 // ── 게임 설명서 ─────────────────────────────────────────────
 function toggleRules(show) {
