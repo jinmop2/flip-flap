@@ -857,7 +857,8 @@ function nickOfIdl(idl) {
 // ══════════════════════════════════════════════════════════
 //  클랜
 // ══════════════════════════════════════════════════════════
-const CLAN_COST = 300;          // 창설 비용 (코인)
+const CLAN_COST = 1000;         // 창설 비용 (코인)
+const CLAN_MIN_LEVEL = 5;       // 창설 가능 최소 레벨 — 뜨내기 클랜 난립 방지
 const CLAN_MAX_MEMBERS = 30;
 const CLAN_NAME_RE = /^[가-힣a-zA-Z0-9 ]{2,12}$/;
 const CLAN_TAG_RE  = /^[A-Z0-9]{2,4}$/;
@@ -914,6 +915,8 @@ function createClan(token, name, tag) {
   if (BADWORDS.test(name.replace(/[\s._-]/g, '')) || BADWORDS.test(tag)) return { error: '사용할 수 없는 이름이에요.' };
   if (clanNameTaken(name)) return { error: '이미 있는 클랜 이름이에요.' };
   if (clanTagTaken(tag))   return { error: '이미 사용 중인 태그예요.' };
+  const lv = levelOf(u.xp);
+  if (lv < CLAN_MIN_LEVEL) return { error: `레벨 ${CLAN_MIN_LEVEL} 이상만 클랜을 만들 수 있어요. (현재 Lv.${lv})` };
   if ((u.coins || 0) < CLAN_COST) return { error: `창설 비용 🪙${CLAN_COST}이 필요해요. (보유 ${u.coins || 0})` };
 
   u.coins -= CLAN_COST;
@@ -929,8 +932,9 @@ function myClan(token) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
   const c = clanOf(u);
-  if (!c) return { ok: true, clan: null, cost: CLAN_COST, coins: u.coins || 0 };
-  return { ok: true, clan: clanView(c, idl), cost: CLAN_COST, coins: u.coins || 0 };
+  const meta = { cost: CLAN_COST, coins: u.coins || 0, minLevel: CLAN_MIN_LEVEL, myLevel: levelOf(u.xp) };
+  if (!c) return { ok: true, clan: null, ...meta };
+  return { ok: true, clan: clanView(c, idl), ...meta };
 }
 
 // 클랜 랭킹 — 총 RP 순

@@ -285,8 +285,12 @@
     .mi-line b { color:#ffe9a8; }
     .mi-badges { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
     .mi-badges span { font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:6px; }
-    .mi-sec { font-size:.74rem; font-weight:700; color:#8a7a80; letter-spacing:1px; text-align:left; margin:8px 0 2px; }
-    .mi-inv { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; }
+    .mi-sec { font-size:.74rem; font-weight:700; color:#8a7a80; letter-spacing:1px; text-align:left; margin:8px 0 2px; flex:none; }
+    /* 아이템이 많아지면 인벤토리가 세로로 늘어나 아래 구역(칭호·최근 전적)을 화면 밖으로 밀어냈다.
+       구역마다 높이를 제한하고 자체 스크롤을 줘서 항상 다 보이게 한다. */
+    .mi-inv { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; max-height:158px; overflow-y:auto; flex:none; padding-right:2px; overscroll-behavior:contain; }
+    #miTitles { max-height:104px; overflow-y:auto; flex:none; overscroll-behavior:contain; }
+    #miHist { flex:none; min-height:96px; }
     .mi-item { position:relative; background:#1c1424; border:1px solid #2a1c30; border-radius:11px; padding:9px 4px 6px; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
     .mi-item .ico { font-size:1.5rem; line-height:1; }
     .mi-item .nm { font-size:.56rem; color:#9a8fa0; text-align:center; line-height:1.25; }
@@ -706,6 +710,19 @@
     }
     .soc-input:focus { outline:none; border-color:#e0b84a; }
     .soc-input::placeholder { color:#7a6a68; }
+
+    /* 돋보기로 엿본 상대 카드 — 뒷면 너머로 비쳐 보이는 느낌 */
+    .card.peeked {
+      opacity:.66; filter:saturate(.8);
+      border-color:#bfe9ff !important;
+      box-shadow:0 0 10px rgba(140,215,255,.55), 0 2px 6px rgba(0,0,0,.5) !important;
+      animation:peekIn .45s ease-out;
+    }
+    .card.peeked::after {
+      content:'🔍'; position:absolute; top:-6px; right:-4px; font-size:.62rem;
+      filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));
+    }
+    @keyframes peekIn { 0% { opacity:0; transform:scale(.86); } 100% { opacity:.66; transform:none; } }
 
     /* ── 클랜 채팅 ── */
     .chat-list {

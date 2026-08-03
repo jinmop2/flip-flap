@@ -979,7 +979,7 @@ async function loadClan() {
   const r = await apiPost('/api/clan', { token: authToken() });
   if (!r.ok) { body.innerHTML = `<div class="soc-empty">${esc(r.error || '불러오기 실패')}</div>`; return; }
   if (r.clan) renderMyClan(r.clan);
-  else renderClanBrowse(r.cost, r.coins);
+  else renderClanBrowse(r);
   updateSocialBadges();
 }
 
@@ -1164,7 +1164,8 @@ socket.on('clan_chat', ({ msg }) => {
 });
 socket.on('clan_report', ({ nick }) => toast(`🚩 클랜 채팅 신고가 접수됐어요 (${esc(nick || '')})`, 3200));
 
-async function renderClanBrowse(cost, coins) {
+async function renderClanBrowse(meta) {
+  const { cost = 1000, coins = 0, minLevel = 5, myLevel = 1 } = meta || {};
   const body = document.getElementById('clanBody');
   body.innerHTML = `
     <div class="soc-tabs">
@@ -1182,9 +1183,15 @@ async function renderClanBrowse(cost, coins) {
       </div>
       <div class="soc-row">
         <input id="clanTagInput" class="soc-input" maxlength="4" placeholder="태그 (영문·숫자 2~4자)" autocomplete="off" style="text-transform:uppercase">
-        <button class="btn btn-gold btn-sm" onclick="submitClanCreate()">만들기</button>
+        <button class="btn btn-gold btn-sm" onclick="submitClanCreate()"
+                ${(myLevel < minLevel || coins < cost) ? 'disabled style="opacity:.5"' : ''}>만들기</button>
       </div>
-      <div class="clan-cost">창설 비용 🪙${cost} · 보유 🪙${coins}</div>
+      <div class="clan-cost">
+        레벨 ${minLevel} 이상 · 창설 비용 🪙${cost}<br>
+        <span style="opacity:.8">현재 Lv.${myLevel} · 보유 🪙${coins}</span>
+        ${myLevel < minLevel ? `<div style="color:#e08a8a;margin-top:5px">레벨 ${minLevel}이 되면 만들 수 있어요</div>`
+          : coins < cost ? `<div style="color:#e08a8a;margin-top:5px">코인이 ${cost - coins} 모자라요</div>` : ''}
+      </div>
       <p class="auth-hint" id="clanCreateMsg" style="margin:8px 0 0"></p>`;
     return;
   }
@@ -2582,7 +2589,7 @@ function render(changed = false) {
   }
 
   renderDeck();
-  renderOppHand(s.oppHandLen);
+  renderOppHand(s.oppHandLen, s.fx && s.fx.peek);
   renderPile('oppAcq', s.oppAcq);
   renderPile('myAcq', s.myAcq);
   renderAuction(changed);
@@ -2637,12 +2644,21 @@ function makeMyBack() {   // 내 비공개 배팅(오픈 경매) — 내 카드�
 }
 
 // 상대 손패 = 뒷면 카드 부채꼴 (내 패보다 작게)
-function renderOppHand(n) {
-  if (lastSig.oppHand === n) return; lastSig.oppHand = n;   // 장수 그대로면 스킵
+// 돋보기로 엿본 카드가 있으면 앞쪽 몇 장을 반투명 앞면으로 바꿔, 뒷면 너머로 비쳐 보이게 한다.
+function renderOppHand(n, peek) {
+  const sig = n + '|' + (peek ? peek.map(c => c.id).join(',') : '');
+  if (lastSig.oppHand === sig) return; lastSig.oppHand = sig;   // 장수·엿본 카드 그대로면 스킵
   const el = document.getElementById('oppHand'); el.innerHTML = '';
+  const seen = (peek || []).slice(0, n);
   for (let i = 0; i < n; i++) {
     const slot = document.createElement('div'); slot.className = 'fan-slot';
-    slot.appendChild(makeOppBack());
+    if (seen[i]) {
+      const c = makeCard(seen[i], { reveal: true });
+      c.classList.add('peeked');
+      slot.appendChild(c);
+    } else {
+      slot.appendChild(makeOppBack());
+    }
     el.appendChild(slot);
   }
   fanRow(el, true);
