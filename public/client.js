@@ -971,7 +971,7 @@ function openClan() {
   document.getElementById('clanModal').classList.add('show');
   loadClan();
 }
-function closeClan() { document.getElementById('clanModal').classList.remove('show'); }
+function closeClan() { document.getElementById('clanModal').classList.remove('show'); closeChatMenu(); }
 
 async function loadClan() {
   const body = document.getElementById('clanBody');
@@ -1015,15 +1015,154 @@ function renderMyClan(c) {
       </div>
       ${c.notice ? `<div class="clan-notice">📢 ${esc(c.notice)}</div>` : ''}
     </div>
-    ${c.isOwner && c.applicants.length ? `<div class="soc-sec">가입 신청 ${c.applicants.length}건</div>
-      <div class="soc-list">${c.applicants.map(applicantRow).join('')}</div>` : ''}
-    <div class="soc-sec">클랜원</div>
-    <div class="soc-list">${c.members.map(memberRow).join('')}</div>
-    <div class="soc-row" style="margin-top:12px">
-      ${c.isOwner ? `<button class="soc-btn" style="flex:1" onclick="clanEditNotice()">공지 수정</button>` : ''}
-      <button class="soc-btn bad" style="flex:1" onclick="clanLeave(${c.isOwner})">${c.isOwner && c.memberCount > 1 ? '탈퇴(위임)' : '탈퇴'}</button>
+    <div class="soc-tabs">
+      <button class="soc-tab ${_clanView === 'chat' ? 'active' : ''}" onclick="clanViewTab('chat')">
+        💬 채팅<span class="tl-badge sm" id="clanChatBadge" style="display:none">0</span>
+      </button>
+      <button class="soc-tab ${_clanView === 'info' ? 'active' : ''}" onclick="clanViewTab('info')">
+        클랜원${c.isOwner && c.applicantCount ? `<span class="tl-badge sm">${c.applicantCount}</span>` : ''}
+      </button>
+    </div>
+    <div id="clanPaneChat" style="display:${_clanView === 'chat' ? '' : 'none'}">
+      <div class="chat-list" id="chatList"><div class="chat-empty">불러오는 중…</div></div>
+      <div class="chat-form" style="margin-top:8px">
+        <input id="chatInput" class="chat-input" maxlength="100" placeholder="클랜원에게 메시지…"
+               autocomplete="off" onkeydown="if(event.key==='Enter')sendClanChat()">
+        <button class="chat-send" onclick="sendClanChat()">보내기</button>
+      </div>
+      <div class="chat-note">클랜원만 볼 수 있어요 · 메시지를 누르면 신고·차단</div>
+    </div>
+    <div id="clanPaneInfo" style="display:${_clanView === 'info' ? '' : 'none'}">
+      ${c.isOwner && c.applicants.length ? `<div class="soc-sec">가입 신청 ${c.applicants.length}건</div>
+        <div class="soc-list">${c.applicants.map(applicantRow).join('')}</div>` : ''}
+      <div class="soc-sec">클랜원</div>
+      <div class="soc-list">${c.members.map(memberRow).join('')}</div>
+      <div class="soc-row" style="margin-top:12px">
+        ${c.isOwner ? `<button class="soc-btn" style="flex:1" onclick="clanEditNotice()">공지 수정</button>` : ''}
+        <button class="soc-btn bad" style="flex:1" onclick="clanLeave(${c.isOwner})">${c.isOwner && c.memberCount > 1 ? '탈퇴(위임)' : '탈퇴'}</button>
+      </div>
     </div>`;
+  if (_clanView === 'chat') loadClanChat();
 }
+
+// ── 클랜 채팅 ──────────────────────────────────────────────
+let _clanView = 'chat';        // 클랜 모달에서 채팅/클랜원 중 무엇을 보고 있나
+let _chatUnread = 0;           // 모달이 닫혀 있을 때 쌓인 새 메시지
+let _chatMsgs = [];
+
+function clanViewTab(which) {
+  _clanView = which;
+  document.getElementById('clanPaneChat').style.display = which === 'chat' ? '' : 'none';
+  document.getElementById('clanPaneInfo').style.display = which === 'info' ? '' : 'none';
+  document.querySelectorAll('#clanBody .soc-tabs .soc-tab').forEach((t, i) =>
+    t.classList.toggle('active', (i === 0) === (which === 'chat')));
+  if (which === 'chat') { loadClanChat(); setTimeout(() => document.getElementById('chatInput')?.focus(), 60); }
+}
+
+const chatOpen = () => document.getElementById('clanModal')?.classList.contains('show') && _clanView === 'chat';
+
+async function loadClanChat() {
+  const box = document.getElementById('chatList'); if (!box) return;
+  const r = await apiPost('/api/clan-chat', { token: authToken() });
+  if (!r.ok) { box.innerHTML = `<div class="chat-empty">${esc(r.error || '불러오기 실패')}</div>`; return; }
+  _chatMsgs = r.messages;
+  _chatUnread = 0; updateChatBadge();
+  renderChat(true);
+}
+
+function chatTime(ts) {
+  const d = new Date(ts), n = new Date();
+  const sameDay = d.toDateString() === n.toDateString();
+  const hh = String(d.getHours()).padStart(2, '0'), mm = String(d.getMinutes()).padStart(2, '0');
+  return sameDay ? `${hh}:${mm}` : `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`;
+}
+
+function renderChat(toBottom) {
+  const box = document.getElementById('chatList'); if (!box) return;
+  if (!_chatMsgs.length) {
+    box.innerHTML = '<div class="chat-empty">아직 대화가 없어요.<br>첫 메시지를 남겨보세요!</div>';
+    return;
+  }
+  box.innerHTML = _chatMsgs.map(m => `
+    <div class="chat-row ${m.mine ? 'mine' : ''}">
+      ${m.mine ? '' : `<div class="chat-who">${esc(m.nick || '')}</div>`}
+      <div class="chat-bubble" ${m.mine ? '' : `onclick="chatMenu(event,'${esc(m.id)}','${esc(m.idl)}','${esc(m.nick || '')}')"`}>${esc(m.text)}</div>
+      <div class="chat-time">${chatTime(m.at)}</div>
+    </div>`).join('');
+  if (toBottom !== false) box.scrollTop = box.scrollHeight;
+}
+
+async function sendClanChat() {
+  const input = document.getElementById('chatInput'); if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  const btn = document.querySelector('.chat-send');
+  if (btn) btn.disabled = true;                       // 연타 방지
+  const r = await apiPost('/api/clan-chat-send', { token: authToken(), text });
+  if (btn) btn.disabled = false;
+  if (!r.ok) { toast('⚠️ ' + esc(r.error || '보내지 못했어요.')); return; }
+  input.value = '';
+  _chatMsgs.push({ ...r.msg, mine: true });
+  renderChat();
+  input.focus();
+}
+
+// 남의 메시지를 누르면 신고·차단 메뉴
+let _chatMenuEl = null;
+function closeChatMenu() { if (_chatMenuEl) { _chatMenuEl.remove(); _chatMenuEl = null; } }
+function chatMenu(ev, msgId, idl, nick) {
+  ev.stopPropagation();
+  closeChatMenu();
+  const el = document.createElement('div');
+  el.className = 'chat-menu';
+  el.innerHTML = `
+    <button onclick="reportChat('${esc(msgId)}','${esc(nick)}')">🚩 신고하기</button>
+    <button class="bad" onclick="blockChatUser('${esc(idl)}','${esc(nick)}')">🚫 ${esc(nick)} 차단</button>`;
+  document.body.appendChild(el);
+  const r = ev.currentTarget.getBoundingClientRect();
+  el.style.left = Math.min(r.left, innerWidth - el.offsetWidth - 12) + 'px';
+  el.style.top = Math.min(r.bottom + 4, innerHeight - el.offsetHeight - 12) + 'px';
+  _chatMenuEl = el;
+  setTimeout(() => document.addEventListener('click', closeChatMenu, { once: true }), 0);
+}
+function reportChat(msgId, nick) {
+  closeChatMenu();
+  askConfirm({ icon: '🚩', title: '이 메시지를 신고할까요?', desc: `${nick}님의 메시지가 운영자에게 전달돼요.`, yes: '신고', no: '취소' },
+    async () => {
+      const r = await apiPost('/api/chat-report', { token: authToken(), msgId, reason: '부적절한 내용' });
+      toast(r.ok ? '🚩 신고했어요. 확인 후 조치할게요.' : '⚠️ ' + esc(r.error || '실패했어요.'));
+    });
+}
+function blockChatUser(idl, nick) {
+  closeChatMenu();
+  askConfirm({ icon: '🚫', title: `${nick}님을 차단할까요?`, desc: '이 사람의 메시지가 보이지 않게 돼요. 언제든 해제할 수 있어요.', yes: '차단', no: '취소' },
+    async () => {
+      const r = await apiPost('/api/chat-block', { token: authToken(), idl, on: true });
+      if (!r.ok) return toast('⚠️ ' + esc(r.error || '실패했어요.'));
+      toast(`🚫 ${esc(nick)}님을 차단했어요.`);
+      loadClanChat();
+    });
+}
+
+function updateChatBadge() {
+  const b = document.getElementById('clanChatBadge');
+  if (b) { b.textContent = _chatUnread > 99 ? '99+' : _chatUnread; b.style.display = _chatUnread > 0 ? '' : 'none'; }
+  const cb = document.getElementById('clanBadge');
+  if (cb && _chatUnread > 0 && cb.style.display === 'none') {   // 로비 버튼에도 표시
+    cb.textContent = _chatUnread > 99 ? '99+' : _chatUnread;
+    cb.style.display = '';
+  }
+}
+
+// 실시간 수신
+socket.on('clan_chat', ({ msg }) => {
+  if (!msg) return;
+  _chatMsgs.push({ ...msg, mine: false });
+  if (_chatMsgs.length > 80) _chatMsgs.shift();
+  if (chatOpen()) { renderChat(); }
+  else { _chatUnread++; updateChatBadge(); playSound('ping'); toast(`💬 <b>${esc(msg.nick || '')}</b> — ${esc(msg.text)}`, 2600); }
+});
+socket.on('clan_report', ({ nick }) => toast(`🚩 클랜 채팅 신고가 접수됐어요 (${esc(nick || '')})`, 3200));
 
 async function renderClanBrowse(cost, coins) {
   const body = document.getElementById('clanBody');
@@ -1149,7 +1288,8 @@ async function updateSocialBadges() {
   setBadge('friendBadge', nIn);
   const tb = document.getElementById('ftabBadge');
   if (tb) { tb.textContent = nIn; tb.style.display = nIn > 0 ? '' : 'none'; }
-  setBadge('clanBadge', (c.ok && c.clan && c.clan.isOwner) ? c.clan.applicantCount : 0);
+  const applicants = (c.ok && c.clan && c.clan.isOwner) ? c.clan.applicantCount : 0;
+  setBadge('clanBadge', applicants + _chatUnread);   // 가입 신청 + 안 읽은 채팅
 }
 
 // ── 칭호 (내 정보에서 관리) ──

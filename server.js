@@ -176,6 +176,33 @@ app.post('/api/clan-disband', rateLimit(10), (req, res) => {
   if (r.ok) for (const m of r.members) notifyIdl(m, 'clan_disbanded', {});
   res.json(r);
 });
+
+// ── 클랜 채팅 ── (닫힌 그룹 대화 — 검증·필터는 전부 서버에서)
+app.post('/api/clan-chat', rateLimit(90), (req, res) => res.json(accounts.clanChatList((req.body || {}).token)));
+app.post('/api/clan-chat-send', rateLimit(40), (req, res) => {
+  const { token, text } = req.body || {};
+  const r = accounts.clanChatSend(token, text);
+  if (!r.ok) return res.json(r);
+  // 접속 중인 클랜원에게 실시간 전달 (나를 차단한 사람은 targets 에서 이미 빠져 있다)
+  for (const m of r.targets) notifyIdl(m, 'clan_chat', { msg: r.msg });
+  res.json({ ok: true, msg: r.msg });
+});
+app.post('/api/chat-block', rateLimit(30), (req, res) => {
+  const { token, idl, on } = req.body || {};
+  res.json(accounts.blockUser(token, idl, on));
+});
+app.post('/api/chat-blocklist', rateLimit(30), (req, res) => res.json(accounts.blockList((req.body || {}).token)));
+app.post('/api/chat-report', rateLimit(20), (req, res) => {
+  const { token, msgId, reason } = req.body || {};
+  const r = accounts.reportMessage(token, msgId, reason);
+  if (r.ok && r.ownerIdl) notifyIdl(r.ownerIdl, 'clan_report', { nick: r.targetNick });   // 클랜장에게 알림
+  res.json(r.ok ? { ok: true } : r);
+});
+// 운영자 확인용 신고 목록 — 통계와 같은 키로 보호
+app.get('/reports', rateLimit(20), (req, res) => {
+  if (!process.env.STATS_KEY || req.query.key !== process.env.STATS_KEY) return res.status(404).send('Not found');
+  res.json(accounts.reportList(100));
+});
 app.post('/api/daily',  rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.claimDaily(token) || { error: '로그인이 필요해요.' }); });
 app.post('/api/missions', rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.missionList(token)); });
 app.post('/api/tutorial-done', rateLimit(20), (req, res) => { const { token } = req.body || {}; const out = accounts.claimTutorial(token); if (out.claimed) stats.bump('tutorial'); res.json(out); });

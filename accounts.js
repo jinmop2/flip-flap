@@ -1082,6 +1082,110 @@ function disbandClan(token) {
   return { ok: true, members };
 }
 
+// ══════════════════════════════════════════════════════════
+//  클랜 채팅
+// ══════════════════════════════════════════════════════════
+// 닫힌 그룹(가입 승인된 클랜원)만 오가는 대화라 공개 채팅보다 위험이 낮지만,
+// 욕설·도배·신고는 기본으로 막는다. 기록은 신고 처리에 필요한 만큼만 짧게 보관한다.
+const CHAT_MAX_LEN = 100;        // 한 메시지 길이 상한
+const CHAT_KEEP = 80;            // 클랜당 보관 메시지 수 (링버퍼)
+const CHAT_COOLDOWN = 1200;      // 연속 전송 최소 간격(ms) — 도배 방지
+const CHAT_BURST = 8;            // 30초 안에 보낼 수 있는 최대 개수
+const CHAT_BURST_WINDOW = 30000;
+const REPORT_KEEP = 300;         // 신고 보관 건수
+
+db.reports ||= [];
+
+function chatArr(c) { if (!Array.isArray(c.chat)) c.chat = []; return c.chat; }
+function blockedOf(u) { if (!Array.isArray(u.blocked)) u.blocked = []; return u.blocked; }
+
+// 화면에 내려보낼 메시지 형태 (차단한 사람 것은 빼고)
+function chatView(c, viewer) {
+  const blocked = blockedOf(viewer);
+  return chatArr(c)
+    .filter(m => !blocked.includes(m.idl))
+    .map(m => ({ id: m.id, idl: m.idl, nick: nickOfIdl(m.idl) || m.nick, text: m.text, at: m.at,
+                 mine: m.idl === String(viewer.id).toLowerCase() }));
+}
+
+function clanChatList(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const c = clanOf(u);
+  if (!c) return { error: '클랜에 가입해야 채팅할 수 있어요.' };
+  return { ok: true, messages: chatView(c, u), me: idl, isOwner: c.owner === idl };
+}
+
+function clanChatSend(token, text) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const c = clanOf(u);
+  if (!c) return { error: '클랜에 가입해야 채팅할 수 있어요.' };
+
+  let t = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!t) return { error: '내용을 입력해주세요.' };
+  if (t.length > CHAT_MAX_LEN) t = t.slice(0, CHAT_MAX_LEN);
+  if (BADWORDS.test(t.replace(/[\s._\-*]/g, ''))) return { error: '사용할 수 없는 표현이 있어요.' };
+
+  // 도배 방지 — 연속 간격 + 짧은 시간 내 개수
+  const now = Date.now();
+  if (u.chatLast && now - u.chatLast < CHAT_COOLDOWN) return { error: '조금 천천히 보내주세요.' };
+  u.chatHits = (u.chatHits || []).filter(ts => now - ts < CHAT_BURST_WINDOW);
+  if (u.chatHits.length >= CHAT_BURST) return { error: '잠시 후 다시 보내주세요.' };
+  u.chatHits.push(now); u.chatLast = now;
+
+  const msg = { id: crypto.randomBytes(6).toString('hex'), idl, nick: u.nick, text: t, at: now };
+  const arr = chatArr(c);
+  arr.push(msg);
+  if (arr.length > CHAT_KEEP) arr.splice(0, arr.length - CHAT_KEEP);   // 오래된 것부터 버림
+  persistClan(c.id); persist(idl);
+  // 받을 사람: 나를 차단하지 않은 클랜원
+  const targets = c.members.filter(m => m !== idl && Object.prototype.hasOwnProperty.call(db.users, m)
+                                     && !blockedOf(db.users[m]).includes(idl));
+  return { ok: true, msg: { ...msg, nick: u.nick }, targets, clanId: c.id };
+}
+
+// 차단 — 차단한 사람의 메시지는 내 화면에서 사라지고, 이후 메시지도 안 온다
+function blockUser(token, targetIdl, on) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  targetIdl = String(targetIdl || '').toLowerCase();
+  if (!targetIdl || targetIdl === idl) return { error: '자기 자신은 차단할 수 없어요.' };
+  const list = blockedOf(u);
+  const i = list.indexOf(targetIdl);
+  if (on === false || (on === undefined && i >= 0)) { if (i >= 0) list.splice(i, 1); }
+  else if (i < 0) list.push(targetIdl);
+  persist(idl);
+  return { ok: true, blocked: list.slice(), on: list.includes(targetIdl) };
+}
+function blockList(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  return { ok: true, blocked: blockedOf(u).map(b => ({ idl: b, nick: nickOfIdl(b) })).filter(x => x.nick) };
+}
+
+// 신고 — 운영자가 확인할 수 있게 보관하고, 클랜장에게도 알린다
+function reportMessage(token, msgId, reason) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const c = clanOf(u);
+  if (!c) return { error: '클랜이 없어요.' };
+  const m = chatArr(c).find(x => x.id === msgId);
+  if (!m) return { error: '없는 메시지예요.' };
+  if (m.idl === idl) return { error: '내 메시지는 신고할 수 없어요.' };
+  db.reports ||= [];
+  if (db.reports.some(r => r.msgId === msgId && r.by === idl)) return { error: '이미 신고했어요.' };
+  db.reports.push({ msgId, by: idl, byNick: u.nick, target: m.idl, targetNick: m.nick,
+                    text: m.text, clanId: c.id, clanName: c.name,
+                    reason: String(reason || '').slice(0, 40), at: Date.now() });
+  if (db.reports.length > REPORT_KEEP) db.reports.splice(0, db.reports.length - REPORT_KEEP);
+  saveFile();
+  return { ok: true, ownerIdl: c.owner, targetNick: m.nick };
+}
+function reportList(limit = 50) {
+  return { ok: true, reports: (db.reports || []).slice(-limit).reverse() };
+}
+
 module.exports = {
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, claimDaily, myRank,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
@@ -1092,4 +1196,6 @@ module.exports = {
   // 클랜
   createClan, myClan, clanList, applyClan, cancelApply, decideApplicant,
   kickMember, transferOwner, setClanNotice, leaveClan, disbandClan,
+  // 클랜 채팅
+  clanChatList, clanChatSend, blockUser, blockList, reportMessage, reportList,
 };

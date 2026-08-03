@@ -707,6 +707,51 @@
     .soc-input:focus { outline:none; border-color:#e0b84a; }
     .soc-input::placeholder { color:#7a6a68; }
 
+    /* ── 클랜 채팅 ── */
+    .chat-list {
+      display:flex; flex-direction:column; gap:7px; height:238px; overflow-y:auto;
+      padding:9px; border-radius:10px; background:rgba(0,0,0,.24); border:1px solid rgba(185,141,52,.22);
+      overscroll-behavior:contain;
+    }
+    .chat-empty { color:#8a7a7e; font-size:.76rem; text-align:center; margin:auto; line-height:1.6; }
+    .chat-row { display:flex; flex-direction:column; gap:2px; max-width:82%; }
+    .chat-row.mine { align-self:flex-end; align-items:flex-end; }
+    .chat-who { font-size:.63rem; color:#c9a24a; font-weight:700; padding:0 3px; }
+    .chat-bubble {
+      background:rgba(255,255,255,.07); border:1px solid rgba(185,141,52,.3);
+      border-radius:12px 12px 12px 3px; padding:6px 10px; font-size:.8rem; color:#f0dcc0;
+      line-height:1.45; word-break:break-word; white-space:pre-wrap; cursor:pointer;
+    }
+    .chat-row.mine .chat-bubble {
+      background:linear-gradient(180deg,#7a4a18,#5a3210); border-color:#c9a24a; color:#ffe9a8;
+      border-radius:12px 12px 3px 12px; cursor:default;
+    }
+    .chat-time { font-size:.58rem; color:#7a6a68; padding:0 3px; }
+    .chat-form { display:flex; gap:6px; }
+    .chat-input {
+      flex:1; min-width:0; background:rgba(0,0,0,.3); border:1px solid rgba(185,141,52,.45);
+      color:#f0dcc0; border-radius:9px; padding:9px 11px; font-size:.84rem; font-family:inherit;
+    }
+    .chat-input:focus { outline:none; border-color:#e0b84a; }
+    .chat-input::placeholder { color:#7a6a68; }
+    .chat-send {
+      flex:none; background:linear-gradient(180deg,#e0b84a,#b8860b); border:1px solid #ffe9a8;
+      color:#2a1008; border-radius:9px; padding:0 14px; font-size:.82rem; font-weight:800;
+      font-family:inherit; cursor:pointer;
+    }
+    .chat-send:disabled { opacity:.5; cursor:not-allowed; }
+    .chat-note { font-size:.63rem; color:#8a7a7e; text-align:center; line-height:1.5; }
+    /* 메시지를 누르면 뜨는 신고·차단 메뉴 */
+    .chat-menu {
+      position:fixed; z-index:60; background:#2a1018; border:1px solid #b98d34; border-radius:10px;
+      padding:5px; display:flex; flex-direction:column; gap:3px; box-shadow:0 8px 22px rgba(0,0,0,.6);
+    }
+    .chat-menu button {
+      background:none; border:none; color:#e8c98a; font-family:inherit; font-size:.75rem;
+      padding:8px 14px; text-align:left; border-radius:6px; cursor:pointer; white-space:nowrap;
+    }
+    .chat-menu button.bad { color:#e08a8a; }
+
     /* 클랜 헤더 */
     .clan-head { text-align:center; padding:6px 0 10px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:10px; }
     .clan-name { font-size:1.15rem; font-weight:800; color:#ffe9a8; }
