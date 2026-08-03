@@ -1005,15 +1005,15 @@ function startBotMatch(entry) {
   rooms[roomId] = {
     players: [entry.sid, null], pids: [entry.pid || null, null], nicks: [prof.nick, randomBotNick()],
     profiles: [prof, null], tokens: [entry.token || null, null],
-    name: '빠른 대전', game: null, vsBot: false, difficulty: 'expert',   // 보상은 멀티 기준
-    secret: false, password: '', cpuIndex: 1, botMatch: true,
+    name: entry.itemMode ? '아이템전' : '빠른 대전', game: null, vsBot: false, difficulty: 'expert',   // 보상은 멀티 기준
+    secret: false, password: '', cpuIndex: 1, botMatch: true, itemMode: !!entry.itemMode,
     aiMem: expert3.createMem(),
   };
   rooms[roomId].profiles[1] = { nick: rooms[roomId].nicks[1], guest: true };   // 게스트 유저처럼 보이게
   s.leave('lobby'); s.join(roomId); s.roomId = roomId; s.playerIndex = 0; s.pid = entry.pid;
-  rooms[roomId].game = createGame();
+  rooms[roomId].game = createGame(rooms[roomId].itemMode);
   rooms[roomId].startedAt = Date.now();
-  io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles });
+  io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles, itemMode: rooms[roomId].itemMode });
   broadcast(roomId);
   startClock(roomId);
   setTimeout(() => maybeCpuAct(roomId), 800);
@@ -1124,7 +1124,7 @@ io.on('connection', (socket) => {
       name: String(name || '').trim().slice(0, 20), game: null, vsBot, difficulty,
       secret: !vsBot && !!secret, password: String(password || '').slice(0, 12),
       tutorial: vsBot && !!tutorial,   // 튜토리얼 모드: 확인 누를 때까지 진행 보류 + 시계 없음
-      itemMode: vsBot && !!itemMode && !tutorial,   // 아이템전(이벤트 모드) — 현재 AI 대전 전용
+      itemMode: !!itemMode && !tutorial,   // 아이템전(이벤트 모드) — 솔로·매칭·친구방 공통
     };
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
     if (vsBot) {
@@ -1187,12 +1187,21 @@ io.on('connection', (socket) => {
   });
 
   // 빠른 대전 (자동 매칭)
-  socket.on('quick_match', ({ pid, nick } = {}) => {
+  socket.on('quick_match', ({ pid, nick, itemMode } = {}) => {
     if (socket.roomId && rooms[socket.roomId]) return;
     dequeue(socket.id);
+    const want = !!itemMode;
+    // 클래식과 아이템전은 규칙이 다르므로 같은 모드끼리만 붙인다.
     let opp = null;
-    while (matchQueue.length) { const c = matchQueue.shift(); if (c.sid !== socket.id && io.sockets.sockets.get(c.sid)) { opp = c; break; } else clearTimeout(c.botTimer); }
-    const me = { sid: socket.id, pid, nick, token: socket.token };
+    for (let i = 0; i < matchQueue.length; i++) {
+      const c = matchQueue[i];
+      if (c.sid === socket.id || !io.sockets.sockets.get(c.sid)) {   // 끊긴 대기자는 정리
+        clearTimeout(c.botTimer); matchQueue.splice(i, 1); i--; continue;
+      }
+      if (!!c.itemMode !== want) continue;
+      opp = c; matchQueue.splice(i, 1); break;
+    }
+    const me = { sid: socket.id, pid, nick, token: socket.token, itemMode: want };
     if (opp) { clearTimeout(opp.botTimer); startMatch(opp, me); }
     else {
       me.botTimer = setTimeout(() => startBotMatch(me), MATCH_BOT_WAIT);   // 15초 후 위장봇 투입
@@ -1487,16 +1496,18 @@ function startMatch(a, b) {
   if (Object.keys(rooms).length >= MAX_ROOMS) { sa.emit('error', '서버가 혼잡해요.'); sb.emit('error', '서버가 혼잡해요.'); return; }
   const profOf = e => { const u = e.token && accounts.byToken(e.token); return u ? accounts.profileOf(u) : { nick: cleanNick(e.nick), guest: true }; };
   const pA = profOf(a), pB = profOf(b);
+  const itemMode = !!(a.itemMode && b.itemMode);   // 같은 모드끼리만 매칭되므로 둘 다 참
   const roomId = makeRoomId();
   rooms[roomId] = {
     players: [a.sid, b.sid], pids: [a.pid || null, b.pid || null], nicks: [pA.nick, pB.nick],
     profiles: [pA, pB], tokens: [a.token || null, b.token || null],
-    name: '빠른 대전', game: null, vsBot: false, difficulty: 'hard', secret: false, password: '',
+    name: itemMode ? '아이템전' : '빠른 대전', game: null, vsBot: false, difficulty: 'hard',
+    secret: false, password: '', itemMode,
   };
   sa.leave('lobby'); sa.join(roomId); sa.roomId = roomId; sa.playerIndex = 0; sa.pid = a.pid;
   sb.leave('lobby'); sb.join(roomId); sb.roomId = roomId; sb.playerIndex = 1; sb.pid = b.pid;
-  rooms[roomId].game = createGame();
-  io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles });
+  rooms[roomId].game = createGame(itemMode);
+  io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles, itemMode });
   broadcast(roomId);
   startClock(roomId);
 }

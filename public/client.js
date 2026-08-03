@@ -482,10 +482,14 @@ fetch('/api/auth-config').then(r => r.json()).then(d => {
 }).catch(() => {});
 
 // ── 빠른 대전 (자동 매칭) ───────────────────────────────────
-function quickMatch() {
+function quickMatch(itemMode) {
   closeModePanels();
-  socket.emit('quick_match', { pid: PID, nick: getNick() });
-  document.getElementById('matchModal').classList.add('show');
+  isItemMode = !!itemMode;
+  socket.emit('quick_match', { pid: PID, nick: getNick(), itemMode: !!itemMode });
+  const m = document.getElementById('matchModal');
+  m.classList.add('show');
+  const t = document.getElementById('matchTitle');
+  if (t) t.textContent = itemMode ? '🎪 아이템전 빠른플레이' : '⚡ 빠른 대전';
 }
 function cancelMatch() {
   socket.emit('cancel_match');
@@ -583,13 +587,14 @@ const itemArt = id => (typeof ITEM_ICONS !== 'undefined' && ITEM_ICONS[id]) || (
 let isItemMode = false;
 let _iuItem = null, _iuCard = null;
 
-// 로비 → 아이템전 시작 (난이도 선택 재사용)
+// 로비 → 아이템전: 솔로(AI) / 빠른플레이(유저 매칭) 선택
 function openItemMode() {
   askConfirm(
     { icon: '🎪', title: '아이템전 (이벤트)',
       desc: '경매에서 지면 아이템을 받아요! 12종 아이템으로 뒤집는 캐주얼 모드예요.\n랭킹에는 반영되지 않고 코인·경험치만 받아요.',
-      yes: '시작하기', no: '취소' },
-    () => startItemGame());
+      yes: '👤 솔로 (AI와)', no: '⚡ 빠른플레이' },
+    () => startItemGame(),                       // 솔로
+    () => quickMatch(true));                     // 빠른플레이 — 아이템전 유저끼리 매칭
 }
 function startItemGame() {
   isVsBot = true; isItemMode = true;
