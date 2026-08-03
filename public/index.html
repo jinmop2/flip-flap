@@ -160,29 +160,84 @@
       animation:ncRainbow 3s steps(30) infinite;   /* 매 프레임 → 초당 10프레임 리페인트로 축소 */
     }
     @keyframes ncRainbow { to { background-position:200% 0; } }
-    /* ── 카드백 스킨 ── */
-    .card.back.cb-night { background:linear-gradient(160deg,#0c1030,#243060); border-color:#4a5aaa; }
-    .card.back.cb-night .bf { color:#9ab0e8; }
-    .card.back.cb-gold { background:linear-gradient(160deg,#4a3808,#9a7a18); border-color:#ffd94a; box-shadow:0 3px 10px rgba(200,160,0,.35); }
-    .card.back.cb-gold .bf { color:#ffe9a8; }
-    .card.back.cb-ruby { background:linear-gradient(160deg,#4a0a18,#8a1830); border-color:#e05a70; box-shadow:0 3px 10px rgba(200,40,70,.35); }
-    .card.back.cb-ruby .bf { color:#ffb0c0; }
+    /* ── 카드백 스킨 ──
+       기본 뒷면은 무늬 없는 어두운 보라. 스킨은 "샀다는 게 한눈에 보이게"
+       각각 다른 문양(격자·색동·다마스크·성운)을 넣고 안쪽 테두리까지 바꾼다.
+       전부 정적인 CSS 그라디언트라 애니메이션 비용은 없다. */
+
+    /* 미드나잇 — 짙은 남색 밤하늘에 은빛 마름모 격자 + 잔별 */
+    .card.back.cb-night {
+      background:
+        radial-gradient(1.4px 1.4px at 22% 24%, rgba(255,255,255,.9) 50%, transparent 51%),
+        radial-gradient(1px 1px at 74% 18%, rgba(200,220,255,.85) 50%, transparent 51%),
+        radial-gradient(1.2px 1.2px at 62% 76%, rgba(255,255,255,.75) 50%, transparent 51%),
+        radial-gradient(1px 1px at 30% 82%, rgba(180,205,255,.8) 50%, transparent 51%),
+        repeating-linear-gradient(45deg, rgba(120,150,220,.16) 0 1px, transparent 1px 11px),
+        repeating-linear-gradient(-45deg, rgba(120,150,220,.16) 0 1px, transparent 1px 11px),
+        linear-gradient(165deg,#101740,#1b2a63 55%,#0a1030) !important;
+      border-color:#6d84d6 !important;
+      box-shadow:0 3px 11px rgba(70,100,200,.42) !important;
+    }
+    .card.back.cb-night::before { border-color:rgba(160,190,255,.5) !important; }
+    .card.back.cb-night .bf { background:none; -webkit-text-fill-color:#d3e0ff; color:#d3e0ff; text-shadow:0 0 9px rgba(120,160,255,.9), 0 1px 3px rgba(0,0,0,.8); }
+
+    /* 황금 — 금박 아가일 격자 + 사선 광택 */
+    .card.back.cb-gold {
+      background:
+        repeating-linear-gradient(45deg, rgba(255,235,150,.22) 0 2px, transparent 2px 13px),
+        repeating-linear-gradient(-45deg, rgba(255,235,150,.22) 0 2px, transparent 2px 13px),
+        linear-gradient(115deg, transparent 0 38%, rgba(255,245,190,.3) 46%, transparent 54% 100%),
+        linear-gradient(160deg,#7a5c10,#c99a2a 45%,#5a4208) !important;
+      border-color:#ffe06a !important;
+      box-shadow:0 3px 13px rgba(220,180,40,.5) !important;
+    }
+    .card.back.cb-gold::before { border-color:rgba(255,235,150,.75) !important; }
+    .card.back.cb-gold .bf { background:none; -webkit-text-fill-color:#3a2606; color:#3a2606; text-shadow:0 1px 0 rgba(255,240,180,.75); }
+
+    /* 오방색 — 전통 색동 띠 + 흰 구획선 */
+    .card.back.cb-obang {
+      background:
+        repeating-linear-gradient(90deg, rgba(255,255,255,.5) 0 1px, transparent 1px 9px),
+        linear-gradient(150deg,
+          #c8102e 0 20%, #f0a020 20% 38%, #f4efe2 38% 50%,
+          #1f6fb2 50% 68%, #2a2118 68% 86%, #c8102e 86% 100%) !important;
+      border-color:#f7f0df !important;
+      box-shadow:0 3px 11px rgba(0,0,0,.45) !important;
+    }
+    .card.back.cb-obang::before { border-color:rgba(255,255,255,.6) !important; }
+    .card.back.cb-obang .bf { background:none; -webkit-text-fill-color:#fff; color:#fff; text-shadow:0 0 5px rgba(0,0,0,1), 0 2px 6px rgba(0,0,0,.95); }
+
+    /* 루비 — 와인빛 다마스크 물결 + 붉은 광채 */
+    .card.back.cb-ruby {
+      background:
+        repeating-radial-gradient(circle at 50% 0%, rgba(255,150,170,.14) 0 1px, transparent 1px 9px),
+        repeating-linear-gradient(60deg, rgba(255,120,150,.13) 0 1px, transparent 1px 10px),
+        radial-gradient(ellipse at 50% 38%, rgba(255,130,160,.28), transparent 62%),
+        linear-gradient(160deg,#5c0a1e,#a51a38 55%,#3a0512) !important;
+      border-color:#ff7f96 !important;
+      box-shadow:0 3px 13px rgba(210,40,80,.5) !important;
+    }
+    .card.back.cb-ruby::before { border-color:rgba(255,180,195,.6) !important; }
+    .card.back.cb-ruby .bf { background:none; -webkit-text-fill-color:#ffe0e7; color:#ffe0e7; text-shadow:0 0 9px rgba(255,90,130,.9), 0 1px 3px rgba(0,0,0,.8); }
+
+    /* 은하수 — 성운 + 흩뿌린 별빛 (프리미엄) */
     .card.back.cb-galaxy {
       background:
-        radial-gradient(1px 1px at 20% 30%, #fff 50%, transparent 51%),
-        radial-gradient(1px 1px at 70% 15%, #ffe9a8 50%, transparent 51%),
-        radial-gradient(1.5px 1.5px at 45% 70%, #9ab0e8 50%, transparent 51%),
-        radial-gradient(1px 1px at 85% 55%, #fff 50%, transparent 51%),
-        radial-gradient(1px 1px at 30% 85%, #c39bff 50%, transparent 51%),
-        linear-gradient(160deg,#0a0a2a,#2a1050 60%,#0f1838);
-      border-color:#8a7aff; box-shadow:0 3px 12px rgba(120,100,255,.4);
+        radial-gradient(1.6px 1.6px at 18% 26%, #fff 50%, transparent 51%),
+        radial-gradient(1.2px 1.2px at 72% 16%, #ffe9a8 50%, transparent 51%),
+        radial-gradient(1.8px 1.8px at 46% 68%, #bcd0ff 50%, transparent 51%),
+        radial-gradient(1.1px 1.1px at 86% 54%, #fff 50%, transparent 51%),
+        radial-gradient(1.3px 1.3px at 28% 84%, #e2b8ff 50%, transparent 51%),
+        radial-gradient(1px 1px at 60% 40%, #fff 50%, transparent 51%),
+        radial-gradient(ellipse 70% 44% at 62% 30%, rgba(190,120,255,.42), transparent 70%),
+        radial-gradient(ellipse 60% 40% at 30% 72%, rgba(90,170,255,.34), transparent 70%),
+        linear-gradient(160deg,#0a0a2e,#2b0f52 55%,#0b1440) !important;
+      border-color:#a798ff !important;
+      box-shadow:0 3px 15px rgba(140,110,255,.55) !important;
     }
-    .card.back.cb-galaxy .bf { color:#c8d0ff; text-shadow:0 0 6px rgba(150,160,255,.8); }
-    .card.back.cb-obang {
-      background:linear-gradient(150deg,var(--red) 0 22%,var(--yel) 22% 42%,#f0e8d8 42% 58%,var(--blue) 58% 78%,#2e2118 78% 100%);
-      border-color:#f0e8d8;
-    }
-    .card.back.cb-obang .bf { color:#fff; text-shadow:0 1px 4px rgba(0,0,0,.7); }
+    .card.back.cb-galaxy::before { border-color:rgba(190,175,255,.65) !important; }
+    .card.back.cb-galaxy .bf { background:none; -webkit-text-fill-color:#e6ebff; color:#e6ebff; text-shadow:0 0 11px rgba(160,170,255,1), 0 1px 3px rgba(0,0,0,.8); }
+
     /* ── 상점 ── */
     .shop-box { max-width:380px; }
     .shop-coins { font-size:.95rem; font-weight:800; color:#ffd94a; background:rgba(200,160,0,.12); border:1px solid rgba(200,160,0,.35); border-radius:9px; padding:3px 11px; letter-spacing:0; margin-right:42px; }
