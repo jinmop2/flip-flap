@@ -541,6 +541,105 @@
       font-size:.58rem; font-weight:800; letter-spacing:.04em;
     }
     .ev-sub { font-size:.62rem; opacity:.8; font-weight:600; }
+    /* 이벤트 버튼 2단 — 아이템전 / 4인전 */
+    .event-row { display:flex; flex-direction:column; gap:6px; }
+    .event-row .event-pill { margin-top:0; }
+    .event-pill.quad { background:linear-gradient(100deg,#1f5f4a,#2b7d55 45%,#4a8f3a); border-color:#8fe0a0; }
+    .ev-badge.beta { background:#8fe0a0; color:#0d3a24; }
+
+    /* ══ 4인전 화면 ══ */
+    #game4 { display:none; position:fixed; inset:0; z-index:60; flex-direction:column;
+      background:radial-gradient(ellipse at 50% 34%, #2c5a44 0%, #17392a 62%, #0d2419 100%);
+      padding:calc(6px + var(--safe-t)) 8px calc(6px + var(--safe-b)); gap:6px; overflow:hidden; }
+    body.quad4 #game4 { display:flex; }
+    body.quad4 #lobby, body.quad4 #profileBar { display:none !important; }
+
+    /* 상단 상대 3명 */
+    #q-opps { display:flex; gap:5px; flex-shrink:0; }
+    .q-opp { flex:1; min-width:0; border-radius:11px; padding:6px 5px 5px;
+      background:linear-gradient(170deg,rgba(255,255,255,.09),rgba(0,0,0,.28));
+      border:1.5px solid rgba(255,255,255,.13); position:relative; transition:.18s; }
+    .q-opp.auc { border-color:var(--gold); box-shadow:0 0 12px rgba(230,190,80,.45); }
+    .q-opp.bidded { background:linear-gradient(170deg,rgba(120,220,150,.18),rgba(0,0,0,.28)); }
+    .q-oname { font-size:.6rem; font-weight:800; color:#f0e6d0; white-space:nowrap;
+      overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:3px; }
+    .q-obadge { font-size:.5rem; background:var(--gold); color:#241000; border-radius:4px;
+      padding:0 3px; font-weight:900; flex-shrink:0; }
+    .q-ometa { display:flex; gap:4px; align-items:center; margin-top:3px; font-size:.56rem; color:#c9bfa8; }
+    .q-need { border-radius:4px; padding:0 4px; font-weight:800; background:rgba(0,0,0,.35); }
+    .q-need.r1 { background:#c0392b; color:#fff; animation:qpulse 1s infinite; }
+    .q-need.r2 { background:#b8860b; color:#fff; }
+    @keyframes qpulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+    .q-oacq { display:flex; flex-wrap:wrap; gap:2px; margin-top:4px; min-height:15px; }
+    .q-chip { font-size:.54rem; font-weight:800; border-radius:3px; padding:1px 3px; color:#fff; line-height:1.25; }
+    .q-chip[data-k="2"]{background:#b8343c} .q-chip[data-k="3"]{background:#2e6f9e}
+    .q-chip[data-k="4"]{background:#b08820} .q-chip[data-k="6"]{background:#4a4038}
+
+    /* 중앙 경매장 */
+    #q-table { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:6px; position:relative; }
+    #q-turnbar { display:flex; gap:10px; align-items:center; font-size:.62rem; color:#bda; font-weight:700; }
+    /* 경매대 — 카드가 허공에 뜬 느낌이 안 나도록 펠트 판을 깔아준다 */
+    #q-mat { display:flex; align-items:center; gap:12px; padding:12px 18px; border-radius:60px;
+      background:radial-gradient(ellipse at 50% 45%, rgba(255,240,200,.10), rgba(0,0,0,.22) 72%);
+      box-shadow:inset 0 0 0 1.5px rgba(255,235,180,.16), 0 6px 20px rgba(0,0,0,.35); }
+    .q-slot { display:flex; flex-direction:column; align-items:center; gap:3px; }
+    .q-slabel { font-size:.55rem; color:#9fb8a8; font-weight:700; }
+    .q-vs { font-size:.62rem; font-weight:800; color:var(--gold); text-align:center; min-width:52px; }
+    /* 공개될 때 화면이 튀지 않도록 자리를 미리 잡아둔다 */
+    #q-bids { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; min-height:96px;
+      align-items:center; }
+    .q-bid { display:flex; flex-direction:column; align-items:center; gap:2px; }
+    .q-bidname { font-size:.5rem; color:#bfae94; max-width:56px; overflow:hidden;
+      text-overflow:ellipsis; white-space:nowrap; }
+    .q-bid.win .q-bidname { color:#ffd94a; font-weight:900; }
+    .q-bid.win .card { box-shadow:0 0 0 2.5px var(--gold), 0 4px 14px rgba(0,0,0,.5); }
+    #q-status { font-size:.72rem; font-weight:800; color:#ffe9a8; text-align:center;
+      min-height:18px; padding:0 8px; }
+    #q-typeBtns { display:none; gap:8px; }
+    #q-typeBtns.show { display:flex; }
+    .q-tbtn { display:flex; flex-direction:column; align-items:center; gap:1px; cursor:pointer;
+      background:linear-gradient(160deg,#3d2a1a,#241608); border:1.5px solid var(--gold);
+      color:#ffe9b0; border-radius:10px; padding:7px 12px; font-family:inherit; }
+    .q-tbtn b { font-size:.76rem; } .q-tbtn span { font-size:.55rem; opacity:.75; }
+    .q-tbtn:hover { filter:brightness(1.15); }
+
+    /* 하단 나 */
+    #q-me { flex-shrink:0; display:flex; flex-direction:column; gap:4px; }
+    #q-myacq { display:flex; flex-wrap:wrap; gap:4px; min-height:16px; justify-content:center;
+      align-items:center; }
+    .q-melabel { font-size:.58rem; font-weight:800; color:#ffe9a8; }
+    #q-myhand { display:flex; gap:4px; justify-content:center; flex-wrap:nowrap; overflow-x:auto;
+      padding:2px 0 4px; scrollbar-width:none; }
+    #q-myhand::-webkit-scrollbar { display:none; }
+    #q-myhand .card { width:54px; height:76px; padding:4px 4px 3px; cursor:default; }
+    #q-myhand .card .c-rank { font-size:.9rem; padding:1px 5px; min-width:20px; }
+    #q-myhand .card.pick { cursor:pointer; box-shadow:0 0 0 2px var(--gold), 0 3px 10px rgba(0,0,0,.5); }
+    #q-myhand .card.pick:hover { transform:translateY(-7px); }
+    #q-mat .card, #q-bids .card { width:58px; height:81px; padding:4px 4px 3px; }
+    #q-mat .card .c-rank, #q-bids .card .c-rank { font-size:.95rem; padding:1px 5px; min-width:21px; }
+
+    #q-quit { background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.2); color:#d8ccb4;
+      border-radius:8px; padding:2px 9px; font-size:.58rem; font-family:inherit; cursor:pointer; }
+    #q-quit:hover { background:rgba(0,0,0,.6); color:#fff; }
+
+    /* 결과 */
+    #q-over { display:none; position:absolute; inset:0; z-index:10; background:rgba(0,0,0,.78);
+      align-items:center; justify-content:center; padding:16px; }
+    #q-over.show { display:flex; }
+    .q-ocard { background:linear-gradient(170deg,#2e1a12,#160b06); border:2px solid var(--gold);
+      border-radius:16px; padding:18px 16px; max-width:340px; width:100%; text-align:center; }
+    #q-otitle { font-size:1.15rem; font-weight:900; color:#ffd94a; margin-bottom:10px; }
+    .q-rrow { display:flex; align-items:center; gap:7px; padding:5px 8px; border-radius:8px;
+      margin-bottom:4px; background:rgba(255,255,255,.05); font-size:.68rem; color:#e0d4bc; }
+    .q-rrow.me { background:rgba(230,190,80,.16); color:#ffe9a8; font-weight:800; }
+    .q-rpos { font-weight:900; min-width:16px; }
+
+    @media (max-height:700px) {
+      #q-myhand .card { width:46px; height:65px; }
+      #q-mat .card, #q-bids .card { width:50px; height:70px; }
+      .q-oacq { min-height:0; }
+    }
 
     /* 인게임 아이템 슬롯 — 왼쪽 세로 3칸 */
     #itemBar { position:absolute; left:10px; bottom:calc(96px + var(--safe-b)); z-index:7; }
@@ -1020,7 +1119,8 @@
     .confirm-box { align-items:center; text-align:center; gap:10px; padding:26px 24px; }
     .cf-icon { font-size:2.4rem; line-height:1; filter:drop-shadow(0 3px 6px rgba(0,0,0,.5)); }
     .cf-title { font-size:1.1rem; font-weight:800; color:#f5e6c0; }
-    .cf-desc { font-size:.82rem; color:#c8a86a; line-height:1.5; min-height:0; }
+    /* pre-line — 설명에 넣은 줄바꿈을 살린다 (개행 없는 기존 문구는 그대로) */
+    .cf-desc { font-size:.82rem; color:#c8a86a; line-height:1.5; min-height:0; white-space:pre-line; }
     .cf-desc:empty { display:none; }
     .cf-btns { display:flex; gap:9px; width:100%; margin-top:6px; }
     .cf-btns .btn { flex:1; }
@@ -1927,7 +2027,10 @@
     </div>
 
     <!-- 친구 초대 -->
-    <button class="event-pill" onclick="openItemMode()"><span class="ev-badge">EVENT</span>🎪 아이템전 <span class="ev-sub">랭킹 미반영 · 코인만</span></button>
+    <div class="event-row">
+      <button class="event-pill" onclick="openItemMode()"><span class="ev-badge">EVENT</span>🎪 아이템전 <span class="ev-sub">랭킹 미반영 · 코인만</span></button>
+      <button class="event-pill quad" onclick="q4Open()"><span class="ev-badge beta">BETA</span>👥 4인전 <span class="ev-sub">AI 3명과 경매 배틀</span></button>
+    </div>
     <button class="invite-pill" onclick="inviteFriend()"><svg class="svgi" viewBox="0 0 24 24" style="color:#f5cf6e"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>친구 초대하기</button>
 
     <!-- 앱 설치 (설치 가능할 때만 표시) -->
@@ -2448,10 +2551,54 @@
   </div>
 </div>
 
+<!-- ══════════ 4인전 화면 (AI 3명) ══════════ -->
+<div id="game4">
+  <!-- 상단: 상대 3명 -->
+  <div id="q-opps"></div>
+
+  <!-- 중앙: 경매장 -->
+  <div id="q-table">
+    <div id="q-turnbar">
+      <span id="q-turn"></span><span id="q-deck"></span>
+      <button id="q-quit" onclick="q4Quit()">나가기</button>
+    </div>
+    <div id="q-mat">
+      <div class="q-slot"><div class="q-slabel">공개 카드</div><div class="q-scard" id="q-center"></div></div>
+      <div class="q-vs" id="q-typeTag"></div>
+      <div class="q-slot"><div class="q-slabel">출품 카드</div><div class="q-scard" id="q-offer"></div></div>
+    </div>
+    <div id="q-bids"></div>
+    <div id="q-status"></div>
+    <div id="q-typeBtns">
+      <button class="q-tbtn" onclick="q4Type('open')"><b>👁 오픈</b><span>경매품 공개</span></button>
+      <button class="q-tbtn" onclick="q4Type('close')"><b>🙈 클로즈</b><span>경매품 비밀</span></button>
+    </div>
+  </div>
+
+  <!-- 하단: 나 -->
+  <div id="q-me">
+    <div id="q-myacq"></div>
+    <div id="q-myhand"></div>
+  </div>
+
+  <!-- 결과 -->
+  <div id="q-over">
+    <div class="q-ocard">
+      <div id="q-otitle"></div>
+      <div id="q-orank"></div>
+      <div style="display:flex; gap:8px; justify-content:center; margin-top:14px">
+        <button class="btn btn-gold" style="width:auto" onclick="q4Start()">한 판 더!</button>
+        <button class="btn btn-outline" style="width:auto" onclick="q4Quit()">로비로</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.8.1/kakao.min.js" integrity="sha384-OL+ylM/iuPLtW5U3XcvLSGhE8JzReKDank5InqlHGWPhb4140/yrBw0bg0y7+C9J" crossorigin="anonymous"></script>
 <script src="item-icons.js"></script>
 <script src="art.js"></script>
 <script src="client.js"></script>
+<script src="client4.js"></script>
 </body>
 </html>

@@ -7,6 +7,7 @@ const accounts = require('./accounts');
 const expert3 = require('./expert3');   // 전문가 AI v3 (카운팅+몬테카를로+종반탐색)
 const items = require('./items');       // 아이템전(이벤트 모드) 아이템 12종
 const stats = require('./stats');       // 방문·활동 통계 (자체 수집)
+const { attach4 } = require('./server4'); // 4인전 (AI 3명) — 2인 엔진과 완전 분리
 
 app.set('trust proxy', 1);
 app.use(require('compression')());   // gzip — html/js/json 전송량 ~75% 절감
@@ -977,6 +978,7 @@ const cleanNick = n => (String(n || '').trim().slice(0, 12)) || '게스트';
 // 현재 접속 인원 브로드캐스트 (5초 주기 + 접속/해제 시)
 function broadcastOnline() { stats.peak(io.engine.clientsCount); io.emit('online', io.engine.clientsCount); }
 setInterval(broadcastOnline, 5000);
+const g4 = attach4(io);              // 4인전 소켓 (g4_* 이벤트)
 const MAX_ROOMS = 800;               // 서버 전체 방 상한
 const MAX_CONN_PER_IP = 8;           // IP당 소켓 연결 상한
 const connByIp = new Map();
@@ -1029,7 +1031,16 @@ io.on('connection', (socket) => {
   const ip = (socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || 'x').split(',')[0].trim();
   socket.clientIp = ip;   // 같은 IP 대전(코인 파밍) 감지용
   const n = (connByIp.get(ip) || 0) + 1; connByIp.set(ip, n);
-  if (n > MAX_CONN_PER_IP) { socket.emit('error', '연결이 너무 많아요.'); socket.disconnect(true); return; }
+  if (n > MAX_CONN_PER_IP) {
+    // 거부한 연결은 카운트에서 즉시 빼야 한다. 여기서 return 하면 아래쪽 disconnect
+    // 핸들러가 등록되지 않아 감소가 영영 일어나지 않고, 한 번 상한을 넘긴 IP가
+    // 서버 재시작 전까지 영구 차단됐다 (통신사 NAT 뒤 유저들이 통째로 막힘).
+    const back = n - 1;
+    if (back <= 0) connByIp.delete(ip); else connByIp.set(ip, back);
+    socket.emit('error', '연결이 너무 많아요.');
+    socket.disconnect(true);
+    return;
+  }
   socket.emit('online', io.engine.clientsCount); broadcastOnline();
 
   // 소켓 이벤트 rate limit (초당 30건 초과 시 드롭 — 스팸/브루트포스 방지)
