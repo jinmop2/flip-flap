@@ -40,7 +40,10 @@ tr:nth-child(even){background:rgba(255,255,255,.03)}h1{color:#ffd94a;font-size:1
 ${rows.map(r => `<tr><td>${r.day}</td>${td(r.pv)}${td(r.uv)}${td(r.signups)}${td(r.games)}${td(r.multi)}${td(r.botmatch)}${td(r.tutorial)}${td(r.peak)}</tr>`).join('')}
 </table>`);
 });
-app.get('/health', (req, res) => res.json({ ok: true, rooms: Object.keys(rooms).length, uptime: Math.round(process.uptime()) }));
+app.get('/health', (req, res) => res.json({
+  ok: true, rooms: Object.keys(rooms).length, uptime: Math.round(process.uptime()),
+  store: accounts.storeInfo(),   // 지금 어디에 저장 중인지 (DB 연결 확인용)
+}));
 
 // Android TWA(Play스토어) 검증 — 앱 서명 SHA256 지문을 Render 환경변수 TWA_FINGERPRINT에 넣으면 자동 제공
 app.get('/.well-known/assetlinks.json', (req, res) => {

@@ -30,18 +30,73 @@ function loadFileSync() {
   try { db = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch (_) { db = { users: {}, nickTaken: {}, clans: {} }; }
   db.users ||= {}; db.clans ||= {}; rebuildIndex();
 }
+// DB가 잠깐 죽어도 영구히 포기하면 안 된다.
+// (무료 Postgres 정지 기간에 재시작되면서 pool 을 버리는 바람에, DB를 되살린 뒤에도
+//  앱이 임시 파일만 보며 계정이 사라진 것처럼 보였다. 같은 일이 반복되지 않게 재시도한다.)
+let dbReady = false;
+let dbRetryTimer = null;
+let dbLastError = null;
+
+function scheduleDbRetry(delay = 20000) {
+  if (dbRetryTimer || !pool) return;
+  dbRetryTimer = setTimeout(() => { dbRetryTimer = null; loadFromDB(); }, delay);
+}
+
+// DB가 죽어 있는 동안 파일에만 생긴 계정을 살아난 DB로 옮긴다 (DB에 있는 건 절대 덮지 않음)
+async function rescueFileOnlyUsers() {
+  let fileDb = null;
+  try { fileDb = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch (_) { return; }
+  const fUsers = (fileDb && fileDb.users) || {};
+  const fClans = (fileDb && fileDb.clans) || {};
+  let n = 0, c = 0;
+  for (const [idl, u] of Object.entries(fUsers)) {
+    if (Object.prototype.hasOwnProperty.call(db.users, idl)) continue;   // DB 우선
+    try {
+      await pool.query('INSERT INTO ff_users(idl, data) VALUES($1, $2) ON CONFLICT(idl) DO NOTHING', [idl, u]);
+      db.users[idl] = u; n++;
+    } catch (_) {}
+  }
+  for (const [cid, cl] of Object.entries(fClans)) {
+    if (Object.prototype.hasOwnProperty.call(db.clans, cid)) continue;
+    try {
+      await pool.query('INSERT INTO ff_clans(cid, data) VALUES($1, $2) ON CONFLICT(cid) DO NOTHING', [cid, cl]);
+      db.clans[cid] = cl; c++;
+    } catch (_) {}
+  }
+  if (n || c) { rebuildIndex(); console.log(`DB 정지 중 파일에만 있던 계정 ${n}개, 클랜 ${c}개를 DB로 구제`); }
+}
+
 async function loadFromDB() {
   try {
     await pool.query('CREATE TABLE IF NOT EXISTS ff_users (idl TEXT PRIMARY KEY, data JSONB)');
     await pool.query('CREATE TABLE IF NOT EXISTS ff_clans (cid TEXT PRIMARY KEY, data JSONB)');
+    await pool.query('CREATE TABLE IF NOT EXISTS ff_meta (k TEXT PRIMARY KEY, data JSONB)');
     const { rows } = await pool.query('SELECT idl, data FROM ff_users');
     const clanRows = (await pool.query('SELECT cid, data FROM ff_clans')).rows;
+    const prevReady = dbReady;
     db = { users: {}, nickTaken: {}, clans: {} };
     for (const r of rows) db.users[r.idl] = r.data;
     for (const r of clanRows) db.clans[r.cid] = r.data;
+    try {
+      const meta = await pool.query("SELECT data FROM ff_meta WHERE k = 'reports'");
+      db.reports = (meta.rows[0] && meta.rows[0].data) || [];
+    } catch (_) { db.reports = []; }
     rebuildIndex();
+    dbReady = true; dbLastError = null;
     console.log('계정 ' + rows.length + '개, 클랜 ' + clanRows.length + '개 DB에서 로드됨');
-  } catch (e) { console.error('DB 로드 실패, 파일로 대체:', e.message); pool = null; loadFileSync(); }
+    if (!prevReady) await rescueFileOnlyUsers();   // 정지 기간에 생긴 계정 회수
+  } catch (e) {
+    dbReady = false; dbLastError = e.message;
+    console.error('DB 연결 실패 — 임시로 파일을 쓰고 20초 뒤 재시도:', e.message);
+    loadFileSync();
+    scheduleDbRetry();
+  }
+}
+// 운영 점검용 — 지금 어디에 저장 중인지 (자격증명은 노출하지 않음)
+function storeInfo() {
+  return { mode: pool ? (dbReady ? 'postgres' : 'file(임시 — DB 재연결 대기)') : 'file',
+           dbConfigured: !!pool, dbReady, lastError: dbLastError,
+           users: Object.keys(db.users || {}).length, clans: Object.keys(db.clans || {}).length };
 }
 let saveTimer = null;
 function saveFile() {
@@ -51,9 +106,16 @@ function saveFile() {
     catch (e) { console.error('accounts save fail:', e.message); }
   }, 300);
 }
+// 신고 기록 저장 — 유저 단위가 아니라 통째로 보관한다
+function persistReports() {
+  if (pool && dbReady) {
+    pool.query("INSERT INTO ff_meta(k, data) VALUES('reports', $1) ON CONFLICT(k) DO UPDATE SET data = excluded.data",
+      [JSON.stringify(db.reports || [])]).catch(e => console.error('신고 저장 실패:', e.message));
+  } else saveFile();
+}
 // 특정 유저를 저장소에 반영
 function persist(idl) {
-  if (pool) {
+  if (pool && dbReady) {
     const u = db.users[idl]; if (!u) return;
     pool.query('INSERT INTO ff_users(idl, data) VALUES($1, $2) ON CONFLICT(idl) DO UPDATE SET data = excluded.data', [idl, u])
       .catch(e => console.error('DB 저장 실패:', e.message));
@@ -61,21 +123,21 @@ function persist(idl) {
 }
 // 특정 유저를 저장소에서 영구 삭제 (계정 삭제 — 구글플레이 필수 정책)
 function purge(idl) {
-  if (pool) {
+  if (pool && dbReady) {
     pool.query('DELETE FROM ff_users WHERE idl = $1', [idl])
       .catch(e => console.error('DB 삭제 실패:', e.message));
   } else saveFile();
 }
 // 클랜 저장 / 삭제 (파일 모드에서는 db 전체가 직렬화되므로 saveFile 한 번이면 충분)
 function persistClan(cid) {
-  if (pool) {
+  if (pool && dbReady) {
     const c = db.clans[cid]; if (!c) return;
     pool.query('INSERT INTO ff_clans(cid, data) VALUES($1, $2) ON CONFLICT(cid) DO UPDATE SET data = excluded.data', [cid, c])
       .catch(e => console.error('클랜 저장 실패:', e.message));
   } else saveFile();
 }
 function purgeClan(cid) {
-  if (pool) {
+  if (pool && dbReady) {
     pool.query('DELETE FROM ff_clans WHERE cid = $1', [cid])
       .catch(e => console.error('클랜 삭제 실패:', e.message));
   } else saveFile();
@@ -1183,7 +1245,7 @@ function reportMessage(token, msgId, reason) {
                     text: m.text, clanId: c.id, clanName: c.name,
                     reason: String(reason || '').slice(0, 40), at: Date.now() });
   if (db.reports.length > REPORT_KEEP) db.reports.splice(0, db.reports.length - REPORT_KEEP);
-  saveFile();
+  persistReports();
   return { ok: true, ownerIdl: c.owner, targetNick: m.nick };
 }
 function reportList(limit = 50) {
@@ -1202,4 +1264,6 @@ module.exports = {
   kickMember, transferOwner, setClanNotice, leaveClan, disbandClan,
   // 클랜 채팅
   clanChatList, clanChatSend, blockUser, blockList, reportMessage, reportList,
+  // 운영 점검
+  storeInfo,
 };
