@@ -19,8 +19,6 @@ const T = { draw: 650, offer: 750, type: 650, bid: 480, reveal: 2300, settle: 16
 const STUCK_MS = 12000;     // 사람을 기다리는 게 아닌데 이만큼 멈춰 있으면 복구한다
 const ORPHAN_MS = 120000;   // 솔로 — 접속이 끊긴 뒤 이만큼 지나면 방을 정리
 const SEAT_GRACE = 20000;   // 멀티 — 이만큼 안 돌아오면 그 자리는 AI가 대신한다
-const FILL_MS = 25000;      // 이 시간 안에 4명이 안 모이면 남는 자리를 AI로 채운다
-const WAIT3_MS = 8000;      // 셋이 모였으면 네 번째를 이만큼만 더 기다린다
 
 // 대기 인원에 따라 몇 인용으로 시작할지. 3명이 모이면 AI를 끼우지 않고 셋이 한다.
 //   4명 이상 → 4인 / 3명 → 3인(전원 사람) / 2명 → 3인(사람2+AI1) / 1명 → 4인(사람1+AI3)
@@ -224,29 +222,22 @@ function attach4(io) {
   // ── 대기열 ───────────────────────────────────────────────────────────────
   const queueInfo = () => {
     const n = queue4.length;
-    const limit = n >= 3 ? WAIT3_MS : FILL_MS;
-    const left = Math.max(0, limit - (Date.now() - queue4[0].at));
-    for (const q of queue4) io.to(q.sid).emit('g4_queue', { n, need: 4, fillIn: left, three: n >= 3 });
+    // 지금 시작하면 몇 인전이 되는지 미리 알려준다
+    for (const q of queue4) io.to(q.sid).emit('g4_queue', { n, need: 4, seats: seatsFor(n) });
   };
   function dequeue(sid) {
     const before = queue4.length;
     queue4 = queue4.filter((q) => q.sid !== sid);
     if (queue4.length !== before && queue4.length) queueInfo();
   }
-  // 4명이 차면 즉시 시작. 셋만 모였을 때 바로 시작해 버리면 네 번째가 와도
-  // 이미 판이 열려 4인전이 영영 안 열리므로, 잠깐 더 기다렸다가 셋이서 연다.
+  // 4명이 차면 자동 시작. 그보다 적으면 누군가 "시작"을 눌러야 시작한다.
   function tryMatch(force) {
     if (queue4.length >= 4) { startRoom(queue4.splice(0, 4), false, 4); return; }
     if (force && queue4.length) { startRoom(queue4.splice(0, queue4.length), false); }
   }
-  setInterval(() => {
-    if (!queue4.length) return;
-    const waited = Date.now() - queue4[0].at;
-    // 셋이 모였으면 네 번째를 조금만 더 기다렸다 시작한다 (전원 사람인 3인전)
-    const limit = queue4.length >= 3 ? WAIT3_MS : FILL_MS;
-    if (waited >= limit) tryMatch(true);
-    else queueInfo();
-  }, 1000).unref?.();
+  // 자동으로 시작하지 않는다. 대기실 인원만 계속 알려주고, 시작은 사람이 누른다.
+  // (4명이 다 차면 그때만 바로 시작한다 — 더 기다릴 이유가 없다)
+  setInterval(() => { if (queue4.length) queueInfo(); }, 1000).unref?.();
 
   // ── 방 생성 ──────────────────────────────────────────────────────────────
   // humans: [{ sid, nick }] — 부족한 자리는 AI 가 채운다
@@ -347,6 +338,13 @@ function attach4(io) {
     });
 
     socket.on('g4_cancel', () => { dequeue(socket.id); socket.emit('g4_cancelled'); });
+
+    // 대기실에서 "시작" — 지금 모인 인원 기준으로 몇 인전인지 정해진다.
+    // 대기 중인 사람 전원이 같이 들어간다.
+    socket.on('g4_startnow', () => {
+      if (!queue4.some((q) => q.sid === socket.id)) return;   // 대기 중인 사람만 누를 수 있다
+      tryMatch(true);
+    });
 
     socket.on('g4_act', (data = {}) => {
       const roomId = socket.g4room, r = rooms4[roomId];

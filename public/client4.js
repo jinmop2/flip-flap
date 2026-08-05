@@ -317,14 +317,17 @@
     if (typeof closeModePanels === 'function') closeModePanels();
     $('q-over').classList.remove('show');
     $('q-wait').classList.add('show');
-    $('q-waitTxt').textContent = '상대를 찾는 중…';
+    $('q-waitTxt').textContent = '대기실 입장 중…';
     $('q-waitSub').textContent = '';
+    { const b = $('q-startNow'); if (b) b.textContent = '지금 시작'; }
     q4Live = true; q4Room = null; lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
     document.body.classList.add('quad4');
     sfx('deal');
     try { if (typeof startBGM === 'function') startBGM(); } catch (_) {}
     socket.emit('g4_quick', { nick: typeof getNick === 'function' ? getNick() : '나' });
   };
+  // 대기실에서 직접 시작 — 지금 모인 인원으로 몇 인전인지 결정된다
+  window.q4StartNow = function () { socket.emit('g4_startnow'); };
   window.q4CancelQuick = function () {
     socket.emit('g4_cancel');
     $('q-wait').classList.remove('show');
@@ -372,11 +375,15 @@
     });
     socket.on('g4_queue', (d) => {
       if (!q4Live) return;
-      $('q-waitTxt').textContent = `상대를 찾는 중… (${d.n}/${d.need})`;
-      const sec = Math.ceil((d.fillIn || 0) / 1000);
-      $('q-waitSub').textContent = sec <= 0 ? '곧 시작합니다…'
-        : d.three ? `${sec}초 안에 한 명 더 안 오면 셋이서 시작합니다`
-                  : `${sec}초 뒤 남는 자리는 AI로 채워 시작합니다`;
+      $('q-waitTxt').textContent = `대기실 — 현재 ${d.n}명`;
+      // 지금 시작하면 몇 인전이 되는지, AI가 몇 자리를 채우는지 미리 알려준다
+      const seats = d.seats || 4;
+      const bots = Math.max(0, seats - d.n);
+      $('q-waitSub').textContent = bots > 0
+        ? `지금 시작하면 ${seats}인전 (사람 ${d.n}명 · AI ${bots}명)`
+        : `지금 시작하면 ${seats}인전 (전원 사람!)`;
+      const b = $('q-startNow');
+      if (b) b.textContent = `${seats}인전 시작`;
     });
     socket.on('g4_cancelled', () => { $('q-wait').classList.remove('show'); });
     socket.on('g4_state', (s) => { if (!q4Live) return; q4 = s; lastRecv = Date.now(); render(); });

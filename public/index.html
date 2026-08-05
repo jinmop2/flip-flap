@@ -444,6 +444,11 @@
     .rw-badge { font-size:.82rem; font-weight:700; padding:4px 12px; border-radius:20px; opacity:0; animation:rwPop .4s ease forwards; }
     @keyframes rwPop { from { opacity:0; transform:scale(.7) translateY(6px); } to { opacity:1; transform:scale(1) translateY(0); } }
     .bd-first  { background:rgba(120,216,120,.16); color:#8ee88e; border:1px solid rgba(120,216,120,.4); }
+    .bd-clan   { background:rgba(90,180,140,.20); color:#8fe0b4; border:1px solid rgba(140,220,180,.45); }
+    /* 클랜 직책 배지 */
+    .soc-role { font-size:.58rem; font-weight:800; border-radius:5px; padding:1px 5px; margin-left:5px; vertical-align:middle; }
+    .soc-role.owner { background:rgba(230,190,80,.25); color:#ffd94a; }
+    .soc-role.vice  { background:rgba(140,200,255,.22); color:#9fd8ff; }
     .bd-streak { background:rgba(255,120,60,.16); color:#ffab5e; border:1px solid rgba(255,120,60,.4); }
     .bd-level  { background:rgba(120,180,255,.16); color:#9ad0ff; border:1px solid rgba(120,180,255,.4); }
     .bd-rank   { background:rgba(200,139,255,.16); color:#d8b0ff; border:1px solid rgba(200,139,255,.45); }
@@ -2639,7 +2644,10 @@
       <div class="q-wspin"></div>
       <div id="q-waitTxt">상대를 찾는 중…</div>
       <div id="q-waitSub"></div>
-      <button class="btn btn-outline" style="width:auto;margin-top:12px" onclick="q4CancelQuick()">취소</button>
+      <div style="display:flex; gap:8px; justify-content:center; margin-top:14px">
+        <button class="btn btn-gold" style="width:auto" id="q-startNow" onclick="q4StartNow()">지금 시작</button>
+        <button class="btn btn-outline" style="width:auto" onclick="q4CancelQuick()">취소</button>
+      </div>
     </div>
   </div>
 

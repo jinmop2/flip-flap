@@ -774,6 +774,14 @@ function recordResult(token, result, opts = {}) {
   }
   coins += firstWin + streak;
 
+  // 클랜 보너스 — 클랜장·부클랜장 +10%, 일반 클랜원 +5%.
+  // 어뷰징으로 막혀 보상이 0인 판에는 당연히 안 붙는다.
+  let clanBonus = 0;
+  if (coins > 0) {
+    const rate = clanCoinBonus(u);
+    if (rate > 0) { clanBonus = Math.round(coins * rate); coins += clanBonus; }
+  }
+
   u.xp += xp;
   u.coins = Math.max(0, (u.coins || 0) + coins);
   if (rp) u.rp = Math.max(0, u.rp + rp);
@@ -800,7 +808,7 @@ function recordResult(token, result, opts = {}) {
   return {
     profile: profileOf(u),
     rewards: {
-      coins, xp, rp, firstWin, streak, streakCount: u.winStreak, blocked, reason,
+      coins, xp, rp, firstWin, streak, clanBonus, streakCount: u.winStreak, blocked, reason,
       levelUp: afterLevel > beforeLevel ? afterLevel : 0,
       rankUp: (afterRank !== beforeRank && rp > 0) ? afterRank : 0,
       missions, titles, milestones,
@@ -962,18 +970,44 @@ function clanStats(c) {
   const wins = members.reduce((s, m) => s + (db.users[m].wins || 0), 0);
   return { count: members.length, rp, wins };
 }
+// 부클랜장은 따로 임명하지 않는다 — 클랜장을 뺀 인원 중 RP가 가장 높은 사람이
+// 자동으로 맡는다. 저장하지 않고 그때그때 계산하므로 RP가 바뀌면 바로 따라간다.
+function viceOf(c) {
+  if (!c || !c.members) return null;
+  let best = null, bestRp = -1;
+  for (const m of c.members) {
+    if (m === c.owner) continue;
+    const u = Object.prototype.hasOwnProperty.call(db.users, m) ? db.users[m] : null;
+    if (!u) continue;
+    const rp = u.rp || 0;
+    // 동점이면 아이디 순으로 고정해, 볼 때마다 부클랜장이 바뀌지 않게 한다
+    if (rp > bestRp || (rp === bestRp && best && m < best)) { best = m; bestRp = rp; }
+  }
+  return best;
+}
+
+// 클랜 보너스 배율 — 클랜장·부클랜장 +10%, 일반 클랜원 +5%
+function clanCoinBonus(u) {
+  const c = clanOf(u); if (!c) return 0;
+  const idl = String(u.id).toLowerCase();
+  if (c.owner === idl || viceOf(c) === idl) return 0.10;
+  return 0.05;
+}
+
 function clanView(c, viewerIdl) {
   const st = clanStats(c);
   const isOwner = c.owner === viewerIdl;
+  const vice = viceOf(c);
   return {
     id: c.id, name: c.name, tag: c.tag, notice: c.notice || '',
     owner: c.owner, ownerNick: nickOfIdl(c.owner),
     createdAt: c.createdAt, memberCount: st.count, totalRp: st.rp, totalWins: st.wins,
-    max: CLAN_MAX_MEMBERS, isOwner,
+    max: CLAN_MAX_MEMBERS, isOwner, vice: vice, viceNick: vice ? nickOfIdl(vice) : null,
+    isVice: vice === viewerIdl,
     members: c.members.map(m => {
       const card = friendCard(m); if (!card) return null;
-      return { ...card, isOwner: m === c.owner };
-    }).filter(Boolean).sort((a, b) => (b.isOwner - a.isOwner) || (b.rp - a.rp)),
+      return { ...card, isOwner: m === c.owner, isVice: m === vice };
+    }).filter(Boolean).sort((a, b) => (b.isOwner - a.isOwner) || (b.isVice - a.isVice) || (b.rp - a.rp)),
     // 가입 신청자는 클랜장에게만 보임
     applicants: isOwner ? (c.applicants || []).map(friendCard).filter(Boolean) : [],
     applicantCount: (c.applicants || []).length,
@@ -1267,6 +1301,7 @@ function reportList(limit = 50) {
 
 module.exports = {
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, applyRp4, claimDaily, myRank,
+  viceOf, clanCoinBonus,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   missionList, titleList, betrayEvent, claimTutorial, applyReferral, deleteAccount,
   // 친구

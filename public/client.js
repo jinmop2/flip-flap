@@ -345,6 +345,7 @@ function showRewards() {
   let d = 400;
   if (r.firstWin) { add('bd-first', `🎯 하루 첫 승 보너스 +${r.firstWin}`, d); d += 250; }
   if (r.streak && r.streakCount >= 2) { add('bd-streak', `🔥 ${r.streakCount}연승! +${r.streak}`, d); d += 250; playSound('setwin'); }
+  if (r.clanBonus) { add('bd-clan', `🛡 클랜 보너스 +${r.clanBonus}`, d); d += 250; }
   if (r.levelUp) { add('bd-level', `⬆️ 레벨 업! Lv.${r.levelUp}`, d); d += 250; playSound('setwin'); }
   if (r.rankUp) { add('bd-rank', `👑 승급! ${r.rankUp}`, d); d += 250; playSound('setwin'); }
   (r.missions || []).forEach(m => { add('bd-first', `🎯 미션 완료: ${m.name} +${m.reward}`, d); d += 250; });
@@ -976,8 +977,11 @@ async function loadClan() {
 function renderMyClan(c) {
   const memberRow = m => `<div class="soc-item">
     <div class="soc-info">
-      <div class="soc-nick">${m.isOwner ? '👑' : ''}${esc(m.nick)}</div>
-      <div class="soc-meta">Lv.${m.level} · ${rankIco(m.rankIcon)} ${esc(m.rank)} · ${m.rp} RP</div>
+      <div class="soc-nick">${m.isOwner ? '👑' : m.isVice ? '🛡' : ''}${esc(m.nick)}${
+        m.isOwner ? '<span class="soc-role owner">클랜장</span>'
+        : m.isVice ? '<span class="soc-role vice">부클랜장</span>' : ''}</div>
+      <div class="soc-meta">Lv.${m.level} · ${rankIco(m.rankIcon)} ${esc(m.rank)} · ${m.rp} RP${
+        m.isOwner || m.isVice ? ' · 코인 +10%' : ' · 코인 +5%'}</div>
     </div>
     ${c.isOwner && !m.isOwner ? `<div class="soc-acts">
       <button class="soc-btn" onclick="clanTransfer('${esc(m.idl)}','${esc(m.nick)}')">위임</button>
