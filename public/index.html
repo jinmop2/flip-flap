@@ -699,6 +699,11 @@
     .q-rrow { display:flex; align-items:center; gap:7px; padding:5px 8px; border-radius:8px;
       margin-bottom:4px; background:rgba(255,255,255,.05); font-size:.68rem; color:#e0d4bc; }
     .q-rrow.me { background:rgba(230,190,80,.16); color:#ffe9a8; font-weight:800; }
+    .q-rp { font-size:.62rem; font-weight:900; border-radius:5px; padding:1px 5px; margin-left:6px; }
+    .q-rp.up { background:rgba(120,220,150,.22); color:#8fe0a0; }
+    .q-rp.down { background:rgba(220,110,110,.22); color:#ff9a9a; }
+    .q-rp.flat { background:rgba(255,255,255,.08); color:#bbb; }
+    #q-rpnote { font-size:.6rem; color:#a89a80; margin-top:8px; }
     .q-rpos { font-weight:900; min-width:16px; }
 
     @media (max-height:700px) {
@@ -2631,6 +2636,7 @@
     <div class="q-ocard">
       <div id="q-otitle"></div>
       <div id="q-orank"></div>
+      <div id="q-rpnote"></div>
       <div style="display:flex; gap:8px; justify-content:center; margin-top:14px">
         <button class="btn btn-gold" style="width:auto" onclick="q4Start()">한 판 더!</button>
         <button class="btn btn-outline" style="width:auto" onclick="q4Quit()">로비로</button>

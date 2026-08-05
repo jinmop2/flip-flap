@@ -277,8 +277,21 @@
       const info = document.createElement('span');
       info.textContent = p.need <= 0 ? '세트 완성' : `완성까지 ${p.need}장`;
       row.appendChild(pos); row.appendChild(nm); row.appendChild(info);
+      // 온라인 멀티에서만 RP가 움직인다 (AI 자리는 애초에 계산에서 빠진다)
+      const rp = s.rp && s.rp[seat];
+      if (rp) {
+        const d = document.createElement('span');
+        d.className = 'q-rp ' + (rp.delta > 0 ? 'up' : rp.delta < 0 ? 'down' : 'flat');
+        d.textContent = (rp.delta > 0 ? '+' : '') + rp.delta + ' RP';
+        row.appendChild(d);
+      }
       rk.appendChild(row);
     });
+    const note = $('q-rpnote');
+    if (note) {
+      note.textContent = s.rp ? '' : '※ 사람 2명 이상인 온라인 멀티에서만 RP가 반영돼요';
+      note.style.display = s.rp ? 'none' : '';
+    }
     sfx(s.over.winner === mySeat ? 'victory' : 'defeat');
     $('q-over').classList.add('show');
   }

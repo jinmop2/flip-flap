@@ -696,6 +696,19 @@ function applyReferral(token, refCode) {
   return { ok: true, amount: REFER_COINS, profile: profileOf(u) };
 }
 
+// 4인전 온라인 멀티 전용 RP 반영.
+// 승/패 전적·코인·XP 는 건드리지 않는다 — 4인전 기록이 2인전 전적에 섞이면 안 되기 때문.
+// 어뷰징 판단(사람 수·같은 IP·짧은 판)은 호출부에서 끝내고 여기서는 반영만 한다.
+function applyRp4(token, delta) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return null;
+  const before = u.rp || 0;
+  u.rp = Math.max(0, before + (Number(delta) || 0));
+  persist(idl);
+  return { profile: profileOf(u), before, after: u.rp, delta: u.rp - before };
+}
+
 // 결과 반영 (result: 'win'|'loss'|'draw') → { profile, rewards }
 // opts: { vsBot, difficulty, turns, playtimeSec, sameIp, friendly, oppUid }
 function recordResult(token, result, opts = {}) {
@@ -1253,7 +1266,7 @@ function reportList(limit = 50) {
 }
 
 module.exports = {
-  signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, claimDaily, myRank,
+  signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, applyRp4, claimDaily, myRank,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   missionList, titleList, betrayEvent, claimTutorial, applyReferral, deleteAccount,
   // 친구
