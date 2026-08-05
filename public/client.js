@@ -114,38 +114,13 @@ function getNick() { return myAccount ? myAccount.nick : (localStorage.getItem('
 
 // ── 회원 계정 ────────────────────────────────────────────────
 let myAccount = null;   // 로그인 프로필 (null=게스트)
-let authMode = 'login';
 async function apiPost(url, body) {
   try { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
   catch (_) { return { error: '서버 연결 실패', netFail: true }; }
 }
-// 로그인 요청 → 타이틀 화면(구글/카카오/게스트)로 통일 (아이디/비번 로그인은 제거)
+// 로그인 요청 → 타이틀 화면(구글/카카오/게스트)로 통일.
+// 아이디/비번 로그인은 353fe8d 에서 제거됐고, 그때 남은 폼·핸들러는 정리했다.
 function openAuth() { if (typeof showTitle === 'function') showTitle(); }
-function closeAuth() { document.getElementById('authModal').classList.remove('show'); }
-function setAuthMode(m) {
-  authMode = m;
-  document.getElementById('authTabLogin').classList.toggle('active', m === 'login');
-  document.getElementById('authTabSignup').classList.toggle('active', m === 'signup');
-  document.getElementById('authNick').style.display = m === 'signup' ? '' : 'none';
-  document.getElementById('authSubmit').textContent = m === 'signup' ? '회원가입' : '로그인';
-}
-async function submitAuth() {
-  const id = document.getElementById('authId').value.trim();
-  const password = document.getElementById('authPw').value;
-  const nick = document.getElementById('authNick').value.trim();
-  const err = document.getElementById('authErr');
-  const res = authMode === 'signup'
-    ? await apiPost('/api/signup', { id, password, nick })
-    : await apiPost('/api/login', { id, password });
-  if (res.error) { err.textContent = '⚠️ ' + res.error; return; }
-  const isSignup = authMode === 'signup';
-  localStorage.setItem('ff_auth', res.token);
-  localStorage.setItem('ff_lastid', id);   // 아이디 기억
-  myAccount = res.profile;
-  socket.emit('auth', { token: res.token });
-  closeAuth(); renderAccount();
-  if (isSignup) offerTutorial();   // 가입 직후 — 튜토리얼로 유도
-}
 // 최초 이용자 튜토리얼 유도 (가입·소셜 첫 로그인 공통) — 1회만
 function offerTutorial() {
   if (localStorage.getItem('ff_tut_offered')) return;
@@ -1337,22 +1312,6 @@ async function renderMyTitles() {
 }
 
 // ── 최근 전적 ──
-function openHist() {
-  const list = document.getElementById('histList');
-  const h = (myAccount && myAccount.history) || [];
-  list.innerHTML = h.length ? '' : '<div class="lb-empty">아직 전적이 없어요. 한 판 해보세요!</div>';
-  h.forEach(m => {
-    const res = m.result === 'win' ? { t: '승', c: 'hist-win' } : m.result === 'loss' ? { t: '패', c: 'hist-loss' } : { t: '무', c: 'hist-draw' };
-    const coin = m.coins > 0 ? `+${m.coins}` : `${m.coins}`;
-    const row = document.createElement('div'); row.className = 'hist-row';
-    row.innerHTML = `<span class="hist-res ${res.c}">${res.t}</span>
-      <span class="hist-vs">vs ${esc(m.vs)}</span>
-      <span class="hist-coin" style="color:${m.coins >= 0 ? '#ffd94a' : '#ff8a8a'}">🪙 ${coin}</span>`;
-    list.appendChild(row);
-  });
-  document.getElementById('histModal').classList.add('show');
-}
-function closeHist() { document.getElementById('histModal').classList.remove('show'); }
 
 // ── 상점 ────────────────────────────────────────────────────
 const DYE_NAMES = { red:'빨강', blue:'파랑', green:'초록', orange:'주황', purple:'보라', cyan:'청록', pink:'핑크', lime:'라임', gold:'✨골드✨', rainbow:'🌈무지개🌈' };
@@ -1709,7 +1668,7 @@ function startBGM() {
   bgmOn = true;
   // AAC(m4a, 절반 용량) 우선 — 미지원 브라우저만 mp3 폴백. ?v 갱신 = 캐시 우회
   const canM4a = document.createElement('audio').canPlayType('audio/mp4; codecs="mp4a.40.2"');
-  bgmAudio = new Audio(canM4a ? '/bgm.m4a?v=1' : '/bgm.mp3?v=2');
+  bgmAudio = new Audio(canM4a ? '/bgm.m4a?v=3' : '/bgm.mp3?v=2');   // v3 = 80kbps 재인코딩
   bgmAudio.loop = true;
   bgmAudio.crossOrigin = 'anonymous';
   try {
@@ -1764,6 +1723,43 @@ window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); p
 function toggleRules(show) {
   document.getElementById('rulesModal').style.display = show ? 'flex' : 'none';
 }
+
+// ── ESC 로 닫기 ─────────────────────────────────────────────
+// 배경 클릭으로는 닫히는데 ESC 는 어디서도 안 먹어 일관성이 없었다.
+// 각 모달의 전용 닫기 함수를 부른다 — 매칭 취소처럼 뒷정리가 필요한 게 있어서
+// 단순히 show 클래스만 떼면 서버 상태와 어긋난다.
+const ESC_TARGETS = [
+  ['rulesModal',   () => toggleRules(false)],
+  ['lbModal',      () => closeLb()],
+  ['shopModal',    () => closeShop()],
+  ['missionModal', () => closeMissions()],
+  ['myInfoModal',  () => closeMyInfo()],
+  ['friendsModal', () => closeFriends()],
+  ['clanModal',    () => closeClan()],
+  ['soloModal',    () => closeModePanels()],
+  ['multiModal',   () => closeModePanels()],
+  ['createModal',  () => closeCreate()],
+  ['codeModal',    () => closeCode()],
+  ['itemUseModal', () => closeItemUse()],
+  ['matchModal',   () => cancelMatch()],       // 대기열에서도 빼야 한다
+  ['confirmModal', () => confirmClose(false)], // 확인창은 대개 가장 위에 뜬다
+  // nickModal 은 일부러 제외 — 닉네임을 정해야 넘어가는 단계라 ESC 로 건너뛰면 안 된다
+];
+const escIsOpen = (el) => !!el && (el.classList.contains('show') ||
+  (el.style.display && el.style.display !== 'none'));
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  // 4인전 화면이면 그쪽 패널을 먼저 처리
+  if (document.body.classList.contains('quad4')) {
+    const p = document.getElementById('q-leftPanel');
+    if (p && p.classList.contains('show')) { p.classList.remove('show'); e.preventDefault(); return; }
+  }
+  // 여러 개가 겹쳐 있으면 목록 뒤쪽(=위에 뜨는 것)을 먼저 닫는다
+  let close = null;
+  for (const [id, fn] of ESC_TARGETS) if (escIsOpen(document.getElementById(id))) close = fn;
+  if (close) { close(); e.preventDefault(); }
+});
 
 // ── 이모트 ──────────────────────────────────────────────────
 function toggleEmotes(force) {

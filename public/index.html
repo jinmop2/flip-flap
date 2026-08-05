@@ -1209,9 +1209,6 @@
     .wc-btns { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
     .btn-kakao { background:#FEE500; color:#191919; border:1.5px solid #FEE500; font-weight:800; }
     .btn-kakao:hover { background:#ffd900; }
-    .auth-kakao { width:100%; margin-bottom:4px; }
-    .auth-or { display:flex; align-items:center; gap:10px; margin:6px 0 10px; color:#8b8598; font-size:12px; }
-    .auth-or::before, .auth-or::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.12); }
     .wc-wait { font-size:.82rem; color:#8a7a80; }
 
     /* 서버 연결 상태 */
@@ -1405,10 +1402,7 @@
     .profile-chip .pc-econ span { font-size:.72rem; font-weight:700; padding:2px 7px; border-radius:6px; text-align:center; white-space:nowrap; }
     .profile-chip .pc-rp   { color:#ffe9a8; background:rgba(200,160,0,.13); }
     .profile-chip .pc-coin { color:#ffd94a; background:rgba(255,215,80,.1); }
-    .auth-tabs { display:flex; gap:0; border-bottom:1px solid #2a1c30; margin-bottom:4px; }
-    .auth-tab { flex:1; background:none; border:none; padding:9px; cursor:pointer; font-family:'Fredoka'; font-size:.9rem; font-weight:600; color:#6a5a70; border-bottom:2px solid transparent; }
-    .auth-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
-    #authModal input, #nickModal input { text-transform:none; letter-spacing:0; text-align:left; }
+    #nickModal input { text-transform:none; letter-spacing:0; text-align:left; }
     .pc-edit { background:none; border:none; cursor:pointer; font-size:.85rem; opacity:.55; padding:2px; }
     .pc-edit:hover { opacity:1; }
     .auth-err { color:#ff8a8a; font-size:.78rem; min-height:16px; }
@@ -2146,26 +2140,6 @@
 </div>
 
 <!-- 로그인 / 회원가입 다이얼로그 -->
-<div class="lb-modal" id="authModal" onclick="if(event.target===this)closeAuth()">
-  <div class="lb-box">
-    <button class="btn btn-kakao auth-kakao" id="kakaoLoginBtn" onclick="location.href='/auth/kakao'">💬 카카오로 3초만에 시작</button>
-    <div class="auth-or"><span>또는 아이디로</span></div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="authTabLogin" onclick="setAuthMode('login')">로그인</button>
-      <button class="auth-tab" id="authTabSignup" onclick="setAuthMode('signup')">회원가입</button>
-    </div>
-    <input id="authId" type="text" placeholder="아이디 (영문/숫자 3~16자)" maxlength="16" autocomplete="username">
-    <input id="authPw" type="password" placeholder="비밀번호 (4자 이상)" autocomplete="current-password">
-    <input id="authNick" type="text" placeholder="닉네임 (중복 불가)" maxlength="12" style="display:none">
-    <div id="authErr" class="auth-err"></div>
-    <div class="lb-btns">
-      <button class="btn btn-gold" id="authSubmit" onclick="submitAuth()">로그인</button>
-      <button class="btn btn-outline" onclick="closeAuth()">취소</button>
-    </div>
-    <p class="auth-hint">회원가입하면 랭크·레벨·전적이 기록돼요. 가입 없이도 게스트로 플레이 가능!</p>
-  </div>
-</div>
-
 <!-- 닉네임 설정 (카카오 첫 로그인 / 프로필 ✏️) -->
 <div class="lb-modal" id="nickModal">
   <div class="lb-box" style="text-align:center;gap:10px">
@@ -2544,14 +2518,6 @@
 </div>
 
 <!-- 최근 전적 -->
-<div class="lb-modal" id="histModal" onclick="if(event.target===this)closeHist()">
-  <div class="lb-box">
-    <div class="lb-title"><span data-ico="📜"></span> 최근 전적</div>
-    <div id="histList" class="hist-list"></div>
-    <button class="btn btn-outline" onclick="closeHist()">닫기</button>
-  </div>
-</div>
-
 <!-- 튜토리얼 코치 -->
 <div id="tutBox" onclick="tutConfirm()" style="cursor:pointer">
   <div class="tut-tag">🎓 튜토리얼 <button class="tut-quit" onclick="event.stopPropagation(); endTutorial()">종료 ×</button></div>
