@@ -98,7 +98,7 @@ function bidderSeats(g) {
 function draw(g) {
   if (g.phase !== 'draw' || !g.deck.length) return false;
   const center = g.deck.pop();
-  g.auction = { center, offered: null, type: null, bids: {}, order: null };
+  g.auction = { center, offered: null, type: null, bids: {}, order: null, seq: null, at: 0 };
   g.phase = 'offer';
   return true;
 }
@@ -117,18 +117,43 @@ function chooseType(g, seat, type) {
   if (g.phase !== 'choose_type' || seat !== g.auctioneer) return false;
   if (type !== 'open' && type !== 'close') return false;
   g.auction.type = type;
+  // 클로즈는 경매품을 감추는 대신 배팅을 공개한다. 진행자부터 시계방향으로
+  // 한 명씩 내고, 뒷사람은 앞사람이 낸 카드를 보고 정한다.
+  // 오픈은 반대로 경매품을 보여주고 배팅은 동시에 비밀로 낸다.
+  g.auction.seq = (type === 'close') ? closedOrder(g) : null;
+  g.auction.at = 0;
   g.phase = 'bidding';
   return true;
+}
+
+// 클로즈 입찰 순서 — 진행자부터 시계방향
+function closedOrder(g) {
+  const able = bidderSeats(g), out = [];
+  for (let k = 0; k < SEATS; k++) {
+    const s = (g.auctioneer + k) % SEATS;
+    if (able.includes(s)) out.push(s);
+  }
+  return out;
+}
+
+// 클로즈에서 지금 낼 차례인 좌석 (오픈이면 null — 아무나 먼저 내도 된다)
+function nextBidder(g) {
+  const a = g.auction;
+  if (!a || !a.seq) return null;
+  while (a.at < a.seq.length && a.bids[a.seq[a.at]]) a.at++;
+  return a.at < a.seq.length ? a.seq[a.at] : null;
 }
 
 function bid(g, seat, cardId) {
   if (g.phase !== 'bidding') return false;
   if (!bidderSeats(g).includes(seat)) return false;
   if (g.auction.bids[seat]) return false;                 // 이미 냈다
+  if (g.auction.seq && nextBidder(g) !== seat) return false;   // 클로즈는 순서를 지켜야 한다
   const h = g.seats[seat].hand;
   const idx = h.findIndex((c) => String(c.id) === String(cardId));
   if (idx < 0) return false;
   g.auction.bids[seat] = h.splice(idx, 1)[0];
+  if (g.auction.seq) g.auction.at++;
   return true;
 }
 
@@ -216,6 +241,6 @@ function advance(g) {
   g.phase = 'draw';
 }
 
-module.exports = { SPEC4, HAND4, SEATS, createGame4, draw, offer, chooseType, bid,
+module.exports = { SPEC4, HAND4, SEATS, createGame4, draw, offer, chooseType, bid, nextBidder,
                    settle, advance, bidderSeats, allBidsIn, checkSet, needLeft,
                    progress, rankSeats, beats, strength, isTop, isBot_, initDeck4 };

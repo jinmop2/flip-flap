@@ -40,7 +40,10 @@ function attach4(io) {
         center: a.center,
         offered: openOffer ? a.offered : null,
         type: a.type,
-        bids: reveal ? { ...a.bids } : {},   // 입찰 카드는 공개 시점 전엔 내보내지 않는다
+        // 오픈은 공개 시점까지 감추고, 클로즈는 낸 순간부터 공개한다
+        bids: (reveal || a.seq) ? { ...a.bids } : {},
+        seq: a.seq || null,                 // 클로즈 입찰 순서
+        toBid: G.nextBidder(g),             // 지금 낼 차례 (오픈이면 null)
       } : null,
       result: (g.phase === 'settled' || g.phase === 'game_over') ? g.lastResult : null,
       over: g.over,
@@ -64,8 +67,10 @@ function attach4(io) {
   function waitingOnHuman(g) {
     if (g.phase === 'draw' || g.phase === 'offer' || g.phase === 'choose_type')
       return g.auctioneer === 0;
-    if (g.phase === 'bidding')
+    if (g.phase === 'bidding') {
+      if (g.auction.seq) return G.nextBidder(g) === 0;    // 클로즈 — 내 차례인가
       return G.bidderSeats(g).includes(0) && !g.auction.bids[0];
+    }
     return false;
   }
 
@@ -113,15 +118,28 @@ function attach4(io) {
         return schedule(roomId, T.bid);
 
       case 'bidding': {
-        // 봇을 한 명씩 순차로 입찰시킨다 (사람 카드를 보고 정하는 게 아니라 연출용 간격일 뿐)
-        const pending = G.bidderSeats(g).filter((s) => s !== 0 && !g.auction.bids[s]);
-        if (pending.length) {
-          const s = pending[0];
-          const c = AI.chooseBid(g, s);
-          if (c) G.bid(g, s, c.id);
-          push(roomId);
-          if (G.allBidsIn(g)) { g.phase = 'reveal'; push(roomId); return schedule(roomId, T.reveal); }
-          return schedule(roomId, T.bid);
+        // 클로즈는 진행자부터 정해진 순서대로 한 명씩 (앞사람 카드를 보고 낸다)
+        if (g.auction.seq) {
+          const nb = G.nextBidder(g);
+          if (nb === 0) return push(roomId);              // 내 차례 — 기다린다
+          if (nb !== null) {
+            const c = AI.chooseBid(g, nb);
+            if (c) G.bid(g, nb, c.id);
+            push(roomId);
+            if (G.allBidsIn(g)) { g.phase = 'reveal'; push(roomId); return schedule(roomId, T.reveal); }
+            return schedule(roomId, T.bid);
+          }
+        } else {
+          // 오픈은 동시·비밀이라 봇 순서는 연출용 간격일 뿐이다
+          const pending = G.bidderSeats(g).filter((s) => s !== 0 && !g.auction.bids[s]);
+          if (pending.length) {
+            const s = pending[0];
+            const c = AI.chooseBid(g, s);
+            if (c) G.bid(g, s, c.id);
+            push(roomId);
+            if (G.allBidsIn(g)) { g.phase = 'reveal'; push(roomId); return schedule(roomId, T.reveal); }
+            return schedule(roomId, T.bid);
+          }
         }
         if (G.allBidsIn(g) || !G.bidderSeats(g).length) {   // 전원 입찰 완료 또는 아무도 못 냄(유찰)
           g.phase = 'reveal'; push(roomId); return schedule(roomId, T.reveal);

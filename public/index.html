@@ -561,6 +561,8 @@
       border:1.5px solid rgba(255,255,255,.13); position:relative; transition:.18s; }
     .q-opp.auc { border-color:var(--gold); box-shadow:0 0 12px rgba(230,190,80,.45); }
     .q-opp.bidded { background:linear-gradient(170deg,rgba(120,220,150,.18),rgba(0,0,0,.28)); }
+    /* 클로즈 경매에서 지금 낼 차례 */
+    .q-opp.turn { border-color:#7fd8ff; box-shadow:0 0 12px rgba(120,200,255,.5); }
     .q-oname { font-size:.6rem; font-weight:800; color:#f0e6d0; white-space:nowrap;
       overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:3px; }
     .q-obadge { font-size:.5rem; background:var(--gold); color:#241000; border-radius:4px;
@@ -2562,8 +2564,8 @@
     <div id="q-bids"></div>
     <div id="q-status"></div>
     <div id="q-typeBtns">
-      <button class="q-tbtn" onclick="q4Type('open')"><b>👁 오픈</b><span>경매품 공개</span></button>
-      <button class="q-tbtn" onclick="q4Type('close')"><b>🙈 클로즈</b><span>경매품 비밀</span></button>
+      <button class="q-tbtn" onclick="q4Type('open')"><b>👁 오픈</b><span>경매품 공개 · 배팅 비밀</span></button>
+      <button class="q-tbtn" onclick="q4Type('close')"><b>🙈 클로즈</b><span>경매품 비밀 · 배팅 공개</span></button>
     </div>
   </div>
 

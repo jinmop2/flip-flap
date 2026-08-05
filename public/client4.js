@@ -110,18 +110,26 @@
       $('q-typeTag').textContent = '';
     }
 
-    // 입찰 공개
+    // 입찰 — 오픈은 공개 시점에 한꺼번에, 클로즈는 낸 순서대로 하나씩 쌓인다
     const bids = $('q-bids'); bids.innerHTML = '';
     if (a && a.bids && Object.keys(a.bids).length) {
       const winner = s.result ? s.result.winner : -1;
-      for (const [seat, c] of Object.entries(a.bids)) {
+      // 클로즈면 낸 순서대로, 오픈이면 좌석순
+      const order = a.seq ? a.seq.filter((x) => a.bids[x]) : Object.keys(a.bids).map(Number);
+      for (const seat of order) {
+        const c = a.bids[seat]; if (!c) continue;
         const w = document.createElement('div');
-        w.className = 'q-bid' + (Number(seat) === winner ? ' win' : '');
+        w.className = 'q-bid' + (seat === winner ? ' win' : '');
         const n = document.createElement('div');
         n.className = 'q-bidname'; n.textContent = s.seats[seat].name;
         w.appendChild(n); w.appendChild(card4(c));
         bids.appendChild(w);
       }
+    }
+    // 클로즈에서 지금 낼 차례인 사람을 상단 패널에 표시
+    if (a && a.seq && a.toBid !== null && a.toBid !== undefined && a.toBid > 0) {
+      const el = opps.children[a.toBid - 1];
+      if (el) el.classList.add('turn');
     }
 
     // 내 획득 더미 — 상대들과 같은 형식으로 보여준다
@@ -142,9 +150,15 @@
     else if (s.phase === 'offer') { if (iAmAuc) { msg = '경매에 내놓을 카드를 고르세요'; pickMode = 'offer'; } else msg = `${s.seats[s.auctioneer].name} 님이 출품하는 중…`; }
     else if (s.phase === 'choose_type') msg = iAmAuc ? '경매 방식을 고르세요' : `${s.seats[s.auctioneer].name} 님이 방식을 고르는 중…`;
     else if (s.phase === 'bidding') {
+      const closed = a && a.seq;                    // 클로즈 = 순서대로 공개 입찰
       if (!s.bidders.includes(0)) msg = s.firstAuction ? '첫 경매라 진행자인 나는 입찰하지 않습니다' : '손패가 없어 이번엔 입찰할 수 없어요';
+      else if (closed) {
+        if (a.toBid === 0) { msg = '🙈 내 차례! 경매품은 비밀 — 배팅 카드를 고르세요'; pickMode = 'bid'; }
+        else if (a.toBid !== null && a.toBid !== undefined) msg = `${s.seats[a.toBid].name} 님이 배팅하는 중…`;
+        else msg = '두구두구…';
+      }
       else if (me.bidded) msg = '다른 사람들이 입찰하는 중…';
-      else { msg = a && a.type !== 'open' ? '🙈 경매품이 비밀! 배팅 카드를 고르세요' : '배팅 카드를 고르세요'; pickMode = 'bid'; }
+      else { msg = '배팅 카드를 고르세요'; pickMode = 'bid'; }
     }
     else if (s.phase === 'reveal') msg = '두구두구… 공개!';
     else if (s.phase === 'settled' && s.result) {

@@ -55,10 +55,29 @@ function chooseBid(g, seat) {
   if (!hand.length) return null;
   const style = me.style || STYLES[0];
   const prize = prizeFor(g, seat);
-  const blind = g.auction.type === 'closed' && seat !== g.auctioneer;
+  const a = g.auction;
+  const closed = a.type === 'close' || a.type === 'closed';
+  const blind = closed && seat !== g.auctioneer;   // 경매품을 못 본다
 
   let desire = gainOf(me.acq, prize) * style.greed + threatOf(g, seat, prize) * style.block;
   if (blind) desire = desire * 0.7 + 0.5;        // 안 보이면 중간값으로 수렴
+
+  // 클로즈는 앞사람 배팅이 공개된다. 이길 마음이 있으면 "이길 만큼만" 최소로 지른다.
+  // 이게 클로즈의 핵심이라, 이 판단이 없으면 순서 정보가 아무 의미가 없다.
+  if (closed) {
+    const shown = Object.values(a.bids);
+    if (shown.length) {
+      const best = shown.reduce((x, y) => (G.strength(x) <= G.strength(y) ? x : y));
+      const last = seat === (a.seq && a.seq[a.seq.length - 1]);
+      if (desire >= 1) {
+        // 앞사람들보다 강한 카드 중 가장 약한 것 — 아껴 쓴다
+        const win = [...hand].reverse().find((c) => G.beats(c, best));
+        if (win && (last || Math.random() < 0.8)) return win;
+      } else if (!last) {
+        return hand[hand.length - 1];            // 관심 없으면 최약 카드로 흘린다
+      }
+    }
+  }
 
   // 배신 노림수 — 최약 카드를 쥐고 있고 판이 중요하면 가끔 던진다
   const weak = hand.find((c) => G.isBot_(c));
