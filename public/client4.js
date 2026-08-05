@@ -8,6 +8,8 @@
   let q4Room = null;     // 재접속해서 이어하기 위한 방 번호
   let lastRecv = 0;      // 마지막으로 상태를 받은 시각
   let prevPhase = null, prevTurn = 0;   // 효과음을 단계가 바뀔 때만 울리려고
+  let mySeat = 0;        // 내 좌석 — 멀티에서는 0이 아닐 수 있다
+  let oppSeats = [1, 2, 3];   // 내 왼쪽부터 시계방향 상대 3명
   const $ = (id) => document.getElementById(id);
   // 소리는 부가 요소다. 아직 초기화 전이거나 재생이 막혀도 게임 진행을 막으면 안 된다.
   const sfx = (n) => { try { if (typeof playSound === 'function') playSound(n); } catch (_) {} };
@@ -76,19 +78,22 @@
   function render() {
     if (!q4) return;
     const s = q4, a = s.auction;
+    mySeat = (s.me === undefined || s.me === null) ? 0 : s.me;
+    oppSeats = [1, 2, 3].map((k) => (mySeat + k) % 4);   // 내 다음 자리부터 시계방향
 
     $('q-turn').textContent = `${s.turn}턴`;
     $('q-deck').textContent = `덱 ${s.deckLeft}장`;
 
     // 상단 3명
     const opps = $('q-opps'); opps.innerHTML = '';
-    for (let i = 1; i < 4; i++) {
+    for (const i of oppSeats) {
       const p = s.seats[i];
       const d = document.createElement('div');
       d.className = 'q-opp' + (s.auctioneer === i ? ' auc' : '') + (p.bidded ? ' bidded' : '');
       const nm = document.createElement('div');
       nm.className = 'q-oname';
       if (s.auctioneer === i) { const b = document.createElement('span'); b.className = 'q-obadge'; b.textContent = '진행'; nm.appendChild(b); }
+      if (!p.isBot) { const b = document.createElement('span'); b.className = 'q-human'; b.textContent = '사람'; nm.appendChild(b); }
       nm.appendChild(document.createTextNode(p.name));
       const meta = document.createElement('div');
       meta.className = 'q-ometa';
@@ -105,8 +110,8 @@
     }
 
     // 경매 매트
-    const me = s.seats[0];
-    const iAmAuc = s.auctioneer === 0;
+    const me = s.seats[mySeat];
+    const iAmAuc = s.auctioneer === mySeat;
     $('q-center').innerHTML = ''; $('q-offer').innerHTML = '';
     if (a) {
       $('q-center').appendChild(card4(a.center));
@@ -128,7 +133,7 @@
       return null;
     };
     const ob = $('q-oppbids'); ob.innerHTML = '';
-    for (let i = 1; i < 4; i++) {
+    for (const i of oppSeats) {
       const slot = document.createElement('div');
       slot.className = 'q-bslot' + (i === winner ? ' win' : '');
       const card = bidView(i);
@@ -139,15 +144,15 @@
       ob.appendChild(slot);
     }
     const mb = $('q-mybid'); mb.innerHTML = '';
-    mb.className = (winner === 0 ? 'win' : '');
-    const myCard = bidView(0);
+    mb.className = (winner === mySeat ? 'win' : '');
+    const myCard = bidView(mySeat);
     if (myCard) {
       mb.appendChild(myCard);
-      if (winner === 0) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; mb.appendChild(l); }
+      if (winner === mySeat) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; mb.appendChild(l); }
     }
     // 클로즈에서 진행자가 아직 선공개를 안 했으면 그 사람을 표시
-    if (a && a.closed && a.first !== null && a.first !== undefined && !a.firstDone && a.first > 0) {
-      const el = opps.children[a.first - 1];
+    if (a && a.closed && a.first !== null && a.first !== undefined && !a.firstDone && a.first !== mySeat) {
+      const el = opps.children[oppSeats.indexOf(a.first)];
       if (el) el.classList.add('turn');
     }
 
@@ -171,19 +176,19 @@
     else if (s.phase === 'bidding') {
       const closed = a && a.closed;
       const waitFirst = closed && a.first !== null && a.first !== undefined && !a.firstDone;
-      if (!s.bidders.includes(0)) msg = s.firstAuction ? '첫 경매라 진행자인 나는 입찰하지 않습니다' : '손패가 없어 이번엔 입찰할 수 없어요';
-      else if (waitFirst && a.first !== 0) msg = `${s.seats[a.first].name} 님이 먼저 공개 배팅하는 중…`;
+      if (!s.bidders.includes(mySeat)) msg = s.firstAuction ? '첫 경매라 진행자인 나는 입찰하지 않습니다' : '손패가 없어 이번엔 입찰할 수 없어요';
+      else if (waitFirst && a.first !== mySeat) msg = `${s.seats[a.first].name} 님이 먼저 공개 배팅하는 중…`;
       else if (me.bidded) msg = '나머지가 배팅하는 중…';
-      else if (waitFirst && a.first === 0) { msg = '👑 진행자는 먼저 공개로 배팅합니다 — 카드를 고르세요'; pickMode = 'bid'; }
+      else if (waitFirst && a.first === mySeat) { msg = '👑 진행자는 먼저 공개로 배팅합니다 — 카드를 고르세요'; pickMode = 'bid'; }
       else { msg = closed ? '🙈 경매품은 비밀! 배팅 카드를 고르세요' : '배팅 카드를 고르세요'; pickMode = 'bid'; }
     }
     else if (s.phase === 'reveal') msg = '두구두구… 공개!';
     else if (s.phase === 'settled' && s.result) {
       const r = s.result;
-      const who = r.winner === 0 ? '내가' : s.seats[r.winner].name + ' 님이';
+      const who = r.winner === mySeat ? '내가' : s.seats[r.winner].name + ' 님이';
       msg = r.betrayed ? `⚔ 졸개의 배신! ${who} 낙찰!` : `${who} 낙찰!`;
       if (r.payouts && r.payouts.length) {
-        const mine = r.payouts.find((p) => p.seat === 0);
+        const mine = r.payouts.find((p) => p.seat === mySeat);
         if (mine) msg += `  (내 손패로 ${mine.card.kind}-${mine.card.grade} 들어옴)`;
       }
     }
@@ -259,12 +264,12 @@
   function showOver(s) {
     const order = (s.over.order && s.over.order.length) ? s.over.order : null;
     const rank = order || [s.over.winner, ...[0, 1, 2, 3].filter((i) => i !== s.over.winner)];
-    $('q-otitle').textContent = s.over.winner === 0 ? '🏆 승리!' : '아쉽네요…';
+    $('q-otitle').textContent = s.over.winner === mySeat ? '🏆 승리!' : '아쉽네요…';
     const rk = $('q-orank'); rk.innerHTML = '';
     rank.forEach((seat, idx) => {
       const p = s.seats[seat];
       const row = document.createElement('div');
-      row.className = 'q-rrow' + (seat === 0 ? ' me' : '');
+      row.className = 'q-rrow' + (seat === mySeat ? ' me' : '');
       const pos = document.createElement('span');
       pos.className = 'q-rpos'; pos.textContent = ['🥇', '🥈', '🥉', '4'][idx] || (idx + 1);
       const nm = document.createElement('span'); nm.style.flex = '1'; nm.style.textAlign = 'left';
@@ -274,7 +279,7 @@
       row.appendChild(pos); row.appendChild(nm); row.appendChild(info);
       rk.appendChild(row);
     });
-    sfx(s.over.winner === 0 ? 'victory' : 'defeat');
+    sfx(s.over.winner === mySeat ? 'victory' : 'defeat');
     $('q-over').classList.add('show');
   }
 
@@ -282,13 +287,34 @@
   window.q4Open = function () {
     askConfirm({
       icon: '👥', title: '4인전 (베타)',
-      desc: 'AI 3명과 벌이는 4인 경매 배틀!\n\n' +
+      desc: '4인 경매 배틀!\n\n' +
             '· 카드 37장, 손패 6장, 덱 13장\n' +
             '· 진행자도 함께 입찰합니다 (첫 경매만 제외)\n' +
             '· 배팅 카드는 약하게 부른 사람부터 강한 카드를 가져갑니다\n\n' +
             '※ 베타 — 전적·랭킹·코인에 반영되지 않습니다',
-      yes: '시작하기', no: '닫기',
-    }, () => window.q4Start(), () => {});
+      yes: '⚡ 빠른대전', no: '👤 솔로 (AI 3명)',
+    }, () => window.q4Quick(), () => window.q4Start());
+  };
+
+  // ── 빠른대전 대기 ────────────────────────────────────────────────────────
+  window.q4Quick = function () {
+    if (typeof closeModePanels === 'function') closeModePanels();
+    $('q-over').classList.remove('show');
+    $('q-wait').classList.add('show');
+    $('q-waitTxt').textContent = '상대를 찾는 중…';
+    $('q-waitSub').textContent = '';
+    q4Live = true; q4Room = null; lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
+    document.body.classList.add('quad4');
+    sfx('deal');
+    try { if (typeof startBGM === 'function') startBGM(); } catch (_) {}
+    socket.emit('g4_quick', { nick: typeof getNick === 'function' ? getNick() : '나' });
+  };
+  window.q4CancelQuick = function () {
+    socket.emit('g4_cancel');
+    $('q-wait').classList.remove('show');
+    q4Live = false; q4 = null; q4Room = null;
+    $('q-wait').classList.remove('show');
+    document.body.classList.remove('quad4');
   };
 
   window.q4Start = function () {
@@ -305,6 +331,7 @@
   window.q4Quit = function () {
     socket.emit('g4_leave');
     q4Live = false; q4 = null; q4Room = null;
+    $('q-wait').classList.remove('show');
     document.body.classList.remove('quad4');
     $('q-over').classList.remove('show');
   };
@@ -320,7 +347,19 @@
   function bind() {
     if (typeof socket === 'undefined' || !socket) return setTimeout(bind, 200);
 
-    socket.on('g4_begin', (d) => { q4Room = d.roomId; lastRecv = Date.now(); });
+    socket.on('g4_begin', (d) => {
+      q4Room = d.roomId; mySeat = d.me || 0; lastRecv = Date.now();
+      $('q-wait').classList.remove('show');
+      const humans = (d.seats || []).filter((x) => !x.isBot).length;
+      if (!d.solo) $('q-status').textContent = `사람 ${humans}명 · AI ${4 - humans}명`;
+    });
+    socket.on('g4_queue', (d) => {
+      if (!q4Live) return;
+      $('q-waitTxt').textContent = `상대를 찾는 중… (${d.n}/${d.need})`;
+      const sec = Math.ceil((d.fillIn || 0) / 1000);
+      $('q-waitSub').textContent = sec > 0 ? `${sec}초 뒤 남는 자리는 AI로 채워 시작합니다` : '곧 시작합니다…';
+    });
+    socket.on('g4_cancelled', () => { $('q-wait').classList.remove('show'); });
     socket.on('g4_state', (s) => { if (!q4Live) return; q4 = s; lastRecv = Date.now(); render(); });
     socket.on('g4_over', (s) => {
       if (!q4Live) return;
@@ -337,15 +376,15 @@
 
   function resume() {
     $('q-status').textContent = '다시 연결하는 중…';
-    socket.emit('g4_resume', { roomId: q4Room });
+    socket.emit('g4_resume', { roomId: q4Room, seat: mySeat });
   }
 
   // 진행이 멈춘 채 방치되지 않도록 클라이언트도 스스로 확인한다
   setInterval(() => {
     if (!q4Live || !q4Room || !q4) return;
     if (q4.over) return;
-    const waiting = (['draw', 'offer', 'choose_type'].includes(q4.phase) && q4.auctioneer === 0)
-      || (q4.phase === 'bidding' && q4.bidders.includes(0) && !q4.seats[0].bidded);
+    const waiting = (['draw', 'offer', 'choose_type'].includes(q4.phase) && q4.auctioneer === mySeat)
+      || (q4.phase === 'bidding' && q4.bidders.includes(mySeat) && !q4.seats[mySeat].bidded);
     if (waiting) return;                       // 내 입력을 기다리는 중이면 정상
     if (Date.now() - lastRecv < 15000) return;
     resume();

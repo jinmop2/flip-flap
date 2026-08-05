@@ -674,6 +674,21 @@
     .q-lg.gone { color:#5d5648; background:rgba(255,255,255,.04); text-decoration:line-through; }
     .q-lg.mine { color:#9fd8ff; background:rgba(90,160,220,.22); box-shadow:inset 0 0 0 1px rgba(140,200,255,.5); }
 
+    /* 빠른대전 대기 */
+    #q-wait { display:none; position:absolute; inset:0; z-index:11; background:rgba(0,0,0,.82);
+      align-items:center; justify-content:center; padding:16px; }
+    #q-wait.show { display:flex; }
+    .q-wcard { background:linear-gradient(170deg,#1e3324,#0d1a12); border:2px solid var(--gold);
+      border-radius:16px; padding:22px 20px; text-align:center; max-width:320px; width:100%; }
+    .q-wspin { width:34px; height:34px; margin:0 auto 12px; border-radius:50%;
+      border:3px solid rgba(255,235,180,.2); border-top-color:var(--gold); animation:qspin .9s linear infinite; }
+    @keyframes qspin { to { transform:rotate(360deg); } }
+    #q-waitTxt { font-size:.95rem; font-weight:800; color:#ffe9a8; }
+    #q-waitSub { font-size:.68rem; color:#c8bfa0; margin-top:6px; min-height:16px; }
+    /* 사람 참가자 표시 */
+    .q-human { font-size:.5rem; background:#4a8f3a; color:#eaffe0; border-radius:4px;
+      padding:0 3px; font-weight:900; flex-shrink:0; }
+
     /* 결과 */
     #q-over { display:none; position:absolute; inset:0; z-index:10; background:rgba(0,0,0,.78);
       align-items:center; justify-content:center; padding:16px; }
@@ -2074,7 +2089,7 @@
     <!-- 친구 초대 -->
     <div class="event-row">
       <button class="event-pill" onclick="openItemMode()"><span class="ev-badge">EVENT</span>🎪 아이템전 <span class="ev-sub">랭킹 미반영 · 코인만</span></button>
-      <button class="event-pill quad" onclick="q4Open()"><span class="ev-badge beta">BETA</span>👥 4인전 <span class="ev-sub">AI 3명과 경매 배틀</span></button>
+      <button class="event-pill quad" onclick="q4Open()"><span class="ev-badge beta">BETA</span>👥 4인전 <span class="ev-sub">빠른대전 · 솔로</span></button>
     </div>
     <button class="invite-pill" onclick="inviteFriend()"><svg class="svgi" viewBox="0 0 24 24" style="color:#f5cf6e"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>친구 초대하기</button>
 
@@ -2599,6 +2614,16 @@
     <div id="q-mybid"></div>
     <div id="q-myacq"></div>
     <div id="q-myhand"></div>
+  </div>
+
+  <!-- 빠른대전 대기 -->
+  <div id="q-wait">
+    <div class="q-wcard">
+      <div class="q-wspin"></div>
+      <div id="q-waitTxt">상대를 찾는 중…</div>
+      <div id="q-waitSub"></div>
+      <button class="btn btn-outline" style="width:auto;margin-top:12px" onclick="q4CancelQuick()">취소</button>
+    </div>
   </div>
 
   <!-- 결과 -->

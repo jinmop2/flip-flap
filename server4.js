@@ -1,11 +1,11 @@
-// ── 4인전 서버 (AI 3명) ───────────────────────────────────────────────────
-// 기존 2인 엔진과 완전히 분리되어 있다. 소켓 이벤트 이름도 g4_* 로 따로 쓰기 때문에
+// ── 4인전 서버 (솔로 = AI 3명 / 빠른대전 = 사람 매칭, 부족분은 AI) ─────────
+// 기존 2인 엔진과 완전히 분리되어 있다. 소켓 이벤트도 g4_* 로 따로 쓰기 때문에
 // 클래식·아이템전 경로에는 전혀 영향을 주지 않는다.
 // v1은 보상·전적 없음 — 4인전 기록이 클래식 전적에 섞이면 안 되기 때문이다.
 //
 // 진행 방식: 방마다 "예약된 타이머는 항상 최대 1개"인 단일 상태머신으로 돈다.
-// 처음엔 단계마다 타이머를 따로 걸었는데, 사람 입력과 봇 타이머가 겹치면 체인이
-// 두 갈래로 갈라져 간헐적으로 판이 멈췄다. 스케줄러를 하나로 합쳐 경합을 없앴다.
+// 단계마다 타이머를 따로 걸면 사람 입력과 봇 타이머가 겹쳐 체인이 두 갈래로
+// 갈라지고 간헐적으로 판이 멈춘다. 스케줄러를 하나로 합쳐 경합을 없앴다.
 
 const G = require('./game4');
 const AI = require('./ai4');
@@ -14,25 +14,28 @@ const MAX_ROOMS4 = 300;
 const BOT_NICKS = ['경매왕 덕배', '큰손 미스박', '눈치백단 재훈', '허세왕 태식', '침착한 소연',
                    '도박사 병철', '노림수 은지', '구두쇠 만수', '한방 규현', '카운팅 지민'];
 
-// 연출 속도 (ms)
 const T = { draw: 650, offer: 750, type: 650, bid: 480, reveal: 2300, settle: 1600, next: 260 };
-const STUCK_MS = 12000;      // 사람을 기다리는 게 아닌데 이만큼 멈춰 있으면 복구한다
-const ORPHAN_MS = 120000;    // 접속이 끊긴 뒤 이만큼 지나면 방을 정리한다
+const STUCK_MS = 12000;     // 사람을 기다리는 게 아닌데 이만큼 멈춰 있으면 복구한다
+const ORPHAN_MS = 120000;   // 솔로 — 접속이 끊긴 뒤 이만큼 지나면 방을 정리
+const SEAT_GRACE = 20000;   // 멀티 — 이만큼 안 돌아오면 그 자리는 AI가 대신한다
+const FILL_MS = 25000;      // 이 시간 안에 4명이 안 모이면 남는 자리를 AI로 채운다
 
 function attach4(io) {
-  const rooms4 = {};   // roomId -> { sid, game, next, lastStep, dead }
+  const rooms4 = {};
   const DBG = !!process.env.G4_DEBUG;
-  const dbg = (...a) => { if (DBG) console.log('[g4]', new Date().toISOString().slice(11,23), ...a); };
+  const dbg = (...a) => { if (DBG) console.log('[g4]', ...a); };
+  let queue4 = [];          // 빠른대전 대기열 [{ sid, nick, at }]
 
-  // 좌석 0(사람) 시점의 상태만 내보낸다. 남의 손패는 절대 보내지 않는다.
-  function stateFor(g) {
+  // ── 상태 ─────────────────────────────────────────────────────────────────
+  // me 좌석 시점으로만 만든다. 남의 손패는 어떤 경우에도 내보내지 않는다.
+  function stateFor(g, me) {
     const a = g.auction;
-    const opened = G.openedBid(g);
     const reveal = g.phase === 'reveal' || g.phase === 'settled' || g.phase === 'game_over';
-    const openOffer = a && (a.type === 'open' || g.auctioneer === 0 || reveal);
+    const opened = G.openedBid(g);
+    const openOffer = a && (a.type === 'open' || g.auctioneer === me || reveal);
     return {
-      turn: g.turn, phase: g.phase, auctioneer: g.auctioneer, deckLeft: g.deck.length,
-      firstAuction: g.firstAuction, bidders: G.bidderSeats(g), myHand: g.seats[0].hand,
+      me, turn: g.turn, phase: g.phase, auctioneer: g.auctioneer, deckLeft: g.deck.length,
+      firstAuction: g.firstAuction, bidders: G.bidderSeats(g), myHand: g.seats[me].hand,
       seats: g.seats.map((s, i) => ({
         name: s.name, isBot: s.isBot, handLen: s.hand.length, acq: s.acq,
         need: G.needLeft(s.acq), bidded: !!(a && a.bids[i]),
@@ -43,11 +46,10 @@ function attach4(io) {
         type: a.type,
         // 오픈은 전원 뒤집어 냈다가 한 번에 공개.
         // 클로즈는 진행자가 낸 카드만 먼저 공개되고, 나머지는 공개 시점까지 감춘다.
-        bids: reveal ? { ...a.bids }
-              : (opened ? { [opened.seat]: opened.card } : {}),
+        bids: reveal ? { ...a.bids } : (opened ? { [opened.seat]: opened.card } : {}),
         closed: !!a.closed,
-        first: (a.first === undefined ? null : a.first),   // 선공개할 좌석
-        firstDone: !!opened,                               // 진행자가 이미 냈는가
+        first: (a.first === undefined ? null : a.first),
+        firstDone: !!opened,
       } : null,
       result: (g.phase === 'settled' || g.phase === 'game_over') ? g.lastResult : null,
       over: g.over,
@@ -56,38 +58,46 @@ function attach4(io) {
 
   function push(roomId) {
     const r = rooms4[roomId]; if (!r || r.dead) return;
-    io.to(r.sid).emit('g4_state', stateFor(r.game));
+    for (let i = 0; i < 4; i++) {
+      const sid = r.seats[i].sid;
+      if (sid) io.to(sid).emit('g4_state', stateFor(r.game, i));
+    }
   }
 
   function destroy(roomId, why) {
     const r = rooms4[roomId]; if (!r) return;
-    dbg('★방 삭제', roomId, '사유=' + (why || '?'), 'phase=' + r.game.phase, 'turn=' + r.game.turn);
+    dbg('방 삭제', roomId, why || '');
     r.dead = true;
     if (r.next) clearTimeout(r.next);
+    for (const s of r.seats) if (s.sid) {
+      const sk = io.sockets.sockets.get(s.sid);
+      if (sk) { sk.g4room = null; sk.g4seat = null; }
+    }
     delete rooms4[roomId];
   }
 
-  // 지금 사람의 입력을 기다리는 중인가 — 이때는 타이머를 걸지 않는다
-  function waitingOnHuman(g) {
+  // 지금 입력을 기다려야 하는 사람 좌석 (없으면 null)
+  function humanToAct(g, r) {
+    const isHuman = (i) => !r.seats[i].isBot && r.seats[i].sid;
     if (g.phase === 'draw' || g.phase === 'offer' || g.phase === 'choose_type')
-      return g.auctioneer === 0;
-    if (g.phase === 'bidding') return G.canBid(g, 0);
-    return false;
+      return isHuman(g.auctioneer) ? g.auctioneer : null;
+    if (g.phase === 'bidding') {
+      for (let i = 0; i < 4; i++) if (isHuman(i) && G.canBid(g, i)) return i;
+    }
+    return null;
   }
 
-  // 방마다 예약 타이머는 항상 최대 1개 — 이게 이 모듈의 핵심 불변식이다
+  // 방마다 예약 타이머는 항상 최대 1개 — 이 모듈의 핵심 불변식
   function schedule(roomId, ms) {
     const r = rooms4[roomId]; if (!r || r.dead) return;
     if (r.next) clearTimeout(r.next);
     r.next = setTimeout(() => {
       r.next = null;
       if (r.dead) return;
-      try { step(roomId); }
-      catch (e) { console.error('[g4] step 예외:', e); }
+      try { step(roomId); } catch (e) { console.error('[g4] step 예외:', e); }
     }, ms);
   }
 
-  // 상태를 한 칸 진행시킨다. 다음 할 일이 있으면 스스로 다음 타이머를 건다.
   function step(roomId) {
     const r = rooms4[roomId]; if (!r || r.dead) return;
     const g = r.game;
@@ -97,33 +107,33 @@ function attach4(io) {
     switch (g.phase) {
       case 'game_over':
         push(roomId);
-        io.to(r.sid).emit('g4_over', stateFor(g));
+        for (let i = 0; i < 4; i++) if (r.seats[i].sid) io.to(r.seats[i].sid).emit('g4_over', stateFor(g, i));
         return;
 
       case 'draw':
-        if (g.auctioneer === 0) return push(roomId);       // 사람이 덱을 눌러야 한다
+        if (humanToAct(g, r) === g.auctioneer) return push(roomId);
         G.draw(g); push(roomId);
         return schedule(roomId, T.offer);
 
       case 'offer': {
-        if (g.auctioneer === 0) return push(roomId);
+        if (humanToAct(g, r) === g.auctioneer) return push(roomId);
         const c = AI.chooseConsign(g, g.auctioneer);
         G.offer(g, g.auctioneer, c.id); push(roomId);
         return schedule(roomId, T.type);
       }
 
       case 'choose_type':
-        if (g.auctioneer === 0) return push(roomId);
+        if (humanToAct(g, r) === g.auctioneer) return push(roomId);
         G.chooseType(g, g.auctioneer, AI.chooseType(g, g.auctioneer));
         push(roomId);
         return schedule(roomId, T.bid);
 
       case 'bidding': {
-        // 클로즈면 진행자가 먼저 내야 나머지가 낼 수 있다. canBid 가 그걸 강제하므로
-        // 여기서는 "지금 낼 수 있는 봇"을 하나씩 굴리기만 하면 된다.
-        // 사람이 낼 수 있는 상태면 기다린다.
-        if (G.canBid(g, 0)) return push(roomId);
-        const pending = G.bidderSeats(g).filter((s) => s !== 0 && G.canBid(g, s));
+        // 클로즈면 진행자가 먼저 내야 나머지가 낼 수 있다 — canBid 가 강제한다.
+        // 사람이 낼 수 있는 상태면 기다리고, 아니면 봇을 하나씩 굴린다.
+        if (humanToAct(g, r) !== null) return push(roomId);
+        const pending = [];
+        for (let i = 0; i < 4; i++) if (r.seats[i].isBot && G.canBid(g, i)) pending.push(i);
         if (pending.length) {
           const s = pending[0];
           const c = AI.chooseBid(g, s);
@@ -132,10 +142,10 @@ function attach4(io) {
           if (G.allBidsIn(g)) { g.phase = 'reveal'; push(roomId); return schedule(roomId, T.reveal); }
           return schedule(roomId, T.bid);
         }
-        if (G.allBidsIn(g) || !G.bidderSeats(g).length) {   // 전원 입찰 완료 또는 아무도 못 냄(유찰)
+        if (G.allBidsIn(g) || !G.bidderSeats(g).length) {
           g.phase = 'reveal'; push(roomId); return schedule(roomId, T.reveal);
         }
-        return push(roomId);      // 사람 입찰 대기
+        return push(roomId);
       }
 
       case 'reveal':
@@ -151,86 +161,181 @@ function attach4(io) {
     }
   }
 
-  // 워치독 — 사람을 기다리는 게 아닌데 멈춰 있으면 다시 굴린다.
-  // 상태머신을 하나로 합쳐 경합은 없앴지만 안전망은 남겨둔다.
+  // ── 대기열 ───────────────────────────────────────────────────────────────
+  const queueInfo = () => {
+    const n = queue4.length;
+    for (const q of queue4) io.to(q.sid).emit('g4_queue', { n, need: 4, fillIn: Math.max(0, FILL_MS - (Date.now() - queue4[0].at)) });
+  };
+  function dequeue(sid) {
+    const before = queue4.length;
+    queue4 = queue4.filter((q) => q.sid !== sid);
+    if (queue4.length !== before && queue4.length) queueInfo();
+  }
+  function tryMatch(force) {
+    if (queue4.length >= 4) { startRoom(queue4.splice(0, 4), false); return; }
+    if (force && queue4.length) { startRoom(queue4.splice(0, queue4.length), false); }
+  }
+  setInterval(() => {
+    if (!queue4.length) return;
+    if (Date.now() - queue4[0].at >= FILL_MS) tryMatch(true);   // 안 모이면 AI 로 채워 시작
+    else queueInfo();
+  }, 1000).unref?.();
+
+  // ── 방 생성 ──────────────────────────────────────────────────────────────
+  // humans: [{ sid, nick }] — 부족한 자리는 AI 가 채운다
+  function startRoom(humans, solo) {
+    if (Object.keys(rooms4).length >= MAX_ROOMS4) {
+      for (const h of humans) io.to(h.sid).emit('g4_error', '서버가 혼잡해요. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    const bots = [...BOT_NICKS].sort(() => Math.random() - 0.5);
+    const seats = [];
+    // 멀티는 자리를 섞고, 솔로는 사람을 0번에 고정한다.
+    // (첫 진행자는 createGame4 가 무작위로 정하므로 솔로에서 섞을 이유가 없다)
+    const order = solo ? [0, 1, 2, 3] : [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+    let hi = 0, bi = 0;
+    for (let i = 0; i < 4; i++) seats.push(null);
+    for (const idx of order) {
+      if (hi < humans.length) { seats[idx] = { sid: humans[hi].sid, nick: humans[hi].nick, isBot: false, orphanAt: null }; hi++; }
+      else { seats[idx] = { sid: null, nick: bots[bi++], isBot: true, orphanAt: null }; }
+    }
+    const g = G.createGame4(seats.map((s) => s.nick));
+    const styles = AI.pickStyles();
+    g.seats.forEach((s, i) => { s.style = styles[i]; s.isBot = seats[i].isBot; });
+
+    const roomId = 'G4' + Math.random().toString(36).slice(2, 8).toUpperCase();
+    rooms4[roomId] = { game: g, seats, next: null, lastStep: Date.now(), dead: false, solo: !!solo };
+    for (let i = 0; i < 4; i++) {
+      const sid = seats[i].sid; if (!sid) continue;
+      const sk = io.sockets.sockets.get(sid);
+      if (sk) { sk.g4room = roomId; sk.g4seat = i; }
+      io.to(sid).emit('g4_begin', {
+        roomId, me: i, solo: !!solo,
+        seats: seats.map((s) => ({ name: s.nick, isBot: s.isBot })),
+      });
+    }
+    push(roomId);
+    schedule(roomId, 700);
+    dbg('방 시작', roomId, solo ? '솔로' : '멀티', '사람 ' + humans.length + '명');
+  }
+
+  // ── 워치독 ───────────────────────────────────────────────────────────────
   const wd = setInterval(() => {
     const now = Date.now();
     for (const [roomId, r] of Object.entries(rooms4)) {
-      if (r.orphanAt) {                                // 자리 비움 — 유예 뒤 정리
-        if (now - r.orphanAt > ORPHAN_MS) destroy(roomId, '유예 만료');
-        continue;
+      if (r.dead) continue;
+      // 자리를 비운 사람 처리
+      let changed = false;
+      for (let i = 0; i < 4; i++) {
+        const s = r.seats[i];
+        if (!s.orphanAt) continue;
+        if (r.solo) {                                   // 솔로는 판을 잠시 보관했다가 정리
+          if (now - s.orphanAt > ORPHAN_MS) { destroy(roomId, '유예 만료'); break; }
+        } else if (now - s.orphanAt > SEAT_GRACE) {     // 멀티는 남은 사람을 위해 AI가 대신
+          s.isBot = true; s.sid = null; s.orphanAt = null;
+          r.game.seats[i].isBot = true;
+          changed = true;
+          dbg('자리를 AI가 대신', roomId, i);
+        }
       }
-      if (r.dead || r.next) continue;                  // 다음 동작이 예약돼 있으면 정상
+      if (!rooms4[roomId] || r.dead) continue;
+      if (changed) { push(roomId); schedule(roomId, 300); continue; }
+      // 사람이 전부 나간 멀티 방은 정리
+      if (!r.solo && !r.seats.some((s) => s.sid)) { destroy(roomId, '사람 없음'); continue; }
+      if (r.solo && r.seats.some((x) => !x.isBot && x.orphanAt)) continue;   // 솔로 자리비움 = 진행 정지
+      if (r.next) continue;
       if (r.game.phase === 'game_over') continue;
-      if (waitingOnHuman(r.game)) continue;            // 사람 입력 대기는 정상
+      if (humanToAct(r.game, r) !== null) continue;
       if (now - (r.lastStep || 0) < STUCK_MS) continue;
       console.warn('[g4] 진행이 멈춰 복구합니다 room=' + roomId + ' phase=' + r.game.phase);
       schedule(roomId, 60);
     }
-  }, 4000);
+  }, 3000);
   if (wd.unref) wd.unref();
 
   // ── 소켓 ─────────────────────────────────────────────────────────────────
   io.on('connection', (socket) => {
-    socket.on('g4_start', (data = {}) => {
-      if (socket.g4room) destroy(socket.g4room, '재시작');
-      if (Object.keys(rooms4).length >= MAX_ROOMS4)
-        return socket.emit('g4_error', '서버가 혼잡해요. 잠시 후 다시 시도해주세요.');
-      const nick = String(data.nick || '나').slice(0, 12) || '나';
-      const bots = [...BOT_NICKS].sort(() => Math.random() - 0.5).slice(0, 3);
-      const g = G.createGame4([nick, ...bots]);
-      const styles = AI.pickStyles();
-      g.seats.forEach((s, i) => { s.style = styles[i]; });
+    const nickOf = (d) => String((d && d.nick) || '플레이어').slice(0, 12) || '플레이어';
 
-      const roomId = 'G4' + Math.random().toString(36).slice(2, 8).toUpperCase();
-      rooms4[roomId] = { sid: socket.id, game: g, next: null, lastStep: Date.now(), dead: false };
-      socket.g4room = roomId;
-      socket.emit('g4_begin', { roomId, seats: g.seats.map((s) => ({ name: s.name, isBot: s.isBot })) });
-      push(roomId);
-      schedule(roomId, 700);
+    socket.on('g4_start', (data = {}) => {          // 솔로 (AI 3명)
+      if (socket.g4room) destroy(socket.g4room, '재시작');
+      dequeue(socket.id);
+      startRoom([{ sid: socket.id, nick: nickOf(data) }], true);
     });
+
+    socket.on('g4_quick', (data = {}) => {          // 빠른대전 대기열
+      if (socket.g4room) destroy(socket.g4room, '빠른대전 진입');
+      dequeue(socket.id);
+      queue4.push({ sid: socket.id, nick: nickOf(data), at: Date.now() });
+      queueInfo();
+      tryMatch(false);
+    });
+
+    socket.on('g4_cancel', () => { dequeue(socket.id); socket.emit('g4_cancelled'); });
 
     socket.on('g4_act', (data = {}) => {
-      const roomId = socket.g4room;
-      const r = rooms4[roomId];
-      if (!r || r.dead) return dbg('⚠ g4_act 무시: 방 없음 room=' + roomId + ' type=' + data.type);
+      const roomId = socket.g4room, r = rooms4[roomId];
+      if (!r || r.dead) return;
+      const me = socket.g4seat;
+      if (me === null || me === undefined || r.seats[me].sid !== socket.id) return;
       const g = r.game;
       let ok = false;
-      if (data.type === 'draw' && g.phase === 'draw' && g.auctioneer === 0) ok = G.draw(g);
-      else if (data.type === 'offer' && g.phase === 'offer') ok = G.offer(g, 0, data.cardId);
-      else if (data.type === 'auctionType' && g.phase === 'choose_type') ok = G.chooseType(g, 0, data.val);
-      else if (data.type === 'bid' && g.phase === 'bidding') ok = G.bid(g, 0, data.cardId);
-      if (!ok) return push(roomId);       // 잘못된 입력이면 현재 상태만 되돌려 보낸다
+      if (data.type === 'draw' && g.phase === 'draw' && g.auctioneer === me) ok = G.draw(g);
+      else if (data.type === 'offer' && g.phase === 'offer' && g.auctioneer === me) ok = G.offer(g, me, data.cardId);
+      else if (data.type === 'auctionType' && g.phase === 'choose_type' && g.auctioneer === me) ok = G.chooseType(g, me, data.val);
+      else if (data.type === 'bid' && g.phase === 'bidding') ok = G.bid(g, me, data.cardId);
+      if (!ok) return push(roomId);
       r.lastStep = Date.now();
       push(roomId);
-      schedule(roomId, T.next);           // 이후 진행은 항상 단일 스케줄러가 맡는다
+      schedule(roomId, T.next);
     });
 
-    socket.on('g4_leave', () => { if (socket.g4room) { destroy(socket.g4room, 'leave'); socket.g4room = null; } });
-    // 잠깐 끊긴 것만으로 판을 없애면 모바일에서 화면만 잠가도 게임이 날아간다.
-    // 자리를 비운 것으로 보고 진행을 멈춘 뒤, 유예 시간이 지나야 정리한다.
-    socket.on('disconnect', (reason) => {
-      const r = rooms4[socket.g4room];
-      if (!r || r.dead) return;
-      r.orphanAt = Date.now();
-      if (r.next) { clearTimeout(r.next); r.next = null; }
-      dbg('자리 비움 — 진행 정지', socket.g4room, reason);
-    });
-
-    // 재접속해서 이어하기
     socket.on('g4_resume', (data = {}) => {
       const roomId = String(data.roomId || '');
       const r = rooms4[roomId];
       if (!r || r.dead) return socket.emit('g4_gone');
-      r.sid = socket.id; r.orphanAt = null;
-      socket.g4room = roomId;
-      dbg('이어하기', roomId, 'phase=' + r.game.phase);
+      const seat = Number(data.seat);
+      const s = r.seats[seat];
+      if (!s || s.isBot) return socket.emit('g4_gone');   // 이미 AI가 대신하고 있으면 못 돌아온다
+      s.sid = socket.id; s.orphanAt = null;
+      socket.g4room = roomId; socket.g4seat = seat;
+      dbg('이어하기', roomId, 'seat=' + seat);
       push(roomId);
-      if (!waitingOnHuman(r.game) && r.game.phase !== 'game_over') schedule(roomId, 400);
+      if (humanToAct(r.game, r) === null && r.game.phase !== 'game_over') schedule(roomId, 400);
+    });
+
+    socket.on('g4_leave', () => {
+      dequeue(socket.id);
+      const r = rooms4[socket.g4room];
+      if (r && !r.dead) {
+        if (r.solo) destroy(socket.g4room, 'leave');
+        else {
+          const i = socket.g4seat;
+          if (i !== null && i !== undefined && r.seats[i]) {
+            r.seats[i].isBot = true; r.seats[i].sid = null; r.seats[i].orphanAt = null;
+            r.game.seats[i].isBot = true;
+            push(socket.g4room); schedule(socket.g4room, 300);
+          }
+        }
+      }
+      socket.g4room = null; socket.g4seat = null;
+    });
+
+    socket.on('disconnect', () => {
+      dequeue(socket.id);
+      const r = rooms4[socket.g4room];
+      if (!r || r.dead) return;
+      const i = socket.g4seat;
+      if (i === null || i === undefined || !r.seats[i]) return;
+      // 잠깐 끊긴 것만으로 자리를 뺏지 않는다. 유예 뒤 워치독이 처리한다.
+      r.seats[i].orphanAt = Date.now();
+      r.seats[i].sid = null;
+      if (r.solo && r.next) { clearTimeout(r.next); r.next = null; }   // 솔로는 진행 정지
+      dbg('자리 비움', socket.g4room, 'seat=' + i);
     });
   });
 
-  return { count: () => Object.keys(rooms4).length };
+  return { count: () => Object.keys(rooms4).length, queued: () => queue4.length };
 }
 
 module.exports = { attach4 };
