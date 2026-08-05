@@ -608,14 +608,23 @@
     .q-slot { display:flex; flex-direction:column; align-items:center; gap:3px; }
     .q-slabel { font-size:.55rem; color:#9fb8a8; font-weight:700; }
     .q-vs { font-size:.62rem; font-weight:800; color:var(--gold); text-align:center; min-width:52px; }
-    /* 공개될 때 화면이 튀지 않도록 자리를 미리 잡아둔다 */
-    #q-bids { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; min-height:96px;
-      align-items:center; }
-    .q-bid { display:flex; flex-direction:column; align-items:center; gap:2px; }
-    .q-bidname { font-size:.5rem; color:#bfae94; max-width:56px; overflow:hidden;
-      text-overflow:ellipsis; white-space:nowrap; }
-    .q-bid.win .q-bidname { color:#ffd94a; font-weight:900; }
-    .q-bid.win .card { box-shadow:0 0 0 2.5px var(--gold), 0 4px 14px rgba(0,0,0,.5); }
+
+    /* 배팅 카드는 각자 자기 앞에 놓인다 — 상대는 패널 바로 아래, 나는 손패 위 */
+    #q-oppbids { display:flex; gap:5px; flex-shrink:0; min-height:52px; }
+    .q-bslot { flex:1; min-width:0; display:flex; flex-direction:column;
+      align-items:center; justify-content:flex-start; gap:2px; }
+    #q-mybid { min-height:56px; display:flex; align-items:center; justify-content:center; gap:5px; }
+    #q-mybid:empty, #q-oppbids:empty { min-height:0; }
+    .q-bslot .card, #q-mybid .card { width:36px; height:50px; padding:3px 3px 2px; }
+    .q-bslot .card .c-num, #q-mybid .card .c-num { font-size:1.3rem; line-height:1; }
+    .q-bslot .card .c-rank, #q-mybid .card .c-rank { font-size:.58rem; padding:1px 3px; min-width:12px; }
+    #q-mybid .card { width:44px; height:61px; }
+    #q-mybid .card .c-num { font-size:1.6rem; }
+    /* 낙찰된 배팅 카드 강조 */
+    .q-bslot.win .card, #q-mybid.win .card { box-shadow:0 0 0 2.5px var(--gold), 0 4px 14px rgba(0,0,0,.5); }
+    .q-blabel { font-size:.48rem; color:#bfae94; }
+    .q-bslot.win .q-blabel, #q-mybid.win .q-blabel { color:#ffd94a; font-weight:900; }
+
     #q-status { font-size:.72rem; font-weight:800; color:#ffe9a8; text-align:center;
       min-height:18px; padding:0 8px; }
     #q-typeBtns { display:none; gap:8px; }
@@ -638,8 +647,8 @@
     #q-myhand .card .c-rank { font-size:.9rem; padding:1px 5px; min-width:20px; }
     #q-myhand .card.pick { cursor:pointer; box-shadow:0 0 0 2px var(--gold), 0 3px 10px rgba(0,0,0,.5); }
     #q-myhand .card.pick:hover { transform:translateY(-7px); }
-    #q-mat .card, #q-bids .card { width:58px; height:81px; padding:4px 4px 3px; }
-    #q-mat .card .c-rank, #q-bids .card .c-rank { font-size:.95rem; padding:1px 5px; min-width:21px; }
+    #q-mat .card { width:58px; height:81px; padding:4px 4px 3px; }
+    #q-mat .card .c-rank { font-size:.95rem; padding:1px 5px; min-width:21px; }
 
     #q-quit, #q-leftBtn { background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.2); color:#d8ccb4;
       border-radius:8px; padding:2px 9px; font-size:.58rem; font-family:inherit; cursor:pointer; }
@@ -679,7 +688,7 @@
 
     @media (max-height:700px) {
       #q-myhand .card { width:46px; height:65px; }
-      #q-mat .card, #q-bids .card { width:50px; height:70px; }
+      #q-mat .card { width:58px; height:81px; padding:4px 4px 3px; }
       .q-oacq { min-height:0; }
     }
 
@@ -2561,8 +2570,9 @@
 
 <!-- ══════════ 4인전 화면 (AI 3명) ══════════ -->
 <div id="game4">
-  <!-- 상단: 상대 3명 -->
+  <!-- 상단: 상대 3명 + 각자 앞의 배팅 자리 -->
   <div id="q-opps"></div>
+  <div id="q-oppbids"></div>
 
   <!-- 중앙: 경매장 -->
   <div id="q-table">
@@ -2577,7 +2587,6 @@
       <div class="q-vs" id="q-typeTag"></div>
       <div class="q-slot"><div class="q-slabel">출품 카드</div><div class="q-scard" id="q-offer"></div></div>
     </div>
-    <div id="q-bids"></div>
     <div id="q-status"></div>
     <div id="q-typeBtns">
       <button class="q-tbtn" onclick="q4Type('open')"><b>👁 오픈</b><span>경매품 공개 · 배팅 비밀</span></button>
@@ -2587,6 +2596,7 @@
 
   <!-- 하단: 나 -->
   <div id="q-me">
+    <div id="q-mybid"></div>
     <div id="q-myacq"></div>
     <div id="q-myhand"></div>
   </div>

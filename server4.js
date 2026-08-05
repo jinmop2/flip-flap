@@ -27,6 +27,7 @@ function attach4(io) {
   // 좌석 0(사람) 시점의 상태만 내보낸다. 남의 손패는 절대 보내지 않는다.
   function stateFor(g) {
     const a = g.auction;
+    const opened = G.openedBid(g);
     const reveal = g.phase === 'reveal' || g.phase === 'settled' || g.phase === 'game_over';
     const openOffer = a && (a.type === 'open' || g.auctioneer === 0 || reveal);
     return {
@@ -40,10 +41,13 @@ function attach4(io) {
         center: a.center,
         offered: openOffer ? a.offered : null,
         type: a.type,
-        // 오픈은 공개 시점까지 감추고, 클로즈는 낸 순간부터 공개한다
-        bids: (reveal || a.seq) ? { ...a.bids } : {},
-        seq: a.seq || null,                 // 클로즈 입찰 순서
-        toBid: G.nextBidder(g),             // 지금 낼 차례 (오픈이면 null)
+        // 오픈은 전원 뒤집어 냈다가 한 번에 공개.
+        // 클로즈는 진행자가 낸 카드만 먼저 공개되고, 나머지는 공개 시점까지 감춘다.
+        bids: reveal ? { ...a.bids }
+              : (opened ? { [opened.seat]: opened.card } : {}),
+        closed: !!a.closed,
+        first: (a.first === undefined ? null : a.first),   // 선공개할 좌석
+        firstDone: !!opened,                               // 진행자가 이미 냈는가
       } : null,
       result: (g.phase === 'settled' || g.phase === 'game_over') ? g.lastResult : null,
       over: g.over,
@@ -67,10 +71,7 @@ function attach4(io) {
   function waitingOnHuman(g) {
     if (g.phase === 'draw' || g.phase === 'offer' || g.phase === 'choose_type')
       return g.auctioneer === 0;
-    if (g.phase === 'bidding') {
-      if (g.auction.seq) return G.nextBidder(g) === 0;    // 클로즈 — 내 차례인가
-      return G.bidderSeats(g).includes(0) && !g.auction.bids[0];
-    }
+    if (g.phase === 'bidding') return G.canBid(g, 0);
     return false;
   }
 
@@ -118,28 +119,18 @@ function attach4(io) {
         return schedule(roomId, T.bid);
 
       case 'bidding': {
-        // 클로즈는 진행자부터 정해진 순서대로 한 명씩 (앞사람 카드를 보고 낸다)
-        if (g.auction.seq) {
-          const nb = G.nextBidder(g);
-          if (nb === 0) return push(roomId);              // 내 차례 — 기다린다
-          if (nb !== null) {
-            const c = AI.chooseBid(g, nb);
-            if (c) G.bid(g, nb, c.id);
-            push(roomId);
-            if (G.allBidsIn(g)) { g.phase = 'reveal'; push(roomId); return schedule(roomId, T.reveal); }
-            return schedule(roomId, T.bid);
-          }
-        } else {
-          // 오픈은 동시·비밀이라 봇 순서는 연출용 간격일 뿐이다
-          const pending = G.bidderSeats(g).filter((s) => s !== 0 && !g.auction.bids[s]);
-          if (pending.length) {
-            const s = pending[0];
-            const c = AI.chooseBid(g, s);
-            if (c) G.bid(g, s, c.id);
-            push(roomId);
-            if (G.allBidsIn(g)) { g.phase = 'reveal'; push(roomId); return schedule(roomId, T.reveal); }
-            return schedule(roomId, T.bid);
-          }
+        // 클로즈면 진행자가 먼저 내야 나머지가 낼 수 있다. canBid 가 그걸 강제하므로
+        // 여기서는 "지금 낼 수 있는 봇"을 하나씩 굴리기만 하면 된다.
+        // 사람이 낼 수 있는 상태면 기다린다.
+        if (G.canBid(g, 0)) return push(roomId);
+        const pending = G.bidderSeats(g).filter((s) => s !== 0 && G.canBid(g, s));
+        if (pending.length) {
+          const s = pending[0];
+          const c = AI.chooseBid(g, s);
+          if (c) G.bid(g, s, c.id);
+          push(roomId);
+          if (G.allBidsIn(g)) { g.phase = 'reveal'; push(roomId); return schedule(roomId, T.reveal); }
+          return schedule(roomId, T.bid);
         }
         if (G.allBidsIn(g) || !G.bidderSeats(g).length) {   // 전원 입찰 완료 또는 아무도 못 냄(유찰)
           g.phase = 'reveal'; push(roomId); return schedule(roomId, T.reveal);

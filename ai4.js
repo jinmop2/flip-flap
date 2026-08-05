@@ -62,20 +62,21 @@ function chooseBid(g, seat) {
   let desire = gainOf(me.acq, prize) * style.greed + threatOf(g, seat, prize) * style.block;
   if (blind) desire = desire * 0.7 + 0.5;        // 안 보이면 중간값으로 수렴
 
-  // 클로즈는 앞사람 배팅이 공개된다. 이길 마음이 있으면 "이길 만큼만" 최소로 지른다.
-  // 이게 클로즈의 핵심이라, 이 판단이 없으면 순서 정보가 아무 의미가 없다.
-  if (closed) {
-    const shown = Object.values(a.bids);
-    if (shown.length) {
-      const best = shown.reduce((x, y) => (G.strength(x) <= G.strength(y) ? x : y));
-      const last = seat === (a.seq && a.seq[a.seq.length - 1]);
-      if (desire >= 1) {
-        // 앞사람들보다 강한 카드 중 가장 약한 것 — 아껴 쓴다
-        const win = [...hand].reverse().find((c) => G.beats(c, best));
-        if (win && (last || Math.random() < 0.8)) return win;
-      } else if (!last) {
-        return hand[hand.length - 1];            // 관심 없으면 최약 카드로 흘린다
+  // 클로즈는 진행자가 선공개로 낸 카드를 나머지가 보고 판단한다.
+  // 다만 나머지끼리는 서로를 모른 채 동시에 내므로, "진행자만 이기면 된다"고
+  // 안심하면 안 된다 — 남들도 같은 생각으로 지를 수 있으니 여유를 둔다.
+  const opened = G.openedBid(g);
+  if (closed && opened && opened.seat !== seat) {
+    if (desire >= 1) {
+      const win = [...hand].reverse().find((c) => G.beats(c, opened.card));
+      if (win) {
+        const i = hand.indexOf(win);
+        // 이기는 카드 중 가장 약한 것보다 한 단계 더 지르기도 한다 (경쟁 대비)
+        const safer = (desire >= 2 && i > 0 && Math.random() < 0.5) ? hand[i - 1] : win;
+        return safer;
       }
+    } else {
+      return hand[hand.length - 1];              // 관심 없으면 최약 카드로 흘린다
     }
   }
 

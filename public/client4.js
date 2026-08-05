@@ -118,25 +118,36 @@
       $('q-typeTag').textContent = '';
     }
 
-    // 입찰 — 오픈은 공개 시점에 한꺼번에, 클로즈는 낸 순서대로 하나씩 쌓인다
-    const bids = $('q-bids'); bids.innerHTML = '';
-    if (a && a.bids && Object.keys(a.bids).length) {
-      const winner = s.result ? s.result.winner : -1;
-      // 클로즈면 낸 순서대로, 오픈이면 좌석순
-      const order = a.seq ? a.seq.filter((x) => a.bids[x]) : Object.keys(a.bids).map(Number);
-      for (const seat of order) {
-        const c = a.bids[seat]; if (!c) continue;
-        const w = document.createElement('div');
-        w.className = 'q-bid' + (seat === winner ? ' win' : '');
-        const n = document.createElement('div');
-        n.className = 'q-bidname'; n.textContent = s.seats[seat].name;
-        w.appendChild(n); w.appendChild(card4(c));
-        bids.appendChild(w);
+    // 배팅 카드는 각자 자기 앞에 놓인다.
+    // 아직 안 열린 카드는 뒷면으로 두었다가 공개 시점에 한 번에 뒤집는다.
+    const winner = s.result ? s.result.winner : -1;
+    const bidView = (seat) => {
+      if (!a) return null;
+      if (a.bids && a.bids[seat]) return card4(a.bids[seat]);   // 열린 카드
+      if (s.seats[seat].bidded) return card4(null);             // 냈지만 아직 뒷면
+      return null;
+    };
+    const ob = $('q-oppbids'); ob.innerHTML = '';
+    for (let i = 1; i < 4; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'q-bslot' + (i === winner ? ' win' : '');
+      const card = bidView(i);
+      if (card) {
+        slot.appendChild(card);
+        if (i === winner) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; slot.appendChild(l); }
       }
+      ob.appendChild(slot);
     }
-    // 클로즈에서 지금 낼 차례인 사람을 상단 패널에 표시
-    if (a && a.seq && a.toBid !== null && a.toBid !== undefined && a.toBid > 0) {
-      const el = opps.children[a.toBid - 1];
+    const mb = $('q-mybid'); mb.innerHTML = '';
+    mb.className = (winner === 0 ? 'win' : '');
+    const myCard = bidView(0);
+    if (myCard) {
+      mb.appendChild(myCard);
+      if (winner === 0) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; mb.appendChild(l); }
+    }
+    // 클로즈에서 진행자가 아직 선공개를 안 했으면 그 사람을 표시
+    if (a && a.closed && a.first !== null && a.first !== undefined && !a.firstDone && a.first > 0) {
+      const el = opps.children[a.first - 1];
       if (el) el.classList.add('turn');
     }
 
@@ -158,15 +169,13 @@
     else if (s.phase === 'offer') { if (iAmAuc) { msg = '경매에 내놓을 카드를 고르세요'; pickMode = 'offer'; } else msg = `${s.seats[s.auctioneer].name} 님이 출품하는 중…`; }
     else if (s.phase === 'choose_type') msg = iAmAuc ? '경매 방식을 고르세요' : `${s.seats[s.auctioneer].name} 님이 방식을 고르는 중…`;
     else if (s.phase === 'bidding') {
-      const closed = a && a.seq;                    // 클로즈 = 순서대로 공개 입찰
+      const closed = a && a.closed;
+      const waitFirst = closed && a.first !== null && a.first !== undefined && !a.firstDone;
       if (!s.bidders.includes(0)) msg = s.firstAuction ? '첫 경매라 진행자인 나는 입찰하지 않습니다' : '손패가 없어 이번엔 입찰할 수 없어요';
-      else if (closed) {
-        if (a.toBid === 0) { msg = '🙈 내 차례! 경매품은 비밀 — 배팅 카드를 고르세요'; pickMode = 'bid'; }
-        else if (a.toBid !== null && a.toBid !== undefined) msg = `${s.seats[a.toBid].name} 님이 배팅하는 중…`;
-        else msg = '두구두구…';
-      }
-      else if (me.bidded) msg = '다른 사람들이 입찰하는 중…';
-      else { msg = '배팅 카드를 고르세요'; pickMode = 'bid'; }
+      else if (waitFirst && a.first !== 0) msg = `${s.seats[a.first].name} 님이 먼저 공개 배팅하는 중…`;
+      else if (me.bidded) msg = '나머지가 배팅하는 중…';
+      else if (waitFirst && a.first === 0) { msg = '👑 진행자는 먼저 공개로 배팅합니다 — 카드를 고르세요'; pickMode = 'bid'; }
+      else { msg = closed ? '🙈 경매품은 비밀! 배팅 카드를 고르세요' : '배팅 카드를 고르세요'; pickMode = 'bid'; }
     }
     else if (s.phase === 'reveal') msg = '두구두구… 공개!';
     else if (s.phase === 'settled' && s.result) {
