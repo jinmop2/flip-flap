@@ -571,17 +571,13 @@
     .q-need.r2 { background:#b8860b; color:#fff; }
     @keyframes qpulse { 0%,100%{opacity:1} 50%{opacity:.55} }
     .q-oacq { display:flex; flex-wrap:wrap; gap:2px; margin-top:4px; min-height:15px; }
-    /* 획득 칩 — [종류] 등급·등급 (개수/필요) 순으로 붙여 어떤 카드가 빠졌는지 보이게 */
-    .q-chip { display:inline-flex; align-items:center; gap:2px; font-size:.53rem; font-weight:800;
-      border-radius:4px; padding:1px 3px; color:#fff; line-height:1.3;
-      background:rgba(0,0,0,.35); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
+    /* 획득 칩 — 카드 한 장을 "종류-등급"으로 그대로 표시 (2-1, 3-5 …) */
+    .q-chip { font-size:.55rem; font-weight:800; border-radius:4px; padding:1px 4px;
+      color:#fff; line-height:1.35; white-space:nowrap; text-shadow:0 1px 1px rgba(0,0,0,.5); }
+    .q-chip[data-k="2"]{background:#b8343c} .q-chip[data-k="3"]{background:#2e6f9e}
+    .q-chip[data-k="4"]{background:#a67d18} .q-chip[data-k="6"]{background:#5e5142}
+    .q-chip.done { box-shadow:0 0 0 1.5px var(--gold); }   /* 완성한 종류는 금테 */
     .q-ck { border-radius:2px; padding:0 3px; color:#fff; font-size:.55rem; }
-    .q-chip[data-k="2"] .q-ck{background:#b8343c} .q-chip[data-k="3"] .q-ck{background:#2e6f9e}
-    .q-chip[data-k="4"] .q-ck{background:#b08820} .q-chip[data-k="6"] .q-ck{background:#6b5a48}
-    .q-cg { color:#f2e8d4; letter-spacing:.02em; }
-    .q-cn { font-style:normal; opacity:.6; font-size:.48rem; }
-    .q-chip.done { background:rgba(230,190,80,.28); box-shadow:inset 0 0 0 1px var(--gold); }
-    .q-chip.done .q-cn { opacity:.95; color:#ffd94a; }
 
     /* 중앙 경매장 */
     #q-table { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center;

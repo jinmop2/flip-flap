@@ -9,7 +9,8 @@
   let lastRecv = 0;      // 마지막으로 상태를 받은 시각
   let prevPhase = null, prevTurn = 0;   // 효과음을 단계가 바뀔 때만 울리려고
   const $ = (id) => document.getElementById(id);
-  const sfx = (n) => { if (typeof playSound === 'function') playSound(n); };
+  // 소리는 부가 요소다. 아직 초기화 전이거나 재생이 막혀도 게임 진행을 막으면 안 된다.
+  const sfx = (n) => { try { if (typeof playSound === 'function') playSound(n); } catch (_) {} };
 
   // 4인전 전용 특수 카드 — 최강 2-1, 최약 6-13 (2인전은 6-10이라 여기서 따로 판정한다)
   const top4 = (c) => c && c.kind === 2 && c.grade === 1;
@@ -47,28 +48,20 @@
     return el;
   }
 
-  // 획득 더미 — 4인이라 카드를 통째로 펼칠 자리가 없어서,
-  // 종류별로 "어떤 등급을 가져갔는지"까지 보이게 압축해서 그린다.
-  // (몇 종의 몇 번이 빠졌는지 세는 게 이 게임의 핵심이라 개수만으론 부족하다)
+  // 획득 더미 — 가져간 카드를 "종류-등급"(2-1, 3-5 …) 그대로 하나씩 보여준다.
+  // 몇 종의 몇 번이 빠졌는지가 이 게임의 핵심 정보라, 개수 요약으론 부족하다.
   function acqChips(acq) {
-    const m = {};
-    for (const c of acq) (m[c.kind] = m[c.kind] || []).push(c.grade);
-    return [2, 3, 4, 6].filter((k) => m[k]).map((k) => {
-      const grades = m[k].sort((a, b) => a - b);
-      const w = document.createElement('span');
-      w.className = 'q-chip' + (grades.length >= k ? ' done' : '');
-      w.dataset.k = k;
-      const kk = document.createElement('b');
-      kk.className = 'q-ck'; kk.textContent = k;
-      w.appendChild(kk);
-      const gs = document.createElement('span');
-      gs.className = 'q-cg'; gs.textContent = grades.join('·');
-      w.appendChild(gs);
-      const cnt = document.createElement('i');
-      cnt.className = 'q-cn'; cnt.textContent = `${grades.length}/${k}`;
-      w.appendChild(cnt);
-      return w;
-    });
+    const cnt = {};
+    for (const c of acq) cnt[c.kind] = (cnt[c.kind] || 0) + 1;
+    return [...acq]
+      .sort((a, b) => (a.kind * 100 + a.grade) - (b.kind * 100 + b.grade))
+      .map((c) => {
+        const s = document.createElement('span');
+        s.className = 'q-chip' + (cnt[c.kind] >= c.kind ? ' done' : '');
+        s.dataset.k = c.kind;
+        s.textContent = `${c.kind}-${c.grade}`;
+        return s;
+      });
   }
 
   // ── 렌더 ────────────────────────────────────────────────────────────────
@@ -273,7 +266,8 @@
     document.body.classList.add('quad4');
     q4Live = true; q4Room = null; lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
     $('q-status').textContent = '자리 배치 중…';
-    sfx('deal'); if (typeof startBGM === 'function') startBGM();   // 2인전과 같은 배경음악
+    sfx('deal');
+    try { if (typeof startBGM === 'function') startBGM(); } catch (_) {}   // 2인전과 같은 배경음악
     socket.emit('g4_start', { nick: typeof getNick === 'function' ? getNick() : '나' });
   };
 
