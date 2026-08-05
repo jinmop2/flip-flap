@@ -9,55 +9,65 @@
 //   · 진행자도 입찰한다. 단 첫 경매만 제외 — 선순위 진행자의 복리 이득을 끊는다.
 //   · 배팅 카드는 "약하게 부른 사람부터 강한 카드"를 가져간다(역순 분배).
 
-const SPEC4 = [[2, 6], [3, 9], [4, 9], [6, 13]];   // [종류, 장수]
-const HAND4 = 6;
-const SEATS = 4;
+// 인원별 카드 구성 — 시뮬레이션으로 정한 값 (BALANCE 참고)
+// [종류, 장수]. 세트 완성에 필요한 장수는 종류 값과 같다 (2종 2장 … 6종 6장)
+// 2만 판 시뮬레이션으로 고른 값. 네 종류가 고르게 우승하고(종류 편중 ~2%p)
+// 덱이 떨어져 흐지부지 끝나는 판이 거의 없도록(세트 완성 99%+) 맞췄다.
+// 3인·4인이 같은 40장 덱을 쓴다. 손패 장수만 달리해서 균형을 맞췄다 —
+// 같은 카드 세트로 두 인원을 모두 지원하는 게 실물로 만들 때도 유리하다.
+const DECK40 = [[2, 6], [3, 10], [4, 10], [6, 14]];
+const SPECS = { 3: DECK40, 4: DECK40 };      // 총 40장
+const HAND = { 3: 7, 4: 6 };                 // 3인 덱 19장 / 4인 덱 16장
+// 판마다 인원이 다르므로 전역 상수 대신 게임 객체가 자기 구성을 들고 다닌다
+const specOf = (g) => SPECS[g.n] || SPECS[4];
 
 const strength = (c) => c.kind * 100 + c.grade;     // 작을수록 강하다
 const isTop = (c) => c.kind === 2 && c.grade === 1;                 // 최강 2-1
-const isBot_ = (c) => c.kind === 6 && c.grade === 13;               // 최약 6-13
+// 최약 카드는 구성마다 다르다 (6종의 마지막 등급). 구성을 안 주면 4인 기준.
+const lowestGrade = (spec) => { for (const [k, n] of (spec || SPECS[4])) if (k === 6) return n; return 13; };
+const isBot_ = (c, spec) => c.kind === 6 && c.grade === lowestGrade(spec);
 // 졸개의 배신 — 최약이 최강을 이긴다
-function beats(a, b) {
-  if (isBot_(a) && isTop(b)) return true;
-  if (isBot_(b) && isTop(a)) return false;
+function beats(a, b, spec) {
+  if (isBot_(a, spec) && isTop(b)) return true;
+  if (isBot_(b, spec) && isTop(a)) return false;
   return strength(a) < strength(b);
 }
 
-function initDeck4() {
+function initDeck4(spec) {
   const cards = [];
-  for (const [kind, count] of SPEC4)
+  for (const [kind, count] of spec)
     for (let g = 1; g <= count; g++) cards.push({ kind, grade: g, id: kind * 100 + g });
   for (let i = cards.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [cards[i], cards[j]] = [cards[j], cards[i]];
   }
-  return cards;   // 37장
+  return cards;
 }
 
 function counts(acq) { const m = {}; for (const c of acq) m[c.kind] = (m[c.kind] || 0) + 1; return m; }
-function checkSet(acq) {
+function checkSet(acq, spec) {
   const m = counts(acq);
-  for (const [kind] of SPEC4) if ((m[kind] || 0) >= kind) return kind;
+  for (const [kind] of (spec || SPECS[4])) if ((m[kind] || 0) >= kind) return kind;
   return null;
 }
 // 세트 완성까지 남은 최소 장수 — 작을수록 리치에 가깝다
-function needLeft(acq) {
+function needLeft(acq, spec) {
   const m = counts(acq); let best = Infinity;
-  for (const [kind] of SPEC4) best = Math.min(best, kind - (m[kind] || 0));
+  for (const [kind] of (spec || SPECS[4])) best = Math.min(best, kind - (m[kind] || 0));
   return best;
 }
-function progress(acq) {
+function progress(acq, spec) {
   const m = counts(acq); let best = 0, kind = null;
-  for (const [k] of SPEC4) { const r = (m[k] || 0) / k; if (r > best) { best = r; kind = k; } }
+  for (const [k] of (spec || SPECS[4])) { const r = (m[k] || 0) / k; if (r > best) { best = r; kind = k; } }
   return { ratio: best, total: acq.length, kind };
 }
 const strengthSum = (acq) => acq.reduce((s, c) => s + strength(c), 0);
 
 // 덱이 떨어졌을 때 순위 — 세트에 가장 가까운 사람이 이긴다
-function rankSeats(seats) {
+function rankSeats(seats, spec) {
   return seats.map((s, i) => ({ i, s })).sort((a, b) => {
-    const n = needLeft(a.s.acq) - needLeft(b.s.acq); if (n) return n;
-    const pa = progress(a.s.acq), pb = progress(b.s.acq);
+    const n = needLeft(a.s.acq, spec) - needLeft(b.s.acq, spec); if (n) return n;
+    const pa = progress(a.s.acq, spec), pb = progress(b.s.acq, spec);
     if (pa.ratio !== pb.ratio) return pb.ratio - pa.ratio;
     if (pa.total !== pb.total) return pb.total - pa.total;
     return strengthSum(a.s.acq) - strengthSum(b.s.acq);
@@ -65,16 +75,19 @@ function rankSeats(seats) {
 }
 
 // ── 게임 생성 ──────────────────────────────────────────────────────────────
-function createGame4(names) {
-  const deck = initDeck4();
+function createGame4(names, opts = {}) {
+  const n = opts.n || names.length || 4;            // 3인 또는 4인
+  const spec = opts.spec || SPECS[n] || SPECS[4];
+  const hand = opts.hand || HAND[n] || 6;
+  const deck = initDeck4(spec);
   const seats = [];
-  for (let i = 0; i < SEATS; i++)
-    seats.push({ name: names[i], isBot: i !== 0, hand: deck.slice(i * HAND4, (i + 1) * HAND4), acq: [] });
+  for (let i = 0; i < n; i++)
+    seats.push({ name: names[i], isBot: i !== 0, hand: deck.slice(i * hand, (i + 1) * hand), acq: [] });
   return {
-    seats,
-    deck: deck.slice(SEATS * HAND4),          // 13장
+    n, spec, seats,
+    deck: deck.slice(n * hand),
     turn: 1,
-    auctioneer: Math.floor(Math.random() * SEATS),   // 첫 진행자는 무작위
+    auctioneer: Math.floor(Math.random() * n),      // 첫 진행자는 무작위
     phase: 'draw',
     auction: null,
     firstAuction: true,
@@ -86,7 +99,7 @@ function createGame4(names) {
 // 이번 경매에 입찰할 좌석들 — 첫 경매만 진행자 제외
 function bidderSeats(g) {
   const out = [];
-  for (let i = 0; i < SEATS; i++) {
+  for (let i = 0; i < g.n; i++) {
     if (g.firstAuction && i === g.auctioneer) continue;
     if (g.seats[i].hand.length === 0) continue;    // 손패가 없으면 입찰 불가
     out.push(i);
@@ -171,7 +184,7 @@ function settle(g) {
     let winner = sorted[0];
     let betrayed = false;
     if (isTop(sorted[0].card)) {
-      const b = sorted.find((e) => isBot_(e.card));
+      const b = sorted.find((e) => isBot_(e.card, g.spec));
       if (b) { winner = b; betrayed = true; }
     }
     g.seats[winner.seat].acq.push(...prize);
@@ -184,7 +197,7 @@ function settle(g) {
     // 안 그러면 배신자가 경매품 2장을 먹으면서 최강 카드까지 받는 이중 보상이 되어,
     // 0.9% 확률로만 터지는데 터지면 73%로 이기는 로또가 된다.
     if (betrayed) {
-      const top = 0, bot = sorted.findIndex((e) => isBot_(e.card));
+      const top = 0, bot = sorted.findIndex((e) => isBot_(e.card, g.spec));
       if (bot > 0) { recv[top] = sorted[top].card; recv[bot] = sorted[bot].card; }
     }
 
@@ -202,14 +215,14 @@ function settle(g) {
 
   // 승리 판정
   const done = [];
-  for (let i = 0; i < SEATS; i++) if (checkSet(g.seats[i].acq)) done.push(i);
+  for (let i = 0; i < g.n; i++) if (checkSet(g.seats[i].acq, g.spec)) done.push(i);
   if (done.length) {
     // 여럿이 동시에 완성하면 이번 경매 낙찰자를 우선한다
     const w = done.includes(g.lastResult.winner) ? g.lastResult.winner : done[0];
     // 승자 뒤의 등수도 매겨준다. 안 그러면 결과창에서 좌석 번호순으로 나열돼
     // "1장 남은 사람이 4등"처럼 엉뚱하게 보인다.
-    const order = [w, ...rankSeats(g.seats).filter((i) => i !== w)];
-    g.over = { winner: w, reason: 'set', kind: checkSet(g.seats[w].acq), order };
+    const order = [w, ...rankSeats(g.seats, g.spec).filter((i) => i !== w)];
+    g.over = { winner: w, reason: 'set', kind: checkSet(g.seats[w].acq, g.spec), order };
   }
   return g.lastResult;
 }
@@ -221,12 +234,12 @@ function advance(g) {
   g.turn++;
   // 진행자는 시계방향. 손패가 없으면 출품할 수 없으니 다음 사람에게 넘긴다.
   let next = null;
-  for (let k = 1; k <= SEATS; k++) {
-    const cand = (g.auctioneer + k) % SEATS;
+  for (let k = 1; k <= g.n; k++) {
+    const cand = (g.auctioneer + k) % g.n;
     if (g.seats[cand].hand.length > 0) { next = cand; break; }
   }
   if (next === null || !g.deck.length) {
-    const order = rankSeats(g.seats);
+    const order = rankSeats(g.seats, g.spec);
     g.over = { winner: order[0], reason: !g.deck.length ? 'deck' : 'nohand', order };
     g.phase = 'game_over';
     return;
@@ -236,6 +249,6 @@ function advance(g) {
   g.phase = 'draw';
 }
 
-module.exports = { SPEC4, HAND4, SEATS, createGame4, draw, offer, chooseType, bid, canBid, openedBid,
+module.exports = { SPECS, HAND, specOf, createGame4, draw, offer, chooseType, bid, canBid, openedBid,
                    settle, advance, bidderSeats, allBidsIn, checkSet, needLeft,
                    progress, rankSeats, beats, strength, isTop, isBot_, initDeck4 };

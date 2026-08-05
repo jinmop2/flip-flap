@@ -3,7 +3,7 @@
 // 무작위로 두는 상대 3명을 두고 59% 승률 — 실력이 확실히 반영되는 수준이다.
 
 const G = require('./game4');
-const { needLeft, SEATS } = G;
+const { needLeft } = G;
 
 // 성향 — 봇마다 다르게 줘서 매판 느낌이 달라지게 한다
 // 견제(block)를 얼마나 중시하느냐가 승률을 크게 갈라서, 처음 값으론 수비형이 9%p 앞섰다.
@@ -25,14 +25,14 @@ const sortStrong = (h) => [...h].sort((a, b) => G.strength(a) - G.strength(b)); 
 const same = (a, b) => a && b && a.id === b.id;
 
 // 이 경매품이 나에게 주는 이득 (0~2)
-const gainOf = (acq, prize) => needLeft(acq) - needLeft([...acq, ...prize]);
+const gainOf = (acq, prize, spec) => needLeft(acq, spec) - needLeft([...acq, ...prize], spec);
 
 // 남이 이걸 먹으면 얼마나 위험한가
 function threatOf(g, meSeat, prize) {
   let t = 0;
-  for (let i = 0; i < SEATS; i++) {
+  for (let i = 0; i < g.n; i++) {
     if (i === meSeat) continue;
-    const after = needLeft([...g.seats[i].acq, ...prize]);
+    const after = needLeft([...g.seats[i].acq, ...prize], g.spec);
     if (after === 0) t = Math.max(t, 3);          // 먹으면 즉시 진다 — 무조건 막는다
     else if (after === 1) t = Math.max(t, 1.5);   // 리치 직전
   }
@@ -59,7 +59,7 @@ function chooseBid(g, seat) {
   const closed = a.type === 'close' || a.type === 'closed';
   const blind = closed && seat !== g.auctioneer;   // 경매품을 못 본다
 
-  let desire = gainOf(me.acq, prize) * style.greed + threatOf(g, seat, prize) * style.block;
+  let desire = gainOf(me.acq, prize, g.spec) * style.greed + threatOf(g, seat, prize) * style.block;
   if (blind) desire = desire * 0.7 + 0.5;        // 안 보이면 중간값으로 수렴
 
   // 클로즈는 진행자가 선공개로 낸 카드를 나머지가 보고 판단한다.
@@ -68,7 +68,7 @@ function chooseBid(g, seat) {
   const opened = G.openedBid(g);
   if (closed && opened && opened.seat !== seat) {
     if (desire >= 1) {
-      const win = [...hand].reverse().find((c) => G.beats(c, opened.card));
+      const win = [...hand].reverse().find((c) => G.beats(c, opened.card, g.spec));
       if (win) {
         const i = hand.indexOf(win);
         // 이기는 카드 중 가장 약한 것보다 한 단계 더 지르기도 한다 (경쟁 대비)
@@ -81,7 +81,7 @@ function chooseBid(g, seat) {
   }
 
   // 배신 노림수 — 최약 카드를 쥐고 있고 판이 중요하면 가끔 던진다
-  const weak = hand.find((c) => G.isBot_(c));
+  const weak = hand.find((c) => G.isBot_(c, g.spec));
   if (weak && desire >= 2 && Math.random() < style.betray) return weak;
 
   let pos = Math.max(0, Math.min(1, 1 - desire / 4)) + (Math.random() - 0.5) * style.noise;
@@ -100,12 +100,12 @@ function chooseConsign(g, seat) {
   if (hand.length === 1) return hand[0];
   const scored = hand.map((c, i) => {
     let harm = 0;
-    for (let j = 0; j < SEATS; j++) {
+    for (let j = 0; j < g.n; j++) {
       if (j === seat) continue;
-      const before = needLeft(g.seats[j].acq), after = needLeft([...g.seats[j].acq, c]);
+      const before = needLeft(g.seats[j].acq, g.spec), after = needLeft([...g.seats[j].acq, c], g.spec);
       harm += (before - after) * (before <= 2 ? 2 : 1);
     }
-    const tool = (G.isTop(c) || G.isBot_(c)) ? 2.5 : 0;
+    const tool = (G.isTop(c) || G.isBot_(c, g.spec)) ? 2.5 : 0;
     const power = (hand.length - i) / hand.length;     // 강할수록 아깝다
     return { c, s: harm * 2 + tool + power * 1.2 + Math.random() * 0.3 };
   });
@@ -118,7 +118,7 @@ function chooseConsign(g, seat) {
 function chooseType(g, seat) {
   const me = g.seats[seat];
   const prize = [g.auction.center, g.auction.offered].filter(Boolean);
-  const mine = gainOf(me.acq, prize);
+  const mine = gainOf(me.acq, prize, g.spec);
   const theirs = threatOf(g, seat, prize);
   const r = Math.random();
   if (mine >= 1 && mine > theirs) return r < 0.75 ? 'close' : 'open';

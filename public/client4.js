@@ -9,7 +9,8 @@
   let lastRecv = 0;      // 마지막으로 상태를 받은 시각
   let prevPhase = null, prevTurn = 0;   // 효과음을 단계가 바뀔 때만 울리려고
   let mySeat = 0;        // 내 좌석 — 멀티에서는 0이 아닐 수 있다
-  let oppSeats = [1, 2, 3];   // 내 왼쪽부터 시계방향 상대 3명
+  let oppSeats = [1, 2, 3];   // 내 다음 자리부터 시계방향 상대들 (3인이면 2명)
+  let seatCount = 4;
   const $ = (id) => document.getElementById(id);
   // 소리는 부가 요소다. 아직 초기화 전이거나 재생이 막혀도 게임 진행을 막으면 안 된다.
   const sfx = (n) => { try { if (typeof playSound === 'function') playSound(n); } catch (_) {} };
@@ -79,7 +80,10 @@
     if (!q4) return;
     const s = q4, a = s.auction;
     mySeat = (s.me === undefined || s.me === null) ? 0 : s.me;
-    oppSeats = [1, 2, 3].map((k) => (mySeat + k) % 4);   // 내 다음 자리부터 시계방향
+    seatCount = s.n || s.seats.length || 4;
+    document.body.classList.toggle('q-n3', seatCount === 3);
+    // 내 다음 자리부터 시계방향. 3인이면 상대가 2명뿐이다.
+    oppSeats = Array.from({ length: seatCount - 1 }, (_, k) => (mySeat + k + 1) % seatCount);
 
     $('q-turn').textContent = `${s.turn}턴`;
     $('q-deck').textContent = `덱 ${s.deckLeft}장`;
@@ -229,7 +233,6 @@
 
   // 아직 안 나온 카드 — 내 손패·모든 획득 더미·공개된 경매품을 빼고 남은 것.
   // 전부 내가 화면에서 볼 수 있는 정보라 따로 세어주는 것뿐이고, 남의 손패를 보여주는 게 아니다.
-  const SPEC4 = [[2, 6], [3, 9], [4, 9], [6, 13]];
   function renderLeft() {
     const box = $('q-left'); if (!box || !q4) return;
     // 내가 쥔 카드와 남이 가져간 카드는 뜻이 달라서 따로 표시한다
@@ -239,7 +242,7 @@
     const a = q4.auction;
     if (a) { if (a.center) gone.add(a.center.id); if (a.offered) gone.add(a.offered.id); }
     box.innerHTML = '';
-    for (const [kind, max] of SPEC4) {
+    for (const [kind, max] of (q4.spec || [[2, 6], [3, 10], [4, 10], [6, 14]])) {
       const row = document.createElement('div'); row.className = 'q-lrow';
       const kk = document.createElement('b'); kk.className = 'q-ck'; kk.dataset.k = kind;
       kk.textContent = kind; row.appendChild(kk);
@@ -327,7 +330,7 @@
     $('q-wait').classList.remove('show');
     q4Live = false; q4 = null; q4Room = null;
     $('q-wait').classList.remove('show');
-    document.body.classList.remove('quad4');
+    document.body.classList.remove('quad4', 'q-n3');
   };
 
   window.q4Start = function () {
@@ -345,7 +348,7 @@
     socket.emit('g4_leave');
     q4Live = false; q4 = null; q4Room = null;
     $('q-wait').classList.remove('show');
-    document.body.classList.remove('quad4');
+    document.body.classList.remove('quad4', 'q-n3');
     $('q-over').classList.remove('show');
   };
 
@@ -363,14 +366,17 @@
     socket.on('g4_begin', (d) => {
       q4Room = d.roomId; mySeat = d.me || 0; lastRecv = Date.now();
       $('q-wait').classList.remove('show');
+      const total = d.n || (d.seats || []).length || 4;
       const humans = (d.seats || []).filter((x) => !x.isBot).length;
-      if (!d.solo) $('q-status').textContent = `사람 ${humans}명 · AI ${4 - humans}명`;
+      if (!d.solo) $('q-status').textContent = `${total}인전 · 사람 ${humans}명 · AI ${total - humans}명`;
     });
     socket.on('g4_queue', (d) => {
       if (!q4Live) return;
       $('q-waitTxt').textContent = `상대를 찾는 중… (${d.n}/${d.need})`;
       const sec = Math.ceil((d.fillIn || 0) / 1000);
-      $('q-waitSub').textContent = sec > 0 ? `${sec}초 뒤 남는 자리는 AI로 채워 시작합니다` : '곧 시작합니다…';
+      $('q-waitSub').textContent = sec <= 0 ? '곧 시작합니다…'
+        : d.three ? `${sec}초 안에 한 명 더 안 오면 셋이서 시작합니다`
+                  : `${sec}초 뒤 남는 자리는 AI로 채워 시작합니다`;
     });
     socket.on('g4_cancelled', () => { $('q-wait').classList.remove('show'); });
     socket.on('g4_state', (s) => { if (!q4Live) return; q4 = s; lastRecv = Date.now(); render(); });

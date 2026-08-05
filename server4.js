@@ -20,6 +20,16 @@ const STUCK_MS = 12000;     // 사람을 기다리는 게 아닌데 이만큼 �
 const ORPHAN_MS = 120000;   // 솔로 — 접속이 끊긴 뒤 이만큼 지나면 방을 정리
 const SEAT_GRACE = 20000;   // 멀티 — 이만큼 안 돌아오면 그 자리는 AI가 대신한다
 const FILL_MS = 25000;      // 이 시간 안에 4명이 안 모이면 남는 자리를 AI로 채운다
+const WAIT3_MS = 8000;      // 셋이 모였으면 네 번째를 이만큼만 더 기다린다
+
+// 대기 인원에 따라 몇 인용으로 시작할지. 3명이 모이면 AI를 끼우지 않고 셋이 한다.
+//   4명 이상 → 4인 / 3명 → 3인(전원 사람) / 2명 → 3인(사람2+AI1) / 1명 → 4인(사람1+AI3)
+function seatsFor(humanCount) {
+  if (humanCount >= 4) return 4;
+  if (humanCount === 3) return 3;
+  if (humanCount === 2) return 3;
+  return 4;
+}
 
 // 온라인 멀티 RP — 사람들끼리의 상대 순위로만 나눈다. 합이 0이라 총량이 늘지 않는다.
 // AI 자리는 계산에서 빠지므로 "AI 대전으로는 RP를 올릴 수 없다".
@@ -44,7 +54,7 @@ function attach4(io) {
     const opened = G.openedBid(g);
     const openOffer = a && (a.type === 'open' || g.auctioneer === me || reveal);
     return {
-      me, turn: g.turn, phase: g.phase, auctioneer: g.auctioneer, deckLeft: g.deck.length,
+      me, n: g.n, spec: g.spec, turn: g.turn, phase: g.phase, auctioneer: g.auctioneer, deckLeft: g.deck.length,
       firstAuction: g.firstAuction, bidders: G.bidderSeats(g), myHand: g.seats[me].hand,
       seats: g.seats.map((s, i) => ({
         name: s.name, isBot: s.isBot, handLen: s.hand.length, acq: s.acq,
@@ -68,7 +78,7 @@ function attach4(io) {
 
   function push(roomId) {
     const r = rooms4[roomId]; if (!r || r.dead) return;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < r.seats.length; i++) {
       const sid = r.seats[i].sid;
       if (sid) io.to(sid).emit('g4_state', stateFor(r.game, i, r.rp));
     }
@@ -92,7 +102,7 @@ function attach4(io) {
     if (g.phase === 'draw' || g.phase === 'offer' || g.phase === 'choose_type')
       return isHuman(g.auctioneer) ? g.auctioneer : null;
     if (g.phase === 'bidding') {
-      for (let i = 0; i < 4; i++) if (isHuman(i) && G.canBid(g, i)) return i;
+      for (let i = 0; i < r.seats.length; i++) if (isHuman(i) && G.canBid(g, i)) return i;
     }
     return null;
   }
@@ -118,7 +128,7 @@ function attach4(io) {
       case 'game_over':
         awardRp(roomId);
         push(roomId);
-        for (let i = 0; i < 4; i++) if (r.seats[i].sid) io.to(r.seats[i].sid).emit('g4_over', stateFor(g, i, r.rp));
+        for (let i = 0; i < r.seats.length; i++) if (r.seats[i].sid) io.to(r.seats[i].sid).emit('g4_over', stateFor(g, i, r.rp));
         return;
 
       case 'draw':
@@ -144,7 +154,7 @@ function attach4(io) {
         // 사람이 낼 수 있는 상태면 기다리고, 아니면 봇을 하나씩 굴린다.
         if (humanToAct(g, r) !== null) return push(roomId);
         const pending = [];
-        for (let i = 0; i < 4; i++) if (r.seats[i].isBot && G.canBid(g, i)) pending.push(i);
+        for (let i = 0; i < r.seats.length; i++) if (r.seats[i].isBot && G.canBid(g, i)) pending.push(i);
         if (pending.length) {
           const s = pending[0];
           const c = AI.chooseBid(g, s);
@@ -179,7 +189,7 @@ function attach4(io) {
     const g = r.game; if (!g.over) return;
 
     const humans = [];
-    for (let i = 0; i < 4; i++) if (r.seats[i].token) humans.push(i);   // 로그인한 사람 자리만
+    for (let i = 0; i < r.seats.length; i++) if (r.seats[i].token) humans.push(i);   // 로그인한 사람 자리만
     if (humans.length < 2) { dbg('RP 미반영 — 사람 ' + humans.length + '명'); return; }   // AI 대전으로는 RP 없음
 
     const ips = humans.map((i) => r.seats[i].ip).filter(Boolean);
@@ -194,7 +204,7 @@ function attach4(io) {
     // 최종 순위에서 사람만 추린다. 도중에 나간 사람은 맨 뒤로 — 지고 있을 때 나가서
     // 페널티를 피하는 걸 막아야 한다.
     const order = (g.over.order && g.over.order.length) ? g.over.order
-                : [g.over.winner, ...[0, 1, 2, 3].filter((i) => i !== g.over.winner)];
+                : [g.over.winner, ...r.seats.map((_, i) => i).filter((i) => i !== g.over.winner)];
     const stayed = order.filter((i) => humans.includes(i) && !r.seats[i].left);
     const left = humans.filter((i) => r.seats[i].left);
     const ranked = [...stayed, ...left];
@@ -214,37 +224,46 @@ function attach4(io) {
   // ── 대기열 ───────────────────────────────────────────────────────────────
   const queueInfo = () => {
     const n = queue4.length;
-    for (const q of queue4) io.to(q.sid).emit('g4_queue', { n, need: 4, fillIn: Math.max(0, FILL_MS - (Date.now() - queue4[0].at)) });
+    const limit = n >= 3 ? WAIT3_MS : FILL_MS;
+    const left = Math.max(0, limit - (Date.now() - queue4[0].at));
+    for (const q of queue4) io.to(q.sid).emit('g4_queue', { n, need: 4, fillIn: left, three: n >= 3 });
   };
   function dequeue(sid) {
     const before = queue4.length;
     queue4 = queue4.filter((q) => q.sid !== sid);
     if (queue4.length !== before && queue4.length) queueInfo();
   }
+  // 4명이 차면 즉시 시작. 셋만 모였을 때 바로 시작해 버리면 네 번째가 와도
+  // 이미 판이 열려 4인전이 영영 안 열리므로, 잠깐 더 기다렸다가 셋이서 연다.
   function tryMatch(force) {
-    if (queue4.length >= 4) { startRoom(queue4.splice(0, 4), false); return; }
+    if (queue4.length >= 4) { startRoom(queue4.splice(0, 4), false, 4); return; }
     if (force && queue4.length) { startRoom(queue4.splice(0, queue4.length), false); }
   }
   setInterval(() => {
     if (!queue4.length) return;
-    if (Date.now() - queue4[0].at >= FILL_MS) tryMatch(true);   // 안 모이면 AI 로 채워 시작
+    const waited = Date.now() - queue4[0].at;
+    // 셋이 모였으면 네 번째를 조금만 더 기다렸다 시작한다 (전원 사람인 3인전)
+    const limit = queue4.length >= 3 ? WAIT3_MS : FILL_MS;
+    if (waited >= limit) tryMatch(true);
     else queueInfo();
   }, 1000).unref?.();
 
   // ── 방 생성 ──────────────────────────────────────────────────────────────
   // humans: [{ sid, nick }] — 부족한 자리는 AI 가 채운다
-  function startRoom(humans, solo) {
+  function startRoom(humans, solo, nSeats) {
     if (Object.keys(rooms4).length >= MAX_ROOMS4) {
       for (const h of humans) io.to(h.sid).emit('g4_error', '서버가 혼잡해요. 잠시 후 다시 시도해주세요.');
       return;
     }
+    const n = nSeats || (solo ? 4 : seatsFor(humans.length));
     const bots = [...BOT_NICKS].sort(() => Math.random() - 0.5);
     const seats = [];
     // 멀티는 자리를 섞고, 솔로는 사람을 0번에 고정한다.
     // (첫 진행자는 createGame4 가 무작위로 정하므로 솔로에서 섞을 이유가 없다)
-    const order = solo ? [0, 1, 2, 3] : [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+    const idx = Array.from({ length: n }, (_, i) => i);
+    const order = solo ? idx : idx.slice().sort(() => Math.random() - 0.5);
     let hi = 0, bi = 0;
-    for (let i = 0; i < 4; i++) seats.push(null);
+    for (let i = 0; i < n; i++) seats.push(null);
     for (const idx of order) {
       if (hi < humans.length) {
         const sk = io.sockets.sockets.get(humans[hi].sid);
@@ -254,25 +273,25 @@ function attach4(io) {
       }
       else { seats[idx] = { sid: null, nick: bots[bi++], isBot: true, orphanAt: null, token: null, ip: null, left: false }; }
     }
-    const g = G.createGame4(seats.map((s) => s.nick));
+    const g = G.createGame4(seats.map((s) => s.nick), { n });
     const styles = AI.pickStyles();
     g.seats.forEach((s, i) => { s.style = styles[i]; s.isBot = seats[i].isBot; });
 
     const roomId = 'G4' + Math.random().toString(36).slice(2, 8).toUpperCase();
     rooms4[roomId] = { game: g, seats, next: null, lastStep: Date.now(), dead: false, solo: !!solo,
                        startedAt: Date.now(), rp: null };
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < n; i++) {
       const sid = seats[i].sid; if (!sid) continue;
       const sk = io.sockets.sockets.get(sid);
       if (sk) { sk.g4room = roomId; sk.g4seat = i; }
       io.to(sid).emit('g4_begin', {
-        roomId, me: i, solo: !!solo,
+        roomId, me: i, n, solo: !!solo,
         seats: seats.map((s) => ({ name: s.nick, isBot: s.isBot })),
       });
     }
     push(roomId);
     schedule(roomId, 700);
-    dbg('방 시작', roomId, solo ? '솔로' : '멀티', '사람 ' + humans.length + '명');
+    dbg('방 시작', roomId, n + '인', solo ? '솔로' : '멀티', '사람 ' + humans.length + '명');
   }
 
   // ── 워치독 ───────────────────────────────────────────────────────────────
@@ -282,7 +301,7 @@ function attach4(io) {
       if (r.dead) continue;
       // 자리를 비운 사람 처리
       let changed = false;
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < r.seats.length; i++) {
         const s = r.seats[i];
         if (!s.orphanAt) continue;
         if (r.solo) {                                   // 솔로는 판을 잠시 보관했다가 정리
