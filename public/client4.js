@@ -48,20 +48,28 @@
     return el;
   }
 
-  // 획득 더미 — 가져간 카드를 "종류-등급"(2-1, 3-5 …) 그대로 하나씩 보여준다.
-  // 몇 종의 몇 번이 빠졌는지가 이 게임의 핵심 정보라, 개수 요약으론 부족하다.
-  function acqChips(acq) {
-    const cnt = {};
-    for (const c of acq) cnt[c.kind] = (cnt[c.kind] || 0) + 1;
-    return [...acq]
-      .sort((a, b) => (a.kind * 100 + a.grade) - (b.kind * 100 + b.grade))
-      .map((c) => {
-        const s = document.createElement('span');
-        s.className = 'q-chip' + (cnt[c.kind] >= c.kind ? ' done' : '');
-        s.dataset.k = c.kind;
-        s.textContent = `${c.kind}-${c.grade}`;
-        return s;
-      });
+  // 획득 더미 — 2인전과 같이 실제 카드 모양 그대로 보여준다.
+  // 종류별로 묶어 겹쳐 쌓되, 등급 배지가 드러날 만큼만 노출해서
+  // 몇 종의 몇 번을 가져갔는지 그대로 읽힌다. (상대는 CSS 로 더 작게)
+  function acqPile(acq) {
+    const groups = {};
+    for (const c of acq) (groups[c.kind] = groups[c.kind] || []).push(c);
+    const out = [];
+    for (const kind of [2, 3, 4, 6]) {
+      const g = groups[kind]; if (!g) continue;
+      g.sort((a, b) => a.grade - b.grade);
+      const done = g.length >= kind, reach = g.length === kind - 1;
+      const wrap = document.createElement('div');
+      wrap.className = 'q-pg' + (done ? ' done' : reach ? ' reach' : '');
+      wrap.dataset.k = kind;
+      for (const c of g) wrap.appendChild(card4(c));
+      const cnt = document.createElement('span');
+      cnt.className = 'q-pn' + (done ? ' done' : reach ? ' reach' : '');
+      cnt.textContent = done ? '완성!' : `${g.length}/${kind}`;
+      wrap.appendChild(cnt);
+      out.push(wrap);
+    }
+    return out;
   }
 
   // ── 렌더 ────────────────────────────────────────────────────────────────
@@ -91,7 +99,7 @@
       const hd = document.createElement('span'); hd.textContent = `🂠${p.handLen}`;
       meta.appendChild(hd);
       const acq = document.createElement('div'); acq.className = 'q-oacq';
-      for (const c of acqChips(p.acq)) acq.appendChild(c);
+      for (const c of acqPile(p.acq)) acq.appendChild(c);
       d.appendChild(nm); d.appendChild(meta); d.appendChild(acq);
       opps.appendChild(d);
     }
@@ -142,7 +150,7 @@
     meNeed.className = 'q-need' + (me.need <= 1 ? ' r1' : me.need === 2 ? ' r2' : '');
     meNeed.textContent = me.need <= 0 ? '완성!' : `-${me.need}`;
     my.appendChild(meNeed);
-    for (const c of acqChips(me.acq)) my.appendChild(c);
+    for (const c of acqPile(me.acq)) my.appendChild(c);
 
     // 상태 문구 + 손패 선택 가능 여부
     let msg = '', pickMode = null;
