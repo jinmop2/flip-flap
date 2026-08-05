@@ -571,9 +571,17 @@
     .q-need.r2 { background:#b8860b; color:#fff; }
     @keyframes qpulse { 0%,100%{opacity:1} 50%{opacity:.55} }
     .q-oacq { display:flex; flex-wrap:wrap; gap:2px; margin-top:4px; min-height:15px; }
-    .q-chip { font-size:.54rem; font-weight:800; border-radius:3px; padding:1px 3px; color:#fff; line-height:1.25; }
-    .q-chip[data-k="2"]{background:#b8343c} .q-chip[data-k="3"]{background:#2e6f9e}
-    .q-chip[data-k="4"]{background:#b08820} .q-chip[data-k="6"]{background:#4a4038}
+    /* 획득 칩 — [종류] 등급·등급 (개수/필요) 순으로 붙여 어떤 카드가 빠졌는지 보이게 */
+    .q-chip { display:inline-flex; align-items:center; gap:2px; font-size:.53rem; font-weight:800;
+      border-radius:4px; padding:1px 3px; color:#fff; line-height:1.3;
+      background:rgba(0,0,0,.35); box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
+    .q-ck { border-radius:2px; padding:0 3px; color:#fff; font-size:.55rem; }
+    .q-chip[data-k="2"] .q-ck{background:#b8343c} .q-chip[data-k="3"] .q-ck{background:#2e6f9e}
+    .q-chip[data-k="4"] .q-ck{background:#b08820} .q-chip[data-k="6"] .q-ck{background:#6b5a48}
+    .q-cg { color:#f2e8d4; letter-spacing:.02em; }
+    .q-cn { font-style:normal; opacity:.6; font-size:.48rem; }
+    .q-chip.done { background:rgba(230,190,80,.28); box-shadow:inset 0 0 0 1px var(--gold); }
+    .q-chip.done .q-cn { opacity:.95; color:#ffd94a; }
 
     /* 중앙 경매장 */
     #q-table { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center;
@@ -619,9 +627,29 @@
     #q-mat .card, #q-bids .card { width:58px; height:81px; padding:4px 4px 3px; }
     #q-mat .card .c-rank, #q-bids .card .c-rank { font-size:.95rem; padding:1px 5px; min-width:21px; }
 
-    #q-quit { background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.2); color:#d8ccb4;
+    #q-quit, #q-leftBtn { background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.2); color:#d8ccb4;
       border-radius:8px; padding:2px 9px; font-size:.58rem; font-family:inherit; cursor:pointer; }
-    #q-quit:hover { background:rgba(0,0,0,.6); color:#fff; }
+    #q-quit:hover, #q-leftBtn:hover { background:rgba(0,0,0,.6); color:#fff; }
+    #q-leftBtn { border-color:rgba(230,190,80,.5); color:#f0dca8; }
+
+    /* 남은 카드 패널 — 카운팅용. 내가 화면에서 볼 수 있는 정보만 모아 세어준다. */
+    #q-leftPanel { display:none; position:absolute; top:32px; left:50%; transform:translateX(-50%);
+      z-index:8; background:linear-gradient(170deg,#20301f,#0e1a10); border:1.5px solid var(--gold);
+      border-radius:12px; padding:8px 10px; box-shadow:0 8px 24px rgba(0,0,0,.6); max-width:94vw; }
+    #q-leftPanel.show { display:block; }
+    .q-lhead { font-size:.55rem; color:#c8bfa0; margin-bottom:5px; text-align:center; }
+    .q-lkey { font-size:.5rem; border-radius:3px; padding:0 4px; }
+    .q-lkey.mine { color:#9fd8ff; background:rgba(90,160,220,.22); }
+    .q-lkey.gone { color:#7d7466; background:rgba(255,255,255,.06); text-decoration:line-through; }
+    .q-lrow { display:flex; align-items:center; gap:5px; margin-bottom:3px; }
+    .q-lrow .q-ck { font-size:.6rem; padding:1px 5px; border-radius:3px; font-weight:900; color:#fff; }
+    .q-lrow .q-ck[data-k="2"]{background:#b8343c} .q-lrow .q-ck[data-k="3"]{background:#2e6f9e}
+    .q-lrow .q-ck[data-k="4"]{background:#b08820} .q-lrow .q-ck[data-k="6"]{background:#6b5a48}
+    .q-lgs { display:flex; gap:2px; flex-wrap:wrap; }
+    .q-lg { font-size:.55rem; font-weight:800; color:#ffe9a8; background:rgba(255,235,180,.14);
+      border-radius:3px; min-width:15px; text-align:center; padding:1px 2px; }
+    .q-lg.gone { color:#5d5648; background:rgba(255,255,255,.04); text-decoration:line-through; }
+    .q-lg.mine { color:#9fd8ff; background:rgba(90,160,220,.22); box-shadow:inset 0 0 0 1px rgba(140,200,255,.5); }
 
     /* 결과 */
     #q-over { display:none; position:absolute; inset:0; z-index:10; background:rgba(0,0,0,.78);
@@ -2560,8 +2588,10 @@
   <div id="q-table">
     <div id="q-turnbar">
       <span id="q-turn"></span><span id="q-deck"></span>
+      <button id="q-leftBtn" onclick="q4ToggleLeft()">🔍 남은 카드</button>
       <button id="q-quit" onclick="q4Quit()">나가기</button>
     </div>
+    <div id="q-leftPanel"><div class="q-lhead">아직 안 나온 카드 &nbsp;<span class="q-lkey mine">내 손패</span> <span class="q-lkey gone">이미 나옴</span></div><div id="q-left"></div></div>
     <div id="q-mat">
       <div class="q-slot"><div class="q-slabel">공개 카드</div><div class="q-scard" id="q-center"></div></div>
       <div class="q-vs" id="q-typeTag"></div>

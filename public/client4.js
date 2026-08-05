@@ -7,7 +7,9 @@
   let q4Live = false;    // 4인전 화면에 있는가
   let q4Room = null;     // 재접속해서 이어하기 위한 방 번호
   let lastRecv = 0;      // 마지막으로 상태를 받은 시각
+  let prevPhase = null, prevTurn = 0;   // 효과음을 단계가 바뀔 때만 울리려고
   const $ = (id) => document.getElementById(id);
+  const sfx = (n) => { if (typeof playSound === 'function') playSound(n); };
 
   // 4인전 전용 특수 카드 — 최강 2-1, 최약 6-13 (2인전은 6-10이라 여기서 따로 판정한다)
   const top4 = (c) => c && c.kind === 2 && c.grade === 1;
@@ -45,16 +47,27 @@
     return el;
   }
 
-  // 획득 더미를 "종류-개수" 칩으로 요약 (4인이라 카드를 다 펼칠 자리가 없다)
+  // 획득 더미 — 4인이라 카드를 통째로 펼칠 자리가 없어서,
+  // 종류별로 "어떤 등급을 가져갔는지"까지 보이게 압축해서 그린다.
+  // (몇 종의 몇 번이 빠졌는지 세는 게 이 게임의 핵심이라 개수만으론 부족하다)
   function acqChips(acq) {
     const m = {};
-    for (const c of acq) m[c.kind] = (m[c.kind] || 0) + 1;
+    for (const c of acq) (m[c.kind] = m[c.kind] || []).push(c.grade);
     return [2, 3, 4, 6].filter((k) => m[k]).map((k) => {
-      const s = document.createElement('span');
-      s.className = 'q-chip'; s.dataset.k = k;
-      s.textContent = `${k}종 ${m[k]}/${k}`;
-      if (m[k] >= k) s.classList.add('done');
-      return s;
+      const grades = m[k].sort((a, b) => a - b);
+      const w = document.createElement('span');
+      w.className = 'q-chip' + (grades.length >= k ? ' done' : '');
+      w.dataset.k = k;
+      const kk = document.createElement('b');
+      kk.className = 'q-ck'; kk.textContent = k;
+      w.appendChild(kk);
+      const gs = document.createElement('span');
+      gs.className = 'q-cg'; gs.textContent = grades.join('·');
+      w.appendChild(gs);
+      const cnt = document.createElement('i');
+      cnt.className = 'q-cn'; cnt.textContent = `${grades.length}/${k}`;
+      w.appendChild(cnt);
+      return w;
     });
   }
 
@@ -170,7 +183,54 @@
     $('q-center').style.cursor = (s.phase === 'draw' && iAmAuc) ? 'pointer' : 'default';
     $('q-center').onclick = (s.phase === 'draw' && iAmAuc)
       ? () => socket.emit('g4_act', { type: 'draw' }) : null;
+
+    // 남은 카드 패널이 열려 있으면 같이 갱신
+    if ($('q-leftPanel').classList.contains('show')) renderLeft();
+
+    // 효과음 — 단계가 바뀔 때만 울린다
+    if (s.phase !== prevPhase || s.turn !== prevTurn) {
+      if (s.phase === 'offer' && s.turn === prevTurn) sfx('flip');       // 덱에서 공개
+      else if (s.phase === 'bidding') sfx('place');
+      else if (s.phase === 'reveal') sfx('reveal');
+      else if (s.phase === 'settled') sfx(s.result && s.result.betrayed ? 'special' : 'card');
+      else if (s.phase === 'draw' && s.turn !== prevTurn) sfx('tick');
+      prevPhase = s.phase; prevTurn = s.turn;
+    }
   }
+
+  // 아직 안 나온 카드 — 내 손패·모든 획득 더미·공개된 경매품을 빼고 남은 것.
+  // 전부 내가 화면에서 볼 수 있는 정보라 따로 세어주는 것뿐이고, 남의 손패를 보여주는 게 아니다.
+  const SPEC4 = [[2, 6], [3, 9], [4, 9], [6, 13]];
+  function renderLeft() {
+    const box = $('q-left'); if (!box || !q4) return;
+    // 내가 쥔 카드와 남이 가져간 카드는 뜻이 달라서 따로 표시한다
+    const mine = new Set(q4.myHand.map((c) => c.id));
+    const gone = new Set();
+    for (const st of q4.seats) for (const c of st.acq) gone.add(c.id);
+    const a = q4.auction;
+    if (a) { if (a.center) gone.add(a.center.id); if (a.offered) gone.add(a.offered.id); }
+    box.innerHTML = '';
+    for (const [kind, max] of SPEC4) {
+      const row = document.createElement('div'); row.className = 'q-lrow';
+      const kk = document.createElement('b'); kk.className = 'q-ck'; kk.dataset.k = kind;
+      kk.textContent = kind; row.appendChild(kk);
+      const gs = document.createElement('div'); gs.className = 'q-lgs';
+      for (let g = 1; g <= max; g++) {
+        const id = kind * 100 + g;
+        const el = document.createElement('span');
+        el.className = 'q-lg' + (gone.has(id) ? ' gone' : mine.has(id) ? ' mine' : '');
+        el.textContent = g;
+        gs.appendChild(el);
+      }
+      row.appendChild(gs);
+      box.appendChild(row);
+    }
+  }
+  window.q4ToggleLeft = function () {
+    const p = $('q-leftPanel');
+    p.classList.toggle('show');
+    if (p.classList.contains('show')) renderLeft();
+  };
 
   function showOver(s) {
     const order = (s.over.order && s.over.order.length) ? s.over.order : null;
@@ -190,6 +250,7 @@
       row.appendChild(pos); row.appendChild(nm); row.appendChild(info);
       rk.appendChild(row);
     });
+    sfx(s.over.winner === 0 ? 'victory' : 'defeat');
     $('q-over').classList.add('show');
   }
 
@@ -210,8 +271,9 @@
     if (typeof closeModePanels === 'function') closeModePanels();
     $('q-over').classList.remove('show');
     document.body.classList.add('quad4');
-    q4Live = true; q4Room = null; lastRecv = Date.now();
+    q4Live = true; q4Room = null; lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
     $('q-status').textContent = '자리 배치 중…';
+    sfx('deal'); if (typeof startBGM === 'function') startBGM();   // 2인전과 같은 배경음악
     socket.emit('g4_start', { nick: typeof getNick === 'function' ? getNick() : '나' });
   };
 

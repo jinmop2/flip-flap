@@ -6,11 +6,13 @@ const G = require('./game4');
 const { needLeft, SEATS } = G;
 
 // 성향 — 봇마다 다르게 줘서 매판 느낌이 달라지게 한다
+// 견제(block)를 얼마나 중시하느냐가 승률을 크게 갈라서, 처음 값으론 수비형이 9%p 앞섰다.
+// 성향의 개성은 남기되 강약 차이는 좁혀, 어느 자리에 어떤 봇이 앉든 체감 난이도가 비슷하게 했다.
 const STYLES = [
-  { key: '균형', greed: 1.0, block: 1.0, betray: 0.35, noise: 0.30 },
-  { key: '공격', greed: 1.5, block: 0.6, betray: 0.45, noise: 0.25 },
-  { key: '수비', greed: 0.8, block: 1.5, betray: 0.30, noise: 0.30 },
-  { key: '절약', greed: 0.7, block: 0.7, betray: 0.40, noise: 0.35 },
+  { key: '균형', greed: 1.0, block: 1.05, betray: 0.35, noise: 0.30 },
+  { key: '공격', greed: 1.4, block: 0.95, betray: 0.45, noise: 0.25 },
+  { key: '수비', greed: 0.9, block: 1.25, betray: 0.30, noise: 0.30 },
+  { key: '절약', greed: 0.85, block: 1.0, betray: 0.40, noise: 0.35 },
 ];
 const pickStyles = () => {
   const s = [...STYLES];

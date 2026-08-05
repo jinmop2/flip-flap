@@ -157,9 +157,20 @@ function settle(g) {
     g.seats[winner.seat].acq.push(...prize);
 
     // 약하게 부른 사람부터 강한 카드를 가져간다 = 완전 역순
+    const n = sorted.length;
+    const recv = sorted.map((_, i) => sorted[n - 1 - i].card);   // sorted[i] 가 받을 카드
+
+    // 배신이 나오면 최강·최약 카드는 각자에게 되돌아간다.
+    // 안 그러면 배신자가 경매품 2장을 먹으면서 최강 카드까지 받는 이중 보상이 되어,
+    // 0.9% 확률로만 터지는데 터지면 73%로 이기는 로또가 된다.
+    if (betrayed) {
+      const top = 0, bot = sorted.findIndex((e) => isBot_(e.card));
+      if (bot > 0) { recv[top] = sorted[top].card; recv[bot] = sorted[bot].card; }
+    }
+
     const payouts = [];
-    for (let i = 0; i < sorted.length; i++) {
-      const to = sorted[i].seat, got = sorted[sorted.length - 1 - i].card;
+    for (let i = 0; i < n; i++) {
+      const to = sorted[i].seat, got = recv[i];
       g.seats[to].hand.push(got);
       payouts.push({ seat: to, card: got, gave: sorted[i].card });
     }
