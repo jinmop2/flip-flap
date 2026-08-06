@@ -516,7 +516,13 @@
     .shop-cfprev.cfp-classic { font-family:Georgia,'Times New Roman',serif; }
     .shop-cfprev.cfp-gold { color:#ffd94a; text-shadow:0 0 6px rgba(255,200,60,.75); }
     .shop-npprev { font-size:.66rem; font-weight:800; color:#f5e6c0; white-space:nowrap; }
-    .shop-emprev { font-size:1.25rem; letter-spacing:-3px; }
+    .shop-emprev { font-size:1.25rem; display:flex; align-items:center; justify-content:center; }
+    /* 셋을 조금 겹쳐 놓아 "여러 개 들어있다"는 느낌을 준다 */
+    .shop-emprev .em-one { width:1.05em; height:1.05em; display:inline-flex; margin-right:-.14em; }
+    .shop-emprev .em-one:last-child { margin-right:0; }
+    .shop-emprev .em-one svg { width:100%; height:100%; display:block; }
+    .np-clover { width:1em; height:1em; display:inline-flex; vertical-align:-.14em; }
+    .np-clover svg { width:100%; height:100%; display:block; }
     .shop-dyeprev { width:36px; height:36px; border-radius:50%; flex-shrink:0;
       background:conic-gradient(#ff5a5a,#ffb350,#ffe95a,#6adf7a,#5ab6ff,#b78aff,#ff7ad0,#ff5a5a);
       border:2px solid rgba(255,255,255,.3); box-shadow:0 2px 6px rgba(0,0,0,.45), inset 0 0 6px rgba(0,0,0,.25); }
@@ -1459,7 +1465,13 @@
     .inv-ico svg  { width:26px; height:26px; display:block; }
     .ti-ico svg   { width:1.05em; height:1.05em; display:inline-block; vertical-align:-.18em; }
     .tr-art svg   { width:26px; height:26px; display:block; }
-    .lbl-ico svg  { width:1.15em; height:1.15em; display:inline-block; vertical-align:-.2em; }
+    /* 직접 그린 아이콘은 선이 가늘어서, 시스템 이모지와 같은 크기로 두면 뭉개져 보인다.
+       글자보다 한 뼘 키우고 뒤에 여백을 줘야 제목·본문에서 읽힌다. */
+    .lbl-ico svg  { width:1.32em; height:1.32em; display:inline-block; vertical-align:-.28em; }
+    .lbl-ico { margin-right:.12em; }
+    /* 한 턴의 흐름 — 원형 배지 안을 꽉 채운다 (그냥 두면 배지 28px 안에 17px만 그려진다) */
+    .r-ico.lbl-ico svg { width:74%; height:74%; vertical-align:0; }
+    .r-ico.lbl-ico { margin-right:0; }
     /* 본문 안에 섞여 들어가는 아이콘 — 글자 크기에 맞춰 따라간다.
        크기를 안 주면 SVG 기본 크기(300×150)로 커져 배지·버튼이 망가진다. */
     .g-ico { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
@@ -2200,7 +2212,7 @@
 <!-- 멀티플레이 팝업 -->
 <div class="lb-modal" id="multiModal" onclick="if(event.target===this)closeModePanels()">
   <div class="lb-box">
-    <div class="lb-title">⚔️ 멀티플레이</div>
+    <div class="lb-title"><span data-ico="⚔️"></span> 멀티플레이</div>
     <button class="btn btn-gold" onclick="quickMatch()">⚡ 빠른 대전 (자동 매칭)</button>
     <div class="online-actions">
       <button class="btn btn-outline btn-sm" onclick="openCreate()">➕ 방 만들기</button>
@@ -2243,7 +2255,7 @@
     <div id="nickErr" class="auth-err"></div>
     <button class="btn btn-gold" onclick="submitNick()">이 닉네임으로 시작</button>
     <button class="nick-later" onclick="confirmSkipNick()">나중에 정할게요</button>
-    <p style="font-size:.66rem;color:#a88a5a;line-height:1.4;margin-top:-2px">⚠️ 지금 안 정하면, 나중엔 상점의 닉네임 변경권이 필요할 수 있어요</p>
+    <p style="font-size:.66rem;color:#a88a5a;line-height:1.4;margin-top:-2px"><span data-ico="⚠"></span> 지금 안 정하면, 나중엔 상점의 닉네임 변경권이 필요할 수 있어요</p>
   </div>
 </div>
 
@@ -2290,7 +2302,7 @@
     <div class="sp-title">⚙️ 설정</div>
     <div class="sp-row" onclick="toggleBgm()"><span class="sp-lbl">🎵 배경음악</span><span class="sp-toggle" id="togBgm"><span class="sp-knob"></span></span></div>
     <div class="sp-row" onclick="toggleSfx()"><span class="sp-lbl">🔊 효과음</span><span class="sp-toggle" id="togSfx"><span class="sp-knob"></span></span></div>
-    <div class="sp-row" onclick="toggleGuide()"><span class="sp-lbl">💡 턴 안내</span><span class="sp-toggle" id="togGuide"><span class="sp-knob"></span></span></div>
+    <div class="sp-row" onclick="toggleGuide()"><span class="sp-lbl"><span data-ico="💡"></span> 턴 안내</span><span class="sp-toggle" id="togGuide"><span class="sp-knob"></span></span></div>
   </div>
 
   <!-- 상대 프로필 (우측 상단, 클릭하면 전적) + 시간은 프로필 아래 -->
@@ -2378,7 +2390,7 @@
   </div>
 </div>
 
-<div id="specialToast">⚔ 졸개의 배신! 6-10이 2-1을 잡았다</div>
+<div id="specialToast"><span data-ico="⚔"></span> 졸개의 배신! 6-10이 2-1을 잡았다</div>
 
 <!-- 공용 확인 다이얼로그 -->
 <div class="lb-modal" id="confirmModal" onclick="if(event.target===this)confirmClose(false)">
@@ -2396,7 +2408,7 @@
 <!-- 상대 연결 끊김 카운트다운 -->
 <div id="graceOverlay">
   <div class="grace-box">
-    <div class="grace-title">⚠️ 상대 연결 끊김</div>
+    <div class="grace-title"><span data-ico="⚠"></span> 상대 연결 끊김</div>
     <div class="grace-count" id="graceCount">60</div>
     <div class="grace-sub">재접속 안 하면 몰수승!</div>
   </div>
@@ -2418,7 +2430,7 @@
       </div>
     </div>
 
-    <h3>🎯 이기는 법 — 세트 완성</h3>
+    <h3><span data-ico="🎯"></span> 이기는 법 — 세트 완성</h3>
     <p>같은 종류를 <b>그 숫자만큼</b> 모으면 즉시 승리! 예: 6짜리 6장</p>
     <div class="r-cards">
       <div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
@@ -2427,13 +2439,13 @@
       <div class="rc" data-kind="6"><span class="rc-rank">4</span><span class="rc-num">6</span></div>
       <div class="rc" data-kind="6"><span class="rc-rank">5</span><span class="rc-num">6</span></div>
       <div class="rc" data-kind="6"><span class="rc-rank">6</span><span class="rc-num">6</span></div>
-      <span class="r-arrow">→</span><span class="r-win">🏆 승리!</span>
+      <span class="r-arrow">→</span><span class="r-win"><span data-ico="🏆"></span> 승리!</span>
     </div>
     <p style="font-size:.78rem">종류별 필요 장수: <b>2</b>→2장 · <b>3</b>→3장 · <b>4</b>→4장 · <b>6</b>→6장<br>
-    ⚠️ 경매로 따서 <b>내 앞에 깐 카드만</b> 인정 (손에 든 카드는 X)<br>
-    🏁 덱이 다 떨어지면 <b>세트에 가장 근접한 사람</b>이 승리</p>
+    <span data-ico="⚠"></span> 경매로 따서 <b>내 앞에 깐 카드만</b> 인정 (손에 든 카드는 X)<br>
+    <span data-ico="🏁"></span> 덱이 다 떨어지면 <b>세트에 가장 근접한 사람</b>이 승리</p>
 
-    <h3>🗂 카드 구성 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 총 24장</span></h3>
+    <h3><span data-ico="🗂"></span> 카드 구성 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 총 24장</span></h3>
     <div class="r-comp">
       <div class="r-comp-row">
         <div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
@@ -2454,32 +2466,32 @@
     </div>
     <p style="font-size:.76rem;color:#8a7a80">덱 12장 + 각자 손패 6장으로 시작. <b style="color:#ffe9a8">숫자가 큰 카드일수록 많지만</b>, 그만큼 세트도 어려워요.</p>
 
-    <h3>🔄 한 턴의 흐름</h3>
+    <h3><span data-ico="🔄"></span> 한 턴의 흐름</h3>
     <div class="r-flow">
       <div class="r-step"><span class="r-ico">🂠</span>덱을 눌러 카드 1장 뽑기 (중앙 카드 공개)</div>
-      <div class="r-step"><span class="r-ico">📤</span>진행자가 손패 1장을 추가 출품 → 경매품 2장</div>
-      <div class="r-step"><span class="r-ico">🎭</span>오픈 / 클로즈 경매 방식 선택</div>
-      <div class="r-step"><span class="r-ico">🎯</span>배팅 카드 1장씩 제출 <b>(진행자가 먼저!)</b></div>
-      <div class="r-step"><span class="r-ico">🏆</span>이긴 사람이 경매품 2장 획득</div>
-      <div class="r-step"><span class="r-ico">🔁</span>배팅에 쓴 카드는 <b>서로 상대에게</b> 넘어감</div>
-      <div class="r-step"><span class="r-ico">🎯</span><b>낙찰받아 앞에 깐 카드만</b> 세트로 인정 — 손패로는 세트 불가!</div>
+      <div class="r-step"><span class="r-ico" data-ico="📤"></span>진행자가 손패 1장을 추가 출품 → 경매품 2장</div>
+      <div class="r-step"><span class="r-ico" data-ico="🎭"></span>오픈 / 클로즈 경매 방식 선택</div>
+      <div class="r-step"><span class="r-ico" data-ico="🎯"></span>배팅 카드 1장씩 제출 <b>(진행자가 먼저!)</b></div>
+      <div class="r-step"><span class="r-ico" data-ico="🏆"></span>이긴 사람이 경매품 2장 획득</div>
+      <div class="r-step"><span class="r-ico" data-ico="🔁"></span>배팅에 쓴 카드는 <b>서로 상대에게</b> 넘어감</div>
+      <div class="r-step"><span class="r-ico" data-ico="🎯"></span><b>낙찰받아 앞에 깐 카드만</b> 세트로 인정 — 손패로는 세트 불가!</div>
     </div>
 
-    <h3>🎭 오픈 vs 클로즈</h3>
+    <h3><span data-ico="🎭"></span> 오픈 vs 클로즈</h3>
     <div class="r-two">
       <div class="r-panel open">
         <div class="r-ptitle">오픈 경매</div>
-        경매품 👁 <b>공개</b><br>배팅 🙈 <b>비공개</b><br>(얼마 낼지 서로 모름)<br>
-        <span style="color:#8fe08a;font-size:.74rem">💡 꼭 갖고 싶은 판에 — 내 강배팅을 숨겨요</span>
+        경매품 <span data-ico="👁"></span> <b>공개</b><br>배팅 <span data-ico="🙈"></span> <b>비공개</b><br>(얼마 낼지 서로 모름)<br>
+        <span style="color:#8fe08a;font-size:.74rem"><span data-ico="💡"></span> 꼭 갖고 싶은 판에 — 내 강배팅을 숨겨요</span>
       </div>
       <div class="r-panel closed">
         <div class="r-ptitle">클로즈 경매</div>
-        경매품 🙈 <b>비공개</b><br>배팅 👁 <b>공개</b><br>(뭐가 걸렸는지 모름)<br>
-        <span style="color:#b89cfe;font-size:.74rem">💡 출품을 숨겨 상대를 헷갈리게 해요</span>
+        경매품 <span data-ico="🙈"></span> <b>비공개</b><br>배팅 <span data-ico="👁"></span> <b>공개</b><br>(뭐가 걸렸는지 모름)<br>
+        <span style="color:#b89cfe;font-size:.74rem"><span data-ico="💡"></span> 출품을 숨겨 상대를 헷갈리게 해요</span>
       </div>
     </div>
 
-    <h3>⚔ 배팅 — 누가 이기나?</h3>
+    <h3><span data-ico="⚔"></span> 배팅 — 누가 이기나?</h3>
     <p style="font-size:.8rem"><b>①</b> 숫자가 작을수록 강함</p>
     <div class="r-cards">
       <div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
@@ -2500,10 +2512,10 @@
     </div>
 
     <div class="r-special">
-      <div class="r-st">⚔ 반전! 졸개의 배신</div>
+      <div class="r-st"><span data-ico="⚔"></span> 반전! 졸개의 배신</div>
       <div class="r-match" style="margin:4px 0 0">
         <div class="rc gold" data-kind="6"><span class="rc-rank">10</span><span class="rc-num">6</span></div>
-        <span class="r-arrow">⚔</span>
+        <span class="r-arrow" data-ico="⚔"></span>
         <div class="rc gold" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
         <span class="r-arrow">→</span>
         <span class="r-win">6-10 승리!</span>
@@ -2621,7 +2633,7 @@
 <!-- 최근 전적 -->
 <!-- 튜토리얼 코치 -->
 <div id="tutBox" onclick="tutConfirm()" style="cursor:pointer">
-  <div class="tut-tag">🎓 튜토리얼 <button class="tut-quit" onclick="event.stopPropagation(); endTutorial()">종료 ×</button></div>
+  <div class="tut-tag"><span data-ico="🎓"></span> 튜토리얼 <button class="tut-quit" onclick="event.stopPropagation(); endTutorial()">종료 ×</button></div>
   <div id="tutText"></div>
   <div class="tut-next">▸ 화면을 탭하면 계속</div>
 </div>

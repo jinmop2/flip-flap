@@ -500,7 +500,7 @@ async function openLeaderboard() {
     r.players.forEach(p => {
       const row = document.createElement('div');
       row.className = 'lb-row' + (myNick && p.nick === myNick ? ' me' : '');
-      row.innerHTML = `<span class="lb-no${p.no <= 3 ? ' top' : ''}">${p.no <= 3 ? ['🥇','🥈','🥉'][p.no-1] : p.no}</span>
+      row.innerHTML = `<span class="lb-no${p.no <= 3 ? ' top' : ''}">${p.no <= 3 ? rankIco(['🥇','🥈','🥉'][p.no-1]) : p.no}</span>
         <span class="lb-rank" style="color:${p.rankColor}">${rankIco(p.rankIcon)}</span>
         <span class="lb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span>
         <span class="lb-wl">${p.wins}승 ${p.losses}패</span>
@@ -1365,8 +1365,15 @@ const shopIcon = it => {
   if (CBP[it.id])  return `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`;
   if (TBLP[it.id]) return `<div class="shop-tblprev ${TBLP[it.id]}"></div>`;
   if (CFP[it.id])  return `<div class="shop-cfprev ${CFP[it.id]}"><i>1</i>6</div>`;
-  if (it.type === 'plate' && NP_CLASS[it.id]) return `<span class="shop-npprev ${NP_CLASS[it.id]}">${it.id === 'np_daily' ? '🍀' : ''}닉네임</span>`;
-  if (it.type === 'emotes' && EMOTE_PACKS[it.id]) return `<span class="shop-emprev">${EMOTE_PACKS[it.id].slice(0, 3).join('')}</span>`;
+  if (it.type === 'plate' && NP_CLASS[it.id]) return `<span class="shop-npprev ${NP_CLASS[it.id]}">${it.id === 'np_daily' ? ico('🍀', 'np-clover') : ''}닉네임</span>`;
+  if (it.type === 'emotes' && EMOTE_PACKS[it.id]) {
+    // 미리보기 3종. emoteArt 가 있으면 그린 그림, 없으면 이모지 그대로.
+    const prev = EMOTE_PACKS[it.id].slice(0, 3).map((e) => {
+      const a = (typeof emoteArt === 'function') && emoteArt(e);
+      return a ? `<span class="em-one">${a}</span>` : `<span class="em-one">${e}</span>`;
+    }).join('');
+    return `<span class="shop-emprev">${prev}</span>`;
+  }
   if (it.type === 'dye')      return `<div class="shop-dyeprev"></div>`;
   if (it.type === 'dye_rare') return `<div class="shop-dyeprev rare"></div>`;
   return ico(it.icon, 'shop-ico');
@@ -1907,9 +1914,9 @@ let tutorial = false, tutSeen = {}, tutTarget = null;
 const TUT_STEPS = [
   // ── 1부: 게임 소개 (대형 안내 — 화면 중앙) ──
   { id: 'intro', when: s => s.phase === 'pick', big: true,
-    text: `<div class="tut-h">FLIP FLAP에 온 걸 환영해요! 🎩</div>
+    text: `<div class="tut-h">FLIP FLAP에 온 걸 환영해요! ${ico('🎩', 'tut-ico')}</div>
       <b>경매</b>로 카드를 모아 <b>세트</b>를 먼저 완성하면 승리하는 게임이에요.`,
-    cards: `<div class="tut-cards" style="margin-top:14px"><span class="tcard k3"><i>1</i>3</span><span class="tcard k3"><i>2</i>3</span><span class="tcard k3"><i>4</i>3</span><span class="tvs">=</span><span class="twin">3짜리 3장 모으면 승리! 🏆</span></div>` },
+    cards: `<div class="tut-cards" style="margin-top:14px"><span class="tcard k3"><i>1</i>3</span><span class="tcard k3"><i>2</i>3</span><span class="tcard k3"><i>4</i>3</span><span class="tvs">=</span><span class="twin">3짜리 3장 모으면 승리! ${ico('🏆', 'tut-ico')}</span></div>` },
   { id: 'cards1', when: s => s.phase === 'pick', big: true,
     text: `<div class="tut-h">카드 읽는 법 🃏</div>`,
     cards: `<div class="tut-arrows">
