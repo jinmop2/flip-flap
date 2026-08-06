@@ -42,7 +42,7 @@ function attach4(io) {
   const rooms4 = {};
   const DBG = !!process.env.G4_DEBUG;
   const dbg = (...a) => { if (DBG) console.log('[g4]', ...a); };
-  let queue4 = [];          // 빠른대전 대기열 [{ sid, nick, at }]
+  const pendings = {};      // 시작 전 대기방 — 사람들이 앉아서 기다리는 곳
 
   // ── 상태 ─────────────────────────────────────────────────────────────────
   // me 좌석 시점으로만 만든다. 남의 손패는 어떤 경우에도 내보내지 않는다.
@@ -219,25 +219,50 @@ function attach4(io) {
     dbg('RP 정산', roomId, JSON.stringify(out));
   }
 
-  // ── 대기열 ───────────────────────────────────────────────────────────────
-  const queueInfo = () => {
-    const n = queue4.length;
-    // 지금 시작하면 몇 인전이 되는지 미리 알려준다
-    for (const q of queue4) io.to(q.sid).emit('g4_queue', { n, need: 4, seats: seatsFor(n) });
-  };
-  function dequeue(sid) {
-    const before = queue4.length;
-    queue4 = queue4.filter((q) => q.sid !== sid);
-    if (queue4.length !== before && queue4.length) queueInfo();
+  // ── 대기방 ───────────────────────────────────────────────────────────────
+  // 대기열이 아니라 "방"이다. 들어오면 바로 게임 화면에 앉아서, 자리가 차는 걸
+  // 보면서 기다린다. 시작은 방 안에서 누른다 — 그때 인원이 몇 인전인지를 정한다.
+  function pendingView(p, me) {
+    const filled = p.seats.filter(Boolean).length;
+    return {
+      roomId: p.id, me, waiting: true,
+      count: filled, seats: p.seats.map((s) => (s ? { name: s.nick } : null)),
+      willBe: seatsFor(filled),          // 지금 시작하면 몇 인전인지
+    };
   }
-  // 4명이 차면 자동 시작. 그보다 적으면 누군가 "시작"을 눌러야 시작한다.
-  function tryMatch(force) {
-    if (queue4.length >= 4) { startRoom(queue4.splice(0, 4), false, 4); return; }
-    if (force && queue4.length) { startRoom(queue4.splice(0, queue4.length), false); }
+  function pushPending(p) {
+    for (let i = 0; i < 4; i++) {
+      const s = p.seats[i]; if (!s) continue;
+      io.to(s.sid).emit('g4_room', pendingView(p, i));
+    }
   }
-  // 자동으로 시작하지 않는다. 대기실 인원만 계속 알려주고, 시작은 사람이 누른다.
-  // (4명이 다 차면 그때만 바로 시작한다 — 더 기다릴 이유가 없다)
-  setInterval(() => { if (queue4.length) queueInfo(); }, 1000).unref?.();
+  function leavePending(sid) {
+    for (const [pid, p] of Object.entries(pendings)) {
+      const i = p.seats.findIndex((s) => s && s.sid === sid);
+      if (i < 0) continue;
+      p.seats[i] = null;
+      if (!p.seats.some(Boolean)) delete pendings[pid];
+      else pushPending(p);
+      return;
+    }
+  }
+  function joinPending(socket, nick) {
+    leavePending(socket.id);
+    // 자리가 남은 방을 찾고, 없으면 새로 연다
+    let p = Object.values(pendings).find((x) => x.seats.some((s) => !s));
+    if (!p) { p = { id: 'W' + Math.random().toString(36).slice(2, 7).toUpperCase(), seats: [null, null, null, null] }; pendings[p.id] = p; }
+    const i = p.seats.findIndex((s) => !s);
+    p.seats[i] = { sid: socket.id, nick, token: socket.token || null, ip: socket.clientIp || null };
+    socket.g4pending = p.id;
+    pushPending(p);
+    if (p.seats.filter(Boolean).length >= 4) beginPending(p);   // 다 차면 바로 시작
+  }
+  function beginPending(p) {
+    const humans = p.seats.filter(Boolean).map((s) => ({ sid: s.sid, nick: s.nick }));
+    delete pendings[p.id];
+    for (const s of p.seats) if (s) { const sk = io.sockets.sockets.get(s.sid); if (sk) sk.g4pending = null; }
+    if (humans.length) startRoom(humans, false, seatsFor(humans.length));
+  }
 
   // ── 방 생성 ──────────────────────────────────────────────────────────────
   // humans: [{ sid, nick }] — 부족한 자리는 AI 가 채운다
@@ -329,21 +354,18 @@ function attach4(io) {
       startRoom([{ sid: socket.id, nick: nickOf(data) }], true);
     });
 
-    socket.on('g4_quick', (data = {}) => {          // 빠른대전 대기열
+    socket.on('g4_quick', (data = {}) => {          // 대기방 입장 (인게임 화면에서 대기)
       if (socket.g4room) destroy(socket.g4room, '빠른대전 진입');
-      dequeue(socket.id);
-      queue4.push({ sid: socket.id, nick: nickOf(data), at: Date.now() });
-      queueInfo();
-      tryMatch(false);
+      joinPending(socket, nickOf(data));
     });
 
-    socket.on('g4_cancel', () => { dequeue(socket.id); socket.emit('g4_cancelled'); });
+    socket.on('g4_cancel', () => { leavePending(socket.id); socket.g4pending = null; socket.emit('g4_cancelled'); });
 
-    // 대기실에서 "시작" — 지금 모인 인원 기준으로 몇 인전인지 정해진다.
-    // 대기 중인 사람 전원이 같이 들어간다.
+    // 대기방에서 "시작" — 지금 앉아 있는 인원으로 몇 인전인지 정해진다.
     socket.on('g4_startnow', () => {
-      if (!queue4.some((q) => q.sid === socket.id)) return;   // 대기 중인 사람만 누를 수 있다
-      tryMatch(true);
+      const p = pendings[socket.g4pending];
+      if (!p || !p.seats.some((s) => s && s.sid === socket.id)) return;   // 방에 있는 사람만
+      beginPending(p);
     });
 
     socket.on('g4_act', (data = {}) => {
@@ -378,7 +400,7 @@ function attach4(io) {
     });
 
     socket.on('g4_leave', () => {
-      dequeue(socket.id);
+      leavePending(socket.id); socket.g4pending = null;
       const r = rooms4[socket.g4room];
       if (r && !r.dead) {
         if (r.solo) destroy(socket.g4room, 'leave');
@@ -395,7 +417,7 @@ function attach4(io) {
     });
 
     socket.on('disconnect', () => {
-      dequeue(socket.id);
+      leavePending(socket.id);
       const r = rooms4[socket.g4room];
       if (!r || r.dead) return;
       const i = socket.g4seat;
@@ -408,7 +430,7 @@ function attach4(io) {
     });
   });
 
-  return { count: () => Object.keys(rooms4).length, queued: () => queue4.length };
+  return { count: () => Object.keys(rooms4).length, waiting: () => Object.keys(pendings).length };
 }
 
 module.exports = { attach4 };

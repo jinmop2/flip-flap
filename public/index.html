@@ -691,17 +691,12 @@
     .q-lg.gone { color:#5d5648; background:rgba(255,255,255,.04); text-decoration:line-through; }
     .q-lg.mine { color:#9fd8ff; background:rgba(90,160,220,.22); box-shadow:inset 0 0 0 1px rgba(140,200,255,.5); }
 
-    /* 빠른대전 대기 */
-    #q-wait { display:none; position:absolute; inset:0; z-index:11; background:rgba(0,0,0,.82);
-      align-items:center; justify-content:center; padding:16px; }
-    #q-wait.show { display:flex; }
-    .q-wcard { background:linear-gradient(170deg,#1e3324,#0d1a12); border:2px solid var(--gold);
-      border-radius:16px; padding:22px 20px; text-align:center; max-width:320px; width:100%; }
-    .q-wspin { width:34px; height:34px; margin:0 auto 12px; border-radius:50%;
-      border:3px solid rgba(255,235,180,.2); border-top-color:var(--gold); animation:qspin .9s linear infinite; }
-    @keyframes qspin { to { transform:rotate(360deg); } }
-    #q-waitTxt { font-size:.95rem; font-weight:800; color:#ffe9a8; }
-    #q-waitSub { font-size:.68rem; color:#c8bfa0; margin-top:6px; min-height:16px; }
+    /* 시작 전 대기 — 게임 화면 안에 뜬다. 아직 경매가 없으니 경매대는 감춘다 */
+    body.q-waiting #q-mat { display:none; }
+    #q-startPanel { display:none; gap:8px; }
+    #q-startPanel.show { display:flex; }
+    .q-opp.empty { opacity:.45; border-style:dashed; }
+    .q-opp.empty .q-oname { color:#9a9484; }
     /* 사람 참가자 표시 */
     .q-human { font-size:.5rem; background:#4a8f3a; color:#eaffe0; border-radius:4px;
       padding:0 3px; font-weight:900; flex-shrink:0; }
@@ -2625,6 +2620,10 @@
       <div class="q-slot"><div class="q-slabel">출품 카드</div><div class="q-scard" id="q-offer"></div></div>
     </div>
     <div id="q-status"></div>
+    <!-- 시작 전 대기 — 인게임 화면에서 자리가 차는 걸 보며 시작한다 -->
+    <div id="q-startPanel">
+      <button class="btn btn-gold" style="width:auto" id="q-startBtn" onclick="q4StartNow()">시작</button>
+    </div>
     <div id="q-typeBtns">
       <button class="q-tbtn" onclick="q4Type('open')"><b>👁 오픈</b><span>경매품 공개 · 배팅 비밀</span></button>
       <button class="q-tbtn" onclick="q4Type('close')"><b>🙈 클로즈</b><span>경매품 비밀 · 배팅 공개</span></button>
@@ -2636,19 +2635,6 @@
     <div id="q-mybid"></div>
     <div id="q-myacq"></div>
     <div id="q-myhand"></div>
-  </div>
-
-  <!-- 빠른대전 대기 -->
-  <div id="q-wait">
-    <div class="q-wcard">
-      <div class="q-wspin"></div>
-      <div id="q-waitTxt">상대를 찾는 중…</div>
-      <div id="q-waitSub"></div>
-      <div style="display:flex; gap:8px; justify-content:center; margin-top:14px">
-        <button class="btn btn-gold" style="width:auto" id="q-startNow" onclick="q4StartNow()">지금 시작</button>
-        <button class="btn btn-outline" style="width:auto" onclick="q4CancelQuick()">취소</button>
-      </div>
-    </div>
   </div>
 
   <!-- 결과 -->

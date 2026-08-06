@@ -75,6 +75,46 @@
     return out;
   }
 
+  // 시작 전 대기방 — 게임 화면에 앉은 채로 자리가 차는 걸 본다
+  let q4Pend = null;
+  function renderPending() {
+    const p = q4Pend; if (!p) return;
+    document.body.classList.toggle('q-n3', p.willBe === 3);
+    $('q-turn').textContent = '대기 중';
+    $('q-deck').textContent = `${p.count}명 입장`;
+
+    // 상대 자리 — 나를 뺀 3칸. 아직 안 온 자리는 "빈 자리"
+    const opps = $('q-opps'); opps.innerHTML = '';
+    for (let k = 1; k <= 3; k++) {
+      const seat = (p.me + k) % 4;
+      const who = p.seats[seat];
+      const d = document.createElement('div');
+      d.className = 'q-opp' + (who ? '' : ' empty');
+      const nm = document.createElement('div');
+      nm.className = 'q-oname';
+      if (who) { const b = document.createElement('span'); b.className = 'q-human'; b.textContent = '사람'; nm.appendChild(b); }
+      nm.appendChild(document.createTextNode(who ? who.name : '빈 자리'));
+      const meta = document.createElement('div');
+      meta.className = 'q-ometa';
+      meta.textContent = who ? '준비 완료' : '기다리는 중…';
+      d.appendChild(nm); d.appendChild(meta);
+      opps.appendChild(d);
+    }
+    $('q-oppbids').innerHTML = '';
+    $('q-mybid').innerHTML = ''; $('q-mybid').className = '';
+    $('q-myacq').innerHTML = '';
+    $('q-myhand').innerHTML = '';
+    $('q-center').innerHTML = ''; $('q-offer').innerHTML = '';
+    $('q-typeTag').textContent = '';
+    $('q-typeBtns').classList.remove('show');
+    $('q-status').textContent = p.count >= 4
+      ? '곧 시작합니다…'
+      : `사람이 더 오면 함께해요. 지금 시작하면 ${p.willBe}인전 (사람 ${p.count}명 · AI ${p.willBe - p.count}명)`;
+    document.body.classList.add('q-waiting');
+    $('q-startPanel').classList.add('show');
+    $('q-startBtn').textContent = `${p.willBe}인전 시작`;
+  }
+
   // ── 렌더 ────────────────────────────────────────────────────────────────
   function render() {
     if (!q4) return;
@@ -85,6 +125,9 @@
     // 내 다음 자리부터 시계방향. 3인이면 상대가 2명뿐이다.
     oppSeats = Array.from({ length: seatCount - 1 }, (_, k) => (mySeat + k + 1) % seatCount);
 
+    q4Pend = null;
+    document.body.classList.remove('q-waiting');
+    $('q-startPanel').classList.remove('show');
     $('q-turn').textContent = `${s.turn}턴`;
     $('q-deck').textContent = `덱 ${s.deckLeft}장`;
 
@@ -312,29 +355,21 @@
     }, () => window.q4Quick(), () => window.q4Start());
   };
 
-  // ── 빠른대전 대기 ────────────────────────────────────────────────────────
+  // ── 빠른대전 — 곧바로 게임 화면에 앉아서 기다린다 ────────────────────────
   window.q4Quick = function () {
     if (typeof closeModePanels === 'function') closeModePanels();
     $('q-over').classList.remove('show');
-    $('q-wait').classList.add('show');
-    $('q-waitTxt').textContent = '대기실 입장 중…';
-    $('q-waitSub').textContent = '';
-    { const b = $('q-startNow'); if (b) b.textContent = '지금 시작'; }
-    q4Live = true; q4Room = null; lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
-    document.body.classList.add('quad4');
+    q4Live = true; q4 = null; q4Room = null; q4Pend = null;
+    lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
+    document.body.classList.add('quad4', 'q-waiting');
+    $('q-turn').textContent = '대기 중'; $('q-deck').textContent = '';
+    $('q-status').textContent = '자리에 앉는 중…';
     sfx('deal');
     try { if (typeof startBGM === 'function') startBGM(); } catch (_) {}
     socket.emit('g4_quick', { nick: typeof getNick === 'function' ? getNick() : '나' });
   };
-  // 대기실에서 직접 시작 — 지금 모인 인원으로 몇 인전인지 결정된다
-  window.q4StartNow = function () { socket.emit('g4_startnow'); };
-  window.q4CancelQuick = function () {
-    socket.emit('g4_cancel');
-    $('q-wait').classList.remove('show');
-    q4Live = false; q4 = null; q4Room = null;
-    $('q-wait').classList.remove('show');
-    document.body.classList.remove('quad4', 'q-n3');
-  };
+  // 방 안에서 시작 — 지금 앉아 있는 인원으로 몇 인전인지 결정된다
+  window.q4StartNow = function () { sfx('select'); socket.emit('g4_startnow'); };
 
   window.q4Start = function () {
     if (typeof closeModePanels === 'function') closeModePanels();
@@ -349,9 +384,9 @@
 
   window.q4Quit = function () {
     socket.emit('g4_leave');
-    q4Live = false; q4 = null; q4Room = null;
-    $('q-wait').classList.remove('show');
-    document.body.classList.remove('quad4', 'q-n3');
+    q4Live = false; q4 = null; q4Room = null; q4Pend = null;
+    $('q-startPanel').classList.remove('show');
+    document.body.classList.remove('quad4', 'q-n3', 'q-waiting');
     $('q-over').classList.remove('show');
   };
 
@@ -367,25 +402,15 @@
     if (typeof socket === 'undefined' || !socket) return setTimeout(bind, 200);
 
     socket.on('g4_begin', (d) => {
-      q4Room = d.roomId; mySeat = d.me || 0; lastRecv = Date.now();
-      $('q-wait').classList.remove('show');
+      q4Room = d.roomId; mySeat = d.me || 0; lastRecv = Date.now(); q4Pend = null;
+      $('q-startPanel').classList.remove('show');
       const total = d.n || (d.seats || []).length || 4;
       const humans = (d.seats || []).filter((x) => !x.isBot).length;
       if (!d.solo) $('q-status').textContent = `${total}인전 · 사람 ${humans}명 · AI ${total - humans}명`;
     });
-    socket.on('g4_queue', (d) => {
-      if (!q4Live) return;
-      $('q-waitTxt').textContent = `대기실 — 현재 ${d.n}명`;
-      // 지금 시작하면 몇 인전이 되는지, AI가 몇 자리를 채우는지 미리 알려준다
-      const seats = d.seats || 4;
-      const bots = Math.max(0, seats - d.n);
-      $('q-waitSub').textContent = bots > 0
-        ? `지금 시작하면 ${seats}인전 (사람 ${d.n}명 · AI ${bots}명)`
-        : `지금 시작하면 ${seats}인전 (전원 사람!)`;
-      const b = $('q-startNow');
-      if (b) b.textContent = `${seats}인전 시작`;
-    });
-    socket.on('g4_cancelled', () => { $('q-wait').classList.remove('show'); });
+    // 대기방 — 게임 화면에 앉은 채로 자리가 차는 걸 본다
+    socket.on('g4_room', (d) => { if (!q4Live) return; q4Pend = d; q4Room = null; lastRecv = Date.now(); renderPending(); });
+    socket.on('g4_cancelled', () => {});
     socket.on('g4_state', (s) => { if (!q4Live) return; q4 = s; lastRecv = Date.now(); render(); });
     socket.on('g4_over', (s) => {
       if (!q4Live) return;
@@ -407,7 +432,7 @@
 
   // 진행이 멈춘 채 방치되지 않도록 클라이언트도 스스로 확인한다
   setInterval(() => {
-    if (!q4Live || !q4Room || !q4) return;
+    if (!q4Live || !q4Room || !q4 || q4Pend) return;
     if (q4.over) return;
     const waiting = (['draw', 'offer', 'choose_type'].includes(q4.phase) && q4.auctioneer === mySeat)
       || (q4.phase === 'bidding' && q4.bidders.includes(mySeat) && !q4.seats[mySeat].bidded);
