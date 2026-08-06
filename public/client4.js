@@ -156,6 +156,9 @@
       const hd = document.createElement('span'); hd.textContent = `🂠${p.handLen}`;
       meta.appendChild(hd);
       const acq = document.createElement('div'); acq.className = 'q-oacq';
+      // 카드가 많이 쌓이면 기본 크기로는 두 줄에도 안 들어가 뒤쪽이 잘린다.
+      // 그때만 한 단계 줄인다 (칸 높이는 그대로라 화면은 안 밀린다).
+      if (p.acq.length >= 7) acq.classList.add('tight');
       for (const c of acqPile(p.acq)) acq.appendChild(c);
       d.appendChild(nm); d.appendChild(meta); d.appendChild(acq);
       opps.appendChild(d);

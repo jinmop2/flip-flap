@@ -613,7 +613,11 @@
     .q-need.r1 { background:#c0392b; color:#fff; animation:qpulse 1s infinite; }
     .q-need.r2 { background:#b8860b; color:#fff; }
     @keyframes qpulse { 0%,100%{opacity:1} 50%{opacity:.55} }
-    .q-oacq { display:flex; flex-wrap:nowrap; gap:1px; margin-top:4px; height:36px; align-items:center; overflow:hidden; }
+    /* 이길 때까지 들 수 있는 최대치는 11장(2세트1+3세트2+4세트3+6세트5)이라
+       한 줄에는 절대 안 들어간다 — 한 줄로 두면 뒤쪽 카드가 잘려 나갔다.
+       두 줄로 접되 높이는 고정해서, 카드가 쌓여도 화면이 밀리지 않는다. */
+    .q-oacq { display:flex; flex-wrap:wrap; align-content:flex-start; gap:2px 0;
+      margin-top:4px; height:64px; overflow:hidden; }
     /* 획득 더미 — 2인전과 같은 실제 카드. 카드 비율(70:98)을 그대로 유지하고
        등급 배지가 드러날 만큼만 노출해 겹쳐 쌓는다. 상대 것은 더 작게. */
     .q-pg { display:inline-flex; align-items:center; margin-right:5px; }
@@ -627,15 +631,20 @@
     .q-pn.reach { color:#ffb84a; } .q-pn.done { color:#ffd94a; }
 
     /* 내 더미 — 40×56 (비율 유지) */
-    #q-myacq .q-pg .card { width:40px; height:56px; padding:3px 3px 2px; border-width:1.5px; }
+    /* 왼쪽의 이름·남은장수 배지가 60px 쯤 먹는다. 그만큼 빼고도 11장이 들어가야 한다. */
+    #q-myacq .q-pg .card { width:36px; height:50px; padding:3px 3px 2px; border-width:1.5px; }
+    #q-myacq .q-pg .card:not(:first-child) { margin-left:-18px; }
     /* 3인전은 손패가 7장이라 6장 기준 크기로는 화면을 넘는다 — 조금 줄인다 */
-    body.q-n3 #q-myhand .card { width:45px; height:63px; }
-    body.q-n3 #q-myhand .card .c-rank { font-size:.78rem; padding:1px 4px; min-width:17px; }
-    body.q-n3 #q-myhand .card .c-num { font-size:1.5rem; }
+    body.q-n3 #q-myhand .card { width:56px; height:78px; }
+    body.q-n3 #q-myhand .card .c-rank { font-size:.9rem; padding:1px 5px; min-width:20px; }
+    body.q-n3 #q-myhand .card .c-num { font-size:1.9rem; }
 
     /* 3인전은 상대가 둘뿐이라 패널이 넓다 — 카드를 조금 키운다 */
-    body.q-n3 .q-oacq .q-pg .card { width:30px; height:42px; }
-    body.q-n3 .q-oacq .q-pg .card:not(:first-child) { margin-left:-15px; }
+    body.q-n3 .q-oacq { height:74px; }
+    body.q-n3 .q-oacq .q-pg .card { width:26px; height:36px; }
+    body.q-n3 .q-oacq .q-pg .card:not(:first-child) { margin-left:-13px; }
+    body.q-n3 .q-oacq.tight .q-pg .card { width:22px; height:31px; }
+    body.q-n3 .q-oacq.tight .q-pg .card:not(:first-child) { margin-left:-12px; }
     body.q-n3 .q-oacq .q-pg .card .c-num { font-size:1rem; }
     body.q-n3 .q-oacq .q-pg .card .c-rank { font-size:.5rem; min-width:10px; }
     /* 3인전은 상대가 둘뿐이라 배팅 자리가 넓다 — 4인전보다 한 단계 크게 */
@@ -647,8 +656,15 @@
     /* 상대 더미 — 24×34 로 더 작게. 개수 텍스트는 뺐다(자리를 많이 먹고,
        카드를 세면 알 수 있으며 이름 옆 -N 배지가 이미 진행도를 보여준다). */
     .q-oacq .q-pg { margin-right:4px; }
-    .q-oacq .q-pg .card { width:24px; height:34px; padding:2px 1px 1px; border-width:1px; border-radius:4px; }
-    .q-oacq .q-pg .card:not(:first-child) { margin-left:-12px; }
+    .q-oacq .q-pg { margin-right:3px; }
+    .q-oacq .q-pg .card { width:22px; height:31px; padding:2px 1px 1px; border-width:1px; border-radius:4px; }
+    .q-oacq .q-pg .card:not(:first-child) { margin-left:-13px; }
+    /* 많이 모았을 때는 두 줄로도 안 들어간다 — 그때만 한 단계 줄인다.
+       (11장 최대치 기준: 좁은 폰 360px 에서도 두 줄 안에 들어간다) */
+    .q-oacq.tight .q-pg .card { width:18px; height:25px; }
+    .q-oacq.tight .q-pg .card:not(:first-child) { margin-left:-11px; }
+    .q-oacq.tight .q-pg .card .c-num { font-size:.68rem; }
+    .q-oacq.tight .q-pg .card .c-rank { font-size:.38rem; min-width:7px; }
     .q-oacq .q-pg .card .c-num { font-size:.82rem; }
     .q-oacq .q-pg .card .c-rank { font-size:.44rem; padding:0 2px; min-width:8px; border-radius:3px; }
     .q-oacq .q-pn { display:none; }
@@ -707,11 +723,11 @@
     /* 내 손패는 2인전과 똑같이 부채꼴로 편다 (fanRow 가 각 칸을 회전·겹침 처리한다).
        회전과 중앙 솟음 때문에 카드 높이보다 여유가 필요해 높이를 넉넉히 고정한다. */
     #q-myhand { display:flex; justify-content:center; align-items:flex-end; flex-wrap:nowrap;
-      height:96px; flex-shrink:0; padding-bottom:2px; }
+      height:112px; flex-shrink:0; padding-bottom:2px; }
     #q-myhand .fan-slot { transition:transform .18s cubic-bezier(.34,1.4,.64,1); }
     #q-myhand .fan-slot:hover { z-index:40 !important; }
-    #q-myhand .card { width:54px; height:76px; padding:4px 4px 3px; cursor:default; }
-    #q-myhand .card .c-rank { font-size:.9rem; padding:1px 5px; min-width:20px; }
+    #q-myhand .card { width:64px; height:90px; padding:5px 5px 3px; cursor:default; }
+    #q-myhand .card .c-rank { font-size:1.02rem; padding:1px 6px; min-width:23px; }
     #q-myhand .card.pick { cursor:pointer; box-shadow:0 0 0 2px var(--gold), 0 3px 10px rgba(0,0,0,.5); }
     /* 들어올림은 칸(fan-slot)이 아니라 카드에 준다 — 칸의 부채꼴 transform 을 덮어쓰지 않게 */
     #q-myhand .card.pick:hover { transform:translateY(-9px); }
@@ -769,10 +785,17 @@
     #q-rpnote { font-size:.6rem; color:#a89a80; margin-top:8px; }
     .q-rpos { font-weight:900; min-width:16px; }
 
+    /* 좁은 폰(360px 급)에서는 부채꼴이 화면 밖으로 1~2px 삐져나간다 — 한 단계만 줄인다 */
+    @media (max-width:380px) {
+      #q-myhand .card { width:60px; height:84px; }
+      body.q-n3 #q-myhand .card { width:52px; height:73px; }
+    }
     @media (max-height:700px) {
-      #q-myhand .card { width:46px; height:65px; }
+      #q-myhand .card { width:56px; height:78px; }
+      body.q-n3 #q-myhand .card { width:50px; height:70px; }
+      #q-myhand { height:98px; }
       #q-mat .card { width:58px; height:81px; padding:4px 4px 3px; }
-      .q-oacq { height:36px; }
+      .q-oacq { height:64px; }
     }
 
     /* 인게임 아이템 슬롯 — 왼쪽 세로 3칸 */
