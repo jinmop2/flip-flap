@@ -38,7 +38,12 @@
     top.appendChild(rank);
     if (special) {
       const mk = document.createElement('span');
-      mk.className = 'c-mark'; mk.textContent = top4(card) ? '👑' : '⚔';
+      mk.className = 'c-mark';
+      // 2인전과 같은 자체 그림. 그림을 못 찾으면 원래 이모지로 떨어진다.
+      const mkArt = top4(card) ? (typeof rankIco === 'function' && rankIco('👑'))
+                               : (typeof ico === 'function' && ico('⚔️'));
+      if (mkArt && mkArt.indexOf('<') === 0) mk.innerHTML = mkArt;
+      else mk.textContent = top4(card) ? '👑' : '⚔';
       top.appendChild(mk);
     }
     const num = document.createElement('div');
@@ -163,7 +168,10 @@
     if (a) {
       $('q-center').appendChild(card4(a.center));
       $('q-offer').appendChild(card4(a.offered));       // null 이면 뒷면
-      $('q-typeTag').textContent = a.type === 'open' ? '👁 오픈' : a.type === 'closed' || a.type === 'close' ? '🙈 클로즈' : '';
+      const tag = a.type === 'open' ? ['👁', '오픈']
+                : (a.type === 'closed' || a.type === 'close') ? ['🙈', '클로즈'] : null;
+      if (tag) $('q-typeTag').innerHTML = (typeof ico === 'function' ? ico(tag[0]) : tag[0]) + ' ' + tag[1];
+      else $('q-typeTag').textContent = '';
     } else {
       $('q-center').appendChild(card4(null));
       $('q-offer').appendChild(card4(null));
@@ -207,7 +215,8 @@
     const my = $('q-myacq'); my.innerHTML = '';
     const meLabel = document.createElement('span');
     meLabel.className = 'q-melabel';
-    meLabel.textContent = iAmAuc ? '👑 나 (진행자)' : '나';
+    if (iAmAuc) meLabel.innerHTML = (typeof rankIco === 'function' ? rankIco('👑') : '👑') + ' 나 (진행자)';
+    else meLabel.textContent = '나';
     my.appendChild(meLabel);
     const meNeed = document.createElement('span');
     meNeed.className = 'q-need' + (me.need <= 1 ? ' r1' : me.need === 2 ? ' r2' : '');
@@ -217,7 +226,7 @@
 
     // 상태 문구 + 손패 선택 가능 여부
     let msg = '', pickMode = null;
-    if (s.phase === 'draw') msg = iAmAuc ? '👑 내가 진행자! 덱을 눌러 카드를 공개하세요' : `${s.seats[s.auctioneer].name} 님이 카드를 공개하는 중…`;
+    if (s.phase === 'draw') msg = iAmAuc ? '내가 진행자! 덱을 눌러 카드를 공개하세요' : `${s.seats[s.auctioneer].name} 님이 카드를 공개하는 중…`;
     else if (s.phase === 'offer') { if (iAmAuc) { msg = '경매에 내놓을 카드를 고르세요'; pickMode = 'offer'; } else msg = `${s.seats[s.auctioneer].name} 님이 출품하는 중…`; }
     else if (s.phase === 'choose_type') msg = iAmAuc ? '경매 방식을 고르세요' : `${s.seats[s.auctioneer].name} 님이 방식을 고르는 중…`;
     else if (s.phase === 'bidding') {
@@ -226,14 +235,14 @@
       if (!s.bidders.includes(mySeat)) msg = s.firstAuction ? '첫 경매라 진행자인 나는 입찰하지 않습니다' : '손패가 없어 이번엔 입찰할 수 없어요';
       else if (waitFirst && a.first !== mySeat) msg = `${s.seats[a.first].name} 님이 먼저 공개 배팅하는 중…`;
       else if (me.bidded) msg = '나머지가 배팅하는 중…';
-      else if (waitFirst && a.first === mySeat) { msg = '👑 진행자는 먼저 공개로 배팅합니다 — 카드를 고르세요'; pickMode = 'bid'; }
-      else { msg = closed ? '🙈 경매품은 비밀! 배팅 카드를 고르세요' : '배팅 카드를 고르세요'; pickMode = 'bid'; }
+      else if (waitFirst && a.first === mySeat) { msg = '진행자는 먼저 공개로 배팅합니다 — 카드를 고르세요'; pickMode = 'bid'; }
+      else { msg = closed ? '경매품은 비밀! 배팅 카드를 고르세요' : '배팅 카드를 고르세요'; pickMode = 'bid'; }
     }
     else if (s.phase === 'reveal') msg = '두구두구… 공개!';
     else if (s.phase === 'settled' && s.result) {
       const r = s.result;
       const who = r.winner === mySeat ? '내가' : s.seats[r.winner].name + ' 님이';
-      msg = r.betrayed ? `⚔ 졸개의 배신! ${who} 낙찰!` : `${who} 낙찰!`;
+      msg = r.betrayed ? `졸개의 배신! ${who} 낙찰!` : `${who} 낙찰!`;
       if (r.payouts && r.payouts.length) {
         const mine = r.payouts.find((p) => p.seat === mySeat);
         if (mine) msg += `  (내 손패로 ${mine.card.kind}-${mine.card.grade} 들어옴)`;
@@ -246,14 +255,20 @@
     const hand = $('q-myhand'); hand.innerHTML = '';
     const sorted = [...s.myHand].sort((x, y) => (x.kind * 100 + x.grade) - (y.kind * 100 + y.grade));
     for (const c of sorted) {
-      hand.appendChild(card4(c, {
+      const el = card4(c, {
         pick: !!pickMode,
         onPick: (card) => {
           if (pickMode === 'offer') socket.emit('g4_act', { type: 'offer', cardId: card.id });
           else if (pickMode === 'bid') socket.emit('g4_act', { type: 'bid', cardId: card.id });
         },
-      }));
+      });
+      // 2인전과 같은 부채꼴 — 카드를 칸에 담아야 회전·겹침이 카드 자체 transform 과 안 부딪힌다
+      const slot = document.createElement('div');
+      slot.className = 'fan-slot';
+      slot.appendChild(el);
+      hand.appendChild(slot);
     }
+    if (typeof fanRow === 'function') fanRow(hand, false);
 
     // 덱 클릭 = 카드 공개
     $('q-center').style.cursor = (s.phase === 'draw' && iAmAuc) ? 'pointer' : 'default';
@@ -310,14 +325,20 @@
   function showOver(s) {
     const order = (s.over.order && s.over.order.length) ? s.over.order : null;
     const rank = order || [s.over.winner, ...[0, 1, 2, 3].filter((i) => i !== s.over.winner)];
-    $('q-otitle').textContent = s.over.winner === mySeat ? '🏆 승리!' : '아쉽네요…';
+    if (s.over.winner === mySeat)
+      $('q-otitle').innerHTML = (typeof ico === 'function' ? ico('🏆') : '🏆') + ' 승리!';
+    else $('q-otitle').textContent = '아쉽네요…';
     const rk = $('q-orank'); rk.innerHTML = '';
     rank.forEach((seat, idx) => {
       const p = s.seats[seat];
       const row = document.createElement('div');
       row.className = 'q-rrow' + (seat === mySeat ? ' me' : '');
       const pos = document.createElement('span');
-      pos.className = 'q-rpos'; pos.textContent = ['🥇', '🥈', '🥉', '4'][idx] || (idx + 1);
+      pos.className = 'q-rpos';
+      const medal = ['🥇', '🥈', '🥉'][idx];
+      const mArt = medal && typeof rankIco === 'function' && rankIco(medal);
+      if (mArt && mArt.indexOf('<') === 0) pos.innerHTML = mArt;
+      else pos.textContent = medal || String(idx + 1);
       const nm = document.createElement('span'); nm.style.flex = '1'; nm.style.textAlign = 'left';
       nm.textContent = p.name;
       const info = document.createElement('span');
@@ -344,20 +365,19 @@
 
   // ── 진입 / 종료 ─────────────────────────────────────────────────────────
   window.q4Open = function () {
-    askConfirm({
-      icon: '👥', title: '4인전 (베타)',
-      desc: '4인 경매 배틀!\n\n' +
-            '· 카드 37장, 손패 6장, 덱 13장\n' +
-            '· 진행자도 함께 입찰합니다 (첫 경매만 제외)\n' +
-            '· 배팅 카드는 약하게 부른 사람부터 강한 카드를 가져갑니다\n\n' +
-            '※ 베타 — 전적·랭킹·코인에 반영되지 않습니다',
-      yes: '⚡ 빠른대전', no: '👤 솔로 (AI 3명)',
-    }, () => window.q4Quick(), () => window.q4Start());
+    if (typeof closeModePanels === 'function') closeModePanels();
+    const m = document.getElementById('quadModal');
+    if (m) m.classList.add('show');
+  };
+  window.q4Close = function () {
+    const m = document.getElementById('quadModal');
+    if (m) m.classList.remove('show');
   };
 
   // ── 빠른대전 — 곧바로 게임 화면에 앉아서 기다린다 ────────────────────────
   window.q4Quick = function () {
     if (typeof closeModePanels === 'function') closeModePanels();
+    window.q4Close();
     $('q-over').classList.remove('show');
     q4Live = true; q4 = null; q4Room = null; q4Pend = null;
     lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
@@ -371,15 +391,19 @@
   // 방 안에서 시작 — 지금 앉아 있는 인원으로 몇 인전인지 결정된다
   window.q4StartNow = function () { sfx('select'); socket.emit('g4_startnow'); };
 
-  window.q4Start = function () {
+  // 솔로. n 을 안 주면 직전에 하던 인원으로 (결과창의 "한 판 더!" 가 이걸 쓴다)
+  let lastSoloN = 4;
+  window.q4Start = function (n) {
+    lastSoloN = (Number(n) === 3) ? 3 : (Number(n) === 4 ? 4 : lastSoloN);
     if (typeof closeModePanels === 'function') closeModePanels();
+    window.q4Close();
     $('q-over').classList.remove('show');
     document.body.classList.add('quad4');
     q4Live = true; q4Room = null; lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
     $('q-status').textContent = '자리 배치 중…';
     sfx('deal');
     try { if (typeof startBGM === 'function') startBGM(); } catch (_) {}   // 2인전과 같은 배경음악
-    socket.emit('g4_start', { nick: typeof getNick === 'function' ? getNick() : '나' });
+    socket.emit('g4_start', { nick: typeof getNick === 'function' ? getNick() : '나', n: lastSoloN });
   };
 
   window.q4Quit = function () {

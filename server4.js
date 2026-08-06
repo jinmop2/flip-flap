@@ -358,10 +358,12 @@ function attach4(io) {
   io.on('connection', (socket) => {
     const nickOf = (d) => String((d && d.nick) || '플레이어').slice(0, 12) || '플레이어';
 
-    safe(socket, 'g4_start', (data = {}) => {          // 솔로 (AI 3명)
+    safe(socket, 'g4_start', (data = {}) => {          // 솔로 — 3인전(AI 2명) 또는 4인전(AI 3명)
       if (socket.g4room) destroy(socket.g4room, '재시작');
       leavePending(socket.id); socket.g4pending = null;
-      startRoom([{ sid: socket.id, nick: nickOf(data) }], true);
+      // 자리 수는 클라이언트가 보내지만 3·4 외에는 받지 않는다
+      const n = Number(data.n) === 3 ? 3 : 4;
+      startRoom([{ sid: socket.id, nick: nickOf(data) }], true, n);
     });
 
     safe(socket, 'g4_quick', (data = {}) => {          // 대기방 입장 (인게임 화면에서 대기)

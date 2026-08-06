@@ -1776,6 +1776,7 @@ const ESC_TARGETS = [
   ['clanModal',    () => closeClan()],
   ['soloModal',    () => closeModePanels()],
   ['multiModal',   () => closeModePanels()],
+  ['quadModal',    () => (typeof q4Close === 'function') && q4Close()],
   ['createModal',  () => closeCreate()],
   ['codeModal',    () => closeCode()],
   ['itemUseModal', () => closeItemUse()],
