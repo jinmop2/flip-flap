@@ -91,6 +91,125 @@ setInterval(() => { const now = Date.now(); for (const [k, e] of rlMap) if (now 
 app.post('/api/signup', rateLimit(20), (req, res) => { const { id, password, nick } = req.body || {}; const out = accounts.signup(id, password, nick); if (out.ok) stats.bump('signups'); res.json(out); });
 app.post('/api/login',  rateLimit(30), (req, res) => { const { id, password } = req.body || {}; res.json(accounts.login(id, password)); });
 app.post('/api/me',     rateLimit(90), (req, res) => { const { token } = req.body || {}; res.json(accounts.meByToken(token)); });
+
+// ── 쿠폰 ───────────────────────────────────────────────────────────────────
+// 사용자 — 코드를 넣으면 코인을 받는다. IP 를 같이 넘겨 무차별 대입을 막는다.
+app.post('/api/coupon', rateLimit(12), (req, res) => {
+  const { token, code } = req.body || {};
+  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'x').split(',')[0].trim();
+  res.json(accounts.redeemCoupon(token, code, ip));
+});
+
+// 관리자 — 키는 URL 쿼리가 아니라 본문으로 받는다.
+// 쿼리로 받으면 브라우저 히스토리·리퍼러·서버 로그에 코인 발행 권한이 그대로 남는다.
+const ADMIN_KEY = () => process.env.ADMIN_KEY || process.env.STATS_KEY;
+function adminOk(req, res) {
+  const KEY = ADMIN_KEY();
+  if (!KEY) { res.status(403).json({ error: 'Render 환경변수에 ADMIN_KEY 를 설정해주세요.' }); return false; }
+  if (!req.body || req.body.key !== KEY) { res.status(403).json({ error: '잘못된 키입니다.' }); return false; }
+  return true;
+}
+app.post('/api/admin/coupon-new', rateLimit(20), (req, res) => {
+  if (!adminOk(req, res)) return;
+  const { count, coins, maxUses, days, memo, minLevel } = req.body || {};
+  res.json(accounts.createCoupons(count, coins, { maxUses, days, memo, minLevel }));
+});
+app.post('/api/admin/coupon-list', rateLimit(30), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json({ ok: true, coupons: accounts.couponList() });
+});
+
+// 관리자 페이지 — 키는 이 화면에서 입력받아 요청 본문으로만 보낸다 (URL 에 안 남음)
+app.get('/admin', rateLimit(20), (req, res) => {
+  res.type('html').send(`<!DOCTYPE html><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>FLIP FLAP 관리</title>
+<style>
+ body{font-family:system-ui,sans-serif;background:#1a0b10;color:#e8dfc8;margin:0;padding:18px;max-width:820px}
+ h1{color:#ffd94a;font-size:1.15rem;margin:0 0 14px}
+ .card{background:#2a1018;border:1px solid #5a3a20;border-radius:12px;padding:14px;margin-bottom:14px}
+ label{display:block;font-size:.8rem;color:#c8a86a;margin:8px 0 3px}
+ input{width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid #5a3a20;background:#160810;color:#e8dfc8;font-size:.95rem}
+ button{background:#ffd94a;color:#2a1008;border:0;border-radius:8px;padding:10px 16px;font-weight:800;cursor:pointer;font-size:.95rem}
+ button.ghost{background:transparent;color:#c8a86a;border:1px solid #5a3a20}
+ .row{display:flex;gap:8px;flex-wrap:wrap}.row>div{flex:1;min-width:120px}
+ table{border-collapse:collapse;width:100%;font-size:.8rem;margin-top:10px}
+ th,td{border:1px solid #4a2a18;padding:5px 8px;text-align:left}
+ th{background:#3a1018;color:#ffd94a}
+ tr.dead{opacity:.45;text-decoration:line-through}
+ code{background:#160810;padding:3px 7px;border-radius:5px;color:#8fe0a0;font-size:.95rem;letter-spacing:.06em}
+ .msg{margin-top:10px;font-size:.85rem}.err{color:#ff9a9a}.ok{color:#8fe0a0}
+ .codes{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+</style>
+<h1>🎟 FLIP FLAP — 쿠폰 관리</h1>
+
+<div class="card">
+  <label>관리자 키 (Render 환경변수 ADMIN_KEY)</label>
+  <input id="key" type="password" placeholder="키를 입력하세요" autocomplete="off">
+  <div class="msg" id="keyMsg"></div>
+</div>
+
+<div class="card">
+  <b>쿠폰 발행</b>
+  <div class="row">
+    <div><label>지급 코인</label><input id="coins" type="number" value="500" min="1"></div>
+    <div><label>발행 장수</label><input id="count" type="number" value="1" min="1" max="200"></div>
+  </div>
+  <div class="row">
+    <div><label>장당 사용 인원 (0=무제한)</label><input id="maxUses" type="number" value="1" min="0"></div>
+    <div><label>유효 기간(일, 0=무기한)</label><input id="days" type="number" value="0" min="0"></div>
+  </div>
+  <div class="row">
+    <div><label>최소 레벨 (0=제한 없음)</label><input id="minLevel" type="number" value="0" min="0"></div>
+    <div><label>메모</label><input id="memo" placeholder="예: 오픈채팅 이벤트"></div>
+  </div>
+  <div style="margin-top:12px"><button onclick="mk()">발행하기</button></div>
+  <div class="msg" id="mkMsg"></div>
+  <div class="codes" id="codes"></div>
+</div>
+
+<div class="card">
+  <b>발행 목록</b> <button class="ghost" onclick="load()" style="float:right">새로고침</button>
+  <div id="list"></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const key=()=>$('key').value.trim();
+async function post(path, body){
+  const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({...body,key:key()})});
+  return r.json();
+}
+async function mk(){
+  $('mkMsg').textContent=''; $('codes').innerHTML='';
+  if(!key()) return $('mkMsg').className='msg err', $('mkMsg').textContent='키를 입력해주세요.';
+  const out=await post('/api/admin/coupon-new',{
+    coins:+$('coins').value, count:+$('count').value, maxUses:+$('maxUses').value,
+    days:+$('days').value, minLevel:+$('minLevel').value, memo:$('memo').value});
+  if(out.error){ $('mkMsg').className='msg err'; $('mkMsg').textContent='⚠ '+out.error; return; }
+  $('mkMsg').className='msg ok';
+  $('mkMsg').textContent=out.codes.length+'장 발행 완료 (장당 '+out.coins+'코인)';
+  $('codes').innerHTML=out.codes.map(c=>'<code>'+c+'</code>').join('');
+  load();
+}
+async function load(){
+  if(!key()) return;
+  const out=await post('/api/admin/coupon-list',{});
+  if(out.error){ $('keyMsg').className='msg err'; $('keyMsg').textContent='⚠ '+out.error; $('list').innerHTML=''; return; }
+  $('keyMsg').className='msg ok'; $('keyMsg').textContent='확인됨';
+  const rows=out.coupons.map(c=>'<tr class="'+(c.dead?'dead':'')+'"><td><code>'+c.code+'</code></td><td>'+c.coins+
+    '</td><td>'+c.uses+(c.maxUses?'/'+c.maxUses:'/∞')+'</td><td>'+
+    (c.expiresAt?new Date(c.expiresAt).toLocaleDateString('ko-KR'):'-')+'</td><td>'+
+    (c.minLevel||'-')+'</td><td>'+(c.memo||'')+'</td></tr>').join('');
+  $('list').innerHTML=out.coupons.length
+    ? '<table><tr><th>코드</th><th>코인</th><th>사용</th><th>만료</th><th>최소Lv</th><th>메모</th></tr>'+rows+'</table>'
+    : '<div class="msg">아직 발행한 쿠폰이 없어요.</div>';
+}
+$('key').addEventListener('change',load);
+</script>`);
+});
+
 app.post('/api/nick',   rateLimit(20), (req, res) => { const { token, nick } = req.body || {}; res.json(accounts.setNick(token, nick)); });
 app.post('/api/delete-account', rateLimit(10), (req, res) => {   // 구글플레이 필수 정책 — 계정 영구 삭제
   const { token, password } = req.body || {};

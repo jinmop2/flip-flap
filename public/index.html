@@ -445,6 +445,17 @@
     @keyframes rwPop { from { opacity:0; transform:scale(.7) translateY(6px); } to { opacity:1; transform:scale(1) translateY(0); } }
     .bd-first  { background:rgba(120,216,120,.16); color:#8ee88e; border:1px solid rgba(120,216,120,.4); }
     .bd-clan   { background:rgba(90,180,140,.20); color:#8fe0b4; border:1px solid rgba(140,220,180,.45); }
+    /* 쿠폰 등록 */
+    .cpn-row { display:flex; gap:6px; margin:8px 0 0; }
+    .cpn-row input { flex:1; min-width:0; padding:8px 10px; border-radius:9px; border:1px solid #3a2a30;
+      background:#160810; color:#e8dfc8; font-family:inherit; font-size:.85rem; letter-spacing:.08em;
+      text-transform:uppercase; }
+    .cpn-row input::placeholder { letter-spacing:0; text-transform:none; color:#6a5a60; }
+    .cpn-btn { background:linear-gradient(160deg,#c9a24a,#a67d18); color:#241000; border:0; border-radius:9px;
+      padding:8px 14px; font-weight:800; font-family:inherit; font-size:.85rem; cursor:pointer; flex-shrink:0; }
+    .cpn-btn:hover { filter:brightness(1.1); }
+    .cpn-msg { font-size:.76rem; margin-top:5px; min-height:16px; }
+    .cpn-msg.ok { color:#8fe0a0; } .cpn-msg.err { color:#ff9a9a; }
     /* 클랜 직책 배지 */
     .soc-role { font-size:.58rem; font-weight:800; border-radius:5px; padding:1px 5px; margin-left:5px; vertical-align:middle; }
     .soc-role.owner { background:rgba(230,190,80,.25); color:#ffd94a; }
@@ -2486,6 +2497,14 @@
       <span>🛒 상점</span><span class="shop-coins" id="shopCoins">🪙 0</span>
       <span class="close-x" onclick="closeShop()">×</span>
     </div>
+    <!-- 쿠폰 등록 -->
+    <div class="cpn-row">
+      <input id="cpnInput" type="text" placeholder="쿠폰 번호 입력" maxlength="20"
+             autocomplete="off" autocapitalize="characters" spellcheck="false"
+             onkeydown="if(event.key==='Enter')submitCoupon()">
+      <button class="cpn-btn" onclick="submitCoupon()">등록</button>
+    </div>
+    <div id="cpnMsg" class="cpn-msg"></div>
     <!-- 선택한 상품 상세 + 구매 -->
     <div class="shop-sel" id="shopSel">
       <div class="ss-ico" id="ssIco">🎨</div>

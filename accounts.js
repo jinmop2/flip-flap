@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const FILE = path.join(__dirname, 'data', 'accounts.json');
-let db = { users: {}, nickTaken: {}, clans: {} };
+let db = { users: {}, nickTaken: {}, clans: {}, coupons: {} };
 let tokenIndex = {};
 
 // DATABASE_URL 있으면 Postgres, 없으면 파일 저장 (로컬)
@@ -27,7 +27,8 @@ function rebuildIndex() {
   }
 }
 function loadFileSync() {
-  try { db = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch (_) { db = { users: {}, nickTaken: {}, clans: {} }; }
+  try { db = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch (_) { db = { users: {}, nickTaken: {}, clans: {}, coupons: {} }; }
+  db.coupons = db.coupons || {};
   db.users ||= {}; db.clans ||= {}; rebuildIndex();
 }
 // DB가 잠깐 죽어도 영구히 포기하면 안 된다.
@@ -71,19 +72,23 @@ async function loadFromDB() {
     await pool.query('CREATE TABLE IF NOT EXISTS ff_users (idl TEXT PRIMARY KEY, data JSONB)');
     await pool.query('CREATE TABLE IF NOT EXISTS ff_clans (cid TEXT PRIMARY KEY, data JSONB)');
     await pool.query('CREATE TABLE IF NOT EXISTS ff_meta (k TEXT PRIMARY KEY, data JSONB)');
+    await pool.query('CREATE TABLE IF NOT EXISTS ff_coupons (code TEXT PRIMARY KEY, data JSONB)');
     const { rows } = await pool.query('SELECT idl, data FROM ff_users');
     const clanRows = (await pool.query('SELECT cid, data FROM ff_clans')).rows;
+    const cpnRows = (await pool.query('SELECT code, data FROM ff_coupons')).rows;
     const prevReady = dbReady;
-    db = { users: {}, nickTaken: {}, clans: {} };
+    db = { users: {}, nickTaken: {}, clans: {}, coupons: {} };
     for (const r of rows) db.users[r.idl] = r.data;
     for (const r of clanRows) db.clans[r.cid] = r.data;
+    // 쿠폰 사용 기록이 날아가면 같은 쿠폰을 무한히 다시 받을 수 있다 — 반드시 DB에서 읽는다
+    for (const r of cpnRows) db.coupons[r.code] = r.data;
     try {
       const meta = await pool.query("SELECT data FROM ff_meta WHERE k = 'reports'");
       db.reports = (meta.rows[0] && meta.rows[0].data) || [];
     } catch (_) { db.reports = []; }
     rebuildIndex();
     dbReady = true; dbLastError = null;
-    console.log('계정 ' + rows.length + '개, 클랜 ' + clanRows.length + '개 DB에서 로드됨');
+    console.log('계정 ' + rows.length + '개, 클랜 ' + clanRows.length + '개, 쿠폰 ' + cpnRows.length + '개 DB에서 로드됨');
     if (!prevReady) await rescueFileOnlyUsers();   // 정지 기간에 생긴 계정 회수
   } catch (e) {
     dbReady = false; dbLastError = e.message;
@@ -696,6 +701,124 @@ function applyReferral(token, refCode) {
   return { ok: true, amount: REFER_COINS, profile: profileOf(u) };
 }
 
+// ── 쿠폰 ───────────────────────────────────────────────────────────────────
+// 코인을 찍어내는 기능이라 방어를 촘촘히 뒀다.
+//  · 코드는 서버가 무작위 생성한다 (추측 불가). 헷갈리는 0/O, 1/I/L 은 뺐다.
+//  · 계정당 1회 + 쿠폰별 총 사용 한도. 둘 다 있어야 이벤트/개별보상 양쪽을 덮는다.
+//  · 실패 횟수를 계정·IP 로 제한해 무차별 대입을 막는다.
+//  · 사용 기록은 Postgres 에 남긴다 — 파일에만 두면 재배포 때 날아가 무한 수령이 된다.
+
+const CPN_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';   // 0/O, 1/I/L 제외
+const CPN_FAIL_USER = 10;        // 계정당 하루 실패 허용
+const CPN_FAIL_IP = 20;          // IP당 1시간 실패 허용
+const cpnFailUser = new Map();   // idl -> { day, n }
+const cpnFailIp = new Map();     // ip  -> { at, n }
+
+function genCouponCode() {
+  const g = (n) => Array.from({ length: n }, () => CPN_CHARS[crypto.randomInt(CPN_CHARS.length)]).join('');
+  return `${g(4)}-${g(4)}-${g(4)}`;                     // 31^12 ≈ 8×10^17 — 대입 불가능
+}
+// 하이픈·공백·대소문자를 흘려도 되게 정규화해서 저장·조회한다
+const normCoupon = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const prettyCoupon = (c) => (c.match(/.{1,4}/g) || [c]).join('-');
+
+function persistCoupon(code) {
+  if (pool && dbReady) {
+    pool.query('INSERT INTO ff_coupons(code, data) VALUES($1, $2) ON CONFLICT(code) DO UPDATE SET data = excluded.data',
+      [code, JSON.stringify(db.coupons[code])]).catch((e) => console.error('쿠폰 저장 실패:', e.message));
+  } else saveFile();
+}
+
+// 발행 — 관리자만 (서버에서 환경변수 키로 확인한 뒤 호출한다)
+function createCoupons(count, coins, opts = {}) {
+  // Number(x) || 기본값 으로 쓰면 0 이 기본값으로 바뀐다.
+  // maxUses:0 은 "무제한"이라는 뜻이라 그 0 을 반드시 살려야 한다.
+  const intOr = (v, dflt) => { const x = Math.floor(Number(v)); return Number.isFinite(x) ? x : dflt; };
+
+  const amount = intOr(coins, NaN);
+  if (!Number.isFinite(amount) || amount < 1) return { error: '지급할 코인을 1 이상으로 입력해주세요.' };
+  if (amount > 100000) return { error: '한 장에 줄 수 있는 코인은 100,000까지예요.' };
+
+  const n = Math.max(1, Math.min(200, intOr(count, 1)));
+  const maxUses = Math.max(0, Math.min(100000, intOr(opts.maxUses, 1)));   // 0 = 무제한
+  const days = Math.max(0, intOr(opts.days, 0));
+  const expiresAt = days > 0 ? Date.now() + days * 86400000 : null;
+  const memo = String(opts.memo || '').slice(0, 60);
+  const minLevel = Math.max(0, Math.min(99, intOr(opts.minLevel, 0)));
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    let code;
+    do { code = normCoupon(genCouponCode()); }
+    while (Object.prototype.hasOwnProperty.call(db.coupons, code));
+    db.coupons[code] = { code, coins: amount, maxUses, uses: 0, usedBy: {}, expiresAt, minLevel, memo, createdAt: Date.now() };
+    persistCoupon(code);
+    out.push(prettyCoupon(code));
+  }
+  return { ok: true, codes: out, coins: amount, maxUses, expiresAt, memo };
+}
+
+function couponList() {
+  return Object.values(db.coupons)
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 300)
+    .map((c) => ({
+      code: prettyCoupon(c.code), coins: c.coins, uses: c.uses, maxUses: c.maxUses,
+      expiresAt: c.expiresAt, memo: c.memo, minLevel: c.minLevel, createdAt: c.createdAt,
+      dead: (c.maxUses > 0 && c.uses >= c.maxUses) || (c.expiresAt && Date.now() > c.expiresAt),
+    }));
+}
+
+// 실패 횟수 제한 — 무차별 대입 방어
+function cpnTooManyFails(idl, ip) {
+  const today = kstDayIndex();
+  const fu = cpnFailUser.get(idl);
+  if (fu && fu.day === today && fu.n >= CPN_FAIL_USER) return true;
+  if (ip) {
+    const fi = cpnFailIp.get(ip);
+    if (fi && Date.now() - fi.at < 3600000 && fi.n >= CPN_FAIL_IP) return true;
+  }
+  return false;
+}
+function cpnNoteFail(idl, ip) {
+  const today = kstDayIndex();
+  const fu = cpnFailUser.get(idl);
+  if (fu && fu.day === today) fu.n++; else cpnFailUser.set(idl, { day: today, n: 1 });
+  if (ip) {
+    const fi = cpnFailIp.get(ip);
+    if (fi && Date.now() - fi.at < 3600000) fi.n++; else cpnFailIp.set(ip, { at: Date.now(), n: 1 });
+  }
+}
+
+const cpnLocks = new Set();      // 같은 쿠폰 동시 요청으로 두 번 지급되는 것 방지
+function redeemCoupon(token, code, ip) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  if (cpnTooManyFails(idl, ip)) return { error: '시도가 너무 많아요. 잠시 후 다시 시도해주세요.' };
+
+  const key = normCoupon(code);
+  if (!key || key.length < 8) { cpnNoteFail(idl, ip); return { error: '쿠폰 번호를 확인해주세요.' }; }
+  if (!Object.prototype.hasOwnProperty.call(db.coupons, key)) { cpnNoteFail(idl, ip); return { error: '없는 쿠폰이에요.' }; }
+
+  const lockKey = key + '|' + idl;
+  if (cpnLocks.has(lockKey)) return { error: '잠시 후 다시 시도해 주세요.' };
+  cpnLocks.add(lockKey);
+  try {
+    const c = db.coupons[key];
+    if (c.expiresAt && Date.now() > c.expiresAt) return { error: '기간이 지난 쿠폰이에요.' };
+    if (Object.prototype.hasOwnProperty.call(c.usedBy, idl)) return { error: '이미 사용한 쿠폰이에요.' };
+    if (c.maxUses > 0 && c.uses >= c.maxUses) return { error: '이미 모두 사용된 쿠폰이에요.' };
+    if (c.minLevel && levelOf(u.xp) < c.minLevel) return { error: `레벨 ${c.minLevel} 이상만 쓸 수 있어요.` };
+
+    c.usedBy[idl] = Date.now();
+    c.uses++;
+    u.coins = (u.coins || 0) + c.coins;
+    persistCoupon(key);
+    persist(idl);
+    return { ok: true, amount: c.coins, profile: profileOf(u) };
+  } finally { cpnLocks.delete(lockKey); }
+}
+
 // 4인전 온라인 멀티 전용 RP 반영.
 // 승/패 전적·코인·XP 는 건드리지 않는다 — 4인전 기록이 2인전 전적에 섞이면 안 되기 때문.
 // 어뷰징 판단(사람 수·같은 IP·짧은 판)은 호출부에서 끝내고 여기서는 반영만 한다.
@@ -1302,6 +1425,7 @@ function reportList(limit = 50) {
 module.exports = {
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, applyRp4, claimDaily, myRank,
   viceOf, clanCoinBonus,
+  createCoupons, couponList, redeemCoupon,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   missionList, titleList, betrayEvent, claimTutorial, applyReferral, deleteAccount,
   // 친구

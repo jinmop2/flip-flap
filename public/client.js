@@ -1317,6 +1317,25 @@ async function renderMyTitles() {
 
 // ── 최근 전적 ──
 
+// ── 쿠폰 등록 ───────────────────────────────────────────────
+async function submitCoupon() {
+  const inp = document.getElementById('cpnInput');
+  const msg = document.getElementById('cpnMsg');
+  const code = (inp.value || '').trim();
+  if (!code) { msg.className = 'cpn-msg err'; msg.textContent = '쿠폰 번호를 입력해주세요.'; return; }
+  if (!myAccount) { msg.className = 'cpn-msg err'; msg.textContent = '로그인하면 쿠폰을 쓸 수 있어요.'; return; }
+  msg.className = 'cpn-msg'; msg.textContent = '확인 중…';
+  const res = await apiPost('/api/coupon', { token: localStorage.getItem('ff_auth'), code });
+  if (res.error) { msg.className = 'cpn-msg err'; msg.textContent = '⚠️ ' + res.error; return; }
+  msg.className = 'cpn-msg ok'; msg.textContent = `🪙 ${res.amount} 코인을 받았어요!`;
+  inp.value = '';
+  myAccount = res.profile;          // 서버가 계산한 잔액으로 갱신 (클라이언트 값은 신뢰하지 않는다)
+  renderAccount();
+  const sc = document.getElementById('shopCoins');
+  if (sc) sc.textContent = '🪙 ' + (res.profile.coins ?? 0);
+  playSound('setwin');
+}
+
 // ── 상점 ────────────────────────────────────────────────────
 const DYE_NAMES = { red:'빨강', blue:'파랑', green:'초록', orange:'주황', purple:'보라', cyan:'청록', pink:'핑크', lime:'라임', gold:'✨골드✨', rainbow:'🌈무지개🌈' };
 let shopItems = null;
