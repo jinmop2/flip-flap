@@ -238,7 +238,7 @@ function renderAccount() {
       </div>
       <div class="pb-right">
         <span class="pb-badge pb-coin">🪙 ${p.coins || 0}</span>
-        <span class="pb-badge pb-rp">🏆 ${p.rp} RP</span>
+        <span class="pb-badge pb-rp">${ico('🏆')} ${p.rp} RP</span>
       </div>`;
     if (fill) fill.style.width = xpPct(p) + '%';
   } else {
@@ -336,19 +336,27 @@ function showRewards() {
   el.innerHTML = `<div class="rw-tiles">
       <div class="rw-tile t-coin"><span class="rw-ic">🪙</span><b id="rwCoin">0</b><small>코인</small></div>
       <div class="rw-tile t-xp"><span class="rw-ic">✨</span><b>+${r.xp}</b><small>경험치</small></div>
-      ${r.rp ? `<div class="rw-tile t-rp"><span class="rw-ic">${r.rp > 0 ? '🏆' : '📉'}</span><b>${r.rp > 0 ? '+' : ''}${r.rp}</b><small>랭크점수</small></div>` : ''}
+      ${r.rp ? `<div class="rw-tile t-rp"><span class="rw-ic">${r.rp > 0 ? ico('🏆') : ico('⚠')}</span><b>${r.rp > 0 ? '+' : ''}${r.rp}</b><small>랭크점수</small></div>` : ''}
     </div>
     <div id="rwBadges" class="rw-badges"></div>`;
   countUp(document.getElementById('rwCoin'), r.coins, '');
   const badges = document.getElementById('rwBadges');
-  const add = (cls, txt, delay) => { const b = document.createElement('div'); b.className = 'rw-badge ' + cls; b.textContent = txt; b.style.animationDelay = delay + 'ms'; badges.appendChild(b); };
+  // html=true 면 직접 그린 아이콘(SVG)을 넣을 수 있게 innerHTML 로 채운다.
+  // 텍스트는 항상 esc 로 넣으므로 사용자 입력이 섞일 여지는 없다.
+  const add = (cls, txt, delay, html) => {
+    const b = document.createElement('div');
+    b.className = 'rw-badge ' + cls;
+    if (html) b.innerHTML = txt; else b.textContent = txt;
+    b.style.animationDelay = delay + 'ms';
+    badges.appendChild(b);
+  };
   let d = 400;
-  if (r.firstWin) { add('bd-first', `🎯 하루 첫 승 보너스 +${r.firstWin}`, d); d += 250; }
-  if (r.streak && r.streakCount >= 2) { add('bd-streak', `🔥 ${r.streakCount}연승! +${r.streak}`, d); d += 250; playSound('setwin'); }
-  if (r.clanBonus) { add('bd-clan', `🛡 클랜 보너스 +${r.clanBonus}`, d); d += 250; }
-  if (r.levelUp) { add('bd-level', `⬆️ 레벨 업! Lv.${r.levelUp}`, d); d += 250; playSound('setwin'); }
-  if (r.rankUp) { add('bd-rank', `👑 승급! ${r.rankUp}`, d); d += 250; playSound('setwin'); }
-  (r.missions || []).forEach(m => { add('bd-first', `🎯 미션 완료: ${m.name} +${m.reward}`, d); d += 250; });
+  if (r.firstWin) { add('bd-first', `${ico('🎯')} 하루 첫 승 보너스 +${r.firstWin}`, d, true); d += 250; }
+  if (r.streak && r.streakCount >= 2) { add('bd-streak', `${ico('🔥')} ${r.streakCount}연승! +${r.streak}`, d, true); d += 250; playSound('setwin'); }
+  if (r.clanBonus) { add('bd-clan', `${ico('🛡️')} 클랜 보너스 +${r.clanBonus}`, d, true); d += 250; }
+  if (r.levelUp) { add('bd-level', `${ico('⬆️')} 레벨 업! Lv.${r.levelUp}`, d, true); d += 250; playSound('setwin'); }
+  if (r.rankUp) { add('bd-rank', `${rankIco('👑')} 승급! ${r.rankUp}`, d, true); d += 250; playSound('setwin'); }
+  (r.missions || []).forEach(m => { add('bd-first', `${ico('🎯')} 미션 완료: ${esc(m.name)} +${m.reward}`, d, true); d += 250; });
   (r.milestones || []).forEach(m => { add('bd-rank', `${m.icon} ${m.label}`, d); d += 250; playSound('setwin'); });
   (r.titles || []).forEach(t => { add('bd-rank', `${t.icon} 칭호 획득! ${t.name}`, d); d += 250; playSound('setwin'); });
   if (r.blocked) {
@@ -356,7 +364,7 @@ function showRewards() {
               : r.reason === 'friendly' ? '같은 접속·친선 대전 — 보상 없음'
               : r.reason === 'repeat' ? '같은 상대 반복 대전 — 보상 없음'
               : '보상 지급 제외';
-    add('bd-warn', `⚠️ ${msg}`, d); d += 250;
+    add('bd-warn', `${ico('⚠')} ${esc(msg)}`, d, true); d += 250;
   }
   // 진행도 노출 — 이전→이후 게이지 상승 모션 (scaleX = GPU 합성 전용, 리플로우 없음)
   if (myAccount && !myAccount.guest) {
@@ -2562,7 +2570,9 @@ function makeCard(card, opts = {}) {
   if (is21(card) || is610(card)) {
     const mk = document.createElement('span');
     mk.className = 'c-mark';
-    mk.textContent = is21(card) ? '👑' : '⚔';
+    // 최강·최약 표식도 직접 그린 그림으로 (없으면 원래 문자로 되돌아간다)
+    const art = is21(card) ? rankIco('👑') : ico('⚔️', 'c-mark-ico');
+    if (art && art.indexOf('<') === 0) mk.innerHTML = art; else mk.textContent = is21(card) ? '👑' : '⚔';
     top.appendChild(mk);
   }
 

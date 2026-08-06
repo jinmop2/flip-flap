@@ -241,7 +241,8 @@
     /* ── 상점 ── */
     .shop-box { max-width:380px; }
     .shop-coins { font-size:.95rem; font-weight:800; color:#ffd94a; background:rgba(200,160,0,.12); border:1px solid rgba(200,160,0,.35); border-radius:9px; padding:3px 11px; letter-spacing:0; margin-right:42px; }
-    .shop-msg { min-height:18px; font-size:.78rem; text-align:center; color:#ffd94a; margin:2px 0 6px; }
+    .shop-msg { height:20px; flex-shrink:0; font-size:.78rem; text-align:center; color:#ffd94a; margin:2px 0 6px;
+      overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
     .shop-list { display:flex; flex-direction:column; gap:8px; max-height:52vh; overflow-y:auto; margin-bottom:10px; }
     .shop-item { display:flex; align-items:center; gap:10px; background:#1c1424; border:1px solid #2a1c30; border-radius:12px; padding:10px 12px; text-align:left; }
     .shop-ico { font-size:1.5rem; flex-shrink:0; }
@@ -354,12 +355,18 @@
     .mi-item.equipped::after { content:'장착'; position:absolute; bottom:-1px; left:50%; transform:translateX(-50%); font-size:.5rem; background:var(--gold); color:#140d0a; font-weight:800; border-radius:5px 5px 0 0; padding:0 6px; }
     .mi-empty { grid-column:1/-1; font-size:.74rem; color:#5a4a60; padding:14px 0; text-align:center; }
     /* ── 상점 그리드 ── */
-    .shop-sel { display:flex; align-items:center; gap:12px; background:#1c1424; border:1px solid rgba(200,160,0,.3); border-radius:13px; padding:10px 12px; min-height:70px; }
+    /* 설명 길이에 따라 이 상자가 커지면 아래 목록이 통째로 밀린다.
+       이름 1줄 + 설명 2줄이 들어갈 높이를 미리 잡아 고정한다. */
+    .shop-sel { display:flex; align-items:center; gap:12px; background:#1c1424; border:1px solid rgba(200,160,0,.3);
+      border-radius:13px; padding:10px 12px; height:84px; flex-shrink:0; box-sizing:border-box; }
     .ss-ico { font-size:1.9rem; flex-shrink:0; width:56px; height:56px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
     .ss-info { flex:1; min-width:0; text-align:left; }
-    .ss-name { font-size:.88rem; font-weight:800; color:#f0ead8; word-break:keep-all; overflow-wrap:anywhere; }
-    .ss-desc { font-size:.68rem; color:#9a8a90; margin-top:3px; line-height:1.4; word-break:keep-all; }
-    .shop-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-height:44vh; overflow-y:auto; margin-bottom:10px; }
+    .ss-name { font-size:.88rem; font-weight:800; color:#f0ead8; word-break:keep-all; overflow-wrap:anywhere;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    /* 2줄까지 보여주고 넘치면 말줄임 — 잘려서 어중간하게 보이는 것보다 낫다 */
+    .ss-desc { font-size:.68rem; color:#9a8a90; margin-top:3px; line-height:1.45; word-break:keep-all;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .shop-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; height:44vh; overflow-y:auto; margin-bottom:10px; }
     .shop-tile {
       position:relative; background:#1c1424; border:1.5px solid #2a1c30; border-radius:13px;
       padding:12px 4px 8px; display:flex; flex-direction:column; align-items:center; gap:5px;
@@ -1453,6 +1460,15 @@
     .ti-ico svg   { width:1.05em; height:1.05em; display:inline-block; vertical-align:-.18em; }
     .tr-art svg   { width:26px; height:26px; display:block; }
     .lbl-ico svg  { width:1.15em; height:1.15em; display:inline-block; vertical-align:-.2em; }
+    /* 본문 안에 섞여 들어가는 아이콘 — 글자 크기에 맞춰 따라간다.
+       크기를 안 주면 SVG 기본 크기(300×150)로 커져 배지·버튼이 망가진다. */
+    .g-ico { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+    /* 카드 위 최강·최약 표식 — 카드가 작아도 알아볼 만큼만 */
+    .c-mark .g-ico svg, .c-mark .rank-art svg { width:.95em; height:.95em; display:block; }
+    .c-mark .rank-art, .c-mark .g-ico { display:inline-flex; }
+    .emote-fab[data-ico] svg { width:1.5rem; height:1.5rem; }
+    .g-ico svg { width:1.05em; height:1.05em; display:block; }
+    .rw-badge .g-ico svg { width:1.1em; height:1.1em; }
     @keyframes emoteFloat {
       0%   { opacity:0; transform:translateY(12px) scale(.4); }
       10%  { opacity:1; transform:translateY(-12px) scale(1.35); }
@@ -1722,7 +1738,7 @@
     /* ─── 획득 더미 (종류별 겹침) ─── */
     /* 획득 더미는 줄바꿈하지 않는다 — 줄바꿈되면 카드가 쌓일수록 세로로 자라 손패를 화면 밖으로 밀어낸다.
        카드끼리 겹쳐 쌓이므로 한 줄로도 충분히 들어간다(세트 최대 6장 × 4종). */
-    .pile { display:flex; gap:6px; min-height:66px; align-items:center; justify-content:center; flex-wrap:nowrap; max-width:100%; }
+    .pile { display:flex; gap:6px; height:70px; flex-shrink:0; align-items:center; justify-content:center; flex-wrap:nowrap; max-width:100%; }
     .pile-group { display:flex; }
     .pile-group .card {
       width:48px; height:66px; padding:4px 4px;
@@ -1750,14 +1766,17 @@
       box-shadow:inset 0 0 24px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,215,120,.08);
       width:288px; min-height:236px;   /* 크기 고정 — 덱과 안 겹치는 폭 */
     }
-    .auction-row { display:flex; align-items:flex-end; gap:14px; justify-content:center; min-height:100px; }
+    /* 높이를 내용에 맡기면 카드가 놓일 때마다 박스가 커져서 화면 전체가 밀린다.
+   비어 있을 때도 "카드가 놓인 높이"를 미리 잡아 두어 레이아웃이 흔들리지 않게 한다. */
+    .auction-row { display:flex; align-items:flex-end; gap:14px; justify-content:center;
+      height:118px; flex-shrink:0; }
     .a-slot { display:flex; flex-direction:column; align-items:center; gap:5px; }
     .a-label { font-size:.6rem; color:rgba(255,220,150,.55); text-transform:uppercase; letter-spacing:1.5px; font-weight:700; }
     .vs-tag { align-self:center; font-family:'Bangers'; font-size:1.1rem; color:rgba(255,215,120,.45); padding:0 2px; }
-    #actionArea { min-height:30px; display:flex; justify-content:center; }
+    #actionArea { height:44px; flex-shrink:0; display:flex; justify-content:center; align-items:center; }
 
     /* 배팅 카드 = 각자 앞에 놓임 */
-    .bid-area { min-height:78px; display:flex; justify-content:center; align-items:center; margin:6px 0; }
+    .bid-area { height:118px; flex-shrink:0; display:flex; justify-content:center; align-items:center; margin:6px 0; }
     .bid-slot { display:flex; flex-direction:column; align-items:center; gap:4px; position:relative; }
     /* 이긴 배팅 카드 강조 + WIN 스탬프 — 글로우도 WIN과 동시(1.3s 지연)에 켜짐 */
     .bid-slot.bid-winner .card { animation:bidWinGlow .4s ease-out 1.05s forwards; }
@@ -1909,17 +1928,17 @@
 
       /* 경매 매트 — 덱(좌측)과 안 겹치게 폭 좁혀 중앙 정렬 */
       #auctionMat { padding:10px 10px; gap:8px; width:auto; max-width:224px; min-width:200px; min-height:200px; margin:0 auto; }
-      .auction-row { gap:8px; min-height:82px; }
+      .auction-row { gap:8px; height:94px; }
       .a-label, .bid-lbl { font-size:.55rem; }
       #actionArea .btn-sm { padding:8px 12px; font-size:.8rem; }
 
       /* 배팅 자리 */
-      .bid-area { min-height:66px; margin:3px 0; }
+      .bid-area { height:94px; margin:3px 0; }
       .bid-empty { width:50px; height:70px; }
       .v-divider { height:56px; }
 
       /* 획득 더미 */
-      .pile { min-height:52px; gap:4px; }
+      .pile { height:54px; gap:4px; }
       .pile-group .card { width:38px; height:52px; margin-left:-19px; padding:3px; }   /* 등급 배지(≈18px)가 보이는 만큼만 노출하고 나머지는 겹침 */
       .pile-group .card .c-num { font-size:1.45rem; }
       .pile-group .card .c-rank { font-size:.6rem; padding:1px 3px; min-width:13px; border-radius:5px; }
@@ -1995,7 +2014,9 @@
       .fan { min-height:86px; }
       .fan.top { min-height:52px; }
       .fan.top .card { width:36px; height:50px; }
-      .pile { min-height:47px; gap:3px; }
+      .pile { height:49px; gap:3px; }
+      .auction-row { height:88px; }
+      .bid-area { height:88px; }
       .pile-group .card { width:34px; height:47px; margin-left:-16px; padding:2px; }
       .pile-group .card .c-num { font-size:1.3rem; }
       .pile-group .card .c-rank { font-size:.55rem; padding:0 2px; min-width:11px; border-radius:4px; }
@@ -2009,7 +2030,9 @@
       .fan { min-height:72px; }
       .fan.top { min-height:44px; }
       .fan.top .card { width:31px; height:43px; }
-      .pile { min-height:43px; gap:3px; }
+      .pile { height:45px; gap:3px; }
+      .auction-row { height:80px; }
+      .bid-area { height:80px; }
       .pile-group .card { width:31px; height:43px; margin-left:-11px; padding:2px; }
       .pile-group .card .c-num { font-size:1.35rem; }
       .pile-group .card .c-rank { font-size:.52rem; padding:0 2px; min-width:10px; border-radius:4px; }
@@ -2116,16 +2139,16 @@
 
     <!-- 친구 초대 -->
     <div class="event-row">
-      <button class="event-pill" onclick="openItemMode()"><span class="ev-badge">EVENT</span>🎪 아이템전 <span class="ev-sub">랭킹 미반영 · 코인만</span></button>
-      <button class="event-pill quad" onclick="q4Open()"><span class="ev-badge beta">BETA</span>👥 4인전 <span class="ev-sub">빠른대전 · 솔로</span></button>
+      <button class="event-pill" onclick="openItemMode()"><span class="ev-badge">EVENT</span><span data-ico="🎪"></span> 아이템전 <span class="ev-sub">랭킹 미반영 · 코인만</span></button>
+      <button class="event-pill quad" onclick="q4Open()"><span class="ev-badge beta">BETA</span><span data-ico="👥"></span> 4인전 <span class="ev-sub">빠른대전 · 솔로</span></button>
     </div>
     <button class="invite-pill" onclick="inviteFriend()"><svg class="svgi" viewBox="0 0 24 24" style="color:#f5cf6e"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>친구 초대하기</button>
 
     <!-- 앱 설치 (설치 가능할 때만 표시) -->
-    <button class="install-btn" id="installBtn" style="display:none" onclick="installApp()">📲 홈 화면에 앱으로 추가</button>
+    <button class="install-btn" id="installBtn" style="display:none" onclick="installApp()"><span data-ico="📲"></span> 홈 화면에 앱으로 추가</button>
     <!-- 피드백 채널 (오픈카톡) -->
     <a class="made-by" href="https://open.kakao.com/o/pgXbpk8h" target="_blank" rel="noopener"
-       style="display:block; color:#8a7a80; text-decoration:none; margin-top:6px">💬 버그 제보·건의는 여기로! <b style="color:#c8a86a">오픈채팅</b></a>
+       style="display:block; color:#8a7a80; text-decoration:none; margin-top:6px"><span data-ico="💬"></span> 버그 제보·건의는 여기로! <b style="color:#c8a86a">오픈채팅</b></a>
   </div>
 
   <!-- 하단 고정 프로필 바 (클릭 → 내 정보) -->
@@ -2278,7 +2301,7 @@
   <div class="timer pc-timer" id="oppTimer">7:00</div>
   <!-- 내 프로필 (클릭하면 전적) + 이모트 버튼(프로필 위) -->
   <div class="emote-wrap" id="emoteWrap">
-    <button class="emote-fab" id="emoteBtn" title="이모트" onclick="toggleEmotes()">😀</button>
+    <button class="emote-fab" id="emoteBtn" data-ico="😀" title="이모트" onclick="toggleEmotes()"></button>
     <div id="emotePicker">
       <button class="emo-b" onclick="sendEmote('👍')" data-e="👍"></button>
       <button class="emo-b" onclick="sendEmote('😆')" data-e="😆"></button>
@@ -2494,7 +2517,7 @@
 <div class="lb-modal" id="shopModal" onclick="if(event.target===this)closeShop()">
   <div class="lb-box shop-box">
     <div class="lb-title" style="display:flex;justify-content:space-between;align-items:center">
-      <span>🛒 상점</span><span class="shop-coins" id="shopCoins">🪙 0</span>
+      <span><span data-ico="🛒"></span> 상점</span><span class="shop-coins" id="shopCoins">🪙 0</span>
       <span class="close-x" onclick="closeShop()">×</span>
     </div>
     <!-- 쿠폰 등록 -->
@@ -2629,7 +2652,7 @@
   <div id="q-table">
     <div id="q-turnbar">
       <span id="q-turn"></span><span id="q-deck"></span>
-      <button id="q-leftBtn" onclick="q4ToggleLeft()">🔍 남은 카드</button>
+      <button id="q-leftBtn" onclick="q4ToggleLeft()"><span data-ico="🔍"></span> 남은 카드</button>
       <button id="q-quit" onclick="q4Quit()">나가기</button>
     </div>
     <div id="q-leftPanel"><div class="q-lhead">아직 안 나온 카드 &nbsp;<span class="q-lkey mine">내 손패</span> <span class="q-lkey gone">이미 나옴</span></div><div id="q-left"></div></div>
@@ -2644,8 +2667,8 @@
       <button class="btn btn-gold" style="width:auto" id="q-startBtn" onclick="q4StartNow()">시작</button>
     </div>
     <div id="q-typeBtns">
-      <button class="q-tbtn" onclick="q4Type('open')"><b>👁 오픈</b><span>경매품 공개 · 배팅 비밀</span></button>
-      <button class="q-tbtn" onclick="q4Type('close')"><b>🙈 클로즈</b><span>경매품 비밀 · 배팅 공개</span></button>
+      <button class="q-tbtn" onclick="q4Type('open')"><b><span data-ico="👁"></span> 오픈</b><span>경매품 공개 · 배팅 비밀</span></button>
+      <button class="q-tbtn" onclick="q4Type('close')"><b><span data-ico="🙈"></span> 클로즈</b><span>경매품 비밀 · 배팅 공개</span></button>
     </div>
   </div>
 

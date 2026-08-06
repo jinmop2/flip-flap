@@ -360,6 +360,71 @@ const ICON_ART = {
     <circle cx="28" cy="25" r="2.2" fill="#f7d98a" stroke="${D}" stroke-width="1.3"/>
     <path d="M37 24 h8 M41 19 l5 5 -5 5" stroke="#5fd0c0" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`,
+  // ── 카드 표식 · 이모트 버튼 ──
+  '⚔️': `<svg viewBox="0 0 48 48">
+    <path d="M10 6 L20 16 L16 20 L6 10 z" fill="#c9ccd4" stroke="${D}" stroke-width="2"/>
+    <path d="M38 6 L28 16 L32 20 L42 10 z" fill="#c9ccd4" stroke="${D}" stroke-width="2"/>
+    <path d="M16 20 L34 38 M32 20 L14 38" stroke="#c9ccd4" stroke-width="5.5" stroke-linecap="round"/>
+    <path d="M16 20 L34 38 M32 20 L14 38" stroke="${D}" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <circle cx="24" cy="27" r="3" fill="#c99a3a" stroke="${D}" stroke-width="1.8"/></svg>`,
+  '😀': `<svg viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="19" fill="#ffd94a" stroke="${D}" stroke-width="2.4"/>
+    <circle cx="17" cy="20" r="2.6" fill="${D}"/><circle cx="31" cy="20" r="2.6" fill="${D}"/>
+    <path d="M14 28 a10 10 0 0 0 20 0 z" fill="#7a2a20" stroke="${D}" stroke-width="2" stroke-linejoin="round"/></svg>`,
+
+  // ── UI 공용 (버튼·안내) ──
+  '🔥': `<svg viewBox="0 0 48 48">
+    <path d="M24 4 c6 8 2 11 6 14 c3-2 3-5 3-5 c5 6 7 11 7 16 a16 16 0 0 1-32 0 c0-8 6-13 9-19 c2 4 5 5 5 5 c1-5 2-8 2-11 z" fill="#ff8c2a" stroke="${D}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M24 22 c3 4 5 7 5 11 a5 5 0 0 1-10 0 c0-4 3-7 5-11 z" fill="#ffe14a"/></svg>`,
+  '⬆️': `<svg viewBox="0 0 48 48">
+    <path d="M24 5 L41 24 H31 v18 H17 V24 H7 z" fill="#8fe0a0" stroke="${D}" stroke-width="2.4" stroke-linejoin="round"/></svg>`,
+  '📲': `<svg viewBox="0 0 48 48">
+    <rect x="13" y="6" width="22" height="36" rx="4" fill="#f7d98a" stroke="${D}" stroke-width="2.2"/>
+    <rect x="16.5" y="10" width="15" height="24" rx="1.5" fill="#2a1a30"/>
+    <circle cx="24" cy="38" r="1.8" fill="${D}"/>
+    <path d="M24 15 v11 M19.5 21.5 L24 26 l4.5-4.5" stroke="#8fe0a0" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  '⚡': `<svg viewBox="0 0 48 48">
+    <path d="M27 4 L12 27 h9 l-4 17 15-23 h-9 z" fill="#ffd94a" stroke="${D}" stroke-width="2.2" stroke-linejoin="round"/></svg>`,
+  '🔍': `<svg viewBox="0 0 48 48">
+    <circle cx="21" cy="20" r="12" fill="#cfe6ff" stroke="${D}" stroke-width="2.6"/>
+    <circle cx="21" cy="20" r="7.5" fill="#eaf5ff"/>
+    <path d="M30 29 L41 40" stroke="${D}" stroke-width="4.4" stroke-linecap="round"/></svg>`,
+  '👁': `<svg viewBox="0 0 48 48">
+    <path d="M4 24 C12 13 36 13 44 24 C36 35 12 35 4 24 z" fill="#f4efe2" stroke="${D}" stroke-width="2.4" stroke-linejoin="round"/>
+    <circle cx="24" cy="24" r="7.5" fill="#3c7fc0" stroke="${D}" stroke-width="2"/>
+    <circle cx="24" cy="24" r="3.2" fill="${D}"/><circle cx="21.5" cy="21.5" r="1.4" fill="#fff"/></svg>`,
+  '🙈': `<svg viewBox="0 0 48 48">
+    <path d="M4 24 C12 13 36 13 44 24 C36 35 12 35 4 24 z" fill="#f4efe2" stroke="${D}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M4 24 C12 13 36 13 44 24" fill="#8a7a70"/>
+    <path d="M9 15 L39 33" stroke="${D}" stroke-width="3.4" stroke-linecap="round"/></svg>`,
+  '🔒': `<svg viewBox="0 0 48 48">
+    <path d="M16 21 v-5 a8 8 0 0 1 16 0 v5" stroke="${D}" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <rect x="11" y="21" width="26" height="19" rx="3.5" fill="#f7d98a" stroke="${D}" stroke-width="2.2"/>
+    <circle cx="24" cy="29" r="3" fill="${D}"/><path d="M24 31 v4" stroke="${D}" stroke-width="2.6" stroke-linecap="round"/></svg>`,
+  '💡': `<svg viewBox="0 0 48 48">
+    <path d="M24 6 a13 13 0 0 1 8 23 v4 H16 v-4 a13 13 0 0 1 8-23 z" fill="#ffe98a" stroke="${D}" stroke-width="2.2" stroke-linejoin="round"/>
+    <rect x="18" y="34" width="12" height="4" rx="1.4" fill="#c9a24a" stroke="${D}" stroke-width="1.8"/>
+    <path d="M20 40 h8" stroke="${D}" stroke-width="2.4" stroke-linecap="round"/></svg>`,
+  '🔄': `<svg viewBox="0 0 48 48">
+    <path d="M40 24 a16 16 0 1 1-5-11.6" stroke="${D}" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+    <path d="M36 4 v10 h-10" stroke="${D}" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  '🔔': `<svg viewBox="0 0 48 48">
+    <path d="M24 7 a10 10 0 0 1 10 10 v8 l4 6 H10 l4-6 v-8 a10 10 0 0 1 10-10 z" fill="#f7d98a" stroke="${D}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M20 34 a4 4 0 0 0 8 0" stroke="${D}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <circle cx="24" cy="6" r="2.4" fill="${D}"/></svg>`,
+  '⚠': `<svg viewBox="0 0 48 48">
+    <path d="M24 6 L44 40 H4 z" fill="#ffcf5a" stroke="${D}" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M24 17 v11" stroke="${D}" stroke-width="3.4" stroke-linecap="round"/>
+    <circle cx="24" cy="34" r="2.2" fill="${D}"/></svg>`,
+  '⏱': `<svg viewBox="0 0 48 48">
+    <circle cx="24" cy="27" r="15" fill="#eaf0f6" stroke="${D}" stroke-width="2.6"/>
+    <path d="M19 6 h10" stroke="${D}" stroke-width="3" stroke-linecap="round"/>
+    <path d="M24 9 v3" stroke="${D}" stroke-width="3"/>
+    <path d="M24 18 v9 h7" stroke="${D}" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  '🎟': `<svg viewBox="0 0 48 48">
+    <path d="M5 14 h38 v7 a4 4 0 0 0 0 8 v7 H5 v-7 a4 4 0 0 0 0-8 z" fill="#f7d98a" stroke="${D}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M19 16 v16" stroke="${D}" stroke-width="2" stroke-dasharray="3 3"/>
+    <circle cx="30" cy="24" r="4.5" fill="#c8102e" stroke="${D}" stroke-width="1.8"/></svg>`,
   '🎁': `<svg viewBox="0 0 48 48">
     <rect x="5" y="17" width="38" height="9" rx="2.4" fill="#e0544a" stroke="${D}" stroke-width="2"/>
     <rect x="8" y="26" width="32" height="16" rx="3" fill="#c8443a" stroke="${D}" stroke-width="2"/>

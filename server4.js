@@ -345,30 +345,40 @@ function attach4(io) {
   if (wd.unref) wd.unref();
 
   // ── 소켓 ─────────────────────────────────────────────────────────────────
+  // 핸들러가 예외로 죽으면 사용자에게는 "아무 반응 없음"으로만 보여 원인을 못 찾는다.
+  // 감싸서 로그를 남기고 클라이언트에도 알린다.
+  const safe = (socket, name, fn) => socket.on(name, (...a) => {
+    try { fn(...a); }
+    catch (e) {
+      console.error('[g4] ' + name + ' 처리 중 오류:', e);
+      try { socket.emit('g4_error', '문제가 생겼어요. 잠시 후 다시 시도해주세요.'); } catch (_) {}
+    }
+  });
+
   io.on('connection', (socket) => {
     const nickOf = (d) => String((d && d.nick) || '플레이어').slice(0, 12) || '플레이어';
 
-    socket.on('g4_start', (data = {}) => {          // 솔로 (AI 3명)
+    safe(socket, 'g4_start', (data = {}) => {          // 솔로 (AI 3명)
       if (socket.g4room) destroy(socket.g4room, '재시작');
-      dequeue(socket.id);
+      leavePending(socket.id); socket.g4pending = null;
       startRoom([{ sid: socket.id, nick: nickOf(data) }], true);
     });
 
-    socket.on('g4_quick', (data = {}) => {          // 대기방 입장 (인게임 화면에서 대기)
+    safe(socket, 'g4_quick', (data = {}) => {          // 대기방 입장 (인게임 화면에서 대기)
       if (socket.g4room) destroy(socket.g4room, '빠른대전 진입');
       joinPending(socket, nickOf(data));
     });
 
-    socket.on('g4_cancel', () => { leavePending(socket.id); socket.g4pending = null; socket.emit('g4_cancelled'); });
+    safe(socket, 'g4_cancel', () => { leavePending(socket.id); socket.g4pending = null; socket.emit('g4_cancelled'); });
 
     // 대기방에서 "시작" — 지금 앉아 있는 인원으로 몇 인전인지 정해진다.
-    socket.on('g4_startnow', () => {
+    safe(socket, 'g4_startnow', () => {
       const p = pendings[socket.g4pending];
       if (!p || !p.seats.some((s) => s && s.sid === socket.id)) return;   // 방에 있는 사람만
       beginPending(p);
     });
 
-    socket.on('g4_act', (data = {}) => {
+    safe(socket, 'g4_act', (data = {}) => {
       const roomId = socket.g4room, r = rooms4[roomId];
       if (!r || r.dead) return;
       const me = socket.g4seat;
@@ -385,7 +395,7 @@ function attach4(io) {
       schedule(roomId, T.next);
     });
 
-    socket.on('g4_resume', (data = {}) => {
+    safe(socket, 'g4_resume', (data = {}) => {
       const roomId = String(data.roomId || '');
       const r = rooms4[roomId];
       if (!r || r.dead) return socket.emit('g4_gone');
@@ -399,7 +409,7 @@ function attach4(io) {
       if (humanToAct(r.game, r) === null && r.game.phase !== 'game_over') schedule(roomId, 400);
     });
 
-    socket.on('g4_leave', () => {
+    safe(socket, 'g4_leave', () => {
       leavePending(socket.id); socket.g4pending = null;
       const r = rooms4[socket.g4room];
       if (r && !r.dead) {
