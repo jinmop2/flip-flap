@@ -1529,6 +1529,43 @@ function dealFromDeck(deckEl, cardEls, opts) {
   return (cards.length - 1) * stagger + dur;
 }
 
+// ── 하단 탭바 ──────────────────────────────────────────────────────────────
+// 미션·상점·친구·클랜을 로비 본문에서 빼내 여기로 모았다. 각 탭은 기존 모달을
+// 그대로 연다 — 화면을 새로 만들지 않아 동작이 바뀌지 않는다.
+const NAV_ACTIONS = {
+  home:    () => { closeAllNavModals(); },
+  mission: () => openMissions(),
+  shop:    () => openShop(),
+  friends: () => openFriends(),
+  clan:    () => openClan(),
+};
+function closeAllNavModals() {
+  try { closeMissions(); } catch (_) {}
+  try { closeShop(); } catch (_) {}
+  try { closeFriends(); } catch (_) {}
+  try { closeClan(); } catch (_) {}
+}
+function navGo(key) {
+  const act = Object.prototype.hasOwnProperty.call(NAV_ACTIONS, key) ? NAV_ACTIONS[key] : null;
+  if (!act) return;
+  if (key !== 'home') closeAllNavModals();   // 탭끼리 겹쳐 열리지 않게
+  act();
+  navSync(key);
+}
+// 어떤 탭이 켜져 있는지 표시. 모달을 ESC·닫기로 끄면 다시 '홈'으로 돌아온다.
+function navSync(key) {
+  document.querySelectorAll('#navBar .nav-item').forEach((b) => {
+    b.classList.toggle('active', b.dataset.nav === (key || 'home'));
+  });
+}
+function navRefresh() {
+  const open = (id) => { const e = document.getElementById(id); return e && e.classList.contains('show'); };
+  navSync(open('missionModal') ? 'mission' : open('shopModal') ? 'shop'
+        : open('friendsModal') ? 'friends' : open('clanModal') ? 'clan' : 'home');
+}
+// 모달은 여러 경로(ESC·바깥 클릭·닫기 버튼)로 닫히므로, 상태를 주기적으로 맞춘다.
+setInterval(navRefresh, 400);
+
 function paintIcons(root) {
   (root || document).querySelectorAll('[data-ico]').forEach(el => {
     if (el.dataset.done) return;
