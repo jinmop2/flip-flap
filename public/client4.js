@@ -248,7 +248,7 @@
     if (bidsOpen && !fx.revealed) {
       fx.revealed = true;
       const cards = [...ob.querySelectorAll('.card'), ...mb.querySelectorAll('.card')];
-      cards.forEach((c, i) => { c.style.animationDelay = (i * 70) + 'ms'; play(c, 'anim-reveal'); });
+      cards.forEach((c, i) => { c.style.animationDelay = (i * 55) + 'ms'; play(c, 'anim-reveal'); });
       setTimeout(() => sfx('reveal'), 60);
     } else if (bidsOpen) {
       // 이미 공개된 뒤의 재렌더 — 다시 뒤집지 않는다
