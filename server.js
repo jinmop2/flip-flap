@@ -338,6 +338,17 @@ app.get('/api/leaderboard', rateLimit(60), (req, res) => res.json({ ok: true, pl
 app.get('/api/shop', rateLimit(60), (req, res) => res.json({ ok: true, items: accounts.shopList() }));
 app.post('/api/buy',   rateLimit(30), (req, res) => { const { token, itemId } = req.body || {}; res.json(accounts.buyItem(token, itemId)); });
 app.post('/api/equip', rateLimit(30), (req, res) => { const { token, itemId, kind } = req.body || {}; res.json(accounts.equipItem(token, itemId, kind)); });
+// ── 뽑기 ──
+// 확률표는 서버가 쥔 값을 그대로 내려준다 — 화면 표시와 실제가 어긋날 수 없게.
+app.get('/api/gacha', rateLimit(60), (req, res) => res.json({ ok: true, info: accounts.gachaInfo() }));
+app.post('/api/gacha/roll', rateLimit(30), (req, res) => {
+  const { token, count } = req.body || {};
+  res.json(accounts.rollGacha(token, count));
+});
+app.post('/api/gacha/exchange', rateLimit(30), (req, res) => {
+  const { token, itemId } = req.body || {};
+  res.json(accounts.exchangeShard(token, itemId));
+});
 
 // ── 카카오 간편로그인 (REST 키는 환경변수 KAKAO_REST_KEY) ──
 const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY || '';

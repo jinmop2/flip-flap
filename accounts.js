@@ -192,6 +192,8 @@ function profileOf(u) {
     wins: u.wins, losses: u.losses,
     winRate: total ? Math.round(u.wins / total * 100) : 0,
     coins: u.coins || 0,
+    shards: u.shards || 0,
+    sinceLegend: u.sinceLegend || 0,
     nickColor: u.nickColor || null,          // 염색약 결과 (색 키)
     cardBack: u.cardBack || null,            // 장착 중인 카드백
     items: u.items || {},                    // 보유 아이템 { id: 개수 or true }
@@ -361,6 +363,36 @@ const SHOP = {
   emote_taunt:  { name: '도발 이모트 팩',  icon: '🫖', price: 500,  type: 'emotes',
                   desc: '티백·느린박수·하품 등 약올리기 8종' },
 
+  // ── 승리 연출 — 이길 때 화면에 터진다. 상대에게도 보인다 ──
+  vfx_confetti: { name: '색종이 축포',   icon: '🎊', price: 900,  type: 'victory',
+                  desc: '승리하면 색종이가 쏟아진다' },
+  vfx_coinrain: { name: '금화비',        icon: '💰', price: 1400, type: 'victory',
+                  desc: '승리하면 금화가 떨어진다' },
+  vfx_thunder:  { name: '벼락',          icon: '⚡', price: 1400, type: 'victory',
+                  desc: '승리하면 벼락이 내리친다' },
+  vfx_firework: { name: '불꽃놀이',      icon: '🎆', price: 2200, type: 'victory',
+                  desc: '승리하면 밤하늘에 불꽃이 터진다' },
+
+  // ── 아바타 — 프로필·랭킹·게임 화면에 계속 보인다 ──
+  ava_rookie:   { name: '초심자 아바타', icon: '🙂', price: 300,  type: 'avatar', desc: '이제 막 시작한 얼굴' },
+  ava_gambler:  { name: '승부사 아바타', icon: '🎩', price: 800,  type: 'avatar', desc: '중절모를 눌러쓴 승부사' },
+  ava_fox:      { name: '여우 아바타',   icon: '🦊', price: 800,  type: 'avatar', desc: '속내를 알 수 없는 여우' },
+  ava_dealer:   { name: '딜러 아바타',   icon: '🃏', price: 1300, type: 'avatar', desc: '판을 굴리는 딜러' },
+  ava_cat:      { name: '도둑고양이 아바타', icon: '🐱', price: 1300, type: 'avatar', desc: '남의 패를 노리는 고양이' },
+  ava_king:     { name: '왕 아바타',     icon: '👑', price: 2000, type: 'avatar', desc: '경매장의 왕' },
+  ava_phantom:  { name: '괴도 아바타',   icon: '🎭', price: 2000, type: 'avatar', desc: '정체를 감춘 괴도' },
+
+  // ── 낙찰 도장 — 이겼을 때 배팅 카드에 찍힌다 ──
+  stamp_win:    { name: 'WIN 도장',      icon: '🏷', price: 0,    type: 'stamp', basic: true, desc: '기본 낙찰 도장' },
+  stamp_seal:   { name: '붉은 인장',     icon: '🔴', price: 700,  type: 'stamp', desc: '옛 도장처럼 붉게 찍힌다' },
+  stamp_star:   { name: '별 도장',       icon: '⭐', price: 1100, type: 'stamp', desc: '별이 박히듯 찍힌다' },
+  stamp_crown:  { name: '왕관 도장',     icon: '👑', price: 1800, type: 'stamp', desc: '왕관이 내려앉는다' },
+
+  // ── 카드 놓는 이펙트 — 내가 카드를 낼 때 ──
+  place_dust:   { name: '먼지',          icon: '💨', price: 0,    type: 'place', basic: true, desc: '기본 — 옅은 먼지가 인다' },
+  place_spark:  { name: '반짝임',        icon: '✨', price: 600,  type: 'place', desc: '카드를 낼 때 반짝인다' },
+  place_ember:  { name: '불티',          icon: '🔥', price: 1200, type: 'place', desc: '카드를 낼 때 불티가 튄다' },
+
   // ── 흑요석 세트 (명패·테이블·앞면) ──
   np_obsidian:  { name: '흑요석 명패',     icon: '🌑', price: 2000, type: 'plate',
                   desc: '금이 흐르는 검은 명패 · 코인 획득 +6%' },
@@ -433,6 +465,144 @@ function bonusOf(u) {
     set,
     setName: set ? SETS[set].name : null,
   };
+}
+
+
+// ── 뽑기 ───────────────────────────────────────────────────────────────────
+// 원칙
+//  · 뽑기 결과는 전부 서버에서만 정한다. 클라이언트는 "뽑았다" 는 요청만 보낸다.
+//  · 확률을 화면에 표시해야 한다(게임산업법·구글 정책). 그래서 GACHA_RATE 를
+//    그대로 내려보내 UI 가 같은 값을 쓰게 한다 — 코드와 표시가 어긋날 여지를 없앤다.
+//  · 코스메틱 뽑기의 최대 적은 중복이다. 중복은 파편으로 바꿔 주고, 파편을 모으면
+//    원하는 것을 확정으로 바꿀 수 있게 해서 "뽑을수록 목표에 가까워지게" 만든다.
+const GACHA_COST = 300;          // 1회
+const GACHA_COST10 = 2700;       // 10연 (10% 할인)
+const GACHA_RATE = { common: 0.60, rare: 0.28, epic: 0.10, legend: 0.02 };
+const SHARD_ON_DUP = { common: 5, rare: 15, epic: 40, legend: 100 };
+const SHARD_EXCHANGE = 300;      // 이만큼 모으면 아무거나 하나 확정
+const PITY_LEGEND = 50;          // 이 횟수 안에 전설 하나는 반드시
+
+// 어떤 상품이 어느 등급인지. 여기 없는 상품은 뽑기에 안 나온다
+// (닉네임 변경권·확정권처럼 기능성인 것, 마일스톤 한정품).
+const GACHA_TIER = {
+  common: ['np_wood', 'tbl_forest', 'tbl_blue', 'stamp_win', 'place_dust', 'ava_rookie'],
+  rare:   ['back_night', 'back_ruby', 'back_hanji', 'face_neon', 'face_classic',
+           'tbl_purple', 'tbl_hanji', 'np_neon', 'np_hanji',
+           'stamp_seal', 'place_spark', 'ava_gambler', 'ava_fox', 'vfx_confetti'],
+  epic:   ['back_obang', 'back_galaxy', 'back_crystal', 'face_gold', 'face_crystal',
+           'tbl_gold', 'tbl_crystal', 'np_gold', 'np_ruby', 'np_crystal',
+           'emote_party', 'emote_animal', 'emote_battle', 'emote_taunt',
+           'stamp_star', 'place_ember', 'ava_dealer', 'ava_cat', 'vfx_coinrain', 'vfx_thunder'],
+  legend: ['back_obsidian', 'face_obsidian', 'tbl_obsidian', 'np_obsidian',
+           'stamp_crown', 'ava_king', 'ava_phantom', 'vfx_firework'],
+};
+const TIERS = ['common', 'rare', 'epic', 'legend'];
+// 상품 → 등급 역인덱스
+const TIER_OF = {};
+for (const t of TIERS) for (const id of GACHA_TIER[t]) TIER_OF[id] = t;
+
+// 천장을 포함한 "실제로 나오는" 확률.
+// 기본 확률만 적으면 표시와 실제가 어긋난다 — 천장이 전설을 끌어올리고
+// 그만큼 나머지 등급이 줄기 때문이다(실측 전설 2% → 3.03%).
+// 확률 표시는 실제 값이어야 하므로, 천장 카운터를 상태로 두고 정확히 계산한다.
+function effectiveRates() {
+  const p = GACHA_RATE.legend;
+  // 천장 카운터가 k 일 때 다음 뽑기에서 전설이 나올 확률 → 정상 상태 분포를 구한다
+  // 한 번의 전설 사이 평균 뽑기 횟수
+  let expected = 0, surv = 1;
+  for (let k = 1; k < PITY_LEGEND; k++) { expected += k * p * surv; surv *= (1 - p); }
+  expected += PITY_LEGEND * surv;                 // 49번 안 나오면 50번째는 확정
+  const legend = 1 / expected;                    // 전설이 차지하는 실제 비율
+  const restShare = 1 - legend;                   // 나머지 등급이 나눠 가질 몫
+  const baseRest = 1 - p;                         // 기본 확률에서 전설을 뺀 몫
+  const out = {};
+  for (const t of TIERS) out[t] = t === 'legend' ? legend : (GACHA_RATE[t] / baseRest) * restShare;
+  return out;
+}
+const EFFECTIVE = effectiveRates();
+
+// 화면에 띄울 확률표 — 서버가 쥔 값을 그대로 내보내 표시와 실제가 어긋날 수 없게 한다
+function gachaInfo() {
+  return {
+    cost: GACHA_COST, cost10: GACHA_COST10,
+    exchange: SHARD_EXCHANGE, pity: PITY_LEGEND,
+    rates: TIERS.map((t) => ({
+      tier: t,
+      rate: EFFECTIVE[t],          // 화면에 적는 값 = 천장까지 반영한 실제 확률
+      baseRate: GACHA_RATE[t],     // 천장을 빼면 이 값 (참고용)
+      shard: SHARD_ON_DUP[t],
+      count: GACHA_TIER[t].filter((id) => Object.prototype.hasOwnProperty.call(SHOP, id)).length,
+    })),
+  };
+}
+
+function pickTier(rand) {
+  let acc = 0;
+  for (const t of TIERS) { acc += GACHA_RATE[t]; if (rand < acc) return t; }
+  return 'common';
+}
+
+// 한 번 뽑는다. 이미 가진 것이면 파편으로 바꾼다.
+function rollOne(u) {
+  // 천장 — 이만큼 뽑도록 전설이 안 나왔으면 이번엔 전설
+  u.gachaCount = (u.gachaCount || 0) + 1;
+  u.sinceLegend = (u.sinceLegend || 0) + 1;
+  let tier = (u.sinceLegend >= PITY_LEGEND) ? 'legend' : pickTier(Math.random());
+  // 그 등급에 실제로 존재하는 상품만 후보로 (카탈로그에서 지운 게 있어도 안전하게)
+  let pool = GACHA_TIER[tier].filter((id) => Object.prototype.hasOwnProperty.call(SHOP, id));
+  if (!pool.length) { tier = 'common'; pool = GACHA_TIER.common.filter((id) => Object.prototype.hasOwnProperty.call(SHOP, id)); }
+  if (!pool.length) return null;
+  const id = pool[Math.floor(Math.random() * pool.length)];
+  if (tier === 'legend') u.sinceLegend = 0;
+
+  u.items = u.items || {};
+  const dup = !!u.items[id];
+  if (dup) {
+    const sh = SHARD_ON_DUP[tier] || 5;
+    u.shards = (u.shards || 0) + sh;
+    return { id, tier, dup: true, shard: sh, name: SHOP[id].name, icon: SHOP[id].icon };
+  }
+  u.items[id] = true;
+  return { id, tier, dup: false, shard: 0, name: SHOP[id].name, icon: SHOP[id].icon };
+}
+
+const gachaLocks = new Set();
+function rollGacha(token, count) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const n = Number(count) === 10 ? 10 : 1;              // 1회 또는 10연만
+  if (gachaLocks.has(idl)) return { error: '잠시 후 다시 시도해 주세요.' };
+  gachaLocks.add(idl);
+  try {
+    const cost = n === 10 ? GACHA_COST10 : GACHA_COST;
+    if ((u.coins || 0) < cost) return { error: `코인이 부족해요. (보유 ${u.coins || 0} / 필요 ${cost})` };
+    u.coins -= cost;
+    const got = [];
+    for (let i = 0; i < n; i++) { const r = rollOne(u); if (r) got.push(r); }
+    persist(idl);
+    return { ok: true, results: got, spent: cost, profile: profileOf(u) };
+  } finally { gachaLocks.delete(idl); }
+}
+
+// 파편으로 원하는 것을 확정 교환
+function exchangeShard(token, itemId) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  if (!Object.prototype.hasOwnProperty.call(SHOP, itemId)) return { error: '없는 아이템이에요.' };
+  if (!Object.prototype.hasOwnProperty.call(TIER_OF, itemId)) return { error: '파편으로 바꿀 수 없는 아이템이에요.' };
+  if (gachaLocks.has(idl)) return { error: '잠시 후 다시 시도해 주세요.' };
+  gachaLocks.add(idl);
+  try {
+    u.items = u.items || {};
+    if (u.items[itemId]) return { error: '이미 보유한 아이템이에요.' };
+    if ((u.shards || 0) < SHARD_EXCHANGE) return { error: `파편이 부족해요. (보유 ${u.shards || 0} / 필요 ${SHARD_EXCHANGE})` };
+    u.shards -= SHARD_EXCHANGE;
+    u.items[itemId] = true;
+    persist(idl);
+    return { ok: true, itemId, name: SHOP[itemId].name, profile: profileOf(u) };
+  } finally { gachaLocks.delete(idl); }
 }
 
 // 염색약 뽑기 풀 (weight 비율)
@@ -528,7 +698,13 @@ function doBuy(idl, u, itemId) {
   return { ok: true, profile: profileOf(u), dye };
 }
 // 장착·해제 (itemId=null이면 kind 슬롯 해제)
-const SLOT = { cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace' };
+const SLOT = {
+  cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace',
+  victory: 'victoryFx',   // 이길 때 터지는 화면 효과
+  avatar:  'avatar',      // 프로필 그림
+  stamp:   'winStamp',    // 낙찰 도장 모양
+  place:   'placeFx',     // 카드를 내려놓을 때 파티클
+};
 function equipItem(token, itemId, kind) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
@@ -1541,6 +1717,7 @@ module.exports = {
   viceOf, clanCoinBonus,
   createCoupons, couponList, redeemCoupon,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
+  gachaInfo, rollGacha, exchangeShard, GACHA_TIER, TIER_OF,
   missionList, titleList, betrayEvent, claimTutorial, applyReferral, deleteAccount,
   // 친구
   friendList, sendFriendReq, acceptFriendReq, declineFriendReq, cancelFriendReq, removeFriend,
