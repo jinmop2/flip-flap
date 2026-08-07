@@ -320,22 +320,20 @@
     .sp-credit { position:absolute; bottom:26px; text-align:center; font-size:.7rem; color:#6a5a70; line-height:1.8; }
     .sp-credit b { color:#9a8aa0; }
     /* ── 하단 프로필 바 ── */
-    /* 프로필은 위로 올렸다 — 아래는 탭바가 차지한다.
-       XP 게이지는 바의 아래쪽 가장자리에 붙는다(column-reverse). */
+    /* 프로필은 아래, 탭바는 위. XP 게이지는 바의 위쪽 가장자리에 붙는다. */
     #profileBar {
-      position:fixed; top:0; left:50%; transform:translateX(-50%); z-index:30;
+      position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:30;
       width:min(480px, 100%); cursor:pointer;
-      display:flex; flex-direction:column-reverse;
-      padding-top:var(--safe-t);
-      background:linear-gradient(0deg, #3a1018 0%, #240a10 100%);
-      border:1.5px solid #b98d34; border-top:none; border-radius:0 0 18px 18px;
-      box-shadow:inset 0 -1px 0 rgba(255,215,120,.2), 0 8px 30px rgba(0,0,0,.55);
-      overflow:hidden;
+      padding-bottom:var(--safe-b);
+      background:linear-gradient(180deg, #3a1018 0%, #240a10 100%);
+      border:1.5px solid #b98d34; border-bottom:none; border-radius:18px 18px 0 0;
+      box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 -8px 30px rgba(0,0,0,.55);
+      overflow:hidden;   /* 상단 XP 게이지가 둥근 모서리 밖으로 삐져나오지 않게 */
     }
     #profileBar:hover { filter:brightness(1.1); }
-    .pb-xp { height:5px; background:#1a0810; overflow:hidden; border-radius:0 0 16px 16px; }
+    .pb-xp { height:5px; background:#1a0810; overflow:hidden; border-radius:16px 16px 0 0; }
     .pb-xpfill { height:100%; width:0%; background:linear-gradient(90deg,#c8912e,#ffd97a); transition:width .5s; }
-    .pb-body { display:flex; align-items:center; gap:11px; padding:9px 16px 8px; }
+    .pb-body { display:flex; align-items:center; gap:11px; padding:10px 16px 12px; }
     .pb-ava {
       width:46px; height:46px; border-radius:12px; flex-shrink:0;
       display:flex; align-items:center; justify-content:center; font-size:1.6rem;
@@ -349,18 +347,18 @@
     .pb-badge { font-size:.72rem; font-weight:800; padding:2px 9px; border-radius:7px; white-space:nowrap; }
     .pb-coin { color:#ffd97a; background:rgba(255,215,80,.12); border:1px solid rgba(255,215,120,.35); }
     .pb-rp   { color:#ffe9b8; background:rgba(200,160,0,.12); border:1px solid rgba(200,160,0,.35); }
-    .pb-lv { position:absolute; top:calc(8px + var(--safe-t)); left:14px; font-size:.6rem; font-weight:800; color:#241008; background:linear-gradient(180deg,#ffd97a,#c8912e); border:1px solid #8a5a12; border-radius:8px; padding:1px 7px; }
+    .pb-lv { position:absolute; top:9px; left:14px; font-size:.6rem; font-weight:800; color:#241008; background:linear-gradient(180deg,#ffd97a,#c8912e); border:1px solid #8a5a12; border-radius:8px; padding:1px 7px; }
     .pb-login { margin-left:auto; flex-shrink:0; background:rgba(200,160,0,.15); border:1.5px solid var(--gold); color:#ffe9a8; border-radius:10px; padding:8px 14px; font-family:'Fredoka'; font-size:.8rem; font-weight:700; cursor:pointer; }
-    #lobby { padding-top:78px; padding-bottom:calc(74px + var(--safe-b)); }   /* 위 프로필 바 · 아래 탭바에 안 가리게 */
+    #lobby { padding-top:calc(66px + var(--safe-t)); padding-bottom:calc(84px + var(--safe-b)); }   /* 위 탭바 · 아래 프로필 바에 안 가리게 */
 
     /* ── 하단 탭바 ── */
     #navBar {
-      position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:30;
+      position:fixed; top:0; left:50%; transform:translateX(-50%); z-index:30;
       width:min(480px, 100%); display:flex;
-      padding:6px 4px calc(6px + var(--safe-b));
-      background:linear-gradient(180deg, #3a1018 0%, #240a10 100%);
-      border:1.5px solid #b98d34; border-bottom:none; border-radius:18px 18px 0 0;
-      box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 -8px 30px rgba(0,0,0,.55);
+      padding:calc(6px + var(--safe-t)) 4px 6px;
+      background:linear-gradient(0deg, #3a1018 0%, #240a10 100%);
+      border:1.5px solid #b98d34; border-top:none; border-radius:0 0 18px 18px;
+      box-shadow:inset 0 -1px 0 rgba(255,215,120,.2), 0 8px 30px rgba(0,0,0,.55);
     }
     .nav-item {
       flex:1; min-width:0; position:relative; background:none; border:none; cursor:pointer;
