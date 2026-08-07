@@ -172,6 +172,49 @@ const EMOTE_ART = {
     <path d="M21.5 27 h5 v6 h-5 z" fill="#f0a83c" stroke="${FS}" stroke-width="1.8" stroke-linejoin="round"/>
     <rect x="14" y="33" width="20" height="6" rx="2.2" fill="#f0a83c" stroke="${FS}" stroke-width="2"/>
     <path d="M24 11 l1.6 3.4 l3.7 .5 l-2.7 2.6 .7 3.7 L24 19.9 l-3.3 1.8 .7-3.7 -2.7-2.6 3.7-.5 z" fill="#fff4c8" stroke="${FS}" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
+  // ── 도발 팩 ──
+  // 약을 올리되 선은 넘지 않게 그렸다. 티백은 CSS 로 위아래 흔들린다.
+  '🫖': `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9 22 h26 v9 a11 11 0 0 1-11 11 h-4 a11 11 0 0 1-11-11 z" fill="#f4efe2" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M35 25 h3.5 a4.5 4.5 0 0 1 0 9 H35" fill="none" stroke="${FS}" stroke-width="2" stroke-linecap="round"/>
+    <path d="M9 22 h26" stroke="${FS}" stroke-width="2"/>
+    <path d="M24 4 v11" stroke="${FS}" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M19.5 15 h9 l-2 7 h-5 z" fill="#a9743f" stroke="${FS}" stroke-width="1.8" stroke-linejoin="round"/>
+    <rect x="20" y="1.5" width="8" height="5" rx="1.5" fill="${F}" stroke="${FS}" stroke-width="1.6"/></svg>`,
+  '👏': `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 40 l-9-9 a4 4 0 0 1 0-6 l1-1 a4 4 0 0 1 6 0 l3 3 v-13 a3.2 3.2 0 0 1 6.4 0 v9"
+          fill="${F}" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M27.4 22 a3.2 3.2 0 0 1 6.4 0 v10 a10 10 0 0 1-10 10" fill="${F}" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M38 8 l5-4 M40 16 l6-1 M34 4 l1-3" stroke="${FS}" stroke-width="2" stroke-linecap="round"/></svg>`,
+  '🥱': pface(F, `${peyes(21, 2.2)}
+    <ellipse cx="24" cy="31" rx="6" ry="7.5" fill="#8c2f22" stroke="${FS}" stroke-width="1.8"/>
+    <path d="M11 14 l6 2 M37 14 l-6 2" stroke="${FS}" stroke-width="2" stroke-linecap="round"/>
+    <path d="M38 9 a3 3 0 1 1 4 3 a3 3 0 0 0 3 3" stroke="${FS}" stroke-width="1.8" fill="none" stroke-linecap="round"/>`),
+  '👎': `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15 26 c0 3 2 5 3 8 1 2.5 1 5 3 5 2.5 0 3.5-2 3.5-5 0-2-.6-3.6-1.2-5 h8.7
+             c2.6 0 4.4-2 3.9-4.4 l-2.2-10.4 c-.4-2-2.2-3.4-4.3-3.4 H18 z"
+          fill="${F}" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="8" y="10" width="8" height="16" rx="2.6" fill="#f0a83c" stroke="${FS}" stroke-width="2"/></svg>`,
+  '🙄': pface(F, `<path d="M12 17 a6 4 0 0 1 11 0 M25 17 a6 4 0 0 1 11 0" stroke="${FS}" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <circle cx="17.5" cy="16.5" r="2.4" fill="${FS}"/><circle cx="30.5" cy="16.5" r="2.4" fill="${FS}"/>
+    <path d="M18 32 h12" stroke="${FS}" stroke-width="2.2" stroke-linecap="round"/>`),
+  '👋': `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 40 a13 13 0 0 1-3-9 V19 a2.8 2.8 0 0 1 5.6 0 v5 V12 a2.8 2.8 0 0 1 5.6 0 v11 V9
+             a2.8 2.8 0 0 1 5.6 0 v14 V14 a2.8 2.8 0 0 1 5.6 0 v17 a13 13 0 0 1-4 9 z"
+          fill="${F}" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M39 8 l5-3 M40 16 l6 0" stroke="${FS}" stroke-width="2" stroke-linecap="round"/></svg>`,
+  '⌚': `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <rect x="17" y="2" width="14" height="10" rx="3" fill="#6d8497" stroke="${FS}" stroke-width="2"/>
+    <rect x="17" y="36" width="14" height="10" rx="3" fill="#6d8497" stroke="${FS}" stroke-width="2"/>
+    <circle cx="24" cy="24" r="14" fill="#f4efe2" stroke="${FS}" stroke-width="2.4"/>
+    <path d="M24 15 v9 l6 4" stroke="${FS}" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  '🤏': `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18 30 a13 13 0 0 0 12 8 a11 11 0 0 0 11-11 v-9 a2.8 2.8 0 0 0-5.6 0 v6"
+          fill="${F}" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M35.4 18 v-4 a2.8 2.8 0 0 0-5.6 0 v5" fill="${F}" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M29.8 19 a2.8 2.8 0 0 0-5.6 0 v4" fill="${F}" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M24.2 23 l-7 7 a4 4 0 0 0 0 6" fill="${F}" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M4 22 h9 M6 16 l7 3 M6 28 l7-3" stroke="${FS}" stroke-width="2" stroke-linecap="round"/></svg>`,
 };
 
 // ── 랭크 아이콘 6종 ───────────────────────────────────────
@@ -253,6 +296,21 @@ const cardShape = (fill, inner = '') =>
   `<rect x="12" y="7" width="24" height="34" rx="4" fill="${fill}" stroke="${D}" stroke-width="2"/>${inner}`;
 
 const ICON_ART = {
+  // ── 크리스탈 세트 상품 아이콘 ──
+  '🔮': `<svg viewBox="0 0 48 48">
+    <path d="M24 4 L38 17 L31 42 h-14 L10 17 z" fill="#7fd8f5" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M24 4 L31 42 M24 4 L17 42 M10 17 h28" stroke="${D}" stroke-width="1.5" opacity=".55"/>
+    <path d="M24 4 L38 17 L24 20 z" fill="#d8f6ff"/>
+    <path d="M24 4 L10 17 L24 20 z" fill="#b0ecff"/></svg>`,
+  '🧊': `<svg viewBox="0 0 48 48">
+    <path d="M11 14 L24 7 L37 14 v20 L24 41 L11 34 z" fill="#a8e4f7" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M11 14 L24 21 L37 14 M24 21 v20" stroke="${D}" stroke-width="1.7" opacity=".6" fill="none"/>
+    <path d="M11 14 L24 7 L24 21 z" fill="#e2f8ff"/>
+    <path d="M15 24 l4 3 M29 26 l4-3" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".8"/></svg>`,
+  '🌑': `<svg viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="18" fill="#14141c" stroke="${D}" stroke-width="2.2"/>
+    <path d="M13 33 q7-11 15-16 M20 39 q6-13 14-19" stroke="#c9a24a" stroke-width="1.6" fill="none" opacity=".85" stroke-linecap="round"/>
+    <path d="M9 20 a18 18 0 0 1 12-13 a15 15 0 0 0-9 14 z" fill="rgba(150,150,180,.3)"/></svg>`,
   // ── 룰북·튜토리얼 ──
   '🏁': `<svg viewBox="0 0 48 48">
     <path d="M11 6 v37" stroke="${D}" stroke-width="3" stroke-linecap="round"/>

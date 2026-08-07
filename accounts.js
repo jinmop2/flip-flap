@@ -342,6 +342,24 @@ const SHOP = {
   face_classic:{ name: '클래식 카드', icon: '♠️', price: 900,  type: 'cardface', desc: '트럼프풍 세리프 숫자 카드 앞면' },
   face_gold: { name: '황금 숫자 카드', icon: '👑', price: 1000, type: 'cardface', desc: '숫자가 황금빛으로 빛나는 카드 앞면' },
   np_ruby:   { name: '루비 명패',     icon: '❤️‍🔥', price: 1200, type: 'plate', desc: '와인빛으로 반짝이는 루비 명패' },
+
+  // ── 크리스탈 세트 — 카드백·명패·테이블·카드앞면을 맞춰 쓰면 한 벌이 된다 ──
+  back_crystal: { name: '크리스탈 카드백', icon: '🔮', price: 1600, type: 'cardback',
+                  desc: '빛을 쪼개는 수정 결정면 뒷면' },
+  np_crystal:   { name: '크리스탈 명패',   icon: '🔮', price: 1300, type: 'plate',
+                  desc: '얼음처럼 맑게 빛나는 명패' },
+  tbl_crystal:  { name: '크리스탈 테이블', icon: '🧊', price: 1400, type: 'table',
+                  desc: '살얼음이 낀 듯한 서늘한 테이블' },
+  face_crystal: { name: '크리스탈 카드',   icon: '💠', price: 1100, type: 'cardface',
+                  desc: '숫자가 수정처럼 맑게 비치는 앞면' },
+
+  // ── 단품 ──
+  back_obsidian:{ name: '흑요석 카드백',   icon: '🌑', price: 1800, type: 'cardback',
+                  desc: '검은 유리에 금이 흐르는 뒷면' },
+  back_hanji:   { name: '한지 카드백',     icon: '📜', price: 900,  type: 'cardback',
+                  desc: '닥종이 결에 먹으로 친 뒷면' },
+  emote_taunt:  { name: '도발 이모트 팩',  icon: '🫖', price: 500,  type: 'emotes',
+                  desc: '티백·느린박수·하품 등 약올리기 8종' },
 };
 // 염색약 뽑기 풀 (weight 비율)
 const DYE_POOL = [

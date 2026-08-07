@@ -207,7 +207,7 @@ async function claimReferral() {
 // 초대 링크(?ref=아이디)로 접속 시 코드 보관
 try { const rp = new URLSearchParams(location.search).get('ref'); if (rp) localStorage.setItem('ff_ref', rp); } catch (_) {}
 const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
-const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby' };
+const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby', np_crystal: 'np-crystal' };
 const xpPct = p => Math.max(0, Math.min(100, Math.round((p.xpInLevel || 0) / (p.xpNeeded || 100) * 100)));
 const npClass = p => p && NP_CLASS[p] ? ' ' + NP_CLASS[p] : '';   // 명패 클래스
 // 이모지 → 직접 그린 SVG (art.js). 매핑에 없으면 원래 이모지 그대로.
@@ -1357,9 +1357,10 @@ async function openShop() {
   renderShop();
 }
 function closeShop() { document.getElementById('shopModal').classList.remove('show'); }
-const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang', back_ruby: 'cb-ruby', back_galaxy: 'cb-galaxy' };
-const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest' };
-const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold' };
+const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang', back_ruby: 'cb-ruby', back_galaxy: 'cb-galaxy',
+              back_crystal: 'cb-crystal', back_obsidian: 'cb-obsidian', back_hanji: 'cb-hanji' };
+const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest', tbl_crystal: 'tp-crystal' };
+const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold', face_crystal: 'cfp-crystal' };
 // 상점 아이콘 = 게임 안 실물 미리보기 (카드백/테이블/카드앞면/명패/이모트/염색)
 const shopIcon = it => {
   if (CBP[it.id])  return `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`;
@@ -1370,7 +1371,8 @@ const shopIcon = it => {
     // 미리보기 3종. emoteArt 가 있으면 그린 그림, 없으면 이모지 그대로.
     const prev = EMOTE_PACKS[it.id].slice(0, 3).map((e) => {
       const a = (typeof emoteArt === 'function') && emoteArt(e);
-      return a ? `<span class="em-one">${a}</span>` : `<span class="em-one">${e}</span>`;
+      const cls = 'em-one' + (e === '🫖' ? ' em-teabag' : '');
+      return a ? `<span class="${cls}">${a}</span>` : `<span class="${cls}">${e}</span>`;
     }).join('');
     return `<span class="shop-emprev">${prev}</span>`;
   }
@@ -1493,6 +1495,8 @@ const EMOTE_PACKS = {
   emote_party:  ['🤡','😈','💀','🎉','👑','🍀','💢','🫠'],
   emote_battle: ['⚔️','🛡️','😤','🤯','🥶','🎲','🎯','🏆'],
   emote_animal: ['🐶','🐱','🐷','🐸','🦊','🐻','🐤','🦄'],
+  // 도발 팩 — 약을 올리되 선은 넘지 않게. 티백은 위아래로 흔들린다.
+  emote_taunt:  ['🫖','👏','🥱','👎','🙄','👋','⌚','🤏'],
 };
 // data-ico="🎒" 같은 표식을 직접 그린 아이콘으로 채운다
 // ── 카드 딜 연출 ────────────────────────────────────────────────────────────
@@ -2616,11 +2620,12 @@ function screenFx(kind) {
 }
 
 // 내 테이블/카드앞면 스킨을 게임 화면에 적용 (내 시야 기준 코스메틱)
-const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest' };
-const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold' };
+const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal' };
+const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal' };
 function applyMySkins() {
   const g = document.getElementById('game'); if (!g) return;
-  g.classList.remove('tbl-blue', 'tbl-purple', 'tbl-gold', 'cf-neon', 'cf-classic');
+  g.classList.remove('tbl-blue', 'tbl-purple', 'tbl-gold', 'tbl-forest', 'tbl-crystal',
+                     'cf-neon', 'cf-classic', 'cf-gold', 'cf-crystal');
   const p = myAccount;
   if (p && TABLE_CLS[p.table]) g.classList.add(TABLE_CLS[p.table]);
   if (p && FACE_CLS[p.cardFace]) g.classList.add(FACE_CLS[p.cardFace]);

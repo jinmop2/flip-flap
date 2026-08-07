@@ -430,8 +430,62 @@
     .shop-tile .pr { font-size:.66rem; font-weight:800; color:#ffd94a; }
     .shop-tile .pr.own { color:#7dd87d; }
     .shop-tile .shop-cbprev { width:34px; height:47px; }
+
+    /* ── 크리스탈 세트 (카드백·명패·테이블·앞면) ── */
+    /* 결정면은 각진 다면체 느낌 — 겹친 사선 그라디언트로 면을 쪼갠다 */
+    .card.back.cb-crystal {
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.55) 0 18%, transparent 18.5%),
+        linear-gradient(215deg, rgba(180,240,255,.45) 0 26%, transparent 26.5%),
+        linear-gradient(45deg,  rgba(255,255,255,.30) 0 34%, transparent 34.5%),
+        linear-gradient(300deg, rgba(120,215,255,.40) 0 44%, transparent 44.5%),
+        linear-gradient(160deg,#9fe8ff,#3fa8d8 48%,#1b6c96) !important;
+      border-color:#dff6ff !important;
+      box-shadow:0 3px 15px rgba(90,200,255,.55), inset 0 0 12px rgba(255,255,255,.45) !important;
+    }
+    .card.back.cb-crystal::before { border-color:rgba(230,250,255,.8) !important; }
+    .card.back.cb-crystal .bf { background:none; -webkit-text-fill-color:#f2fdff; color:#f2fdff;
+      text-shadow:0 0 10px rgba(120,225,255,1), 0 1px 3px rgba(0,40,60,.8); }
+
+    /* 흑요석 — 검은 유리에 금이 흐른다 (킨츠기) */
+    .card.back.cb-obsidian {
+      background:
+        linear-gradient(72deg,  transparent 0 46%, rgba(230,190,90,.85) 46.4% 47.4%, transparent 47.8%),
+        linear-gradient(-38deg, transparent 0 62%, rgba(230,190,90,.7) 62.3% 63.1%, transparent 63.5%),
+        linear-gradient(18deg,  transparent 0 30%, rgba(255,225,140,.55) 30.3% 30.9%, transparent 31.3%),
+        radial-gradient(ellipse at 32% 24%, rgba(120,120,150,.35), transparent 62%),
+        linear-gradient(155deg,#15151c,#0a0a10 60%,#1c1c26) !important;
+      border-color:#c9a24a !important;
+      box-shadow:0 3px 15px rgba(0,0,0,.75), inset 0 0 10px rgba(200,160,70,.25) !important;
+    }
+    .card.back.cb-obsidian::before { border-color:rgba(210,170,80,.6) !important; }
+    .card.back.cb-obsidian .bf { background:none; -webkit-text-fill-color:#e8c98a; color:#e8c98a;
+      text-shadow:0 0 9px rgba(200,160,70,.8), 0 1px 3px rgba(0,0,0,.9); }
+
+    /* 한지 — 닥종이 결에 먹 */
+    .card.back.cb-hanji {
+      background:
+        repeating-linear-gradient(92deg, rgba(150,120,80,.10) 0 1px, transparent 1px 5px),
+        repeating-linear-gradient(2deg, rgba(150,120,80,.07) 0 1px, transparent 1px 7px),
+        radial-gradient(ellipse at 70% 30%, rgba(190,150,100,.20), transparent 60%),
+        linear-gradient(160deg,#f2e6cd,#e2cfa9 60%,#d3bc90) !important;
+      border-color:#8a6a3a !important;
+      box-shadow:0 3px 12px rgba(90,60,20,.45), inset 0 0 10px rgba(140,100,50,.18) !important;
+    }
+    .card.back.cb-hanji::before { border-color:rgba(90,60,25,.4) !important; }
+    .card.back.cb-hanji .bf { background:none; -webkit-text-fill-color:#3a2a16; color:#3a2a16;
+      text-shadow:0 1px 0 rgba(255,250,235,.6); }
+
+    /* 크리스탈 명패 */
+    .np-crystal { background:linear-gradient(135deg,#bdf0ff,#5cc4ee 55%,#2f8fbd);
+      border:1px solid #eafcff; color:#0b3a4e !important;
+      box-shadow:0 0 10px rgba(110,215,255,.65), inset 0 1px 0 rgba(255,255,255,.7); }
+
+    /* 크리스탈 테이블 — 살얼음 */
+    .shop-tblprev.tp-crystal { background:radial-gradient(ellipse at 50% 45%, #2d6d8c, #14384c); }
+
     /* ── 명패 (닉네임 장식) ── */
-    .np-wood, .np-neon, .np-gold, .np-daily, .np-lv50, .np-ruby { padding:1px 9px; border-radius:8px; display:inline-block; }
+    .np-wood, .np-neon, .np-gold, .np-daily, .np-lv50, .np-ruby, .np-crystal { padding:1px 9px; border-radius:8px; display:inline-block; }
     .np-wood  { background:linear-gradient(135deg,#5a3f24,#3c2a16); border:1px solid #8a6a3a; }
     .np-neon  { background:#160b26; border:1px solid #c39bff; box-shadow:0 0 9px rgba(195,155,255,.55); }
     .np-gold  { background:linear-gradient(135deg,#6a5312,#a8850f); border:1px solid #ffd94a; box-shadow:0 0 8px rgba(255,215,80,.4); }
@@ -572,6 +626,10 @@
     .shop-emprev .em-one { width:1.05em; height:1.05em; display:inline-flex; margin-right:-.14em; }
     .shop-emprev .em-one:last-child { margin-right:0; }
     .shop-emprev .em-one svg { width:100%; height:100%; display:block; }
+    /* 도발 팩의 티백은 위아래로 담갔다 뺐다 한다 — 이 팩의 성격을 한눈에 보여준다 */
+    .em-teabag svg, .emo-b[data-e="🫖"] svg { animation:teaDip 1.1s ease-in-out infinite; }
+    @keyframes teaDip { 0%,100% { transform:translateY(0); } 50% { transform:translateY(3px); } }
+    @media (prefers-reduced-motion:reduce) { .em-teabag svg, .emo-b[data-e="🫖"] svg { animation:none; } }
     .np-clover { width:1em; height:1em; display:inline-flex; vertical-align:-.14em; }
     .np-clover svg { width:100%; height:100%; display:block; }
     .shop-dyeprev { width:36px; height:36px; border-radius:50%; flex-shrink:0;
@@ -1507,6 +1565,11 @@
     #game.tbl-purple { background:radial-gradient(ellipse 90% 70% at 50% 50%, #3d2350 0%, #251533 78%, #140b1c 100%); }
     #game.tbl-gold   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #5a4410 0%, #3a2c0a 78%, #1e1605 100%); border-color:#4a3410; }
     #game.tbl-forest { background:radial-gradient(ellipse 90% 70% at 50% 50%, #14532d 0%, #0d3a20 78%, #061f10 100%); }
+    #game.tbl-crystal { background:
+      linear-gradient(118deg, rgba(255,255,255,.05) 0 12%, transparent 12.4%),
+      linear-gradient(-142deg, rgba(190,240,255,.06) 0 22%, transparent 22.4%),
+      radial-gradient(ellipse 90% 70% at 50% 50%, #235a75 0%, #123a4e 78%, #08202c 100%);
+      border-color:#2f6f8e; }
     /* ── 카드 앞면 스킨 (내 시야 카드 숫자 테마) ── */
     #game.cf-neon .card .c-num { color:#6ffcff; text-shadow:0 0 8px rgba(90,240,255,.8),0 0 2px rgba(90,240,255,.9); }
     #game.cf-neon .card .c-rank { color:#ff8ef0; }
@@ -1514,6 +1577,9 @@
     #game.cf-classic .card .c-rank { font-family:'Georgia',serif; }
     #game.cf-gold .card .c-num { color:#ffd94a; text-shadow:0 0 8px rgba(255,200,60,.7),0 1px 2px rgba(0,0,0,.5); }
     #game.cf-gold .card .c-rank { color:#ffe9a8; }
+    #game.cf-crystal .card .c-num { color:#dffaff; text-shadow:0 0 9px rgba(120,225,255,.9), 0 1px 2px rgba(0,30,45,.6); }
+    #game.cf-crystal .card .c-rank { color:#a8e8ff; }
+    .shop-cfprev.cfp-crystal { color:#dffaff; text-shadow:0 0 8px rgba(120,225,255,.9); }
     /* 펠트 위 미세 무늬 */
     #game::before {
       content:''; position:absolute; inset:14px; border-radius:20px; pointer-events:none;
