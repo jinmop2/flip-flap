@@ -317,6 +317,12 @@
         if (mine) msg += `  (내 손패로 ${mine.card.kind}-${mine.card.grade} 들어옴)`;
       }
     }
+    // 남의 차례를 기다리는 중이면 남은 시간을 같이 보여준다.
+    // 예전엔 이게 없어서 "왜 안 넘어가지" 하고 멈춘 줄 알았다.
+    if (s.waitSeat !== null && s.waitSeat !== undefined && s.waitSeat !== mySeat
+        && typeof s.waitLeft === 'number' && s.waitLeft <= 20 && !s.over) {
+      msg += `  (${s.waitLeft}초)`;
+    }
     $('q-status').textContent = msg;
     $('q-typeBtns').classList.toggle('show', s.phase === 'choose_type' && iAmAuc);
 

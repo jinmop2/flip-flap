@@ -20,6 +20,15 @@ const BOT_NICKS = ['경매왕 덕배', '큰손 미스박', '눈치백단 재훈'
 // 아무 일이 없다가 뜬금없이 WIN 이 떴다.
 const T = { draw: 650, offer: 750, type: 650, bid: 480, reveal: 1150, settle: 1750, next: 260 };
 const STUCK_MS = 12000;     // 사람을 기다리는 게 아닌데 이만큼 멈춰 있으면 복구한다
+// 사람 차례에도 제한이 필요하다. 예전엔 없어서, 멀티에서 한 명이 가만히 있으면
+// 나머지가 무한정 기다렸다("카드가 안 내진다"의 정체). 2인전은 60초 시계가 있는데
+// 다인전만 빠져 있었다. 여럿이 기다리므로 2인전보다 짧게 잡는다.
+const TURN_MS = 25000;
+// 한 번 시간을 넘긴 사람은 자리를 비웠을 가능성이 크다. 그런데도 매 수마다
+// 25초씩 기다리면 한 턴에 75초가 걸려 남은 사람들이 못 견딘다.
+// 연속으로 넘기면 대기를 확 줄이고, 그 사람이 다시 두면 원래대로 돌린다.
+const TURN_MS_AFK = 6000;
+const AFK_AFTER = 2;        // 연속 이만큼 넘기면 자리비움으로 본다
 const ORPHAN_MS = 120000;   // 솔로 — 접속이 끊긴 뒤 이만큼 지나면 방을 정리
 const SEAT_GRACE = 20000;   // 멀티 — 이만큼 안 돌아오면 그 자리는 AI가 대신한다
 
@@ -49,7 +58,7 @@ function attach4(io) {
 
   // ── 상태 ─────────────────────────────────────────────────────────────────
   // me 좌석 시점으로만 만든다. 남의 손패는 어떤 경우에도 내보내지 않는다.
-  function stateFor(g, me, rp) {
+  function stateFor(g, me, rp, room) {
     const a = g.auction;
     const reveal = g.phase === 'reveal' || g.phase === 'settled' || g.phase === 'game_over';
     const openedList = G.openedBids(g);
@@ -73,6 +82,9 @@ function attach4(io) {
         seq: a.seq || null,
         turnToBid: G.turnToBid(g),
       } : null,
+      // 지금 누구를 몇 초 기다리는지 — 화면에 남은 시간을 보여주려고
+      waitSeat: (room && room.waitSeat !== undefined) ? room.waitSeat : null,
+      waitLeft: (room && room.waitUntil) ? Math.max(0, Math.round((room.waitUntil - Date.now()) / 1000)) : null,
       result: (g.phase === 'settled' || g.phase === 'game_over') ? g.lastResult : null,
       over: g.over, rp: rp || null,
     };
@@ -82,7 +94,7 @@ function attach4(io) {
     const r = rooms4[roomId]; if (!r || r.dead) return;
     for (let i = 0; i < r.seats.length; i++) {
       const sid = r.seats[i].sid;
-      if (sid) io.to(sid).emit('g4_state', stateFor(r.game, i, r.rp));
+      if (sid) io.to(sid).emit('g4_state', stateFor(r.game, i, r.rp, r));
     }
   }
 
@@ -99,6 +111,18 @@ function attach4(io) {
   }
 
   // 지금 입력을 기다려야 하는 사람 좌석 (없으면 null)
+  // 사람 차례가 시작·유지·해제될 때 마감 시각을 관리한다.
+  // 같은 사람이 계속 같은 차례면 마감을 유지하고, 차례가 바뀌면 새로 잰다.
+  function markWait(r, seat) {
+    if (seat === null) { r.waitSeat = null; r.waitUntil = 0; return; }
+    if (r.waitSeat !== seat) {
+      r.waitSeat = seat;
+      r.afk = r.afk || {};
+      const ms = (r.afk[seat] || 0) >= AFK_AFTER ? TURN_MS_AFK : TURN_MS;
+      r.waitUntil = Date.now() + ms;
+    }
+  }
+
   function humanToAct(g, r) {
     const isHuman = (i) => !r.seats[i].isBot && r.seats[i].sid;
     if (g.phase === 'draw' || g.phase === 'offer' || g.phase === 'choose_type')
@@ -107,6 +131,23 @@ function attach4(io) {
       for (let i = 0; i < r.seats.length; i++) if (isHuman(i) && G.canBid(g, i)) return i;
     }
     return null;
+  }
+
+  // 시간이 다 된 사람 대신 한 수 둔다. AI 와 같은 판단을 쓰므로 엉뚱한 수가 나오진 않는다.
+  function autoPlayFor(g, seat) {
+    if (g.phase === 'draw' && g.auctioneer === seat) return G.draw(g);
+    if (g.phase === 'offer' && g.auctioneer === seat) {
+      const c = AI.chooseConsign(g, seat);
+      return c ? G.offer(g, seat, c.id) : false;
+    }
+    if (g.phase === 'choose_type' && g.auctioneer === seat) {
+      return G.chooseType(g, seat, AI.chooseType(g, seat));
+    }
+    if (g.phase === 'bidding' && G.canBid(g, seat)) {
+      const c = AI.chooseBid(g, seat);
+      return c ? G.bid(g, seat, c.id) : false;
+    }
+    return false;
   }
 
   // 방마다 예약 타이머는 항상 최대 1개 — 이 모듈의 핵심 불변식
@@ -124,13 +165,14 @@ function attach4(io) {
     const r = rooms4[roomId]; if (!r || r.dead) return;
     const g = r.game;
     r.lastStep = Date.now();
+    markWait(r, humanToAct(g, r));
     dbg('step', g.phase, 'turn=' + g.turn, 'auc=' + g.auctioneer);
 
     switch (g.phase) {
       case 'game_over':
         awardRp(roomId);
         push(roomId);
-        for (let i = 0; i < r.seats.length; i++) if (r.seats[i].sid) io.to(r.seats[i].sid).emit('g4_over', stateFor(g, i, r.rp));
+        for (let i = 0; i < r.seats.length; i++) if (r.seats[i].sid) io.to(r.seats[i].sid).emit('g4_over', stateFor(g, i, r.rp, r));
         return;
 
       case 'draw':
@@ -340,7 +382,26 @@ function attach4(io) {
       if (r.solo && r.seats.some((x) => !x.isBot && x.orphanAt)) continue;   // 솔로 자리비움 = 진행 정지
       if (r.next) continue;
       if (r.game.phase === 'game_over') continue;
-      if (humanToAct(r.game, r) !== null) continue;
+      const waiting = humanToAct(r.game, r);
+      if (waiting !== null) {
+        // 사람을 기다리는 중 — 다만 무한정은 아니다.
+        markWait(r, waiting);
+        if (now < (r.waitUntil || 0)) continue;
+        r.afk = r.afk || {};
+        r.afk[waiting] = (r.afk[waiting] || 0) + 1;
+        console.warn('[g4] 시간 초과 — AI 가 대신 둡니다 room=' + roomId + ' seat=' + waiting
+                     + ' phase=' + r.game.phase + ' (연속 ' + r.afk[waiting] + '회)');
+        try {
+          autoPlayFor(r.game, waiting);
+        } catch (e) {
+          console.error('[g4] 대리 진행 실패:', e);
+        }
+        markWait(r, null);
+        r.lastStep = now;
+        push(roomId);
+        schedule(roomId, T.next);
+        continue;
+      }
       if (now - (r.lastStep || 0) < STUCK_MS) continue;
       console.warn('[g4] 진행이 멈춰 복구합니다 room=' + roomId + ' phase=' + r.game.phase);
       schedule(roomId, 60);
@@ -397,6 +458,8 @@ function attach4(io) {
       else if (data.type === 'bid' && g.phase === 'bidding') ok = G.bid(g, me, data.cardId);
       if (!ok) return push(roomId);
       r.lastStep = Date.now();
+      markWait(r, null);          // 냈으니 이 사람 기다림은 끝
+      if (r.afk) r.afk[me] = 0;   // 돌아왔으니 자리비움 해제
       push(roomId);
       schedule(roomId, T.next);
     });
