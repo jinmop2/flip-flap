@@ -293,7 +293,7 @@
     else if (s.phase === 'bidding') {
       const closed = a && a.closed;
       const waitFirst = closed && a.first !== null && a.first !== undefined && !a.firstDone;
-      if (!s.bidders.includes(mySeat)) msg = s.firstAuction ? '첫 경매라 진행자인 나는 입찰하지 않습니다' : '손패가 없어 이번엔 입찰할 수 없어요';
+      if (!s.bidders.includes(mySeat)) msg = '손패가 없어 이번엔 입찰할 수 없어요';
       else if (waitFirst && a.first !== mySeat) msg = `${s.seats[a.first].name} 님이 먼저 공개 배팅하는 중…`;
       else if (me.bidded) msg = '나머지가 배팅하는 중…';
       else if (waitFirst && a.first === mySeat) { msg = '진행자는 먼저 공개로 배팅합니다 — 카드를 고르세요'; pickMode = 'bid'; }
@@ -369,7 +369,7 @@
     const a = q4.auction;
     if (a) { if (a.center) gone.add(a.center.id); if (a.offered) gone.add(a.offered.id); }
     box.innerHTML = '';
-    for (const [kind, max] of (q4.spec || [[2, 6], [3, 10], [4, 10], [6, 14]])) {
+    for (const [kind, max] of (q4.spec || [[2, 5], [3, 7], [4, 11], [6, 23]])) {
       const row = document.createElement('div'); row.className = 'q-lrow';
       const kk = document.createElement('b'); kk.className = 'q-ck'; kk.dataset.k = kind;
       kk.textContent = kind; row.appendChild(kk);

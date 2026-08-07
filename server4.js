@@ -56,7 +56,7 @@ function attach4(io) {
     const openOffer = a && (a.type === 'open' || g.auctioneer === me || reveal);
     return {
       me, n: g.n, spec: g.spec, turn: g.turn, phase: g.phase, auctioneer: g.auctioneer, deckLeft: g.deck.length,
-      firstAuction: g.firstAuction, bidders: G.bidderSeats(g), myHand: g.seats[me].hand,
+      bidders: G.bidderSeats(g), myHand: g.seats[me].hand,
       seats: g.seats.map((s, i) => ({
         name: s.name, isBot: s.isBot, handLen: s.hand.length, acq: s.acq,
         need: G.needLeft(s.acq), bidded: !!(a && a.bids[i]),
