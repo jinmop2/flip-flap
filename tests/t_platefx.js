@@ -35,31 +35,31 @@ console.log(`    코인 ${base.r.coins} · 경험치 ${base.r.xp}`);
 ok('보상이 들어옴', base.r.coins > 0 && base.r.xp > 0);
 ok('명패 몫 없음', !base.r.plateCoin && !base.r.plateXp);
 
-console.log('\n② 황금 명패 — 코인 +8%');
+console.log('\n② 황금 명패 — 코인 +4%');
 const gold = playOnce('np_gold');
-const expGold = Math.round(base.r.coins * 0.08);
+const expGold = Math.round(base.r.coins * 0.04);
 ok(`코인 +${expGold} (${base.r.coins} → ${gold.r.coins})`, gold.r.plateCoin === expGold,
    `기대 ${expGold} / 실제 ${gold.r.plateCoin}`);
 ok('경험치는 그대로', gold.r.xp === base.r.xp);
 
-console.log('\n③ 흑요석 명패 — 코인 +15% (황금보다 세다)');
+console.log('\n③ 흑요석 명패 — 코인 +6% (황금보다 세다)');
 const obs = playOnce('np_obsidian');
 ok('흑요석 > 황금', obs.r.plateCoin > gold.r.plateCoin, `흑요석 ${obs.r.plateCoin} / 황금 ${gold.r.plateCoin}`);
 
 console.log('\n④ 경험치 명패');
-for (const [plate, rate] of [['np_hanji', 0.05], ['np_neon', 0.10], ['np_crystal', 0.15]]) {
+for (const [plate, rate] of [['np_hanji', 0.03], ['np_neon', 0.05], ['np_crystal', 0.08]]) {
   const g = playOnce(plate);
   const exp = Math.round(base.r.xp * rate);
   ok(`${plate} 경험치 +${exp}`, g.r.plateXp === exp, `기대 ${exp} / 실제 ${g.r.plateXp}`);
   ok(`${plate} 코인은 그대로`, !g.r.plateCoin);
 }
 
-console.log('\n⑤ 루비 명패 — 연승 보너스 1.5배');
+console.log('\n⑤ 루비 명패 — 연승 보너스 1.25배');
 {
   const plain = playOnce(null, { winStreak: 4 });
   const ruby = playOnce('np_ruby', { winStreak: 4 });
   ok('연승 보너스가 늘어남', ruby.r.streak > plain.r.streak, `일반 ${plain.r.streak} / 루비 ${ruby.r.streak}`);
-  ok('1.5배', ruby.r.streak === plain.r.streak + Math.round(plain.r.streak * 0.5));
+  ok('1.25배', ruby.r.streak === plain.r.streak + Math.round(plain.r.streak * 0.25));
 }
 
 console.log('\n⑥ 세트 완성 보너스 — 네 가지를 다 맞춰 껴야 붙는다');
@@ -140,8 +140,11 @@ console.log('\n⑪ 코인 명패와 경험치 명패의 격차');
   const obs = playOnce('np_obsidian');
   const cry = playOnce('np_crystal');
   console.log(`    흑요석 코인 +${obs.r.plateCoin} / 크리스탈 경험치 +${cry.r.plateXp}`);
-  ok('흑요석 코인 보너스가 10% 로 낮아짐', obs.r.plateCoin === Math.round(base.r.coins * 0.10),
-    `기대 ${Math.round(base.r.coins * 0.10)} / 실제 ${obs.r.plateCoin}`);
+  ok('흑요석 코인 보너스 6%', obs.r.plateCoin === Math.round(base.r.coins * 0.06),
+    `기대 ${Math.round(base.r.coins * 0.06)} / 실제 ${obs.r.plateCoin}`);
+  // 명패 하나로 벌이가 확 달라지면 안 된다 — 한 판 보상의 10% 를 넘지 않게 둔다
+  ok('명패 몫이 한 판 보상의 10% 이하', obs.r.plateCoin <= base.r.coins * 0.10,
+    `${obs.r.plateCoin} / ${base.r.coins}`);
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

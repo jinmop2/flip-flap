@@ -329,10 +329,10 @@ const SHOP = {
   emote_battle:{ name: '승부사 이모트 팩',    icon: '⚔️', price: 400,  type: 'emotes',
                  desc: '칼·방패·트로피 등 승부용 8종' },
   np_wood:  { name: '나무 명패',   icon: '🪵', price: 400,  type: 'plate', desc: '닉네임을 감싸는 소박한 나무 명패' },
-  np_neon:  { name: '네온 명패',   icon: '💜', price: 800,  type: 'plate', desc: '보랏빛 네온 명패 · 경험치 +10%' },
-  np_gold:  { name: '황금 명패',   icon: '🏅', price: 1000, type: 'plate', desc: '번쩍이는 황금 명패 · 코인 획득 +8%' },
+  np_neon:  { name: '네온 명패',   icon: '💜', price: 800,  type: 'plate', desc: '보랏빛 네온 명패 · 경험치 +5%' },
+  np_gold:  { name: '황금 명패',   icon: '🏅', price: 1000, type: 'plate', desc: '번쩍이는 황금 명패 · 코인 획득 +4%' },
   np_daily: { name: '행운의 명패', icon: '🍀', price: 1500, type: 'plate', desc: '장착 중이면 매일 출석 보상 +50🪙' },
-  np_lv50:  { name: '레벨50 한정 명패', icon: '🎖️', price: 0, type: 'plate', milestone: true, desc: '레벨 50 달성자 한정 · 코인·경험치 각 +5%' },
+  np_lv50:  { name: '레벨50 한정 명패', icon: '🎖️', price: 0, type: 'plate', milestone: true, desc: '레벨 50 달성자 한정 · 코인·경험치 각 +3%' },
   dye_rare: { name: '희귀 염색약 확정권', icon: '💎', price: 0, type: 'dye_rare', milestone: true, desc: '희귀 색상(청록·핑크·라임) 확정 — 레벨20 보상' },
   tbl_blue:  { name: '블루 테이블',   icon: '🔵', price: 600,  type: 'table', desc: '차분한 심해 블루 테이블' },
   tbl_purple:{ name: '퍼플 테이블',   icon: '🟣', price: 700,  type: 'table', desc: '고급스러운 자주빛 테이블' },
@@ -341,13 +341,13 @@ const SHOP = {
   face_neon: { name: '네온 카드',     icon: '🃏', price: 700,  type: 'cardface', desc: '숫자가 네온으로 빛나는 카드 앞면' },
   face_classic:{ name: '클래식 카드', icon: '♠️', price: 900,  type: 'cardface', desc: '트럼프풍 세리프 숫자 카드 앞면' },
   face_gold: { name: '황금 숫자 카드', icon: '👑', price: 1000, type: 'cardface', desc: '숫자가 황금빛으로 빛나는 카드 앞면' },
-  np_ruby:   { name: '루비 명패',     icon: '❤️‍🔥', price: 1200, type: 'plate', desc: '와인빛 루비 명패 · 연승 보너스 1.5배' },
+  np_ruby:   { name: '루비 명패',     icon: '❤️‍🔥', price: 1200, type: 'plate', desc: '와인빛 루비 명패 · 연승 보너스 1.25배' },
 
   // ── 크리스탈 세트 — 카드백·명패·테이블·카드앞면을 맞춰 쓰면 한 벌이 된다 ──
   back_crystal: { name: '크리스탈 카드백', icon: '🔮', price: 1600, type: 'cardback',
                   desc: '빛을 쪼개는 수정 결정면 뒷면' },
   np_crystal:   { name: '크리스탈 명패',   icon: '🔮', price: 1300, type: 'plate',
-                  desc: '얼음처럼 맑은 명패 · 경험치 +15%' },
+                  desc: '얼음처럼 맑은 명패 · 경험치 +8%' },
   tbl_crystal:  { name: '크리스탈 테이블', icon: '🧊', price: 1400, type: 'table',
                   desc: '살얼음이 낀 듯한 서늘한 테이블' },
   face_crystal: { name: '크리스탈 카드',   icon: '💠', price: 1100, type: 'cardface',
@@ -363,7 +363,7 @@ const SHOP = {
 
   // ── 흑요석 세트 (명패·테이블·앞면) ──
   np_obsidian:  { name: '흑요석 명패',     icon: '🌑', price: 2000, type: 'plate',
-                  desc: '금이 흐르는 검은 명패 · 코인 획득 +10%' },
+                  desc: '금이 흐르는 검은 명패 · 코인 획득 +6%' },
   tbl_obsidian: { name: '흑요석 테이블',   icon: '🌑', price: 1700, type: 'table',
                   desc: '검은 유리를 깐 듯한 테이블' },
   face_obsidian:{ name: '흑요석 카드',     icon: '🌑', price: 1300, type: 'cardface',
@@ -371,7 +371,7 @@ const SHOP = {
 
   // ── 한지 세트 (명패·테이블·앞면) ──
   np_hanji:     { name: '한지 명패',       icon: '📜', price: 900,  type: 'plate',
-                  desc: '먹으로 쓴 이름표 · 경험치 +5%' },
+                  desc: '먹으로 쓴 이름표 · 경험치 +3%' },
   tbl_hanji:    { name: '한지 테이블',     icon: '📜', price: 800,  type: 'table',
                   desc: '닥종이를 깐 차분한 테이블' },
   face_hanji:   { name: '먹글씨 카드',     icon: '📜', price: 800,  type: 'cardface',
@@ -390,16 +390,19 @@ const SHOP = {
 //   · 코인 보너스 상단을 15% → 10% 로 낮췄다
 // 그래도 완전히 같아지진 않는다. 코인 명패는 "버는 사람", 경험치 명패는
 // "빨리 크는 사람" 을 위한 것으로 성격을 갈랐다.
+// 수치는 한 번 낮췄다. 처음엔 코인 +8~15% 로 잡았는데 실제로 굴려 보니
+// 명패 하나로 벌이가 눈에 띄게 달라져, 명패가 "장식" 이 아니라 "필수" 가 됐다.
+// 꾸미는 재미가 먼저고 효과는 덤이어야 해서 대략 절반으로 줄였다.
 const PLATE_FX = {
   np_wood:     {},                              // 입문용 — 장식만
-  np_hanji:    { xp: 0.05 },
-  np_neon:     { xp: 0.10 },
-  np_gold:     { coin: 0.08 },                  // 황금 = 돈
-  np_ruby:     { streak: 0.5 },                 // 연승 보너스 1.5배
-  np_crystal:  { xp: 0.15 },
+  np_hanji:    { xp: 0.03 },
+  np_neon:     { xp: 0.05 },
+  np_gold:     { coin: 0.04 },                  // 황금 = 돈
+  np_ruby:     { streak: 0.25 },                // 연승 보너스 1.25배
+  np_crystal:  { xp: 0.08 },
   np_daily:    {},                              // 출석 +50 은 따로 처리
-  np_obsidian: { coin: 0.10 },                  // 최고가지만 과하지 않게 — 아래 주석 참고
-  np_lv50:     { coin: 0.05, xp: 0.05 },        // 마일스톤 — 양쪽 조금씩
+  np_obsidian: { coin: 0.06 },                  // 최고가지만 과하지 않게
+  np_lv50:     { coin: 0.03, xp: 0.03 },        // 마일스톤 — 양쪽 조금씩
 };
 
 // ── 세트 보너스 ────────────────────────────────────────────────────────────
@@ -410,7 +413,7 @@ const SETS = {
   obsidian: { back: 'back_obsidian', plate: 'np_obsidian', table: 'tbl_obsidian', face: 'face_obsidian', name: '흑요석' },
   hanji:    { back: 'back_hanji',    plate: 'np_hanji',    table: 'tbl_hanji',    face: 'face_hanji',    name: '한지' },
 };
-const SET_BONUS = { coin: 0.05, xp: 0.05 };
+const SET_BONUS = { coin: 0.03, xp: 0.03 };
 
 // 지금 장착한 것으로 완성된 세트가 있으면 그 키를 돌려준다
 function setOf(u) {

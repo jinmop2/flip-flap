@@ -1384,6 +1384,15 @@ const shopIcon = it => {
   return ico(it.icon, 'shop-ico');
 };
 // 장착 슬롯: 상점 타입 → 프로필 필드
+// 상점 진열 순서 — 위에서부터 이 차례로 묶어 보여준다
+const SHOP_GROUPS = [
+  { name: '카드 뒷면', types: ['cardback'] },
+  { name: '카드 앞면', types: ['cardface'] },
+  { name: '테이블',   types: ['table'] },
+  { name: '명패',     types: ['plate'] },
+  { name: '이모트',   types: ['emotes'] },
+  { name: '꾸미기·기타', types: ['dye', 'dye_rare', 'ticket'] },
+];
 const EQUIP_SLOT = { cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace' };
 let shopSelId = null;
 // 마일스톤 아이템은 보유/티켓 있을 때만 상점에 노출
@@ -1402,7 +1411,28 @@ function renderShop() {
   if (!vis.length) { list.innerHTML = '<div class="lb-empty">상점을 불러오지 못했어요. 잠시 후 다시 열어주세요.</div>'; return; }
   if (!shopSelId || !vis.some(x => x.id === shopSelId)) shopSelId = vis[0].id;
   list.innerHTML = '';
-  vis.forEach(it => {
+  // 종류별로 묶어 순서대로 놓는다. 예전엔 카탈로그에 적은 순서 그대로라
+  // 카드백과 명패가 뒤섞여 뭘 고르는 화면인지 알기 어려웠다.
+  const ordered = [];
+  for (const g of SHOP_GROUPS) {
+    const items = vis.filter((x) => g.types.includes(x.type));
+    if (!items.length) continue;
+    ordered.push({ head: g.name, count: items.length });
+    for (const it of items) ordered.push(it);
+  }
+  // 어느 묶음에도 안 걸린 게 있으면 맨 뒤에 (새 종류를 넣고 분류를 깜빡했을 때)
+  const known = new Set(SHOP_GROUPS.flatMap((g) => g.types));
+  const rest = vis.filter((x) => !known.has(x.type));
+  if (rest.length) { ordered.push({ head: '그 밖에', count: rest.length }); ordered.push(...rest); }
+
+  ordered.forEach(it => {
+    if (it.head) {
+      const h = document.createElement('div');
+      h.className = 'shop-head';
+      h.textContent = it.head;
+      list.appendChild(h);
+      return;
+    }
     const owned = myAccount.items && myAccount.items[it.id];
     const tile = document.createElement('div');
     tile.className = 'shop-tile' + (shopSelId === it.id ? ' sel' : '');
@@ -1596,10 +1626,16 @@ function refreshEmotes() {
   for (const [pack, emojis] of Object.entries(EMOTE_PACKS)) {
     if (!myAccount.items[pack]) continue;
     emojis.forEach(e => {
-      const b = document.createElement('button'); b.className = 'emote-extra'; b.textContent = e;
-      b.onclick = () => sendEmote(e); picker.appendChild(b);
+      // 기본 이모트와 같은 클래스를 준다 — 안 그러면 팩 이모트만 원시 이모지로 뜨고,
+      // 정작 보낼 때는 그림이 날아가서 "누르기 전 그림과 실제가 다르다" 가 된다.
+      const b = document.createElement('button');
+      b.className = 'emo-b emote-extra';
+      b.dataset.e = e;
+      b.onclick = () => sendEmote(e);
+      picker.appendChild(b);
     });
   }
+  paintEmoteButtons();   // 새로 붙인 팩 버튼까지 그림으로 채운다
 }
 
 // ── 로비 다이얼로그 ─────────────────────────────────────────
