@@ -140,20 +140,41 @@ function chooseBid(g, seat) {
   let desire = gainOf(me.acq, prize, rem, g.spec) * style.greed + threat * style.block;
   if (blind) desire = desire * 0.65 + 1.1;         // 안 보이면 평균치로 수렴
 
-  // 클로즈 — 진행자가 먼저 깐 카드를 보고 판단한다
-  const opened = G.openedBid(g);
-  if (closed && opened && opened.seat !== seat) {
-    if (desire >= TUNE.contest) {
-      // 이기는 카드 중 가장 약한 것 = 최소 비용. 경쟁이 예상되면 한 단계 더 지른다.
+  // 클로즈 — 순서대로 한 명씩 공개하며 낸다.
+  // 내 뒤에 몇 명이 남았는지가 판단을 가른다.
+  //   마지막이면  → 지금 최강을 넘기는 가장 싼 카드로 확실히 이긴다
+  //   앞이면      → 뒤에서 넘길 수 있으니 여유를 두거나, 아예 흘린다
+  const opened = G.openedBid(g);          // 지금까지 깐 것 중 최강
+  if (closed && a.seq) {
+    const idx = a.seq.indexOf(seat);
+    const after = idx < 0 ? 0 : a.seq.length - 1 - idx;   // 내 뒤에 낼 사람 수
+    if (desire < TUNE.concede) return hand[hand.length - 1];
+
+    if (after === 0 && opened) {
+      // 마지막 — 이기는 카드 중 가장 약한 것이면 충분하다. 더 지르면 낭비다.
+      const winners = hand.filter((c) => G.beats(c, opened.card, g.spec));
+      if (winners.length && desire >= TUNE.contest) return winners[winners.length - 1];
+      return hand[hand.length - 1];        // 못 이기면 굳이 좋은 카드를 안 버린다
+    }
+    if (opened && desire >= TUNE.contest) {
+      // 뒤에 사람이 남았다 — 지금 최강만 넘겨서는 뺏긴다. 뒷사람 몫만큼 더 지른다.
       const winners = hand.filter((c) => G.beats(c, opened.card, g.spec));
       if (winners.length) {
-        const cheapest = winners[winners.length - 1];
-        const i = hand.indexOf(cheapest);
-        const contested = G.bidderSeats(g).length >= 3 && desire >= 3.5;
-        return (contested && i > 0) ? hand[i - 1] : cheapest;
+        const i = hand.indexOf(winners[winners.length - 1]);
+        const step = Math.min(i, desire >= TUNE.allIn ? after : Math.max(0, after - 1));
+        return hand[i - step];
       }
-    } else {
-      return hand[hand.length - 1];               // 관심 없으면 최약으로 흘린다
+      return hand[hand.length - 1];
+    }
+    // 내가 첫 번째 — 볼 게 없다. 세게 질러 뒤를 물러나게 하거나, 싸게 흘린다.
+    if (!opened) {
+      if (desire >= TUNE.allIn) return hand[0];
+      if (desire >= TUNE.contest) {
+        const target = likelyBest(g, seat);
+        const winners = target ? hand.filter((c) => G.beats(c, target, g.spec)) : [];
+        return winners.length ? winners[winners.length - 1] : hand[0];
+      }
+      return hand[hand.length - 1];
     }
   }
 

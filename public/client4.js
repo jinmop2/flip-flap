@@ -266,9 +266,9 @@
       }
     }
 
-    // 클로즈에서 진행자가 아직 선공개를 안 했으면 그 사람을 표시
-    if (a && a.closed && a.first !== null && a.first !== undefined && !a.firstDone && a.first !== mySeat) {
-      const el = opps.children[oppSeats.indexOf(a.first)];
+    // 클로즈는 순서제 — 지금 낼 차례인 사람을 짚어준다
+    if (a && a.closed && a.turnToBid !== null && a.turnToBid !== undefined && a.turnToBid !== mySeat) {
+      const el = opps.children[oppSeats.indexOf(a.turnToBid)];
       if (el) el.classList.add('turn');
     }
 
@@ -292,12 +292,20 @@
     else if (s.phase === 'choose_type') msg = iAmAuc ? '경매 방식을 고르세요' : `${s.seats[s.auctioneer].name} 님이 방식을 고르는 중…`;
     else if (s.phase === 'bidding') {
       const closed = a && a.closed;
-      const waitFirst = closed && a.first !== null && a.first !== undefined && !a.firstDone;
       if (!s.bidders.includes(mySeat)) msg = '손패가 없어 이번엔 입찰할 수 없어요';
-      else if (waitFirst && a.first !== mySeat) msg = `${s.seats[a.first].name} 님이 먼저 공개 배팅하는 중…`;
-      else if (me.bidded) msg = '나머지가 배팅하는 중…';
-      else if (waitFirst && a.first === mySeat) { msg = '진행자는 먼저 공개로 배팅합니다 — 카드를 고르세요'; pickMode = 'bid'; }
-      else { msg = closed ? '경매품은 비밀! 배팅 카드를 고르세요' : '배팅 카드를 고르세요'; pickMode = 'bid'; }
+      else if (me.bidded) msg = closed ? '다음 사람이 내는 중…' : '나머지가 배팅하는 중…';
+      else if (closed) {
+        // 순서제 — 내 차례가 와야 낼 수 있다. 뒤에 낼수록 앞사람 카드를 다 보고 정한다.
+        if (a.turnToBid !== mySeat) msg = `${s.seats[a.turnToBid].name} 님이 내는 중… (순서대로 공개)`;
+        else {
+          const left = (a.seq || []).filter((x) => !s.seats[x].bidded && x !== mySeat).length;
+          msg = left > 0
+            ? `내 차례! 뒤에 ${left}명이 내 카드를 보고 냅니다`
+            : '내 차례! 마지막이라 앞사람 카드를 다 보고 정할 수 있어요';
+          pickMode = 'bid';
+        }
+      }
+      else { msg = '배팅 카드를 고르세요'; pickMode = 'bid'; }
     }
     else if (s.phase === 'reveal') msg = '두구두구… 공개!';
     else if (s.phase === 'settled' && s.result) {
@@ -369,7 +377,7 @@
     const a = q4.auction;
     if (a) { if (a.center) gone.add(a.center.id); if (a.offered) gone.add(a.offered.id); }
     box.innerHTML = '';
-    for (const [kind, max] of (q4.spec || [[2, 5], [3, 7], [4, 11], [6, 23]])) {
+    for (const [kind, max] of (q4.spec || [[2, 4], [3, 6], [4, 10], [6, 18]])) {
       const row = document.createElement('div'); row.className = 'q-lrow';
       const kk = document.createElement('b'); kk.className = 'q-ck'; kk.dataset.k = kind;
       kk.textContent = kind; row.appendChild(kk);

@@ -52,7 +52,7 @@ function attach4(io) {
   function stateFor(g, me, rp) {
     const a = g.auction;
     const reveal = g.phase === 'reveal' || g.phase === 'settled' || g.phase === 'game_over';
-    const opened = G.openedBid(g);
+    const openedList = G.openedBids(g);
     const openOffer = a && (a.type === 'open' || g.auctioneer === me || reveal);
     return {
       me, n: g.n, spec: g.spec, turn: g.turn, phase: g.phase, auctioneer: g.auctioneer, deckLeft: g.deck.length,
@@ -66,11 +66,12 @@ function attach4(io) {
         offered: openOffer ? a.offered : null,
         type: a.type,
         // 오픈은 전원 뒤집어 냈다가 한 번에 공개.
-        // 클로즈는 진행자가 낸 카드만 먼저 공개되고, 나머지는 공개 시점까지 감춘다.
-        bids: reveal ? { ...a.bids } : (opened ? { [opened.seat]: opened.card } : {}),
+        // 클로즈는 순서대로 한 명씩 공개 — 이미 낸 사람 것만 보인다.
+        bids: reveal ? { ...a.bids }
+                     : Object.fromEntries(openedList.map((e) => [e.seat, e.card])),
         closed: !!a.closed,
-        first: (a.first === undefined ? null : a.first),
-        firstDone: !!opened,
+        seq: a.seq || null,
+        turnToBid: G.turnToBid(g),
       } : null,
       result: (g.phase === 'settled' || g.phase === 'game_over') ? g.lastResult : null,
       over: g.over, rp: rp || null,
@@ -151,7 +152,7 @@ function attach4(io) {
         return schedule(roomId, T.bid);
 
       case 'bidding': {
-        // 클로즈면 진행자가 먼저 내야 나머지가 낼 수 있다 — canBid 가 강제한다.
+        // 클로즈는 순서제 — 진행자부터 한 명씩. 순서는 canBid 가 강제한다.
         // 사람이 낼 수 있는 상태면 기다리고, 아니면 봇을 하나씩 굴린다.
         if (humanToAct(g, r) !== null) return push(roomId);
         const pending = [];

@@ -4,8 +4,8 @@
 // 여기서 따로 굴린다. 나중에 좌석에 실제 소켓을 채우면 PvP로도 확장된다.
 //
 // 룰·수량은 시뮬레이션으로 결정했다.
-//   · 카드 46장 = 2종 5장 / 3종 7장 / 4종 11장 / 6종 23장
-//   · 손패 3인 7장 / 4인 6장, 나머지가 중앙 덱
+//   · 카드 38장 = 2종 4장 / 3종 6장 / 4종 10장 / 6종 18장
+//   · 손패 3인 7장 / 4인 6장, 나머지가 중앙 덱 (3인 17장 / 4인 14장)
 //   · 진행자도 함께 입찰한다 (예외 없음).
 //   · 배팅 카드는 "약하게 부른 사람부터 강한 카드"를 가져간다(역순 분배).
 
@@ -16,23 +16,25 @@
 // 적게 필요한 세트는 운 좋게 초반에 튀어 끝나는 일이 잦아서(분산이 크다),
 // 비례보다 더 깎아야 균형이 맞는다.
 //
-// 예전 구성(2:6 3:10 4:10 6:14)은 AI 가 아무 세트나 쫓을 때만 균형처럼 보였다.
-// AI 가 "가장 빨리 되는 세트"를 노리도록 똑똑해지자 3종이 54%, 6종이 2% 로
-// 무너졌다. 그래서 실력 있는 플레이 기준으로 다시 골랐다.
-// 6000판 × 3인·4인: 종류 편차 3인 9.1%p / 4인 6.7%p (예전 51.6 / 46.5)
+// 장수는 두 번 크게 바꿨다.
+//   ① 예전 40장(2:6 3:10 4:10 6:14)은 AI 가 아무 세트나 쫓을 때만 균형처럼 보였다.
+//      AI 가 "가장 빨리 되는 세트" 를 노리자 3종 54% / 6종 2% 로 무너졌다.
+//   ② 46장으로 늘려 맞췄더니 이번엔 카드가 너무 많아 판이 헐거워졌다.
+//      클로즈를 순차 공개로 바꾸면서 판이 촘촘해져, 다시 줄일 여유가 생겼다.
+// 6000판 × 3인·4인 기준 종류 편차: 3인 5.2%p / 4인 4.5%p
 //
-// 3인·4인이 같은 46장 덱을 쓴다. 손패 장수만 달리해 균형을 맞췄다 —
+// 3인·4인이 같은 38장 덱을 쓴다. 손패 장수만 달리해 균형을 맞췄다 —
 // 같은 카드 한 벌로 두 인원을 모두 지원하는 게 실물로 만들 때도 유리하다.
-const DECK46 = [[2, 5], [3, 7], [4, 11], [6, 23]];
-const SPECS = { 3: DECK46, 4: DECK46 };      // 총 46장
-const HAND = { 3: 7, 4: 6 };                 // 3인 덱 25장 / 4인 덱 22장
+const DECK38 = [[2, 4], [3, 6], [4, 10], [6, 18]];
+const SPECS = { 3: DECK38, 4: DECK38 };      // 총 38장
+const HAND = { 3: 7, 4: 6 };                 // 3인 덱 17장 / 4인 덱 14장
 // 판마다 인원이 다르므로 전역 상수 대신 게임 객체가 자기 구성을 들고 다닌다
 const specOf = (g) => SPECS[g.n] || SPECS[4];
 
 const strength = (c) => c.kind * 100 + c.grade;     // 작을수록 강하다
 const isTop = (c) => c.kind === 2 && c.grade === 1;                 // 최강 2-1
 // 최약 카드는 구성마다 다르다 (6종의 마지막 등급). 구성을 안 주면 4인 기준.
-const lowestGrade = (spec) => { for (const [k, n] of (spec || SPECS[4])) if (k === 6) return n; return 23; };
+const lowestGrade = (spec) => { for (const [k, n] of (spec || SPECS[4])) if (k === 6) return n; return 18; };
 const isBot_ = (c, spec) => c.kind === 6 && c.grade === lowestGrade(spec);
 // 졸개의 배신 — 최약이 최강을 이긴다
 function beats(a, b, spec) {
@@ -140,29 +142,68 @@ function chooseType(g, seat, type) {
   if (type !== 'open' && type !== 'close') return false;
   g.auction.type = type;
   // 오픈  : 경매품을 보여주고, 배팅은 모두 뒤집어 낸 뒤 한 번에 공개한다.
-  // 클로즈: 경매품을 감추는 대신, 진행자가 먼저 공개로 배팅한다.
-  //         나머지는 그 카드를 보고 동시에(서로는 모른 채) 낸 뒤 함께 공개한다.
+  //         동시에 내므로 서로를 읽을 수 없다 — 대신 물건이 뭔지는 안다.
+  // 클로즈: 경매품을 감추는 대신, 진행자부터 시계방향으로 한 명씩 공개하며 낸다.
+  //         뒤에 내는 사람은 앞사람들 카드를 다 보고 정한다.
+  //         앞사람은 세게 질러 뒤를 물러나게 하는 수(허세)가 생긴다.
+  //         동시 입찰에서는 "한 명을 읽어도 나머지에게 뺏길" 확률 때문에
+  //         심리전이 성립하지 않아서(인원 m 일 때 읽기의 가치가 2/m), 순차로 바꿨다.
   g.auction.closed = (type === 'close');
-  g.auction.first = (type === 'close' && bidderSeats(g).includes(g.auctioneer))
-    ? g.auctioneer : null;
+  if (type === 'close') {
+    // 진행자부터 시계방향. 손패가 없어 못 내는 사람은 건너뛴다.
+    const bidders = bidderSeats(g);
+    const seq = [];
+    for (let k = 0; k < g.n; k++) {
+      const cand = (g.auctioneer + k) % g.n;
+      if (bidders.includes(cand)) seq.push(cand);
+    }
+    g.auction.seq = seq;
+    g.auction.first = seq.length ? seq[0] : null;
+  } else {
+    g.auction.seq = null;
+    g.auction.first = null;
+  }
   g.phase = 'bidding';
   return true;
 }
 
-// 지금 이 좌석이 낼 수 있는가 (클로즈는 진행자가 먼저 내야 나머지가 낼 수 있다)
+// 클로즈에서 지금 낼 차례인 좌석 (오픈이면 null — 아무나 먼저 내도 된다)
+function turnToBid(g) {
+  const a = g.auction;
+  if (!a || !a.seq) return null;
+  for (const s of a.seq) if (!a.bids[s]) return s;
+  return null;
+}
+
+// 지금 이 좌석이 낼 수 있는가.
+// 클로즈는 순서제 — 진행자부터 한 명씩, 앞사람이 내야 다음 사람 차례가 온다.
 function canBid(g, seat) {
   const a = g.auction;
   if (!a || g.phase !== 'bidding') return false;
   if (!bidderSeats(g).includes(seat) || a.bids[seat]) return false;
-  if (a.first !== null && a.first !== undefined && !a.bids[a.first] && seat !== a.first) return false;
+  if (a.seq) return turnToBid(g) === seat;
   return true;
 }
 
-// 진행자가 선공개로 낸 카드 — 클로즈에서 나머지가 보고 판단하는 정보
-function openedBid(g) {
+// 클로즈에서 지금까지 공개된 배팅들 — 뒤에 내는 사람이 보고 판단하는 정보.
+// 순서대로 낸 것만 담기므로, 아직 안 낸 사람 것은 들어 있지 않다.
+function openedBids(g) {
   const a = g.auction;
-  if (!a || a.first === null || a.first === undefined) return null;
-  return a.bids[a.first] ? { seat: a.first, card: a.bids[a.first] } : null;
+  if (!a || !a.seq) return [];
+  const out = [];
+  for (const s of a.seq) {
+    if (!a.bids[s]) break;              // 아직 안 낸 사람부터는 볼 수 없다
+    out.push({ seat: s, card: a.bids[s] });
+  }
+  return out;
+}
+// 지금까지 공개된 것 중 가장 강한 배팅 (없으면 null)
+function openedBid(g) {
+  const list = openedBids(g);
+  if (!list.length) return null;
+  let best = list[0];
+  for (const e of list) if (strength(e.card) < strength(best.card)) best = e;
+  return best;
 }
 
 function bid(g, seat, cardId) {
@@ -257,6 +298,6 @@ function advance(g) {
   g.phase = 'draw';
 }
 
-module.exports = { SPECS, HAND, specOf, createGame4, draw, offer, chooseType, bid, canBid, openedBid,
+module.exports = { SPECS, HAND, specOf, createGame4, draw, offer, chooseType, bid, canBid, openedBid, openedBids, turnToBid,
                    settle, advance, bidderSeats, allBidsIn, checkSet, needLeft,
                    progress, rankSeats, beats, strength, isTop, isBot_, initDeck4 };
