@@ -120,6 +120,34 @@
     $('q-startBtn').textContent = `${p.willBe}인전 시작`;
   }
 
+  // ── 연출 ────────────────────────────────────────────────────────────────
+  // render() 는 매 상태마다 DOM 을 통째로 다시 그린다. 그래서 "지금 막 바뀐 것"만
+  // 골라 연출하려면 직전 상태를 따로 기억해야 한다. 안 그러면 같은 카드가 매번
+  // 다시 뒤집히고, 딜이 계속 반복된다.
+  const fx = { dealt: false, centerId: null, offerId: null, revealed: false,
+               settledTurn: null, acqSeen: new Set() };
+  function resetFx() {
+    fx.dealt = false; fx.centerId = null; fx.offerId = null;
+    fx.revealed = false; fx.settledTurn = null; fx.acqSeen = new Set();
+  }
+  // 이번에 새로 들어온 카드만 날아들게 한다 (매 렌더마다 전부 튀면 정신없다).
+  // acqPile 은 종류별 묶음을 주므로 그 안의 카드를 훑어야 한다.
+  function markNewCards(group, who) {
+    let i = 0;
+    for (const c of group.querySelectorAll('.card')) {
+      const id = c.dataset && c.dataset.id; if (!id) continue;
+      const key = who + ':' + id;
+      if (fx.acqSeen.has(key)) continue;
+      fx.acqSeen.add(key);
+      c.classList.add('anim-acquire');
+      c.style.animationDelay = (i++ * 90) + 'ms';
+    }
+  }
+  const play = (el, cls) => {
+    if (!el) return;
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  };
+
   // ── 렌더 ────────────────────────────────────────────────────────────────
   function render() {
     if (!q4) return;
@@ -159,7 +187,7 @@
       // 카드가 많이 쌓이면 기본 크기로는 두 줄에도 안 들어가 뒤쪽이 잘린다.
       // 그때만 한 단계 줄인다 (칸 높이는 그대로라 화면은 안 밀린다).
       if (p.acq.length >= 7) acq.classList.add('tight');
-      for (const c of acqPile(p.acq)) acq.appendChild(c);
+      for (const g of acqPile(p.acq)) { markNewCards(g, i); acq.appendChild(g); }
       d.appendChild(nm); d.appendChild(meta); d.appendChild(acq);
       opps.appendChild(d);
     }
@@ -171,6 +199,13 @@
     if (a) {
       $('q-center').appendChild(card4(a.center));
       $('q-offer').appendChild(card4(a.offered));       // null 이면 뒷면
+      // 덱 카드·출품 카드가 "방금" 공개된 순간에만 뒤집기 연출을 준다
+      const cid = a.center ? a.center.id : null;
+      const oid = a.offered ? a.offered.id : null;
+      if (cid && cid !== fx.centerId) { play($('q-center').firstElementChild, 'anim-reveal'); sfx('flip'); }
+      if (oid && oid !== fx.offerId) play($('q-offer').firstElementChild, 'anim-reveal');
+      fx.centerId = cid; fx.offerId = oid;
+
       const tag = a.type === 'open' ? ['👁', '오픈']
                 : (a.type === 'closed' || a.type === 'close') ? ['🙈', '클로즈'] : null;
       if (tag) $('q-typeTag').innerHTML = (typeof ico === 'function' ? ico(tag[0]) : tag[0]) + ' ' + tag[1];
@@ -208,6 +243,29 @@
       mb.appendChild(myCard);
       if (winner === mySeat) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; mb.appendChild(l); }
     }
+    // 배팅 카드가 한꺼번에 공개되는 순간 — 전부 뒤집고, 낙찰자에게 도장을 찍는다
+    const bidsOpen = !!(a && a.bids && Object.keys(a.bids).length);
+    if (bidsOpen && !fx.revealed) {
+      fx.revealed = true;
+      const cards = [...ob.querySelectorAll('.card'), ...mb.querySelectorAll('.card')];
+      cards.forEach((c, i) => { c.style.animationDelay = (i * 70) + 'ms'; play(c, 'anim-reveal'); });
+      setTimeout(() => sfx('reveal'), 60);
+    } else if (bidsOpen) {
+      // 이미 공개된 뒤의 재렌더 — 다시 뒤집지 않는다
+      [...ob.querySelectorAll('.card'), ...mb.querySelectorAll('.card')].forEach((c) => { c.style.animationDelay = ''; });
+    }
+    if (!bidsOpen) fx.revealed = false;
+
+    if (winner >= 0 && fx.settledTurn !== s.turn) {
+      fx.settledTurn = s.turn;
+      const box = winner === mySeat ? mb : ob.children[oppSeats.indexOf(winner)];
+      if (box) {
+        const st = document.createElement('div');
+        st.className = 'q-winstamp'; st.textContent = 'WIN';
+        box.appendChild(st);
+      }
+    }
+
     // 클로즈에서 진행자가 아직 선공개를 안 했으면 그 사람을 표시
     if (a && a.closed && a.first !== null && a.first !== undefined && !a.firstDone && a.first !== mySeat) {
       const el = opps.children[oppSeats.indexOf(a.first)];
@@ -225,7 +283,7 @@
     meNeed.className = 'q-need' + (me.need <= 1 ? ' r1' : me.need === 2 ? ' r2' : '');
     meNeed.textContent = me.need <= 0 ? '완성!' : `-${me.need}`;
     my.appendChild(meNeed);
-    for (const c of acqPile(me.acq)) my.appendChild(c);
+    for (const g of acqPile(me.acq)) { markNewCards(g, 'me'); my.appendChild(g); }
 
     // 상태 문구 + 손패 선택 가능 여부
     let msg = '', pickMode = null;
@@ -272,6 +330,14 @@
       hand.appendChild(slot);
     }
     if (typeof fanRow === 'function') fanRow(hand, false);
+    // 첫 손패는 덱에서 한 장씩 날아오게 — 2인전과 같은 연출
+    if (!fx.dealt && sorted.length >= 6 && s.turn <= 1) {
+      fx.dealt = true;
+      const STAGGER = 85;
+      if (typeof dealFromDeck === 'function')
+        dealFromDeck($('q-center'), hand.querySelectorAll('.card'), { stagger: STAGGER });
+      for (let i = 0; i < sorted.length; i++) setTimeout(() => sfx('deal'), 40 + i * STAGGER);
+    }
 
     // 덱 클릭 = 카드 공개
     $('q-center').style.cursor = (s.phase === 'draw' && iAmAuc) ? 'pointer' : 'default';
@@ -430,6 +496,7 @@
 
     socket.on('g4_begin', (d) => {
       q4Room = d.roomId; mySeat = d.me || 0; lastRecv = Date.now(); q4Pend = null;
+      resetFx();   // 새 판 — 딜·뒤집기 연출을 처음부터 다시
       $('q-startPanel').classList.remove('show');
       const total = d.n || (d.seats || []).length || 4;
       const humans = (d.seats || []).filter((x) => !x.isBot).length;

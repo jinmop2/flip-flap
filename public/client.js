@@ -1495,6 +1495,40 @@ const EMOTE_PACKS = {
   emote_animal: ['🐶','🐱','🐷','🐸','🦊','🐻','🐤','🦄'],
 };
 // data-ico="🎒" 같은 표식을 직접 그린 아이콘으로 채운다
+// ── 카드 딜 연출 ────────────────────────────────────────────────────────────
+// 덱에서 한 장씩 날아와 자리에 앉는다. 시작 위치를 덱의 실제 화면 좌표로 잡아야
+// "덱에서 나왔다"는 느낌이 나고, 고정 오프셋일 때처럼 뚝뚝 끊겨 보이지 않는다.
+// 카드가 이미 최종 위치에 놓인 뒤에 불러야 한다(부채꼴 transform 반영 후).
+function dealFromDeck(deckEl, cardEls, opts) {
+  const o = opts || {};
+  const stagger = o.stagger === undefined ? 85 : o.stagger;
+  const dur = o.duration === undefined ? 460 : o.duration;
+  const cards = [...cardEls].filter(Boolean);
+  if (!cards.length) return 0;
+  let sx = null, sy = null;
+  if (deckEl) {
+    const d = deckEl.getBoundingClientRect();
+    if (d.width) { sx = d.left + d.width / 2; sy = d.top + d.height / 2; }
+  }
+  cards.forEach((el, i) => {
+    const r = el.getBoundingClientRect();
+    if (r.width && sx !== null) {
+      el.style.setProperty('--dx', Math.round(sx - (r.left + r.width / 2)) + 'px');
+      el.style.setProperty('--dy', Math.round(sy - (r.top + r.height / 2)) + 'px');
+    }
+    el.style.animationDelay = (i * stagger) + 'ms';
+    el.style.animationDuration = dur + 'ms';
+    el.classList.add('dealing');
+    el.addEventListener('animationend', () => {
+      // 끝나면 정리 — 합성 레이어를 계속 붙들고 있으면 이후 렌더가 무거워진다
+      el.classList.remove('dealing');
+      el.style.animationDelay = ''; el.style.animationDuration = '';
+      el.style.removeProperty('--dx'); el.style.removeProperty('--dy');
+    }, { once: true });
+  });
+  return (cards.length - 1) * stagger + dur;
+}
+
 function paintIcons(root) {
   (root || document).querySelectorAll('[data-ico]').forEach(el => {
     if (el.dataset.done) return;
@@ -2955,17 +2989,16 @@ function renderHand() {
     else
       cardEl = makeCard(card);
     const slot = document.createElement('div'); slot.className = 'fan-slot';
-    // 딜 애니는 카드(내부)에 — slot의 부채꼴 transform을 덮어쓰지 않게
-    if (deal) {
-      cardEl.classList.add('dealing'); cardEl.style.animationDelay = (i * 70) + 'ms';
-      cardEl.addEventListener('animationend', () => { cardEl.classList.remove('dealing'); cardEl.style.animationDelay = ''; }, { once: true });   // 끝나면 정리(합성 레이어 해제)
-    }
     slot.appendChild(cardEl); el.appendChild(slot);
   });
   fanRow(el, false);
   if (deal) {
     needsDeal = false;
-    for (let i = 0; i < hand.length; i++) setTimeout(() => playSound('deal'), 60 + i * 75);   // 딜 사운드도 스태거
+    // 부채꼴을 잡은 뒤에 딜을 건다 — 그래야 각 카드의 최종 위치를 알 수 있다
+    const STAGGER = 85;
+    dealFromDeck(document.getElementById('deckStack'), el.querySelectorAll('.card'), { stagger: STAGGER });
+    // 사운드도 같은 간격으로 — 예전엔 75ms 라 화면(70ms)과 조금씩 어긋났다
+    for (let i = 0; i < hand.length; i++) setTimeout(() => playSound('deal'), 40 + i * STAGGER);
   }
 }
 function animateWinCards() {
