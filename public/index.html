@@ -88,9 +88,8 @@
         drop-shadow(0 4px 6px rgba(0,0,0,.55)) drop-shadow(0 0 14px rgba(255,200,90,.3));
     }
     .logo .flap { transform:rotate(180deg); margin-top:-14px; display:inline-block; opacity:.92; }
-    .logo .sub { font-size:.74rem; letter-spacing:5px; color:#d8a860; margin-top:8px; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,.5); }
     /* 로고 아래: 랭킹 버튼 + 접속 인원 */
-    .logo-actions { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:-12px; }
+    .logo-actions { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:2px; }
     .rank-btn {
       background:linear-gradient(180deg,#3a1018,#280a10);
       border:1.5px solid #c99a3a; color:#f5cf6e; border-radius:22px;
@@ -110,7 +109,7 @@
     /* 간격이 전부 같으면 그룹이 안 읽힌다. 묶음 안은 좁게, 묶음 사이는 넓게. */
     .lobby-btns { display:flex; flex-direction:column; gap:8px; width:320px; }
     .lobby-btns > .mode-grid.sub { margin-top:2px; }
-    .lobby-btns > .lobby-top.learn { margin-top:26px; }
+    .lobby-btns > .mode-grid:not(.sub) { margin-top:22px; }   /* 배우기 묶음과 떼어놓는다 */
     .lobby-btns > .lobby-misc { margin-top:26px; }
     /* 닉네임 바 */
     .nick-bar { display:flex; align-items:center; gap:10px; background:#16101c; border:1px solid #241a2e; border-radius:12px; padding:4px 14px; }
@@ -1233,10 +1232,9 @@
     @media (max-height:720px) {
       .logo h1, .logo .flap { font-size:3.2rem; letter-spacing:3px; }
       .logo .flap { margin-top:-10px; }
-      .logo .sub { font-size:.64rem; letter-spacing:3px; margin-top:5px; }
       .rank-btn { padding:6px 15px; font-size:.76rem; }
       #lobby { gap:15px; }
-      .lobby-btns > .lobby-top.learn, .lobby-btns > .lobby-misc { margin-top:16px; }
+      .lobby-btns > .mode-grid:not(.sub), .lobby-btns > .lobby-misc { margin-top:14px; }
     }
     @media (max-height:620px) {
       .logo h1, .logo .flap { font-size:2.5rem; }
@@ -2263,8 +2261,7 @@
   <div class="title-mid">
     <div class="logo big">
       <h1>FLIP</h1><div class="flap">FLAP</div>
-      <p class="sub">경매 · 블러핑 · 심리전</p>
-    </div>
+      </div>
     <div class="title-btns">
       <button class="social-btn google" id="titleGoogle" style="display:none" onclick="location.href='/auth/google'">
         <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.3 9.14 5.38 12 5.38z"/></svg>
@@ -2286,13 +2283,18 @@
 <div id="lobby">
   <div class="logo">
     <h1>FLIP</h1><div class="flap">FLAP</div>
-    <p class="sub">경매 · 블러핑 · 심리전</p>
   </div>
   <div class="logo-actions">
     <button class="rank-btn" onclick="openLeaderboard()" style="display:inline-flex;align-items:center;gap:6px"><svg class="svgi" viewBox="0 0 24 24"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v6a5 5 0 0 1-10 0z"/><path d="M7 5H4a1 1 0 0 0-1 1 4 4 0 0 0 4 4"/><path d="M17 5h3a1 1 0 0 1 1 1 4 4 0 0 1-4 4"/></svg>랭킹</button>
     <span class="online-badge" id="onlineBadge" style="display:none"><span class="online-dot"></span><b id="onlineCount">–</b> 접속 중</span>
   </div>
   <div class="lobby-btns" id="lobbyMain">
+    <!-- 배우기 -->
+    <div class="lobby-top learn">
+      <button class="top-link" onclick="toggleRules(true)"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>게임방법</button>
+      <button class="top-link" onclick="startTutorial()"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/><path d="M22 10v6"/></svg></span>튜토리얼</button>
+    </div>
+
     <!-- 무엇을 할까 — 크기가 곧 우선순위 -->
     <div class="mode-grid">
       <button class="mode-card solo" id="modeSolo" onclick="openMode('solo')">
@@ -2320,12 +2322,6 @@
         <span class="mc-title">다인전</span>
         <span class="mc-tag beta">3·4인</span>
       </button>
-    </div>
-
-    <!-- 배우기 -->
-    <div class="lobby-top learn">
-      <button class="top-link" onclick="toggleRules(true)"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>게임방법</button>
-      <button class="top-link" onclick="startTutorial()"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/><path d="M22 10v6"/></svg></span>튜토리얼</button>
     </div>
 
     <!-- 부가 — 눈에 덜 띄게 아래로 -->
