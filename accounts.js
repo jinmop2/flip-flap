@@ -329,7 +329,7 @@ const SHOP = {
   emote_battle:{ name: '승부사 이모트 팩',    icon: '⚔️', price: 400,  type: 'emotes',
                  desc: '칼·방패·트로피 등 승부용 8종' },
   np_wood:  { name: '나무 명패',   icon: '🪵', price: 400,  type: 'plate', desc: '닉네임을 감싸는 소박한 나무 명패' },
-  np_neon:  { name: '네온 명패',   icon: '💜', price: 800,  type: 'plate', desc: '보랏빛 네온 명패 · 경험치 +8%' },
+  np_neon:  { name: '네온 명패',   icon: '💜', price: 800,  type: 'plate', desc: '보랏빛 네온 명패 · 경험치 +10%' },
   np_gold:  { name: '황금 명패',   icon: '🏅', price: 1000, type: 'plate', desc: '번쩍이는 황금 명패 · 코인 획득 +8%' },
   np_daily: { name: '행운의 명패', icon: '🍀', price: 1500, type: 'plate', desc: '장착 중이면 매일 출석 보상 +50🪙' },
   np_lv50:  { name: '레벨50 한정 명패', icon: '🎖️', price: 0, type: 'plate', milestone: true, desc: '레벨 50 달성자 한정 · 코인·경험치 각 +5%' },
@@ -347,7 +347,7 @@ const SHOP = {
   back_crystal: { name: '크리스탈 카드백', icon: '🔮', price: 1600, type: 'cardback',
                   desc: '빛을 쪼개는 수정 결정면 뒷면' },
   np_crystal:   { name: '크리스탈 명패',   icon: '🔮', price: 1300, type: 'plate',
-                  desc: '얼음처럼 맑은 명패 · 경험치 +12%' },
+                  desc: '얼음처럼 맑은 명패 · 경험치 +15%' },
   tbl_crystal:  { name: '크리스탈 테이블', icon: '🧊', price: 1400, type: 'table',
                   desc: '살얼음이 낀 듯한 서늘한 테이블' },
   face_crystal: { name: '크리스탈 카드',   icon: '💠', price: 1100, type: 'cardface',
@@ -363,7 +363,7 @@ const SHOP = {
 
   // ── 흑요석 세트 (명패·테이블·앞면) ──
   np_obsidian:  { name: '흑요석 명패',     icon: '🌑', price: 2000, type: 'plate',
-                  desc: '금이 흐르는 검은 명패 · 코인 획득 +15%' },
+                  desc: '금이 흐르는 검은 명패 · 코인 획득 +10%' },
   tbl_obsidian: { name: '흑요석 테이블',   icon: '🌑', price: 1700, type: 'table',
                   desc: '검은 유리를 깐 듯한 테이블' },
   face_obsidian:{ name: '흑요석 카드',     icon: '🌑', price: 1300, type: 'cardface',
@@ -383,15 +383,22 @@ const SHOP = {
 // 랭킹이 곧 RP 순위라서 돈으로 등수를 사는 꼴이 되고, RP 는 사람들 사이
 // 제로섬이라 보너스를 주면 총량이 부풀어 랭킹 자체가 뜻을 잃는다.
 // 그래서 코인(경제)·경험치(성장)·연승 보너스만 건드린다.
+//
+// 코인 명패가 경험치 명패보다 세 보이는 건 어쩔 수 없다 — 코인은 바로 쓰지만
+// 경험치는 레벨을 거쳐 돌아오기 때문이다. 그래서 두 가지로 좁혔다.
+//   · 레벨업마다 코인을 주도록 바꿔(LEVELUP_COIN) 경험치도 결국 돈이 되게 했다
+//   · 코인 보너스 상단을 15% → 10% 로 낮췄다
+// 그래도 완전히 같아지진 않는다. 코인 명패는 "버는 사람", 경험치 명패는
+// "빨리 크는 사람" 을 위한 것으로 성격을 갈랐다.
 const PLATE_FX = {
   np_wood:     {},                              // 입문용 — 장식만
   np_hanji:    { xp: 0.05 },
-  np_neon:     { xp: 0.08 },
+  np_neon:     { xp: 0.10 },
   np_gold:     { coin: 0.08 },                  // 황금 = 돈
   np_ruby:     { streak: 0.5 },                 // 연승 보너스 1.5배
-  np_crystal:  { xp: 0.12 },
+  np_crystal:  { xp: 0.15 },
   np_daily:    {},                              // 출석 +50 은 따로 처리
-  np_obsidian: { coin: 0.15 },                  // 최고가 — 가장 센 코인 보너스
+  np_obsidian: { coin: 0.10 },                  // 최고가지만 과하지 않게 — 아래 주석 참고
   np_lv50:     { coin: 0.05, xp: 0.05 },        // 마일스톤 — 양쪽 조금씩
 };
 
@@ -448,6 +455,17 @@ const MILESTONES = {
   20: { icon: '💎', label: 'Lv.20 달성 — 희귀 염색약 확정권', ticket: 'dye_rare_ticket' },
   50: { icon: '🎖️', label: 'Lv.50 달성 — 한정판 명패', plate: 'np_lv50' },
 };
+// 레벨업 보상 — 오른 레벨 하나당 (레벨 × 30) 코인.
+// 예전엔 Lv10·20·50 에서만 뭘 줘서, 그 사이 구간은 올라도 아무 일이 없었다.
+// 경험치가 값어치를 가져야 경험치 명패도 고를 이유가 생긴다.
+const LEVELUP_COIN = 30;
+function grantLevelCoins(u, fromLevel, toLevel) {
+  let total = 0;
+  for (let lv = fromLevel + 1; lv <= toLevel; lv++) total += lv * LEVELUP_COIN;
+  if (total > 0) u.coins = (u.coins || 0) + total;
+  return total;
+}
+
 function grantMilestones(u) {
   u.milestones = u.milestones || {};
   const level = levelOf(u.xp);
@@ -999,7 +1017,9 @@ function recordResult(token, result, opts = {}) {
   u.coins = Math.max(0, (u.coins || 0) + coins);
   if (rp) u.rp = Math.max(0, u.rp + rp);
 
-  // 레벨 마일스톤 (Lv10/20/50 최초 1회) — XP 반영 후 검사
+  // 레벨업 보상 + 마일스톤 (Lv10/20/50 최초 1회) — XP 반영 후 검사
+  const lvNow = levelOf(u.xp);
+  const levelCoins = grantLevelCoins(u, beforeLevel, lvNow);
   const milestones = grantMilestones(u);
 
   // 최근 전적 (최대 10)
@@ -1021,7 +1041,7 @@ function recordResult(token, result, opts = {}) {
   return {
     profile: profileOf(u),
     rewards: {
-      coins, xp, rp, firstWin, streak, clanBonus, plateCoin, plateXp, setName: fx.setName,
+      coins, xp, rp, firstWin, streak, clanBonus, plateCoin, plateXp, setName: fx.setName, levelCoins,
       streakCount: u.winStreak, blocked, reason,
       levelUp: afterLevel > beforeLevel ? afterLevel : 0,
       rankUp: (afterRank !== beforeRank && rp > 0) ? afterRank : 0,

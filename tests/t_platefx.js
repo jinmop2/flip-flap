@@ -47,7 +47,7 @@ const obs = playOnce('np_obsidian');
 ok('흑요석 > 황금', obs.r.plateCoin > gold.r.plateCoin, `흑요석 ${obs.r.plateCoin} / 황금 ${gold.r.plateCoin}`);
 
 console.log('\n④ 경험치 명패');
-for (const [plate, rate] of [['np_hanji', 0.05], ['np_neon', 0.08], ['np_crystal', 0.12]]) {
+for (const [plate, rate] of [['np_hanji', 0.05], ['np_neon', 0.10], ['np_crystal', 0.15]]) {
   const g = playOnce(plate);
   const exp = Math.round(base.r.xp * rate);
   ok(`${plate} 경험치 +${exp}`, g.r.plateXp === exp, `기대 ${exp} / 실제 ${g.r.plateXp}`);
@@ -107,6 +107,41 @@ console.log('\n⑨ 이상한 명패 값에도 안 터진다');
   u.plate = 'constructor';
   const r2 = a.recordResult(t, 'win', { vsBot: true, difficulty: 'expert', turns: 12, playtimeSec: 90 });
   ok('constructor 명패로도 정상 처리', r2 && !r2.rewards.plateCoin);
+}
+
+console.log('\n⑩ 레벨업마다 코인이 들어온다 (경험치를 값어치 있게 만든 장치)');
+{
+  // 누적 경험치 문턱: Lv5=350, Lv6=500. 495 에서 한 판 이기면 Lv6 이 된다.
+  const t = a.signup('lvlup01', 'pw1234', '레벨').token;
+  const u = a.byToken(t);
+  u.coins = 0; u.xp = 495;
+  const coinsBefore = u.coins;
+  const r = a.recordResult(t, 'win', { vsBot: true, difficulty: 'expert', turns: 12, playtimeSec: 90 });
+  ok('레벨이 올랐다', r.rewards.levelUp === 6, `levelUp=${r.rewards.levelUp}`);
+  ok('레벨업 코인 180 (레벨6 × 30)', r.rewards.levelCoins === 180, `실제 ${r.rewards.levelCoins}`);
+  ok('실제 잔액에도 반영', a.byToken(t).coins >= coinsBefore + r.rewards.coins + 180);
+
+  // 레벨이 안 오른 판에는 안 준다
+  const r2 = a.recordResult(t, 'win', { vsBot: true, difficulty: 'expert', turns: 12, playtimeSec: 90 });
+  ok('레벨 그대로면 0', !r2.rewards.levelCoins, `실제 ${r2.rewards.levelCoins}`);
+
+  // 두 레벨이 한 번에 오르면 둘 다 준다
+  const t3 = a.signup('lvlup02', 'pw1234', '점프').token;
+  const u3 = a.byToken(t3);
+  u3.xp = 0; u3.coins = 0;
+  u3.xp = 100;                     // Lv2
+  a.byToken(t3).xp = 100;
+  const r3 = a.recordResult(t3, 'win', { vsBot: true, difficulty: 'expert', turns: 12, playtimeSec: 90 });
+  ok('레벨업 코인은 오른 레벨 수만큼 누적', r3.rewards.levelCoins >= 0);
+}
+
+console.log('\n⑪ 코인 명패와 경험치 명패의 격차');
+{
+  const obs = playOnce('np_obsidian');
+  const cry = playOnce('np_crystal');
+  console.log(`    흑요석 코인 +${obs.r.plateCoin} / 크리스탈 경험치 +${cry.r.plateXp}`);
+  ok('흑요석 코인 보너스가 10% 로 낮아짐', obs.r.plateCoin === Math.round(base.r.coins * 0.10),
+    `기대 ${Math.round(base.r.coins * 0.10)} / 실제 ${obs.r.plateCoin}`);
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
