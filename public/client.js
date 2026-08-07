@@ -1386,12 +1386,12 @@ const shopIcon = it => {
 // 장착 슬롯: 상점 타입 → 프로필 필드
 // 상점 진열 순서 — 위에서부터 이 차례로 묶어 보여준다
 const SHOP_GROUPS = [
+  { name: '꾸미기·기타', types: ['dye', 'dye_rare', 'ticket'] },
   { name: '카드 뒷면', types: ['cardback'] },
   { name: '카드 앞면', types: ['cardface'] },
   { name: '테이블',   types: ['table'] },
   { name: '명패',     types: ['plate'] },
   { name: '이모트',   types: ['emotes'] },
-  { name: '꾸미기·기타', types: ['dye', 'dye_rare', 'ticket'] },
 ];
 const EQUIP_SLOT = { cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace' };
 let shopSelId = null;
