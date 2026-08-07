@@ -207,7 +207,7 @@ async function claimReferral() {
 // 초대 링크(?ref=아이디)로 접속 시 코드 보관
 try { const rp = new URLSearchParams(location.search).get('ref'); if (rp) localStorage.setItem('ff_ref', rp); } catch (_) {}
 const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
-const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby', np_crystal: 'np-crystal' };
+const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby', np_crystal: 'np-crystal', np_obsidian: 'np-obsidian', np_hanji: 'np-hanji' };
 const xpPct = p => Math.max(0, Math.min(100, Math.round((p.xpInLevel || 0) / (p.xpNeeded || 100) * 100)));
 const npClass = p => p && NP_CLASS[p] ? ' ' + NP_CLASS[p] : '';   // 명패 클래스
 // 이모지 → 직접 그린 SVG (art.js). 매핑에 없으면 원래 이모지 그대로.
@@ -353,6 +353,9 @@ function showRewards() {
   let d = 400;
   if (r.firstWin) { add('bd-first', `${ico('🎯')} 하루 첫 승 보너스 +${r.firstWin}`, d, true); d += 250; }
   if (r.streak && r.streakCount >= 2) { add('bd-streak', `${ico('🔥')} ${r.streakCount}연승! +${r.streak}`, d, true); d += 250; playSound('setwin'); }
+  if (r.plateCoin) { add('bd-clan', `${ico('🏅')} 명패 효과 +${r.plateCoin}`, d, true); d += 250; }
+  if (r.plateXp) { add('bd-first', `${ico('⬆️')} 명패 효과 경험치 +${r.plateXp}`, d, true); d += 250; }
+  if (r.setName) { add('bd-rank', `${ico('💠')} ${esc(r.setName)} 세트 완성 보너스`, d, true); d += 250; }
   if (r.clanBonus) { add('bd-clan', `${ico('🛡️')} 클랜 보너스 +${r.clanBonus}`, d, true); d += 250; }
   if (r.levelUp) { add('bd-level', `${ico('⬆️')} 레벨 업! Lv.${r.levelUp}`, d, true); d += 250; playSound('setwin'); }
   if (r.rankUp) { add('bd-rank', `${rankIco('👑')} 승급! ${r.rankUp}`, d, true); d += 250; playSound('setwin'); }
@@ -1359,8 +1362,8 @@ async function openShop() {
 function closeShop() { document.getElementById('shopModal').classList.remove('show'); }
 const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang', back_ruby: 'cb-ruby', back_galaxy: 'cb-galaxy',
               back_crystal: 'cb-crystal', back_obsidian: 'cb-obsidian', back_hanji: 'cb-hanji' };
-const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest', tbl_crystal: 'tp-crystal' };
-const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold', face_crystal: 'cfp-crystal' };
+const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest', tbl_crystal: 'tp-crystal', tbl_obsidian: 'tp-obsidian', tbl_hanji: 'tp-hanji' };
+const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold', face_crystal: 'cfp-crystal', face_obsidian: 'cfp-obsidian', face_hanji: 'cfp-hanji' };
 // 상점 아이콘 = 게임 안 실물 미리보기 (카드백/테이블/카드앞면/명패/이모트/염색)
 const shopIcon = it => {
   if (CBP[it.id])  return `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`;
@@ -2620,12 +2623,12 @@ function screenFx(kind) {
 }
 
 // 내 테이블/카드앞면 스킨을 게임 화면에 적용 (내 시야 기준 코스메틱)
-const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal' };
-const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal' };
+const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal', tbl_obsidian: 'tbl-obsidian', tbl_hanji: 'tbl-hanji' };
+const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal', face_obsidian: 'cf-obsidian', face_hanji: 'cf-hanji' };
 function applyMySkins() {
   const g = document.getElementById('game'); if (!g) return;
-  g.classList.remove('tbl-blue', 'tbl-purple', 'tbl-gold', 'tbl-forest', 'tbl-crystal',
-                     'cf-neon', 'cf-classic', 'cf-gold', 'cf-crystal');
+  g.classList.remove('tbl-blue', 'tbl-purple', 'tbl-gold', 'tbl-forest', 'tbl-crystal', 'tbl-obsidian', 'tbl-hanji',
+                     'cf-neon', 'cf-classic', 'cf-gold', 'cf-crystal', 'cf-obsidian', 'cf-hanji');
   const p = myAccount;
   if (p && TABLE_CLS[p.table]) g.classList.add(TABLE_CLS[p.table]);
   if (p && FACE_CLS[p.cardFace]) g.classList.add(FACE_CLS[p.cardFace]);

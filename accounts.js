@@ -329,10 +329,10 @@ const SHOP = {
   emote_battle:{ name: '승부사 이모트 팩',    icon: '⚔️', price: 400,  type: 'emotes',
                  desc: '칼·방패·트로피 등 승부용 8종' },
   np_wood:  { name: '나무 명패',   icon: '🪵', price: 400,  type: 'plate', desc: '닉네임을 감싸는 소박한 나무 명패' },
-  np_neon:  { name: '네온 명패',   icon: '💜', price: 800,  type: 'plate', desc: '보랏빛으로 빛나는 네온 명패' },
-  np_gold:  { name: '황금 명패',   icon: '🏅', price: 1000, type: 'plate', desc: '번쩍번쩍 황금 명패' },
+  np_neon:  { name: '네온 명패',   icon: '💜', price: 800,  type: 'plate', desc: '보랏빛 네온 명패 · 경험치 +8%' },
+  np_gold:  { name: '황금 명패',   icon: '🏅', price: 1000, type: 'plate', desc: '번쩍이는 황금 명패 · 코인 획득 +8%' },
   np_daily: { name: '행운의 명패', icon: '🍀', price: 1500, type: 'plate', desc: '장착 중이면 매일 출석 보상 +50🪙' },
-  np_lv50:  { name: '레벨50 한정 명패', icon: '🎖️', price: 0, type: 'plate', milestone: true, desc: '레벨 50 달성자만 얻는 한정판 명패' },
+  np_lv50:  { name: '레벨50 한정 명패', icon: '🎖️', price: 0, type: 'plate', milestone: true, desc: '레벨 50 달성자 한정 · 코인·경험치 각 +5%' },
   dye_rare: { name: '희귀 염색약 확정권', icon: '💎', price: 0, type: 'dye_rare', milestone: true, desc: '희귀 색상(청록·핑크·라임) 확정 — 레벨20 보상' },
   tbl_blue:  { name: '블루 테이블',   icon: '🔵', price: 600,  type: 'table', desc: '차분한 심해 블루 테이블' },
   tbl_purple:{ name: '퍼플 테이블',   icon: '🟣', price: 700,  type: 'table', desc: '고급스러운 자주빛 테이블' },
@@ -341,13 +341,13 @@ const SHOP = {
   face_neon: { name: '네온 카드',     icon: '🃏', price: 700,  type: 'cardface', desc: '숫자가 네온으로 빛나는 카드 앞면' },
   face_classic:{ name: '클래식 카드', icon: '♠️', price: 900,  type: 'cardface', desc: '트럼프풍 세리프 숫자 카드 앞면' },
   face_gold: { name: '황금 숫자 카드', icon: '👑', price: 1000, type: 'cardface', desc: '숫자가 황금빛으로 빛나는 카드 앞면' },
-  np_ruby:   { name: '루비 명패',     icon: '❤️‍🔥', price: 1200, type: 'plate', desc: '와인빛으로 반짝이는 루비 명패' },
+  np_ruby:   { name: '루비 명패',     icon: '❤️‍🔥', price: 1200, type: 'plate', desc: '와인빛 루비 명패 · 연승 보너스 1.5배' },
 
   // ── 크리스탈 세트 — 카드백·명패·테이블·카드앞면을 맞춰 쓰면 한 벌이 된다 ──
   back_crystal: { name: '크리스탈 카드백', icon: '🔮', price: 1600, type: 'cardback',
                   desc: '빛을 쪼개는 수정 결정면 뒷면' },
   np_crystal:   { name: '크리스탈 명패',   icon: '🔮', price: 1300, type: 'plate',
-                  desc: '얼음처럼 맑게 빛나는 명패' },
+                  desc: '얼음처럼 맑은 명패 · 경험치 +12%' },
   tbl_crystal:  { name: '크리스탈 테이블', icon: '🧊', price: 1400, type: 'table',
                   desc: '살얼음이 낀 듯한 서늘한 테이블' },
   face_crystal: { name: '크리스탈 카드',   icon: '💠', price: 1100, type: 'cardface',
@@ -360,7 +360,71 @@ const SHOP = {
                   desc: '닥종이 결에 먹으로 친 뒷면' },
   emote_taunt:  { name: '도발 이모트 팩',  icon: '🫖', price: 500,  type: 'emotes',
                   desc: '티백·느린박수·하품 등 약올리기 8종' },
+
+  // ── 흑요석 세트 (명패·테이블·앞면) ──
+  np_obsidian:  { name: '흑요석 명패',     icon: '🌑', price: 2000, type: 'plate',
+                  desc: '금이 흐르는 검은 명패 · 코인 획득 +15%' },
+  tbl_obsidian: { name: '흑요석 테이블',   icon: '🌑', price: 1700, type: 'table',
+                  desc: '검은 유리를 깐 듯한 테이블' },
+  face_obsidian:{ name: '흑요석 카드',     icon: '🌑', price: 1300, type: 'cardface',
+                  desc: '숫자가 금빛으로 새겨진 앞면' },
+
+  // ── 한지 세트 (명패·테이블·앞면) ──
+  np_hanji:     { name: '한지 명패',       icon: '📜', price: 900,  type: 'plate',
+                  desc: '먹으로 쓴 이름표 · 경험치 +5%' },
+  tbl_hanji:    { name: '한지 테이블',     icon: '📜', price: 800,  type: 'table',
+                  desc: '닥종이를 깐 차분한 테이블' },
+  face_hanji:   { name: '먹글씨 카드',     icon: '📜', price: 800,  type: 'cardface',
+                  desc: '붓으로 쓴 듯한 숫자 앞면' },
 };
+
+// ── 명패 효과 ──────────────────────────────────────────────────────────────
+// 비싼 명패에는 장식 말고 실익도 붙인다. 다만 RP 는 절대 건드리지 않는다 —
+// 랭킹이 곧 RP 순위라서 돈으로 등수를 사는 꼴이 되고, RP 는 사람들 사이
+// 제로섬이라 보너스를 주면 총량이 부풀어 랭킹 자체가 뜻을 잃는다.
+// 그래서 코인(경제)·경험치(성장)·연승 보너스만 건드린다.
+const PLATE_FX = {
+  np_wood:     {},                              // 입문용 — 장식만
+  np_hanji:    { xp: 0.05 },
+  np_neon:     { xp: 0.08 },
+  np_gold:     { coin: 0.08 },                  // 황금 = 돈
+  np_ruby:     { streak: 0.5 },                 // 연승 보너스 1.5배
+  np_crystal:  { xp: 0.12 },
+  np_daily:    {},                              // 출석 +50 은 따로 처리
+  np_obsidian: { coin: 0.15 },                  // 최고가 — 가장 센 코인 보너스
+  np_lv50:     { coin: 0.05, xp: 0.05 },        // 마일스톤 — 양쪽 조금씩
+};
+
+// ── 세트 보너스 ────────────────────────────────────────────────────────────
+// 카드백·명패·테이블·카드앞면을 같은 테마로 맞춰 끼면 덤이 붙는다.
+// 모으는 값어치를 만들되, 한 벌 값이 비싸므로 덤은 작게 잡았다.
+const SETS = {
+  crystal:  { back: 'back_crystal',  plate: 'np_crystal',  table: 'tbl_crystal',  face: 'face_crystal',  name: '크리스탈' },
+  obsidian: { back: 'back_obsidian', plate: 'np_obsidian', table: 'tbl_obsidian', face: 'face_obsidian', name: '흑요석' },
+  hanji:    { back: 'back_hanji',    plate: 'np_hanji',    table: 'tbl_hanji',    face: 'face_hanji',    name: '한지' },
+};
+const SET_BONUS = { coin: 0.05, xp: 0.05 };
+
+// 지금 장착한 것으로 완성된 세트가 있으면 그 키를 돌려준다
+function setOf(u) {
+  for (const [key, s] of Object.entries(SETS))
+    if (u.cardBack === s.back && u.plate === s.plate && u.table === s.table && u.cardFace === s.face) return key;
+  return null;
+}
+
+// 이 계정에 걸려 있는 보상 배율 — 명패 + 세트를 합친 값
+function bonusOf(u) {
+  const p = (u.plate && Object.prototype.hasOwnProperty.call(PLATE_FX, u.plate)) ? PLATE_FX[u.plate] : {};
+  const set = setOf(u);
+  return {
+    coin: (p.coin || 0) + (set ? SET_BONUS.coin : 0),
+    xp: (p.xp || 0) + (set ? SET_BONUS.xp : 0),
+    streak: p.streak || 0,
+    set,
+    setName: set ? SETS[set].name : null,
+  };
+}
+
 // 염색약 뽑기 풀 (weight 비율)
 const DYE_POOL = [
   { key: 'red',     w: 12 }, { key: 'blue',   w: 12 }, { key: 'green', w: 12 },
@@ -913,7 +977,15 @@ function recordResult(token, result, opts = {}) {
     // 플래티넘(500+) 양학 방지: 멀티 3연승 이상 시 RP 가중치 +10 → 강자를 빠르게 상위 티어로
     if (!opts.vsBot && result === 'win' && u.winStreak >= 3 && (u.rp || 0) >= 500) rp += PLATE_RP_WEIGHT;
   }
+  // 명패 효과 — 루비 명패는 연승 보너스를 더 준다
+  const fx = bonusOf(u);
+  if (streak > 0 && fx.streak > 0) streak += Math.round(streak * fx.streak);
   coins += firstWin + streak;
+
+  // 명패·세트 보너스 (코인·경험치). 어뷰징으로 막힌 판에는 붙지 않는다.
+  let plateCoin = 0, plateXp = 0;
+  if (coins > 0 && fx.coin > 0) { plateCoin = Math.round(coins * fx.coin); coins += plateCoin; }
+  if (xp > 0 && fx.xp > 0) { plateXp = Math.round(xp * fx.xp); xp += plateXp; }
 
   // 클랜 보너스 — 클랜장·부클랜장 +10%, 일반 클랜원 +5%.
   // 어뷰징으로 막혀 보상이 0인 판에는 당연히 안 붙는다.
@@ -949,7 +1021,8 @@ function recordResult(token, result, opts = {}) {
   return {
     profile: profileOf(u),
     rewards: {
-      coins, xp, rp, firstWin, streak, clanBonus, streakCount: u.winStreak, blocked, reason,
+      coins, xp, rp, firstWin, streak, clanBonus, plateCoin, plateXp, setName: fx.setName,
+      streakCount: u.winStreak, blocked, reason,
       levelUp: afterLevel > beforeLevel ? afterLevel : 0,
       rankUp: (afterRank !== beforeRank && rp > 0) ? afterRank : 0,
       missions, titles, milestones,
