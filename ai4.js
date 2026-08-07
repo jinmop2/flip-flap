@@ -13,6 +13,11 @@ const G = require('./game4');
 // 판단 기준값. 3인·4인을 따로 쓸어봤는데 두 인원 모두 같은 값이 가장 좋았다.
 // 전반적으로 예전보다 낮다 — 예전 AI 는 너무 신중해서, 이길 수 있는 판을
 // 그냥 흘려보내는 경우가 많았다.
+// 상대가 낼 카드를 추정할 때 "아직 안 나온 카드 중 상위 몇 %" 를 기준으로 볼지.
+// 덱 구성이 바뀌면 다시 맞춰야 한다 — 6종이 절반인 지금 덱에서 예전 값(0.12)은
+// 3인전에서 상대를 과대평가해 매판 과잉 배팅을 했다.
+// 좌석 수를 맞춘 맞대결로 쓸어 고른 값: 4인 +6.7%p / 3인 +0.2%p (예전 +6.9 / -6.7)
+const PCT = global.__AIPCT !== undefined ? global.__AIPCT : 0.18;
 const TUNE = {
   concede: 0.7,   // 이 아래면 최약을 던져 다음 판 화력을 챙긴다
   contest: 1.5,   // 클로즈에서 진행자를 이기러 갈 최소 욕심
@@ -110,7 +115,7 @@ function likelyBest(g, seat) {
   pool.sort((a, b) => G.strength(a) - G.strength(b));
   const rivals = Math.max(1, G.bidderSeats(g).length - 1);
   // 상대가 많을수록 더 강한 카드가 나온다고 본다
-  const idx = Math.min(pool.length - 1, Math.floor(pool.length * 0.12 * rivals));
+  const idx = Math.min(pool.length - 1, Math.floor(pool.length * PCT * rivals));
   return pool[idx];
 }
 
