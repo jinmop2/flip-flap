@@ -76,7 +76,195 @@
     }
 
     /* ─── 로비 ─── */
-    #lobby { display:flex; flex-direction:column; align-items:center; gap:22px; }
+
+    /* ══════════ 로비 (금장 카지노) ══════════ */
+    /* 목업대로 짰다. 사진 소재 대신 그라디언트로 결과 세 가지를 만든다 —
+       초록 펠트 바닥, 금색 아치, 가장자리 어둠. 이미지가 없으니 용량도 안 는다. */
+    #lobby {
+      display:flex; flex-direction:column; align-items:center; gap:16px;
+      padding-top:calc(8px + var(--safe-t));
+      padding-bottom:calc(86px + var(--safe-b));
+      position:relative; isolation:isolate;
+    }
+    .lb-bg { position:fixed; inset:0; z-index:-1; overflow:hidden; pointer-events:none;
+      background:
+        radial-gradient(ellipse 120% 80% at 50% 42%, #16452e 0%, #0d2c1e 46%, #071710 74%, #030b08 100%); }
+    /* 금색 아치 — 큰 원의 테두리만 보이게 잘라 쓴다 */
+    .bg-arc { position:absolute; left:50%; top:6%; width:150vw; height:150vw; max-width:1100px; max-height:1100px;
+      transform:translateX(-50%); border-radius:50%;
+      border:2px solid rgba(201,154,58,.42);
+      box-shadow:0 0 60px rgba(201,154,58,.18), inset 0 0 90px rgba(201,154,58,.12); }
+    .bg-arc::after { content:''; position:absolute; inset:14px; border-radius:50%;
+      border:1px solid rgba(201,154,58,.22); }
+    /* 좌상단 카드 두 장 */
+    .bg-cards { position:absolute; left:-6%; top:11%; width:130px; height:170px;
+      background:
+        linear-gradient(150deg,#2a1638,#1a0e24) padding-box;
+      border:2px solid rgba(201,154,58,.5); border-radius:12px;
+      transform:rotate(-24deg); opacity:.62;
+      box-shadow:-10px 14px 26px rgba(0,0,0,.55); }
+    .bg-cards::after { content:''; position:absolute; left:26px; top:16px; width:130px; height:170px;
+      background:linear-gradient(150deg,#32193f,#1e1029);
+      border:2px solid rgba(201,154,58,.45); border-radius:12px; transform:rotate(11deg); }
+    /* 우측 칩 더미 */
+    .bg-chips { position:absolute; right:-4%; top:27%; width:120px; height:70px; opacity:.55;
+      background:
+        radial-gradient(ellipse 46% 12% at 30% 82%, #3a2a12 0 99%, transparent),
+        radial-gradient(ellipse 46% 12% at 30% 70%, #55401c 0 99%, transparent),
+        radial-gradient(ellipse 46% 12% at 30% 58%, #3a2a12 0 99%, transparent),
+        radial-gradient(ellipse 46% 12% at 72% 92%, #55401c 0 99%, transparent),
+        radial-gradient(ellipse 46% 12% at 72% 80%, #3a2a12 0 99%, transparent);
+      filter:drop-shadow(0 6px 14px rgba(0,0,0,.6)); }
+    @media (max-width:420px) { .bg-cards { width:96px; height:126px; left:-9%; } .bg-chips { width:92px; } }
+
+    /* ── 금장 프레임 (공통) ── */
+    /* 바깥 굵은 금선 + 안쪽 얇은 금선. 모서리에 작은 마름모를 얹어 장식한다. */
+    .gold-frame {
+      position:relative; border:1.5px solid #c9a24a; border-radius:14px;
+      background:linear-gradient(180deg, rgba(20,10,8,.86), rgba(8,4,4,.9));
+      box-shadow:inset 0 1px 0 rgba(255,225,150,.16), 0 4px 16px rgba(0,0,0,.55);
+    }
+    .gold-frame::before { content:''; position:absolute; inset:4px; border-radius:9px;
+      border:1px solid rgba(201,162,74,.38); pointer-events:none; }
+
+    /* ── 상단 프로필 바 ── */
+    #profileBar {
+      position:relative; width:min(480px,100%); padding:0 10px; cursor:default; z-index:2;
+      background:none; border:none; box-shadow:none; overflow:visible;
+    }
+    .pb-frame {
+      display:flex; align-items:center; gap:9px; padding:8px 10px;
+      position:relative; border:1.5px solid #c9a24a; border-radius:14px;
+      background:linear-gradient(180deg, rgba(18,10,8,.9), rgba(7,4,4,.94));
+      box-shadow:inset 0 1px 0 rgba(255,225,150,.16), 0 4px 16px rgba(0,0,0,.55);
+    }
+    .pb-frame::before { content:''; position:absolute; inset:4px; border-radius:9px;
+      border:1px solid rgba(201,162,74,.32); pointer-events:none; }
+    .pb-ava { position:relative; width:50px; height:50px; flex-shrink:0; cursor:pointer;
+      border-radius:12px; border:1.5px solid #c9a24a; background:rgba(0,0,0,.45);
+      display:flex; align-items:center; justify-content:center; padding:0;
+      box-shadow:inset 0 0 0 1px rgba(255,215,120,.14); }
+    .pb-face { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:1.7rem; }
+    .pb-face svg { width:88%; height:88%; display:block; }
+    .pb-lv { position:absolute; left:50%; bottom:-8px; transform:translateX(-50%);
+      font-size:.54rem; font-weight:800; color:#241008; white-space:nowrap;
+      background:linear-gradient(180deg,#ffd97a,#c8912e); border:1px solid #8a5a12;
+      border-radius:7px; padding:0 6px; }
+    .pb-mid { flex:1; min-width:0; text-align:left; background:none; border:none;
+      cursor:pointer; padding:0; font-family:inherit; }
+    .pb-nick { display:block; font-size:.9rem; font-weight:800; color:#f5e6c0;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pb-stats { display:block; font-size:.62rem; color:#b09a72; margin-top:1px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .pb-pills { display:flex; flex-direction:column; gap:4px; flex-shrink:0; }
+    .pb-pill { display:inline-flex; align-items:center; gap:4px; cursor:pointer;
+      font-family:'Fredoka'; font-size:.72rem; font-weight:800; color:#ffd97a;
+      background:rgba(0,0,0,.45); border:1px solid rgba(201,162,74,.55);
+      border-radius:999px; padding:3px 8px; }
+    .pb-pill .pill-ico { display:inline-flex; width:1.1em; height:1.1em; }
+    .pb-pill .pill-ico svg { width:100%; height:100%; display:block; }
+    .pb-pill .pill-plus { display:inline-flex; align-items:center; justify-content:center;
+      width:14px; height:14px; border-radius:50%; margin-left:2px;
+      background:rgba(201,162,74,.28); border:1px solid rgba(201,162,74,.6);
+      font-size:.7rem; line-height:1; color:#ffe9a8; }
+    .pb-rp { color:#ffe9b8; }
+    .pb-acts { display:flex; flex-direction:column; gap:5px; flex-shrink:0; }
+    .pb-icon { position:relative; width:28px; height:28px; padding:0; cursor:pointer;
+      background:none; border:none; color:#c9a24a; display:flex; align-items:center; justify-content:center; }
+    .pb-icon .svgi { width:19px; height:19px; }
+    .pb-icon:hover { color:#ffd97a; }
+    .pb-dot { position:absolute; top:2px; right:2px; width:7px; height:7px; border-radius:50%;
+      background:#e8544a; border:1px solid #2a0a10; }
+    #profileBar .pb-xp { height:3px; margin:3px 14px 0; border-radius:3px; background:rgba(0,0,0,.5); overflow:hidden; }
+    #profileBar .pb-xpfill { height:100%; width:0%; border-radius:3px;
+      background:linear-gradient(90deg,#c8912e,#ffd97a); transition:width .5s; }
+
+    /* ── 로고 ── */
+    .set-row { display:flex; align-items:center; justify-content:space-between; cursor:pointer;
+      background:#1c1424; border:1px solid #2a1c30; border-radius:11px; padding:11px 13px;
+      font-size:.82rem; color:#e8dcc8; }
+    .set-row:hover { border-color:rgba(201,162,74,.5); }
+    .set-note { font-size:.66rem; color:#8a7a80; text-align:center; }
+    .logo-suits { display:flex; justify-content:center; gap:14px; font-size:1.05rem; margin-bottom:2px;
+      color:#e8c98a; text-shadow:0 1px 3px rgba(0,0,0,.7); }
+    .logo-suits .red { color:#d8564a; }
+
+    /* ── 금색 장식 알약 (게임방법·튜토리얼) ── */
+    .learn-row { display:flex; gap:10px; width:100%; }
+    .gold-pill {
+      flex:1; position:relative; display:inline-flex; align-items:center; justify-content:center; gap:7px;
+      padding:11px 8px; cursor:pointer; font-family:'Fredoka'; font-size:.82rem; font-weight:700;
+      color:#f0dca8; border:1.5px solid #c9a24a; border-radius:12px;
+      background:linear-gradient(180deg, rgba(20,12,8,.86), rgba(8,5,4,.9));
+      box-shadow:inset 0 1px 0 rgba(255,225,150,.16), 0 3px 10px rgba(0,0,0,.5);
+      transition:.15s;
+    }
+    .gold-pill::before { content:''; position:absolute; inset:3px; border-radius:8px;
+      border:1px solid rgba(201,162,74,.3); pointer-events:none; }
+    .gold-pill:hover { filter:brightness(1.15); transform:translateY(-1px); }
+    .gold-pill .svgi { width:17px; height:17px; color:#e8c98a; }
+
+    /* ── 모드 2×2 ── */
+    .mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:11px; width:100%; }
+    .mode-card {
+      position:relative; aspect-ratio:1; cursor:pointer; font-family:'Fredoka';
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+      border:1.5px solid #c9a24a; border-radius:16px; transition:.16s;
+      box-shadow:inset 0 2px 14px rgba(0,0,0,.5), 0 4px 14px rgba(0,0,0,.5);
+    }
+    .mode-card::before { content:''; position:absolute; inset:5px; border-radius:11px;
+      border:1px solid rgba(201,162,74,.32); pointer-events:none; }
+    .mode-card::after { content:''; position:absolute; left:50%; top:6px; width:26px; height:1px;
+      transform:translateX(-50%); background:linear-gradient(90deg,transparent,rgba(201,162,74,.6),transparent); }
+    .mode-card.solo  { background:radial-gradient(ellipse at 50% 38%, #17512f 0%, #0e3520 68%, #082014 100%); }
+    .mode-card.multi { background:radial-gradient(ellipse at 50% 38%, #16294f 0%, #0e1a36 68%, #070f20 100%); }
+    .mode-card.item  { background:radial-gradient(ellipse at 50% 38%, #4a1832 0%, #2e0f20 68%, #1a0713 100%); }
+    .mode-card.quad  { background:radial-gradient(ellipse at 50% 38%, #17512f 0%, #0e3520 68%, #082014 100%); }
+    .mode-card:hover { transform:translateY(-2px); filter:brightness(1.1); }
+    .mc-ico { position:relative; line-height:1; filter:drop-shadow(0 3px 7px rgba(0,0,0,.6)); }
+    .mc-emblem { width:52px; height:52px; display:block; }
+    .mc-title { position:relative; font-size:1rem; font-weight:800; color:#f5e6c0; letter-spacing:.5px;
+      text-shadow:0 1px 3px rgba(0,0,0,.7); }
+    .mc-sub { position:relative; font-size:.66rem; color:#c0a878; }
+    .mc-tag { position:relative; font-size:.58rem; font-weight:800; border-radius:999px;
+      padding:1px 9px; border:1px solid rgba(201,162,74,.6); color:#e8c98a; background:rgba(0,0,0,.35); }
+    .mc-tag.beta { color:#9fe0b0; border-color:rgba(140,220,160,.5); }
+    /* 아래쪽 셰브론 — "들어간다" 는 표시 */
+    .mc-go { position:absolute; left:50%; bottom:7px; transform:translateX(-50%);
+      font-size:1rem; line-height:1; color:rgba(201,162,74,.75); }
+
+    /* ── 부가 한 줄 ── */
+    .lobby-misc {
+      display:flex; align-items:center; justify-content:center; width:100%;
+      padding:7px 6px; border:1.5px solid rgba(201,162,74,.55); border-radius:12px;
+      background:linear-gradient(180deg, rgba(18,10,8,.8), rgba(7,4,4,.86));
+    }
+    .misc-link { flex:1; background:none; border:none; cursor:pointer; text-decoration:none;
+      font-family:'Fredoka'; font-size:.66rem; font-weight:600; color:#b09a72;
+      display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:3px 2px; transition:.14s; }
+    .misc-link:hover { color:#f0dca8; }
+    .misc-link .svgi { width:14px; height:14px; color:#c9a24a; }
+    .misc-div { width:1px; align-self:stretch; background:rgba(201,162,74,.32); }
+
+    /* ── 하단 탭바 ── */
+    #navBar {
+      position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:30;
+      width:min(480px,100%); display:flex; padding:6px 6px calc(6px + var(--safe-b));
+      background:linear-gradient(0deg, rgba(6,3,3,.97), rgba(16,9,7,.95));
+      border:1.5px solid #c9a24a; border-bottom:none; border-radius:16px 16px 0 0;
+      box-shadow:inset 0 1px 0 rgba(255,225,150,.16), 0 -8px 30px rgba(0,0,0,.6);
+    }
+    #navBar::before { content:''; position:absolute; inset:4px 4px 0; border-radius:12px 12px 0 0;
+      border:1px solid rgba(201,162,74,.28); border-bottom:none; pointer-events:none; }
+    .nav-item { flex:1; min-width:0; position:relative; background:none; border:none; cursor:pointer;
+      display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 2px 5px;
+      font-family:'Fredoka'; font-size:.62rem; font-weight:700; color:#8a7458; transition:.14s; }
+    .nav-item .svgi { width:21px; height:21px; color:currentColor; }
+    .nav-item:hover { color:#c9a24a; }
+    .nav-item.active { color:#ffd97a; }
+    .nav-item.active::after { content:''; position:absolute; inset:2px 6px; border-radius:10px;
+      border:1px solid rgba(201,162,74,.45); background:rgba(201,162,74,.1); z-index:-1; }
+
     .logo { text-align:center; line-height:.9; }
     .logo h1, .logo .flap {
       font-family:'Bangers',cursive; font-size:4.4rem; letter-spacing:5px;
@@ -107,7 +295,6 @@
     .made-by a { color:#8a7a80; text-decoration:none; }
     .made-by a:hover { color:var(--gold); }
     /* 간격이 전부 같으면 그룹이 안 읽힌다. 묶음 안은 좁게, 묶음 사이는 넓게. */
-    .lobby-btns { display:flex; flex-direction:column; gap:8px; width:320px; }
     .lobby-btns > .mode-grid.sub { margin-top:2px; }
     .lobby-btns > .mode-grid:not(.sub) { margin-top:22px; }   /* 배우기 묶음과 떼어놓는다 */
     .lobby-btns > .lobby-misc { margin-top:26px; }
@@ -320,54 +507,10 @@
     .sp-credit b { color:#9a8aa0; }
     /* ── 하단 프로필 바 ── */
     /* 프로필은 아래, 탭바는 위. XP 게이지는 바의 위쪽 가장자리에 붙는다. */
-    #profileBar {
-      position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:30;
-      width:min(480px, 100%); cursor:pointer;
-      padding-bottom:var(--safe-b);
-      background:linear-gradient(180deg, #3a1018 0%, #240a10 100%);
-      border:1.5px solid #b98d34; border-bottom:none; border-radius:18px 18px 0 0;
-      box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 -8px 30px rgba(0,0,0,.55);
-      overflow:hidden;   /* 상단 XP 게이지가 둥근 모서리 밖으로 삐져나오지 않게 */
-    }
-    #profileBar:hover { filter:brightness(1.1); }
-    .pb-xp { height:5px; background:#1a0810; overflow:hidden; border-radius:16px 16px 0 0; }
-    .pb-xpfill { height:100%; width:0%; background:linear-gradient(90deg,#c8912e,#ffd97a); transition:width .5s; }
-    .pb-body { display:flex; align-items:center; gap:11px; padding:10px 16px 12px; }
-    .pb-ava {
-      width:46px; height:46px; border-radius:12px; flex-shrink:0;
-      display:flex; align-items:center; justify-content:center; font-size:1.6rem;
-      background:rgba(0,0,0,.4); border:1.5px solid #c99a3a;
-      box-shadow:inset 0 0 0 1px rgba(255,215,120,.15);
-    }
-    .pb-mid { flex:1; min-width:0; text-align:left; }
-    .pb-nick { font-size:.95rem; font-weight:800; color:#f5e6c0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .pb-stats { font-size:.68rem; color:#c8a86a; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .pb-right { display:flex; flex-direction:column; gap:4px; align-items:flex-end; flex-shrink:0; }
-    .pb-badge { font-size:.72rem; font-weight:800; padding:2px 9px; border-radius:7px; white-space:nowrap; }
-    .pb-coin { color:#ffd97a; background:rgba(255,215,80,.12); border:1px solid rgba(255,215,120,.35); }
     .pb-rp   { color:#ffe9b8; background:rgba(200,160,0,.12); border:1px solid rgba(200,160,0,.35); }
-    .pb-lv { position:absolute; top:9px; left:14px; font-size:.6rem; font-weight:800; color:#241008; background:linear-gradient(180deg,#ffd97a,#c8912e); border:1px solid #8a5a12; border-radius:8px; padding:1px 7px; }
     .pb-login { margin-left:auto; flex-shrink:0; background:rgba(200,160,0,.15); border:1.5px solid var(--gold); color:#ffe9a8; border-radius:10px; padding:8px 14px; font-family:'Fredoka'; font-size:.8rem; font-weight:700; cursor:pointer; }
-    #lobby { padding-top:calc(66px + var(--safe-t)); padding-bottom:calc(84px + var(--safe-b)); }   /* 위 탭바 · 아래 프로필 바에 안 가리게 */
 
     /* ── 하단 탭바 ── */
-    #navBar {
-      position:fixed; top:0; left:50%; transform:translateX(-50%); z-index:30;
-      width:min(480px, 100%); display:flex;
-      padding:calc(6px + var(--safe-t)) 4px 6px;
-      background:linear-gradient(0deg, #3a1018 0%, #240a10 100%);
-      border:1.5px solid #b98d34; border-top:none; border-radius:0 0 18px 18px;
-      box-shadow:inset 0 -1px 0 rgba(255,215,120,.2), 0 8px 30px rgba(0,0,0,.55);
-    }
-    .nav-item {
-      flex:1; min-width:0; position:relative; background:none; border:none; cursor:pointer;
-      display:flex; flex-direction:column; align-items:center; gap:3px;
-      padding:6px 2px 4px; font-family:'Fredoka'; font-size:.62rem; font-weight:700;
-      color:#8a7a80; transition:.14s;
-    }
-    .nav-item .svgi { width:21px; height:21px; color:currentColor; }
-    .nav-item:hover { color:#c8a86a; }
-    .nav-item.active { color:var(--gold); }
     .nav-badge {
       position:absolute; top:2px; right:calc(50% - 20px); min-width:15px; height:15px;
       border-radius:8px; background:#c8102e; color:#fff; font-size:.55rem; font-weight:800;
@@ -1370,13 +1513,6 @@
     .mi-del:hover { border-color:#c05050; color:#ff9a9a; background:rgba(200,80,80,.08); }
     .mi-danger span { display:block; margin-top:7px; font-size:11px; color:#8a7a7e; line-height:1.5; }
     /* 솔로/멀티 모드 카드 */
-    .mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; }
-    .mode-card {
-      aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
-      border-radius:18px; cursor:pointer; font-family:'Fredoka'; transition:.16s; position:relative;
-      border:2.5px solid #c99a3a;
-      box-shadow:inset 0 2px 12px rgba(0,0,0,.5), 0 4px 12px rgba(0,0,0,.5);
-    }
     .mode-card::after {   /* 골드 스티치 라인 */
       content:''; position:absolute; inset:5px; border-radius:12px;
       border:1.5px dashed rgba(245,207,110,.5); pointer-events:none;
@@ -1413,12 +1549,6 @@
     .lobby-top.learn .top-link .tl-ico { font-size:1.05rem; }
 
     /* 부가 — 한 줄에 모아 작게 */
-    .lobby-misc { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; }
-    .misc-link {
-      background:none; border:1px solid #3a2a40; color:#8a7a80; border-radius:999px;
-      padding:6px 12px; font-family:'Fredoka'; font-size:.66rem; font-weight:600; cursor:pointer;
-      display:inline-flex; align-items:center; gap:5px; text-decoration:none; transition:.14s;
-    }
     .misc-link:hover { border-color:var(--gold); color:#e8c98a; }
     .misc-link .svgi { width:14px; height:14px; color:#c8a86a; }
 
@@ -2510,63 +2640,120 @@
 <div id="connStatus">서버 연결 중…</div>
 
 <div id="lobby">
+  <!-- 배경 장식 — 초록 펠트 위에 금색 아치, 좌우로 카드와 칩 -->
+  <div class="lb-bg" aria-hidden="true">
+    <span class="bg-arc"></span>
+    <span class="bg-cards"></span>
+    <span class="bg-chips"></span>
+  </div>
+
+  <!-- 상단 프로필 바 -->
+  <div id="profileBar">
+    <div class="pb-frame">
+      <button class="pb-ava" onclick="openMyInfo()" aria-label="내 정보">
+        <span class="pb-face" id="pbFace"></span>
+        <span class="pb-lv" id="pbLv">Lv.1</span>
+      </button>
+      <button class="pb-mid" onclick="openMyInfo()">
+        <span class="pb-nick" id="pbNick">…</span>
+        <span class="pb-stats" id="pbStats"></span>
+      </button>
+      <div class="pb-pills">
+        <button class="pb-pill pb-coin" onclick="openShop()">
+          <span class="pill-ico" id="pbCoinIco"></span><b id="pbCoins">0</b>
+          <span class="pill-plus">+</span>
+        </button>
+        <button class="pb-pill pb-rp" onclick="openLeaderboard()">
+          <span class="pill-ico" data-ico="🏆"></span><b id="pbRp">0</b> RP
+        </button>
+      </div>
+      <div class="pb-acts">
+        <button class="pb-icon" onclick="openMissions()" aria-label="알림">
+          <svg class="svgi" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <i class="pb-dot" id="pbDot" style="display:none"></i>
+        </button>
+        <button class="pb-icon" onclick="openSettings()" aria-label="설정">
+          <svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10.6 3.09V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 16 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="pb-xp"><div class="pb-xpfill" id="pbXpFill"></div></div>
+  </div>
+
+  <!-- 로고 -->
   <div class="logo">
+    <div class="logo-suits" aria-hidden="true"><i>&clubs;</i><i class="red">&hearts;</i><i>&spades;</i></div>
     <h1>FLIP</h1><div class="flap">FLAP</div>
   </div>
-  <div class="logo-actions">
-    <button class="rank-btn" onclick="openLeaderboard()" style="display:inline-flex;align-items:center;gap:6px"><svg class="svgi" viewBox="0 0 24 24"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v6a5 5 0 0 1-10 0z"/><path d="M7 5H4a1 1 0 0 0-1 1 4 4 0 0 0 4 4"/><path d="M17 5h3a1 1 0 0 1 1 1 4 4 0 0 1-4 4"/></svg>랭킹</button>
-    <span class="online-badge" id="onlineBadge" style="display:none"><span class="online-dot"></span><b id="onlineCount">–</b> 접속 중</span>
-  </div>
+  <span class="online-badge" id="onlineBadge" style="display:none"><span class="online-dot"></span><b id="onlineCount">–</b> 접속 중</span>
+
   <div class="lobby-btns" id="lobbyMain">
     <!-- 배우기 -->
-    <div class="lobby-top learn">
-      <button class="top-link" onclick="toggleRules(true)"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>게임방법</button>
-      <button class="top-link" onclick="startTutorial()"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/><path d="M22 10v6"/></svg></span>튜토리얼</button>
+    <div class="learn-row">
+      <button class="gold-pill" onclick="toggleRules(true)">
+        <svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>게임방법
+      </button>
+      <button class="gold-pill" onclick="startTutorial()">
+        <svg class="svgi" viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/><path d="M22 10v6"/></svg>튜토리얼
+      </button>
     </div>
 
-    <!-- 무엇을 할까 — 크기가 곧 우선순위 -->
+    <!-- 모드 넷 — 2×2, 크기 동일 -->
     <div class="mode-grid">
       <button class="mode-card solo" id="modeSolo" onclick="openMode('solo')">
         <span class="mc-ico"><svg class="mc-emblem" viewBox="0 0 48 48">
           <rect x="14" y="8" width="20" height="30" rx="4" fill="#f7d98a" stroke="#7a4e10" stroke-width="2"/>
           <path d="M24 13.5 C24 13.5 17.5 20 17.5 24.2 C17.5 26.7 20 28.2 22.6 27.1 L21.5 32.5 L26.5 32.5 L25.4 27.1 C28 28.2 30.5 26.7 30.5 24.2 C30.5 20 24 13.5 24 13.5 Z" fill="#2a0a10"/>
-        </svg></span><span class="mc-title">솔로플레이</span><span class="mc-sub">AI와 대전</span>
+        </svg></span>
+        <span class="mc-title">솔로플레이</span><span class="mc-sub">AI와 대전</span>
+        <span class="mc-go" aria-hidden="true">&rsaquo;</span>
       </button>
       <button class="mode-card multi" id="modeMulti" onclick="openMode('multi')">
         <span class="mc-ico"><svg class="mc-emblem" viewBox="0 0 48 48">
           <g transform="rotate(-15 24 25)"><rect x="8" y="10" width="18" height="27" rx="3.5" fill="#c99a3a" stroke="#7a4e10" stroke-width="2"/></g>
           <g transform="rotate(15 24 25)"><rect x="22" y="10" width="18" height="27" rx="3.5" fill="#f7d98a" stroke="#7a4e10" stroke-width="2"/>
             <path d="M31 16 C31 16 25.5 21.5 25.5 25 C25.5 27 27.5 28.2 29.5 27.3 L28.5 31.5 L33.5 31.5 L32.5 27.3 C34.5 28.2 36.5 27 36.5 25 C36.5 21.5 31 16 31 16 Z" fill="#2a0a10"/></g>
-        </svg></span><span class="mc-title">멀티플레이</span><span class="mc-sub">온라인 대전</span>
+        </svg></span>
+        <span class="mc-title">멀티플레이</span><span class="mc-sub">온라인 대전</span>
+        <span class="mc-go" aria-hidden="true">&rsaquo;</span>
       </button>
-    </div>
-
-    <!-- 곁들이 모드 — 같은 격자, 크기만 작게 -->
-    <div class="mode-grid sub">
-      <button class="mode-card mini item" onclick="openItemMode()">
+      <button class="mode-card item" onclick="openItemMode()">
+        <span class="mc-ico"><svg class="mc-emblem" viewBox="0 0 48 48">
+          <g transform="rotate(14 24 25)"><rect x="24" y="11" width="15" height="24" rx="3" fill="#c99a3a" stroke="#7a4e10" stroke-width="2"/></g>
+          <g transform="rotate(4 24 25)"><rect x="18" y="9" width="15" height="26" rx="3" fill="#e0b45a" stroke="#7a4e10" stroke-width="2"/></g>
+          <g transform="rotate(-10 24 25)"><rect x="9" y="10" width="16" height="27" rx="3" fill="#f7d98a" stroke="#7a4e10" stroke-width="2"/>
+            <path d="M17 15.5 l2.2 4.6 5 .7 -3.6 3.5 .9 5 -4.5-2.4 -4.5 2.4 .9-5 -3.6-3.5 5-.7 z" fill="#2a0a10"/></g>
+        </svg></span>
         <span class="mc-title">아이템전</span>
         <span class="mc-tag">이벤트</span>
+        <span class="mc-go" aria-hidden="true">&rsaquo;</span>
       </button>
-      <button class="mode-card mini quad" onclick="q4Open()">
+      <button class="mode-card quad" onclick="q4Open()">
+        <span class="mc-ico"><svg class="mc-emblem" viewBox="0 0 48 48">
+          <circle cx="24" cy="12" r="6" fill="#f7d98a" stroke="#7a4e10" stroke-width="2"/>
+          <circle cx="10" cy="17" r="5" fill="#e0b45a" stroke="#7a4e10" stroke-width="2"/>
+          <circle cx="38" cy="17" r="5" fill="#e0b45a" stroke="#7a4e10" stroke-width="2"/>
+          <path d="M14 30 a10 8 0 0 1 20 0 z" fill="#f7d98a" stroke="#7a4e10" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M2 32 a8 7 0 0 1 12 -3 M46 32 a8 7 0 0 0 -12 -3" fill="#e0b45a" stroke="#7a4e10" stroke-width="2" stroke-linejoin="round"/>
+          <rect x="6" y="34" width="36" height="5" rx="2" fill="#c99a3a" stroke="#7a4e10" stroke-width="2"/>
+        </svg></span>
         <span class="mc-title">다인전</span>
-        <span class="mc-tag beta">3·4인</span>
+        <span class="mc-tag beta">3~4인</span>
+        <span class="mc-go" aria-hidden="true">&rsaquo;</span>
       </button>
     </div>
 
-    <!-- 부가 — 눈에 덜 띄게 아래로 -->
+    <!-- 부가 — 한 줄 프레임, 구분선으로 나눔 -->
     <div class="lobby-misc">
-      <button class="misc-link" onclick="inviteFriend()"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>친구 초대</button>
+      <button class="misc-link" onclick="inviteFriend()">
+        <svg class="svgi" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>친구 초대
+      </button>
+      <span class="misc-div"></span>
       <button class="misc-link" id="installBtn" style="display:none" onclick="installApp()"><span data-ico="📲"></span> 앱으로 추가</button>
+      <span class="misc-div" id="installDiv" style="display:none"></span>
       <a class="misc-link" href="https://open.kakao.com/o/pgXbpk8h" target="_blank" rel="noopener"><span data-ico="💬"></span> 버그 제보</a>
     </div>
   </div>
-
-  <!-- 하단 고정 프로필 바 (클릭 → 내 정보) -->
-  <div id="profileBar" onclick="openMyInfo()">
-    <div class="pb-xp"><div class="pb-xpfill" id="pbXpFill"></div></div>
-    <div class="pb-body" id="pbBody"></div>
-  </div>
-
 
   <!-- 하단 탭바 — 미션·상점·친구·클랜을 로비 본문에서 빼내 여기로 모았다 -->
   <nav id="navBar">
@@ -2697,6 +2884,18 @@
 
     <div class="gc-exch" id="gcExch"></div>
     <button class="btn btn-outline" onclick="closeGacha()">닫기</button>
+  </div>
+</div>
+
+<!-- 로비 설정 -->
+<div class="lb-modal" id="setModal" onclick="if(event.target===this)closeSettings()">
+  <div class="lb-box">
+    <div class="lb-title"><span data-ico="⚙"></span> 설정 <span class="close-x" onclick="closeSettings()">×</span></div>
+    <div class="set-row" onclick="toggleBgm()"><span><span data-ico="🎵"></span> 배경음악</span><span class="sp-toggle" id="togBgm2"><span class="sp-knob"></span></span></div>
+    <div class="set-row" onclick="toggleSfx()"><span><span data-ico="🔊"></span> 효과음</span><span class="sp-toggle" id="togSfx2"><span class="sp-knob"></span></span></div>
+    <div class="set-row" onclick="toggleGuide()"><span><span data-ico="💡"></span> 턴 안내</span><span class="sp-toggle" id="togGuide2"><span class="sp-knob"></span></span></div>
+    <div class="set-note">계정·전적은 프로필을 눌러 확인할 수 있어요</div>
+    <button class="btn btn-outline" onclick="closeSettings()">닫기</button>
   </div>
 </div>
 
