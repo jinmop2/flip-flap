@@ -1747,6 +1747,7 @@ async function openGacha() {
   if (!myAccount) { openAuth('login'); return; }
   closeAllNavModals();
   document.getElementById('gachaModal').classList.add('show');
+  gachaTab('roll');            // 다시 열면 늘 뽑기부터 (교환소가 열린 채 남지 않게)
   gachaWallet();
   document.getElementById('gcStage').innerHTML = '<div class="gc-hint">아래 버튼을 눌러 뽑아보세요</div>';
   if (!_gachaInfo) {
@@ -1756,6 +1757,7 @@ async function openGacha() {
     } catch (_) {}
   }
   renderGachaInfo();
+  gachaWallet();               // 목록을 받은 뒤라야 최저 교환가를 적을 수 있다
 }
 function closeGacha() { document.getElementById('gachaModal').classList.remove('show'); }
 
@@ -1768,11 +1770,80 @@ function gachaWallet() {
     one.textContent = `1회 ${info.cost}`;
     ten.textContent = `10연 ${info.cost10}`;
   }
+  const have = myAccount ? myAccount.shards || 0 : 0;
   const ex = document.getElementById('gcExch');
   if (ex && info) {
-    const have = myAccount.shards || 0;
-    ex.innerHTML = `중복은 파편이 됩니다 · 파편 <b style="color:#9fe8ff">${info.exchange}</b>개면 원하는 것 하나를 확정으로 바꿀 수 있어요 (지금 ${have}개)`;
+    const lo = Math.min(...info.rates.map((r) => r.cost));
+    ex.innerHTML = `중복은 파편이 됩니다 · <b style="color:#9fe8ff">${lo}</b>파편부터 원하는 것을 확정으로 바꿀 수 있어요 — 위 <b style="color:#ffd94a">교환소</b> 탭 (지금 ${have}개)`;
   }
+  const top = document.getElementById('gcExchTop');
+  if (top) top.innerHTML = `가진 파편 <b style="color:#9fe8ff">${have}</b>개 · 누르면 그 자리에서 확정으로 바뀝니다`;
+}
+
+// ── 교환소 ─────────────────────────────────────────────────
+// 중복으로 쌓인 파편을 원하는 것과 바꾼다. 값은 서버가 등급에서 정하고
+// 여기서는 서버가 준 목록을 그리기만 한다.
+function gachaTab(which) {
+  const roll = which === 'roll';
+  document.getElementById('gcTabRoll').classList.toggle('active', roll);
+  document.getElementById('gcTabExch').classList.toggle('active', !roll);
+  document.getElementById('gcPaneRoll').style.display = roll ? '' : 'none';
+  document.getElementById('gcPaneExch').style.display = roll ? 'none' : '';
+  if (!roll) renderExchange();
+}
+
+function renderExchange() {
+  const box = document.getElementById('gcShop');
+  if (!box) return;
+  if (!_gachaInfo || !_gachaInfo.pool) { box.innerHTML = '<div class="gc-hint">목록을 불러오는 중…</div>'; return; }
+  gachaWallet();
+  const have = myAccount ? myAccount.shards || 0 : 0;
+  const mine = (myAccount && myAccount.items) || {};
+  // 살 수 있는 것 → 파편이 모자란 것 → 이미 가진 것 순. 목표가 눈에 먼저 들어오게.
+  const rank = (p) => (mine[p.id] ? 2 : have >= p.cost ? 0 : 1);
+  const pool = _gachaInfo.pool.slice().sort((a, b) =>
+    rank(a) - rank(b) || b.cost - a.cost || a.name.localeCompare(b.name));
+
+  let html = '', lastSect = null;
+  for (const p of pool) {
+    const owned = !!mine[p.id], poor = !owned && have < p.cost;
+    const sect = owned ? '이미 가진 것' : poor ? '파편이 더 필요해요' : '지금 바꿀 수 있어요';
+    if (sect !== lastSect) { html += `<div class="gc-sect">${sect}</div>`; lastSect = sect; }
+    const cls = `gc-buy t-${p.tier}` + (owned ? ' owned' : poor ? ' poor' : '');
+    const click = owned || poor ? '' : ` onclick="doExchange('${p.id}')"`;
+    html += `<div class="${cls}"${click}>` +
+      `<span class="gi-ico">${shopArtFor(p.id, p.icon)}</span>` +
+      `<span class="gi-nm">${esc(p.name)}</span>` +
+      `<span class="gi-cost">${owned ? '보유' : p.cost + ' 파편'}</span></div>`;
+  }
+  box.innerHTML = html || '<div class="gc-hint">교환할 수 있는 게 없어요</div>';
+  paintIcons(box);
+}
+
+let _exchBusy = false;
+function doExchange(itemId) {
+  if (_exchBusy || !myAccount || !_gachaInfo) return;
+  const p = _gachaInfo.pool.find((x) => x.id === itemId);
+  if (!p) return;
+  const have = myAccount.shards || 0;
+  askConfirm({
+    icon: '🎁', title: `«${p.name}» 로 바꿀까요?`,
+    desc: `파편 ${p.cost}개를 씁니다 (보유 ${have} → ${have - p.cost})`,
+    yes: '교환', no: '취소',
+  }, async () => {
+    if (_exchBusy) return;
+    _exchBusy = true;
+    try {
+      const r = await apiPost('/api/gacha/exchange', { token: authToken(), itemId });
+      if (!r || r.error) { toast(esc((r && r.error) || '교환에 실패했어요')); return; }
+      myAccount = r.profile || myAccount;
+      renderAccount();
+      renderExchange();
+      if (typeof renderShop === 'function') { try { renderShop(); } catch (_) {} }
+      toast(`«${esc(r.name)}» 을 얻었어요!`);
+      playSound('setwin');
+    } finally { _exchBusy = false; }
+  });
 }
 
 function renderGachaInfo() {
@@ -1780,7 +1851,7 @@ function renderGachaInfo() {
   const i = _gachaInfo;
   box.innerHTML = i.rates.map((r) =>
     `<div class="gi-row"><span>${TIER_KO[r.tier] || r.tier} · ${r.count}종</span>` +
-    `<span><b>${(r.rate * 100).toFixed(2)}%</b> · 중복 시 ${r.shard}파편</span></div>`
+    `<span><b>${(r.rate * 100).toFixed(2)}%</b> · 중복 +${r.shard}파편 · 교환 ${r.cost}파편</span></div>`
   ).join('') +
     `<div class="gi-row" style="margin-top:6px;border-top:1px solid rgba(200,160,0,.2);padding-top:6px">` +
     `<span>천장</span><span><b>${i.pity}회</b> 안에 전설 확정</span></div>` +

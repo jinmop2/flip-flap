@@ -22,15 +22,16 @@ const rich = (coins = 10000000) => {
   return t;
 };
 
+const info = a.gachaInfo();
+
 console.log('\n① 확률표가 화면에 내려간다 (법적으로 표시 의무)');
 {
-  const info = a.gachaInfo();
   ok('확률표 있음', !!info && Array.isArray(info.rates) && info.rates.length === 4);
   const sum = info.rates.reduce((s, r) => s + r.rate, 0);
   ok('확률 합이 100%', Math.abs(sum - 1) < 1e-9, '합 ' + sum);
   ok('등급마다 상품이 있다', info.rates.every((r) => r.count > 0),
      info.rates.map((r) => r.tier + ':' + r.count).join(' '));
-  ok('천장·교환 수치도 내려간다', info.pity > 0 && info.exchange > 0);
+  ok('천장·교환 수치도 내려간다', info.pity > 0 && info.rates.every((r) => r.cost > 0));
   console.log('    ' + info.rates.map((r) => `${r.tier} ${(r.rate * 100).toFixed(0)}% (${r.count}종, 중복 ${r.shard}파편)`).join(' · '));
 }
 
@@ -40,10 +41,39 @@ console.log('\n② 코인이 실제로 빠지고 물건이 들어온다');
   const before = a.byToken(t).coins;
   const r = a.rollGacha(t, 1);
   ok('뽑기 성공', r.ok && r.results.length === 1);
-  ok('코인 300 차감', a.byToken(t).coins === before - 300, `${before} → ${a.byToken(t).coins}`);
+  // 값은 바뀔 수 있으므로 숫자를 박지 않고 서버가 알려준 값과 맞는지 본다
+  ok('1회 값만큼 차감', a.byToken(t).coins === before - info.cost, `${before} → ${a.byToken(t).coins}`);
   const r10 = a.rollGacha(t, 10);
   ok('10연 10개', r10.ok && r10.results.length === 10);
-  ok('10연은 2700 (할인)', a.byToken(t).coins === before - 300 - 2700);
+  ok('10연 값만큼 차감', a.byToken(t).coins === before - info.cost - info.cost10);
+  ok('10연이 1회 열 번보다 싸다', info.cost10 < info.cost * 10,
+     `${info.cost10} vs ${info.cost * 10}`);
+}
+
+console.log('\n②-b 뽑기 값이 상점과 균형이 맞는가');
+{
+  // 뽑기 상품은 전부 상점에서도 살 수 있다. 그래서 1회 값이
+  // "1회에 기대되는 상점 가치" 보다 많이 싸면 상점이 통째로 죽는다 —
+  // 뭘 사든 손해라서 뽑기만 돌리는 게 늘 정답이 된다.
+  // 예전에 1회 300 · 기대가치 566 이라 1.9배 남는 장사였다.
+  const src = require('fs').readFileSync(dir + '/accounts.js', 'utf8');
+  const priceOf = (id) => {
+    const m = src.match(new RegExp('\\n  ' + id + '\\s*:\\s*\\{[^\\n]*?price:\\s*(\\d+)'));
+    return m ? +m[1] : null;
+  };
+  let ev = 0, missing = [];
+  for (const row of info.rates) {
+    const ps = a.GACHA_TIER[row.tier].map(priceOf);
+    missing.push(...a.GACHA_TIER[row.tier].filter((id, i) => ps[i] == null));
+    const got = ps.filter((x) => x != null);
+    ev += row.rate * (got.reduce((s, x) => s + x, 0) / got.length);
+  }
+  ok('모든 뽑기 상품에 상점가가 있다', missing.length === 0, missing.join(' '));
+  const ratio = ev / info.cost;
+  console.log(`     1회 ${info.cost}코인 · 기대 상점가치 ${Math.round(ev)}코인 → ${ratio.toFixed(2)}배`);
+  ok('뽑기가 상점을 죽일 만큼 싸지 않다', ratio <= 1.35, `${ratio.toFixed(2)}배`);
+  // 반대로 너무 비싸도 아무도 안 돌린다 (원하는 걸 못 고르는 값을 얹어 준 것)
+  ok('그렇다고 상점보다 손해도 아니다', ratio >= 0.95, `${ratio.toFixed(2)}배`);
 }
 
 console.log('\n③ 돈이 모자라면 아무 일도 안 일어난다');
@@ -65,7 +95,6 @@ console.log('\n④ 실제 등급 분포가 표시한 확률과 맞는가 (2만 �
     const r = a.rollGacha(t, 10);
     for (const g of r.results) cnt[g.tier]++;
   }
-  const info = a.gachaInfo();
   for (const row of info.rates) {
     const got = cnt[row.tier] / N;
     // 화면에 적는 값은 천장까지 반영한 실제 확률이어야 한다.
@@ -113,15 +142,23 @@ console.log('\n⑦ 파편으로 원하는 것을 확정 교환');
 {
   const t = rich(1e9);
   const u = a.byToken(t);
-  u.shards = 300;
-  const target = 'back_obsidian';
+  // 교환가는 등급마다 다르다. 값은 서버가 쥐고 있으므로 여기서도 서버에서 읽는다.
+  const costOf = (tier) => a.gachaInfo().rates.find((r) => r.tier === tier).cost;
+  const target = 'back_obsidian';                 // 전설
+  const legendCost = costOf('legend');
+  u.shards = legendCost;
   const r = a.exchangeShard(t, target);
   ok('교환 성공', r.ok && !!a.byToken(t).items[target], r.error);
-  ok('파편 300 차감', a.byToken(t).shards === 0);
+  ok('등급에 맞는 값이 차감된다', a.byToken(t).shards === 0);
+  ok('응답이 낸 값을 알려준다', r.cost === legendCost);
   ok('이미 가진 건 못 바꾼다', !!a.exchangeShard(t, target).error);
-  u.shards = 299;
+  u.shards = legendCost - 1;
   ok('파편 모자라면 거부', !!a.exchangeShard(t, 'np_obsidian').error);
-  ok('모자랄 때 파편 안 깎임', a.byToken(t).shards === 299);
+  ok('모자랄 때 파편 안 깎임', a.byToken(t).shards === legendCost - 1);
+  // 전설 값으로 일반품을 사면 안 된다 — 등급별로 실제로 다른 값이 나가는지
+  u.shards = costOf('common');
+  ok('일반은 싼값에 바뀐다', !!a.exchangeShard(t, 'np_wood').ok);
+  ok('일반 값만 나간다', a.byToken(t).shards === 0);
 }
 
 console.log('\n⑧ 방어');
@@ -137,7 +174,7 @@ console.log('\n⑧ 방어');
   const t2 = rich(5000);
   const before = a.byToken(t2).coins;
   const r = a.rollGacha(t2, 999);
-  ok('이상한 횟수는 1회로', r.ok && r.results.length === 1 && a.byToken(t2).coins === before - 300);
+  ok('이상한 횟수는 1회로', r.ok && r.results.length === 1 && a.byToken(t2).coins === before - info.cost);
 }
 
 console.log('\n⑨ 뽑기로 나온 것은 전부 실제 상품이다');

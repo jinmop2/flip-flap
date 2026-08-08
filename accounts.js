@@ -479,12 +479,32 @@ function bonusOf(u) {
 //    그대로 내려보내 UI 가 같은 값을 쓰게 한다 — 코드와 표시가 어긋날 여지를 없앤다.
 //  · 코스메틱 뽑기의 최대 적은 중복이다. 중복은 파편으로 바꿔 주고, 파편을 모으면
 //    원하는 것을 확정으로 바꿀 수 있게 해서 "뽑을수록 목표에 가까워지게" 만든다.
-const GACHA_COST = 300;          // 1회
-const GACHA_COST10 = 2700;       // 10연 (10% 할인)
+// 뽑기 값은 "1회에 기대되는 상점 가치" 에 맞춘다.
+// 등급별 평균 상점가 × 출현확률을 더하면 1회당 566코인어치가 나온다.
+//   일반 317×59.3% · 고급 764×27.7% · 희귀 1095×9.9% · 전설 1850×3.2%
+// 예전엔 300이라 중복을 무시해도 1.9배 남는 장사였다. 그러면 상점에서
+// 뭘 사든 손해라서 상점이 통째로 죽는다 — 뽑기만 돌리는 게 늘 정답이 된다.
+// 기대값보다 아주 조금 싸게 잡아, 뽑기가 여전히 매력적이되 상점을
+// 무의미하게 만들지는 않는 선에 둔다. (원하는 걸 못 고르는 게 그 차액의 값이다)
+const GACHA_COST = 500;          // 1회 — 기대 상점가치 566보다 조금 아래
+const GACHA_COST10 = 4500;       // 10연 (10% 할인)
 const GACHA_RATE = { common: 0.60, rare: 0.28, epic: 0.10, legend: 0.02 };
 const SHARD_ON_DUP = { common: 5, rare: 15, epic: 40, legend: 100 };
-const SHARD_EXCHANGE = 300;      // 이만큼 모으면 아무거나 하나 확정
 const PITY_LEGEND = 50;          // 이 횟수 안에 전설 하나는 반드시
+
+// 파편으로 원하는 것을 확정으로 사는 값. 등급별로 다르다.
+//
+// 예전엔 등급과 무관하게 300 고정이었는데, 그러면 중복 때 5파편밖에 안 주는
+// 일반품을 100파편짜리 전설과 같은 값에 사는 꼴이라 전설 말고는 아무도 안 고른다.
+// 일반·고급·희귀 교환이 통째로 죽은 선택지였다.
+//
+// 그래서 "그 등급 중복 보상의 10배" 로 맞췄다. 전부 보유한 상태에서 1회당
+// 기대 파편이 14.2 이므로 뽑기 횟수로 환산하면:
+//   일반 3.5회 · 고급 10.6회 · 희귀 28회 · 전설 49회
+// 전설이 천장(50회)과 거의 같은 게 핵심이다 —
+//   50번 뽑으면 무작위 전설 하나, 700파편을 모으면 원하는 전설 하나.
+// 확정으로 고르는 값이 운에 맡기는 값과 같으니 어느 쪽을 택해도 손해가 아니다.
+const SHARD_COST = { common: 50, rare: 150, epic: 400, legend: 700 };
 
 // 어떤 상품이 어느 등급인지. 여기 없는 상품은 뽑기에 안 나온다
 // (닉네임 변경권·확정권처럼 기능성인 것, 마일스톤 한정품).
@@ -529,14 +549,19 @@ const EFFECTIVE = effectiveRates();
 function gachaInfo() {
   return {
     cost: GACHA_COST, cost10: GACHA_COST10,
-    exchange: SHARD_EXCHANGE, pity: PITY_LEGEND,
+    exchange: SHARD_COST.legend, pity: PITY_LEGEND,   // exchange = 가장 비싼 값(요약 표시용)
     rates: TIERS.map((t) => ({
       tier: t,
       rate: EFFECTIVE[t],          // 화면에 적는 값 = 천장까지 반영한 실제 확률
       baseRate: GACHA_RATE[t],     // 천장을 빼면 이 값 (참고용)
       shard: SHARD_ON_DUP[t],
+      cost: SHARD_COST[t],         // 파편으로 확정 구매하는 값
       count: GACHA_TIER[t].filter((id) => Object.prototype.hasOwnProperty.call(SHOP, id)).length,
     })),
+    // 교환소에 늘어놓을 목록. 무엇이 얼마인지는 서버가 정하고 화면은 그리기만 한다.
+    pool: TIERS.flatMap((t) => GACHA_TIER[t]
+      .filter((id) => Object.prototype.hasOwnProperty.call(SHOP, id))
+      .map((id) => ({ id, tier: t, cost: SHARD_COST[t], name: SHOP[id].name, icon: SHOP[id].icon }))),
   };
 }
 
@@ -601,11 +626,13 @@ function exchangeShard(token, itemId) {
   try {
     u.items = u.items || {};
     if (u.items[itemId]) return { error: '이미 보유한 아이템이에요.' };
-    if ((u.shards || 0) < SHARD_EXCHANGE) return { error: `파편이 부족해요. (보유 ${u.shards || 0} / 필요 ${SHARD_EXCHANGE})` };
-    u.shards -= SHARD_EXCHANGE;
+    // 값은 서버가 등급에서 뽑는다. 클라이언트가 보낸 값은 쓰지 않는다.
+    const cost = SHARD_COST[TIER_OF[itemId]];
+    if ((u.shards || 0) < cost) return { error: `파편이 부족해요. (보유 ${u.shards || 0} / 필요 ${cost})` };
+    u.shards -= cost;
     u.items[itemId] = true;
     persist(idl);
-    return { ok: true, itemId, name: SHOP[itemId].name, profile: profileOf(u) };
+    return { ok: true, itemId, cost, name: SHOP[itemId].name, profile: profileOf(u) };
   } finally { gachaLocks.delete(idl); }
 }
 

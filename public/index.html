@@ -537,6 +537,32 @@
     .gc-info .gi-row { display:flex; justify-content:space-between; }
     .gc-exch { font-size:.66rem; color:#9a8a90; text-align:center; }
 
+    /* 뽑기 / 교환소 전환 */
+    .gc-pane { flex:1; min-height:0; display:flex; flex-direction:column; gap:10px; }
+    .gc-tabs { display:flex; gap:6px; flex-shrink:0; }
+    .gc-tab { flex:1; background:rgba(0,0,0,.3); border:1px solid rgba(185,141,52,.35);
+      border-radius:8px; padding:7px 0; color:#9a8a90; font-family:inherit; font-size:.74rem;
+      font-weight:800; cursor:pointer; }
+    .gc-tab.active { color:#ffd94a; border-color:#b98d34; background:rgba(185,141,52,.16); }
+
+    /* 교환소 상품 — 살 수 있으면 또렷하게, 못 사면 흐리게 */
+    .gc-buy { width:78px; display:flex; flex-direction:column; align-items:center; gap:3px;
+      padding:6px 3px; border-radius:9px; border:1px solid rgba(185,141,52,.3);
+      background:rgba(0,0,0,.3); cursor:pointer; }
+    .gc-buy .gi-ico { height:44px; display:flex; align-items:center; justify-content:center; }
+    .gc-buy .gi-nm { font-size:.56rem; color:#c8bcc4; text-align:center; line-height:1.25; }
+    .gc-buy .gi-cost { font-size:.58rem; font-weight:800; color:#9fe8ff; }
+    .gc-buy.t-rare   { border-color:rgba(95,168,216,.55); }
+    .gc-buy.t-epic   { border-color:rgba(200,139,255,.6); }
+    .gc-buy.t-legend { border-color:rgba(255,212,94,.7); box-shadow:0 0 10px rgba(255,212,94,.28); }
+    .gc-buy.poor { opacity:.42; cursor:default; }
+    .gc-buy.poor .gi-cost { color:#8a7a80; }
+    .gc-buy.owned { opacity:.3; cursor:default; }
+    .gc-buy.owned .gi-cost { color:#7dd87d; }
+    .gc-buy:not(.poor):not(.owned):active { transform:scale(.94); }
+    .gc-sect { width:100%; font-size:.62rem; font-weight:800; color:#8a7a80;
+      margin:2px 0 -4px; padding-left:2px; }
+
     .shop-tile {
       position:relative; background:#1c1424; border:1.5px solid #2a1c30; border-radius:13px;
       padding:12px 4px 8px; display:flex; flex-direction:column; align-items:center; gap:5px;
@@ -2684,18 +2710,33 @@
       <span class="close-x" onclick="closeGacha()">×</span>
     </div>
 
-    <div id="gcStage" class="gc-stage"><div class="gc-hint">아래 버튼을 눌러 뽑아보세요</div></div>
-
-    <div class="gc-btns">
-      <button class="btn btn-outline" id="gcOne" onclick="doGacha(1)">1회</button>
-      <button class="btn btn-gold" id="gcTen" onclick="doGacha(10)">10연</button>
+    <div class="gc-tabs">
+      <button class="gc-tab active" id="gcTabRoll" onclick="gachaTab('roll')">뽑기</button>
+      <button class="gc-tab" id="gcTabExch" onclick="gachaTab('exch')">교환소</button>
     </div>
 
-    <!-- 확률은 서버가 준 값을 그대로 표시한다 (법적 표시 의무) -->
-    <button class="gc-toggle" onclick="toggleGachaInfo()">확률·천장 보기</button>
-    <div class="gc-info" id="gcInfo"></div>
+    <!-- 뽑기 -->
+    <div id="gcPaneRoll" class="gc-pane">
+      <div id="gcStage" class="gc-stage"><div class="gc-hint">아래 버튼을 눌러 뽑아보세요</div></div>
 
-    <div class="gc-exch" id="gcExch"></div>
+      <div class="gc-btns">
+        <button class="btn btn-outline" id="gcOne" onclick="doGacha(1)">1회</button>
+        <button class="btn btn-gold" id="gcTen" onclick="doGacha(10)">10연</button>
+      </div>
+
+      <!-- 확률은 서버가 준 값을 그대로 표시한다 (법적 표시 의무) -->
+      <button class="gc-toggle" onclick="toggleGachaInfo()">확률·천장 보기</button>
+      <div class="gc-info" id="gcInfo"></div>
+
+      <div class="gc-exch" id="gcExch"></div>
+    </div>
+
+    <!-- 교환소 — 중복으로 모은 파편을 원하는 것으로 바꾼다 -->
+    <div id="gcPaneExch" class="gc-pane" style="display:none">
+      <div class="gc-exch" id="gcExchTop"></div>
+      <div id="gcShop" class="gc-stage"></div>
+    </div>
+
     <button class="btn btn-outline" onclick="closeGacha()">닫기</button>
   </div>
 </div>
