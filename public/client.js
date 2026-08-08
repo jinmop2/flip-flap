@@ -302,51 +302,33 @@ function playVictoryFx() {
 
 // 하단 고정 프로필 바 (클릭 → 내 정보)
 function renderAccount() {
-  const nick = document.getElementById('pbNick');
-  if (!nick) return;
+  const body = document.getElementById('pbBody');
   const fill = document.getElementById('pbXpFill');
-  const set = (id, v) => { const e = document.getElementById(id); if (e) e.innerHTML = v; };
-
+  if (!body) return;
   if (myAccount) {
     const p = myAccount;
     const total = p.wins + p.losses;
-    set('pbFace', faceOf(p));
-    set('pbLv', 'Lv.' + p.level);
-    nick.innerHTML = `<span class="${ncClass(p.nickColor).trim()}${npClass(p.plate)}">${esc(p.nick)}</span>`;
-    set('pbStats', `<span style="color:${p.rankColor}">${esc(p.rank)}</span> · ${p.wins}승 ${p.losses}패` +
-                   (total ? ` (${p.winRate}%)` : ''));
-    set('pbCoins', p.coins || 0);
-    set('pbRp', p.rp || 0);
-    set('pbCoinIco', ico('🪙', 'pill-ico'));
+    body.innerHTML = `
+      <span class="pb-lv">Lv.${p.level}</span>
+      <div class="pb-ava" style="color:${p.rankColor}">${faceOf(p)}</div>
+      <div class="pb-mid">
+        <div class="pb-nickrow"><span class="pb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span>${titleTag(p.titleInfo)}</div>
+        <div class="pb-stats">${p.wins}승 ${p.losses}패${total ? ` (${p.winRate}%)` : ''} · <span style="color:${p.rankColor}">${esc(p.rank)}</span></div>
+      </div>
+      <div class="pb-right">
+        <span class="pb-badge pb-coin">🪙 ${p.coins || 0}</span>
+        <span class="pb-badge pb-rp">${ico('🏆')} ${p.rp} RP</span>
+      </div>`;
     if (fill) fill.style.width = xpPct(p) + '%';
   } else {
-    set('pbFace', ico('👤'));
-    set('pbLv', 'Lv.—');
-    nick.textContent = getNick();
-    set('pbStats', '게스트 · 눌러서 로그인');
-    set('pbCoins', 0); set('pbRp', 0);
-    set('pbCoinIco', ico('🪙', 'pill-ico'));
+    body.innerHTML = `
+      <div class="pb-ava">👤</div>
+      <div class="pb-mid">
+        <div class="pb-nick">${esc(getNick())}</div>
+        <div class="pb-stats">게스트 · 기록이 저장되지 않아요</div>
+      </div>
+      <button class="pb-login" onclick="event.stopPropagation();openAuth('login')">로그인</button>`;
     if (fill) fill.style.width = '0%';
-  }
-  // 코인 아이콘은 ico() 가 span 을 만들어 주므로 안쪽 span 이 겹친다 — 한 겹만 남긴다
-  const ci = document.getElementById('pbCoinIco');
-  if (ci && ci.firstElementChild && ci.firstElementChild.classList.contains('pill-ico'))
-    ci.innerHTML = ci.firstElementChild.innerHTML;
-}
-
-// 로비 설정
-function openSettings() {
-  closeAllNavModals();
-  syncSetToggles();
-  document.getElementById('setModal').classList.add('show');
-}
-function closeSettings() { document.getElementById('setModal').classList.remove('show'); }
-// 인게임 패널과 로비 모달이 같은 설정을 보므로, 열 때 상태를 맞춘다
-function syncSetToggles() {
-  const pair = [['togBgm', 'togBgm2'], ['togSfx', 'togSfx2'], ['togGuide', 'togGuide2']];
-  for (const [a, b] of pair) {
-    const src = document.getElementById(a), dst = document.getElementById(b);
-    if (src && dst) dst.classList.toggle('on', src.classList.contains('on'));
   }
 }
 
@@ -1693,7 +1675,6 @@ const NAV_ACTIONS = {
 };
 function closeAllNavModals() {
   try { closeGacha(); } catch (_) {}
-  try { closeSettings(); } catch (_) {}
   try { closeMissions(); } catch (_) {}
   try { closeShop(); } catch (_) {}
   try { closeFriends(); } catch (_) {}
@@ -2100,7 +2081,6 @@ const ESC_TARGETS = [
   ['multiModal',   () => closeModePanels()],
   ['quadModal',    () => (typeof q4Close === 'function') && q4Close()],
   ['gachaModal',   () => closeGacha()],
-  ['setModal',     () => closeSettings()],
   ['createModal',  () => closeCreate()],
   ['codeModal',    () => closeCode()],
   ['itemUseModal', () => closeItemUse()],
