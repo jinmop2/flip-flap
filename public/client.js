@@ -1759,7 +1759,10 @@ async function openGacha() {
   renderGachaInfo();
   gachaWallet();               // 목록을 받은 뒤라야 최저 교환가를 적을 수 있다
 }
-function closeGacha() { document.getElementById('gachaModal').classList.remove('show'); }
+function closeGacha() {
+  skipGachaReveal();                 // 돌던 연출을 끊는다 (닫은 뒤 번쩍이지 않게)
+  document.getElementById('gachaModal').classList.remove('show');
+}
 
 function gachaWallet() {
   document.getElementById('gcCoins').innerHTML = `${ico('🪙')} ${myAccount ? myAccount.coins || 0 : 0}`;
@@ -1859,33 +1862,102 @@ function renderGachaInfo() {
 }
 function toggleGachaInfo() { document.getElementById('gcInfo').classList.toggle('show'); }
 
+// ── 뽑기 연출 ──────────────────────────────────────────────
+// 결과를 알기 전의 긴장이 뽑는 맛이다. 그래서 순서를 이렇게 둔다.
+//   ① 구슬이 돈다 — 이번 판의 최고 등급 색으로 미리 물든다 ("뭔가 온다")
+//   ② 카드가 뒷면으로 깔린다
+//   ③ 한 장씩 뒤집힌다 — 등급은 이때 처음 드러나고, 높을수록 크게 터진다
+// 아무 데나 누르면 즉시 다 보여 준다. 10연을 매번 끝까지 보게 하면 물린다.
+const TIER_RANK = { common: 0, rare: 1, epic: 2, legend: 3 };
+const gcWait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+let _skipReveal = false;
+function skipGachaReveal() { _skipReveal = true; }
+function gachaOpen() { return document.getElementById('gachaModal').classList.contains('show'); }
+
+function gcCardHtml(g) {
+  const badge = g.dup
+    ? `<span class="gi-dup">+${g.shard} 파편</span>`
+    : `<span class="gi-dup" style="color:#7dd87d">NEW</span>`;
+  return `<div class="gc-inner">` +
+    `<div class="gc-face gc-back"></div>` +
+    `<div class="gc-face gc-front"><span class="gi-ico">${shopArtFor(g.id, g.icon)}</span>` +
+    `<span class="gi-nm">${esc(g.name)}</span>${badge}</div>` +
+    `</div><div class="gc-aura"></div>`;
+}
+
+function gcFlash() {
+  const f = document.createElement('div');
+  f.className = 'gc-flash';
+  document.body.appendChild(f);
+  setTimeout(() => f.remove(), 700);
+}
+
+async function revealGacha(stage, results) {
+  const top = results.reduce((m, g) => Math.max(m, TIER_RANK[g.tier] || 0), 0);
+  const topName = ['common', 'rare', 'epic', 'legend'][top];
+
+  // ① 기다림 — 최고 등급 색으로 미리 물든다
+  stage.innerHTML =
+    `<div class="gc-charge"><div class="gc-orb hint-${topName}"></div>` +
+    `<div class="gc-charge-t">${top >= 3 ? '무언가 온다…' : '뽑는 중…'}</div></div>`;
+  const charge = top >= 3 ? 1100 : top >= 2 ? 800 : 620;
+  // 뒤로 갈수록 빨라지는 초읽기. 같은 간격으로 계속 울리면 기관총 소리가 난다.
+  for (let t = 0, gap = 260; t < charge && !_skipReveal && gachaOpen(); t += gap, gap = Math.max(90, gap - 45)) {
+    playSound('tick'); await gcWait(Math.min(gap, charge - t));
+  }
+
+  // ② 뒷면으로 깔린다
+  stage.innerHTML = '';
+  const els = results.map((g, i) => {
+    const el = document.createElement('div');
+    el.className = 'gc-item t-' + g.tier;
+    el.style.animationDelay = (_skipReveal ? 0 : i * 55) + 'ms';
+    el.innerHTML = gcCardHtml(g);
+    stage.appendChild(el);
+    return el;
+  });
+  if (results.length > 1 && !_skipReveal) {
+    stage.insertAdjacentHTML('beforeend', '<div class="gc-skip">아무 데나 누르면 바로 보기</div>');
+  }
+  if (!_skipReveal) { playSound('deal'); await gcWait(results.length * 55 + 260); }
+
+  // ③ 한 장씩 뒤집힌다
+  for (let i = 0; i < els.length; i++) {
+    const g = results[i], el = els[i];
+    el.classList.add('flipped');
+    // 도중에 창을 닫았으면 남은 건 조용히 다 뒤집고 끝낸다.
+    // 안 그러면 닫힌 뒤에 화면이 번쩍이고 소리가 난다.
+    if (_skipReveal || !gachaOpen()) continue;
+    const rank = TIER_RANK[g.tier] || 0;
+    if (rank >= 1) { el.classList.add('lit', 'pop-' + g.tier); }
+    if (rank >= 3) gcFlash();
+    playSound(rank >= 3 ? 'setwin' : rank >= 2 ? 'reveal' : rank >= 1 ? 'ping' : 'flip');
+    await gcWait(rank >= 3 ? 900 : rank >= 2 ? 380 : 165);
+  }
+  const skip = stage.querySelector('.gc-skip');
+  if (skip) skip.remove();
+}
+
 let _gachaBusy = false;
 async function doGacha(count) {
   if (_gachaBusy || !myAccount) return;
   _gachaBusy = true;
+  _skipReveal = false;
   const one = document.getElementById('gcOne'), ten = document.getElementById('gcTen');
   one.disabled = ten.disabled = true;
   const stage = document.getElementById('gcStage');
   stage.innerHTML = '<div class="gc-hint">뽑는 중…</div>';
+  const modal = document.getElementById('gachaModal');
+  modal.addEventListener('pointerdown', skipGachaReveal);
   try {
     const r = await apiPost('/api/gacha/roll', { token: authToken(), count });
     if (!r || r.error) { stage.innerHTML = `<div class="gc-hint">${esc((r && r.error) || '뽑기에 실패했어요')}</div>`; return; }
     myAccount = r.profile || myAccount;
     renderAccount(); gachaWallet();
-    stage.innerHTML = '';
-    // 한 장씩 차례로 뒤집히듯 나타난다
-    r.results.forEach((g, idx) => {
-      const el = document.createElement('div');
-      el.className = 'gc-item t-' + g.tier;
-      el.style.animationDelay = (idx * 90) + 'ms';
-      const art = shopArtFor(g.id, g.icon);
-      el.innerHTML = `<span class="gi-ico">${art}</span><span class="gi-nm">${esc(g.name)}</span>` +
-                     (g.dup ? `<span class="gi-dup">+${g.shard} 파편</span>` : `<span class="gi-dup" style="color:#7dd87d">NEW</span>`);
-      stage.appendChild(el);
-    });
-    const legend = r.results.filter((g) => g.tier === 'legend').length;
-    playSound(legend ? 'setwin' : 'card');
+    await revealGacha(stage, r.results);
   } finally {
+    modal.removeEventListener('pointerdown', skipGachaReveal);
     _gachaBusy = false;
     one.disabled = ten.disabled = false;
   }
