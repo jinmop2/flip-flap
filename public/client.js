@@ -292,7 +292,7 @@ async function renderMyInv() {
     html += `<div class="mi-item${on ? ' equipped' : ''}" ${slot ? `onclick="invEquip('${it.id}', ${on}, '${it.type}')"` : ''} title="${it.name}">
       ${cnt}<span class="ico">${ico(it.icon, 'inv-ico')}</span><span class="nm">${it.name.replace(' 카드백','')}</span></div>`;
   });
-  inv.innerHTML = html || '<div class="mi-empty">아직 아이템이 없어요 — 상점 구경 가기 🛒</div>';
+  inv.innerHTML = html || `<div class="mi-empty">아직 아이템이 없어요 — 상점 구경 가기 ${ico('🛒')}</div>`;
 }
 async function invEquip(itemId, isOn, kind) {
   const r = await apiPost('/api/equip', { token: localStorage.getItem('ff_auth'), itemId: isOn ? null : itemId, kind });
@@ -544,7 +544,7 @@ async function openMissions() {
     row.className = 'mis-row' + (m.claimed ? ' done' : '');
     row.innerHTML = `
       <div class="mis-info">
-        <div class="mis-name">${m.claimed ? '✅' : '🎯'} ${esc(m.name)}</div>
+        <div class="mis-name">${m.claimed ? ico('✅') : ico('🎯')} ${esc(m.name)}</div>
         <div class="mis-bar"><div class="mis-fill" style="width:${Math.round(m.prog / m.goal * 100)}%"></div></div>
         <div class="mis-prog">${m.prog}/${m.goal}</div>
       </div>
@@ -1317,7 +1317,7 @@ async function renderMyTitles() {
     el.innerHTML = `<span class="tr-ico">${ico(t.icon, 'tr-art')}</span>
       <div class="tr-info"><div class="tr-name" style="color:${t.owned ? t.color : '#6a5a70'}">${esc(t.name)}</div>
       <div class="tr-cond">${esc(t.cond)}${t.owned ? '' : ` (${t.prog}/${t.goal})`}</div></div>
-      <span class="tr-state">${on ? '장착 중 ✓' : t.owned ? '장착' : '🔒'}</span>`;
+      <span class="tr-state">${on ? '장착 중 ' + ico('✅') : t.owned ? '장착' : ico('🔒')}</span>`;
     if (t.owned) el.onclick = async () => {
       const res = await apiPost('/api/equip-title', { token: localStorage.getItem('ff_auth'), titleId: on ? null : t.id });
       if (!res.error) { myAccount = res.profile; renderAccount(); renderMyTitles(); }
@@ -1965,7 +1965,12 @@ let _confirmCb = null;
 let _confirmNoCb = null;
 function askConfirm({ icon = '❓', title, desc = '', yes = '확인', no = '취소' }, cb, noCb) {
   _confirmNoCb = noCb || null;
-  document.getElementById('cfIcon').textContent = icon;
+  // 대화상자 아이콘도 우리가 그린 그림으로. 예전엔 textContent 라 시스템 이모지가
+  // 그대로 떴다 — 나가기 문이 유독 밋밋해 보이던 게 이것 때문이다.
+  const cf = document.getElementById('cfIcon');
+  const art = (typeof iconArt === 'function') && iconArt(icon);
+  if (art) { cf.innerHTML = art; cf.classList.add('cf-art'); }
+  else { cf.textContent = icon; cf.classList.remove('cf-art'); }
   document.getElementById('cfTitle').textContent = title;
   document.getElementById('cfDesc').textContent = desc;
   document.getElementById('cfYes').textContent = yes;

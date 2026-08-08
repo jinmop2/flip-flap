@@ -296,6 +296,66 @@ const cardShape = (fill, inner = '') =>
   `<rect x="12" y="7" width="24" height="34" rx="4" fill="${fill}" stroke="${D}" stroke-width="2"/>${inner}`;
 
 const ICON_ART = {
+  '✅': `<svg viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="18" fill="#4fa84f" stroke="${D}" stroke-width="2.2"/>
+    <path d="M15 24.5 l6.5 6.5 L34 18" stroke="#fff" stroke-width="4.2" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  // ── 확인 대화상자용 ──
+  '🚩': `<svg viewBox="0 0 48 48">
+    <path d="M12 44 V4" stroke="${D}" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M12 6 h24 l-5 8 5 8 h-24 z" fill="#e8544a" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M12 6 h12 v16 h-12 z" fill="#ff7a6a" opacity=".5"/></svg>`,
+  '🚫': `<svg viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="17" fill="none" stroke="#e8544a" stroke-width="5.5"/>
+    <path d="M12.5 12.5 L35.5 35.5" stroke="#e8544a" stroke-width="5.5" stroke-linecap="round"/>
+    <circle cx="24" cy="24" r="17" fill="none" stroke="${D}" stroke-width="1.6" opacity=".5"/></svg>`,
+  '❓': `<svg viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="18" fill="#3d2a55" stroke="${D}" stroke-width="2.2"/>
+    <path d="M17.5 18.5 a6.5 6.5 0 1 1 8.5 6.2 c-1.6 .6 -2 1.6 -2 3 v1.3"
+          stroke="#e0c2ff" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="24" cy="34" r="2.4" fill="#e0c2ff"/></svg>`,
+  // ── 뽑기 신규 상품 ──
+  '🎊': `<svg viewBox="0 0 48 48">
+    <path d="M6 42 L20 16 L32 28 z" fill="#f0a83c" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M6 42 L20 16" stroke="${D}" stroke-width="1.4" opacity=".5"/>
+    <rect x="27" y="6" width="5" height="5" rx="1" fill="#e8544a" stroke="${D}" stroke-width="1.4" transform="rotate(20 29.5 8.5)"/>
+    <rect x="37" y="14" width="5" height="5" rx="1" fill="#5fbdd8" stroke="${D}" stroke-width="1.4" transform="rotate(-25 39.5 16.5)"/>
+    <rect x="33" y="30" width="5" height="5" rx="1" fill="#7cc45a" stroke="${D}" stroke-width="1.4" transform="rotate(35 35.5 32.5)"/>
+    <rect x="40" y="35" width="4.5" height="4.5" rx="1" fill="#c88bff" stroke="${D}" stroke-width="1.3" transform="rotate(-15 42 37)"/>
+    <rect x="20" y="4" width="4.5" height="4.5" rx="1" fill="#ffd94a" stroke="${D}" stroke-width="1.3" transform="rotate(40 22 6)"/></svg>`,
+  '🎆': `<svg viewBox="0 0 48 48">
+    <circle cx="24" cy="20" r="2.6" fill="#ffd94a" stroke="${D}" stroke-width="1.4"/>
+    <path d="M24 20 L24 5 M24 20 L34.6 9.4 M24 20 L39 20 M24 20 L34.6 30.6
+             M24 20 L24 35 M24 20 L13.4 30.6 M24 20 L9 20 M24 20 L13.4 9.4"
+          stroke="#ff8c2a" stroke-width="2.2" stroke-linecap="round"/>
+    <circle cx="24" cy="5" r="1.8" fill="#e8544a"/><circle cx="39" cy="20" r="1.8" fill="#5fbdd8"/>
+    <circle cx="24" cy="35" r="1.8" fill="#7cc45a"/><circle cx="9" cy="20" r="1.8" fill="#c88bff"/>
+    <circle cx="34.6" cy="9.4" r="1.5" fill="#ffd94a"/><circle cx="34.6" cy="30.6" r="1.5" fill="#ff8ac0"/>
+    <circle cx="13.4" cy="30.6" r="1.5" fill="#ffd94a"/><circle cx="13.4" cy="9.4" r="1.5" fill="#9fe8ff"/>
+    <path d="M20 40 q4 4 8 0" stroke="${D}" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`,
+  '🙂': `<svg viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="18" fill="#ffd94a" stroke="${D}" stroke-width="2.2"/>
+    <circle cx="17.5" cy="20" r="2.4" fill="${D}"/><circle cx="30.5" cy="20" r="2.4" fill="${D}"/>
+    <path d="M17 29 a9 6 0 0 0 14 0" stroke="${D}" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`,
+  '🔴': `<svg viewBox="0 0 48 48">
+    <rect x="9" y="9" width="30" height="30" rx="3" fill="#c8102e" stroke="${D}" stroke-width="2.2"/>
+    <path d="M15 15 h18 v18 h-18 z" fill="none" stroke="#fff" stroke-width="2"/>
+    <path d="M19 20 h10 M19 24 h10 M19 28 h10" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>`,
+  '⭐': `<svg viewBox="0 0 48 48">
+    <path d="M24 4 l5.8 12.4 13.2 1.7 -9.8 9.2 2.6 13.3 L24 34.2 12.2 40.6 14.8 27.3 5 18.1 18.2 16.4 z"
+          fill="#ffd94a" stroke="${D}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M24 4 l5.8 12.4 13.2 1.7 -9.8 9.2 z" fill="#fff4c8" opacity=".55"/></svg>`,
+  '💨': `<svg viewBox="0 0 48 48">
+    <path d="M6 18 h20 a6 6 0 1 0 -5-9.4" stroke="#b8c8d4" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M4 28 h26 a5.5 5.5 0 1 1 -4.5 8.6" stroke="#9fb4c4" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M12 38 h12" stroke="#b8c8d4" stroke-width="3.4" fill="none" stroke-linecap="round"/></svg>`,
+  '✨': `<svg viewBox="0 0 48 48">
+    <path d="M20 5 l3.4 8.6 8.6 3.4 -8.6 3.4 L20 29 l-3.4 -8.6 -8.6 -3.4 8.6 -3.4 z"
+          fill="#ffd94a" stroke="${D}" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M35 24 l2.2 5.4 5.4 2.2 -5.4 2.2 -2.2 5.4 -2.2 -5.4 -5.4 -2.2 5.4 -2.2 z"
+          fill="#fff4c8" stroke="${D}" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="M10 33 l1.5 3.6 3.6 1.5 -3.6 1.5 -1.5 3.6 -1.5 -3.6 -3.6 -1.5 3.6 -1.5 z"
+          fill="#9fe8ff" stroke="${D}" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
   // ── 크리스탈 세트 상품 아이콘 ──
   '🔮': `<svg viewBox="0 0 48 48">
     <path d="M24 4 L38 17 L31 42 h-14 L10 17 z" fill="#7fd8f5" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
@@ -540,11 +600,20 @@ const ICON_ART = {
     <circle cx="16" cy="20" r="2.6" fill="#8a6a3a"/><circle cx="24" cy="20" r="2.6" fill="#8a6a3a"/>
     <circle cx="32" cy="20" r="2.6" fill="#8a6a3a"/>
   </svg>`,
+  // 나가기 — 문틀 안쪽에서 따뜻한 빛이 새어 나오고, 문짝이 비스듬히 열려 있다.
+  // 예전엔 갈색 네모에 화살표만 붙여 놔서 안내 아이콘처럼 밋밋했다.
   '🚪': `<svg viewBox="0 0 48 48">
-    <rect x="9" y="5" width="24" height="38" rx="3" fill="#a5763f" stroke="${D}" stroke-width="2"/>
-    <rect x="13" y="9" width="16" height="30" rx="2" fill="#8a5a2a"/>
-    <circle cx="28" cy="25" r="2.2" fill="#f7d98a" stroke="${D}" stroke-width="1.3"/>
-    <path d="M37 24 h8 M41 19 l5 5 -5 5" stroke="#5fd0c0" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="6" y="3" width="27" height="42" rx="2.5" fill="#3a2416" stroke="${D}" stroke-width="2"/>
+    <path d="M10 7 h19 v34 h-19 z" fill="#f7d98a"/>
+    <path d="M10 7 h19 v34 h-19 z" fill="url(#doorGlow)" opacity=".9"/>
+    <defs><linearGradient id="doorGlow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff6d8"/><stop offset="1" stop-color="#e8a83c"/>
+    </linearGradient></defs>
+    <path d="M29 7 L41 12 v24 L29 41 z" fill="#a5763f" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M31.5 12 L38.5 14.6 v18.8 L31.5 36 z" fill="#8a5a2a"/>
+    <circle cx="32.6" cy="24" r="1.9" fill="#f7d98a" stroke="${D}" stroke-width="1.2"/>
+    <path d="M13 24 h9 M18 19.5 l4.5 4.5 -4.5 4.5" stroke="${D}" stroke-width="2.4"
+          fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`,
   // ── 카드 표식 · 이모트 버튼 ──
   '😀': `<svg viewBox="0 0 48 48">

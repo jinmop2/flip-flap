@@ -1471,6 +1471,7 @@
     /* 공용 확인 다이얼로그 */
     .confirm-box { align-items:center; text-align:center; gap:10px; padding:26px 24px; }
     .cf-icon { font-size:2.4rem; line-height:1; filter:drop-shadow(0 3px 6px rgba(0,0,0,.5)); }
+    .cf-icon.cf-art svg { width:1em; height:1em; display:block; margin:0 auto; }
     .cf-title { font-size:1.1rem; font-weight:800; color:#f5e6c0; }
     /* pre-line — 설명에 넣은 줄바꿈을 살린다 (개행 없는 기존 문구는 그대로) */
     .cf-desc { font-size:.82rem; color:#c8a86a; line-height:1.5; min-height:0; white-space:pre-line; }
@@ -1737,6 +1738,11 @@
     .tr-art svg   { width:26px; height:26px; display:block; }
     /* 직접 그린 아이콘은 선이 가늘어서, 시스템 이모지와 같은 크기로 두면 뭉개져 보인다.
        글자보다 한 뼘 키우고 뒤에 여백을 줘야 제목·본문에서 읽힌다. */
+    /* ico() 에 클래스를 새로 주면 여기에 크기 규칙도 같이 넣어야 한다.
+       빠뜨리면 SVG 가 기본 크기(300×150)로 터져 화면이 망가진다 — 실제로
+       튜토리얼 모자가 그렇게 터졌다. tests/t_iconcss.js 가 빠진 걸 잡아준다. */
+    .tut-ico > svg { width:1.2em; height:1.2em; display:inline-block; vertical-align:-.18em; }
+    .c-mark-ico > svg { width:.95em; height:.95em; display:block; }
     .lbl-ico svg  { width:1.32em; height:1.32em; display:inline-block; vertical-align:-.28em; }
     .lbl-ico { margin-right:.12em; }
     /* 한 턴의 흐름 — 원형 배지 안을 꽉 채운다 (그냥 두면 배지 28px 안에 17px만 그려진다) */
