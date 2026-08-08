@@ -1393,7 +1393,11 @@ const SHOP_GROUPS = [
   { name: '명패',     types: ['plate'] },
   { name: '이모트',   types: ['emotes'] },
 ];
-const EQUIP_SLOT = { cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace' };
+// 서버(accounts.js SLOT)와 짝이 맞아야 한다. 한쪽만 고치면 장착이 안 된다.
+const EQUIP_SLOT = {
+  cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace',
+  victory: 'victoryFx', avatar: 'avatar', stamp: 'winStamp', place: 'placeFx',
+};
 let shopSelId = null;
 // 마일스톤 아이템은 보유/티켓 있을 때만 상점에 노출
 function shopVisible() {
@@ -2818,8 +2822,11 @@ function renderDeck() {
   el.classList.toggle('drawable', !isSpec && s.phase === 'draw' && s.auctioneer === s.myIndex);
 }
 
-// 상대의 카드백 스킨 (프로필에 장착 정보가 실려옴)
-const CB_CLASS = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang', back_ruby: 'cb-ruby', back_galaxy: 'cb-galaxy' };
+// 상대의 카드백 스킨 (프로필에 장착 정보가 실려옴).
+// 표를 따로 두지 않고 상점용(CBP)을 그대로 쓴다 — 예전엔 두 벌이라
+// 새 카드백을 상점에만 등록하고 인게임 표를 깜빡해서, 사 놓고도 판에서는
+// 기본 뒷면이 나왔다.
+const CB_CLASS = CBP;
 function oppBackClass() {
   const p = gameProfiles && gameProfiles[myIndex === 1 ? 1 : 0];
   return (p && CB_CLASS[p.cardBack]) || null;
