@@ -196,6 +196,10 @@ function profileOf(u) {
     sinceLegend: u.sinceLegend || 0,
     nickColor: u.nickColor || null,          // 염색약 결과 (색 키)
     cardBack: u.cardBack || null,            // 장착 중인 카드백
+    avatar: u.avatar || null,                // 장착 중인 아바타 (랭킹·게임 화면에서 남도 본다)
+    winStamp: u.winStamp || null,            // 낙찰 도장
+    victoryFx: u.victoryFx || null,          // 승리 연출
+    placeFx: u.placeFx || null,              // 카드 놓는 이펙트
     items: u.items || {},                    // 보유 아이템 { id: 개수 or true }
     streak: u.winStreak || 0,                // 현재 연승
     loginStreak: u.loginStreak || 0,         // 연속 출석 일수

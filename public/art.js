@@ -277,12 +277,67 @@ const RANK_ART = {
 
 };
 
+
+// ── 아바타 ─────────────────────────────────────────────────────────────────
+// 프로필·랭킹·게임 화면에 계속 보이는 얼굴. 작게 줄여도 실루엣으로 구분되도록
+// 머리 모양(모자·귀·복면)을 크게 잡고 이목구비는 단순하게 그렸다.
+const AVATAR_ART = {
+  ava_rookie: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="24" cy="24" r="18" fill="${F}" stroke="${FS}" stroke-width="2.2"/>
+    <circle cx="17.5" cy="21" r="2.4" fill="${FS}"/><circle cx="30.5" cy="21" r="2.4" fill="${FS}"/>
+    <path d="M17 29 a9 6 0 0 0 14 0" stroke="${FS}" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`,
+  ava_gambler: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="24" cy="27" r="15" fill="#e8b98a" stroke="${FS}" stroke-width="2.2"/>
+    <path d="M14 15 a3 3 0 0 1 3-3 h14 a3 3 0 0 1 3 3 v3 h-20 z" fill="#2f3540" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="9" y="16" width="30" height="5" rx="2.5" fill="#2f3540" stroke="${FS}" stroke-width="2"/>
+    <rect x="14" y="14" width="20" height="2.6" fill="#c8102e"/>
+    <circle cx="18.5" cy="27" r="2.2" fill="${FS}"/><circle cx="29.5" cy="27" r="2.2" fill="${FS}"/>
+    <path d="M19 34 a7 4 0 0 0 10 0" stroke="${FS}" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`,
+  ava_fox: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M7 9 l4 14 l8.5 -7 z M41 9 l-4 14 l-8.5 -7 z" fill="#f08030" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="24" cy="25" r="16" fill="#f08030" stroke="${FS}" stroke-width="2.2"/>
+    <path d="M24 33 a14 12 0 0 0 15 -7 a19 19 0 0 1 -30 0 a14 12 0 0 0 15 7 z" fill="#fff3e6"/>
+    <circle cx="18" cy="23" r="2.3" fill="${FS}"/><circle cx="30" cy="23" r="2.3" fill="${FS}"/>
+    <path d="M24 29 l-2.6 2.6 h5.2 z" fill="${FS}"/></svg>`,
+  ava_dealer: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="24" cy="26" r="15" fill="#e8b98a" stroke="${FS}" stroke-width="2.2"/>
+    <path d="M9 20 a15 12 0 0 1 30 0 z" fill="#2a2a34" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="18.5" cy="26" r="2.2" fill="${FS}"/><circle cx="29.5" cy="26" r="2.2" fill="${FS}"/>
+    <path d="M19 33 h10" stroke="${FS}" stroke-width="2" stroke-linecap="round"/>
+    <g transform="rotate(-16 10 36)">
+      <rect x="4" y="30" width="11" height="15" rx="2" fill="#f4efe2" stroke="${FS}" stroke-width="1.8"/>
+      <path d="M9.5 34 l2.4 3 -2.4 3 -2.4 -3 z" fill="#c8102e"/></g></svg>`,
+  ava_cat: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9 14 L10 3 L20 10 z M39 14 L38 3 L28 10 z" fill="#5a5a6a" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="24" cy="25" r="16" fill="#5a5a6a" stroke="${FS}" stroke-width="2.2"/>
+    <path d="M11 22 h11 a2 2 0 0 1 0 4 h-11 z M26 22 h11 a2 2 0 0 1 0 4 h-11 z" fill="#20202a"/>
+    <circle cx="17.5" cy="24" r="1.9" fill="#ffd94a"/><circle cx="30.5" cy="24" r="1.9" fill="#ffd94a"/>
+    <path d="M24 30 l-2.4 2.4 h4.8 z" fill="${FS}"/>
+    <path d="M5 28 h7 M5 32 h7 M43 28 h-7 M43 32 h-7" stroke="${FS}" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  ava_king: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="24" cy="28" r="15" fill="#e8b98a" stroke="${FS}" stroke-width="2.2"/>
+    <path d="M8 16 L6 4 l9 6 L24 1 l9 9 9 -6 -2 12 z" fill="#ffd45e" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="8" y="16" width="32" height="5" rx="2" fill="#e0a82a" stroke="${FS}" stroke-width="1.8"/>
+    <circle cx="24" cy="9" r="2" fill="#e8544a" stroke="${FS}" stroke-width="1.2"/>
+    <circle cx="18.5" cy="28" r="2.2" fill="${FS}"/><circle cx="29.5" cy="28" r="2.2" fill="${FS}"/>
+    <path d="M19 35 a7 4 0 0 0 10 0" stroke="${FS}" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`,
+  ava_phantom: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="24" cy="26" r="15" fill="#3a3550" stroke="${FS}" stroke-width="2.2"/>
+    <path d="M6 12 a4 4 0 0 1 4-4 h28 a4 4 0 0 1 4 4 l-6 5 h-24 z" fill="#1a1626" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M8 20 h32 v7 a6 6 0 0 1-6 6 h-4 a5 5 0 0 1-4-2 a5 5 0 0 1-4 2 h-4 a6 6 0 0 1-6-6 z"
+          fill="#f4efe2" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <ellipse cx="16.5" cy="25.5" rx="3.4" ry="2.6" fill="${FS}"/>
+    <ellipse cx="31.5" cy="25.5" rx="3.4" ry="2.6" fill="${FS}"/>
+    <path d="M19 37 a6 3 0 0 0 10 0" stroke="${FS}" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`,
+};
+const avatarArt = (id) => (id && Object.prototype.hasOwnProperty.call(AVATAR_ART, id)) ? AVATAR_ART[id] : null;
+
 // 이모지 → SVG (없으면 원래 이모지 그대로)
 const emoteArt = e =>
   EMOTE_ART[e] || RANK_ART[e] || (typeof ICON_ART !== 'undefined' ? ICON_ART[e] : null) || null;
 const rankArt  = e => RANK_ART[e]  || null;
 
-if (typeof module !== 'undefined') module.exports = { AI_AVATAR, EMOTE_ART, RANK_ART };
+if (typeof module !== 'undefined') module.exports = { AI_AVATAR, EMOTE_ART, RANK_ART, AVATAR_ART };
 
 // ══════════════════════════════════════════════════════════
 //  상점·칭호·UI 아이콘

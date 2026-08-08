@@ -423,6 +423,120 @@
       margin-bottom:2px;
     }
     .shop-head:first-child { padding-top:0; }
+
+    /* ── 낙찰 도장 (모양별) ── */
+    /* 기본 WIN 은 .win-stamp 가 이미 잡고 있고, 여기서는 모양만 바꾼다 */
+    .win-stamp.st-seal, .q-winstamp.st-seal {
+      font-family:'Fredoka',sans-serif; font-size:1.05rem; letter-spacing:0;
+      color:#fff; -webkit-text-stroke:0; text-stroke:0;
+      background:#c8102e; border:2px solid #8a0a20; border-radius:5px; padding:3px 6px;
+      box-shadow:0 2px 6px rgba(0,0,0,.55);
+    }
+    .win-stamp.st-star, .q-winstamp.st-star { font-family:sans-serif; font-size:1.9rem; color:#ffd94a;
+      -webkit-text-stroke:1.4px #7a4e10; }
+    .win-stamp.st-crown, .q-winstamp.st-crown { font-family:sans-serif; font-size:1.8rem; color:#ffd45e;
+      -webkit-text-stroke:1.4px #7a4e10; }
+
+    /* ── 카드 놓을 때 파티클 ── */
+    .place-fx { position:absolute; inset:0; pointer-events:none; z-index:6; overflow:visible; }
+    .place-fx i {
+      position:absolute; left:50%; top:50%; width:5px; height:5px; border-radius:50%;
+      animation:pfBurst .55s ease-out forwards;
+    }
+    @keyframes pfBurst {
+      from { opacity:1; transform:translate(-50%,-50%) scale(1); }
+      to   { opacity:0; transform:translate(calc(-50% + var(--px)), calc(-50% + var(--py))) scale(.3); }
+    }
+    .pf-dust  i { background:#b8a890; }
+    .pf-spark i { background:#ffe9a8; box-shadow:0 0 6px rgba(255,220,120,.9); }
+    .pf-ember i { background:#ff8c2a; box-shadow:0 0 8px rgba(255,120,40,.95); }
+    @media (prefers-reduced-motion:reduce) { .place-fx { display:none; } }
+
+    /* ── 승리 연출 — 이길 때 화면 전체 ── */
+    #victoryFx { position:fixed; inset:0; pointer-events:none; z-index:60; overflow:hidden; display:none; }
+    #victoryFx.show { display:block; }
+    #victoryFx i { position:absolute; top:-8%; }
+    /* 색종이 — 네모가 돌면서 떨어진다 */
+    .vx-confetti i { width:9px; height:14px; border-radius:2px; animation:vxFall linear forwards; }
+    /* 금화비 — 동그란 금화 */
+    .vx-coin i { width:16px; height:16px; border-radius:50%;
+      background:radial-gradient(circle at 35% 30%, #fff3c8, #e0a82a 65%, #a87818);
+      border:1.5px solid #7a5a12; animation:vxFall linear forwards; }
+    @keyframes vxFall {
+      from { transform:translateY(0) rotate(0deg); opacity:1; }
+      to   { transform:translateY(115vh) rotate(var(--spin,540deg)); opacity:.9; }
+    }
+    /* 벼락 — 화면이 번쩍이고 번개가 그어진다 */
+    .vx-thunder { background:#fff; animation:vxFlash .7s ease-out forwards; }
+    @keyframes vxFlash { 0%{opacity:0} 8%{opacity:.85} 16%{opacity:.1} 26%{opacity:.7} 40%{opacity:.05} 100%{opacity:0} }
+    .vx-thunder b {
+      position:absolute; left:50%; top:0; width:0; height:0; transform:translateX(-50%);
+      border-left:22px solid transparent; border-right:22px solid transparent;
+      border-top:100vh solid rgba(255,240,160,.55);
+      filter:drop-shadow(0 0 18px rgba(255,230,120,.9));
+      animation:vxBolt .7s ease-out forwards;
+    }
+    @keyframes vxBolt { 0%{opacity:0} 10%{opacity:1} 45%{opacity:.3} 100%{opacity:0} }
+    /* 불꽃놀이 — 여러 점이 사방으로 퍼진다 */
+    .vx-firework i { width:7px; height:7px; border-radius:50%; top:auto;
+      animation:vxBurst 1.1s cubic-bezier(.2,.7,.3,1) forwards; }
+    @keyframes vxBurst {
+      from { opacity:1; transform:translate(0,0) scale(1.2); }
+      to   { opacity:0; transform:translate(var(--fx), var(--fy)) scale(.25); }
+    }
+    @media (prefers-reduced-motion:reduce) { #victoryFx { display:none !important; } }
+
+    /* ── 상점 미리보기 (새 슬롯) ── */
+    .shop-avaprev { width:44px; height:44px; display:inline-flex; }
+    .shop-avaprev svg { width:100%; height:100%; display:block; }
+    .shop-stampprev { font-family:'Bangers',cursive; font-size:1.5rem; color:#ffe14a;
+      -webkit-text-stroke:1.2px #7a3a00; transform:rotate(-11deg); display:inline-block; }
+    .shop-placeprev { width:38px; height:38px; border-radius:50%; display:inline-block;
+      background:radial-gradient(circle, rgba(255,255,255,.25), transparent 68%); position:relative; }
+    .shop-placeprev.pf-dust  { box-shadow:inset 0 0 0 2px #b8a890, 0 0 10px rgba(184,168,144,.6); }
+    .shop-placeprev.pf-spark { box-shadow:inset 0 0 0 2px #ffe9a8, 0 0 12px rgba(255,220,120,.85); }
+    .shop-placeprev.pf-ember { box-shadow:inset 0 0 0 2px #ff8c2a, 0 0 14px rgba(255,120,40,.9); }
+    .shop-vfxprev { width:44px; height:30px; border-radius:6px; display:inline-block; }
+    .shop-vfxprev.vx-confetti { background:linear-gradient(115deg,#e8544a 0 20%,#ffd94a 20% 40%,#5fbdd8 40% 60%,#7cc45a 60% 80%,#c88bff 80%); }
+    .shop-vfxprev.vx-coin { background:radial-gradient(circle at 30% 30%, #fff3c8, #e0a82a 60%, #8a5a12); }
+    .shop-vfxprev.vx-thunder { background:linear-gradient(180deg,#2a2a3a,#0e0e18); box-shadow:inset 0 0 10px rgba(255,240,160,.75); }
+    .shop-vfxprev.vx-firework { background:radial-gradient(circle at 50% 55%, #ffd94a 0 12%, #ff7a6a 12% 26%, #1a1030 26%); }
+
+
+    /* ── 뽑기 ── */
+    .lb-box.gacha-box { width:100%; max-width:none; height:100dvh; max-height:none;
+      border-radius:0; border:none; padding:calc(12px + var(--safe-t)) 14px calc(12px + var(--safe-b));
+      gap:10px; overflow:hidden; }
+    @media (min-width:700px) { .lb-box.gacha-box { max-width:720px; margin:0 auto;
+      border-left:1.5px solid #b98d34; border-right:1.5px solid #b98d34; } }
+    .gacha-entry { flex-shrink:0; }
+    .gc-wallet { font-size:.82rem; font-weight:800; color:#ffd94a; margin-right:42px; }
+    .gc-wallet b { color:#9fe8ff; }
+    .gc-stage { flex:1; min-height:0; overflow-y:auto; display:flex; flex-wrap:wrap;
+      align-content:flex-start; justify-content:center; gap:8px; padding:10px 4px;
+      background:rgba(0,0,0,.24); border-radius:14px; }
+    .gc-hint { align-self:center; font-size:.76rem; color:#8a7a80; }
+    .gc-item { width:78px; display:flex; flex-direction:column; align-items:center; gap:3px;
+      padding:7px 4px; border-radius:11px; border:1.5px solid #3a2a40; background:#1c1424;
+      animation:gcPop .34s cubic-bezier(.2,1.5,.5,1) both; }
+    .gc-item .gi-ico { height:44px; display:flex; align-items:center; justify-content:center; }
+    .gc-item .gi-nm { font-size:.56rem; color:#c8bcc4; text-align:center; line-height:1.25;
+      height:26px; overflow:hidden; word-break:keep-all; }
+    .gc-item .gi-dup { font-size:.54rem; font-weight:800; color:#9fe8ff; }
+    .gc-item.t-rare   { border-color:#5fa8d8; box-shadow:0 0 8px rgba(95,168,216,.35); }
+    .gc-item.t-epic   { border-color:#c88bff; box-shadow:0 0 10px rgba(200,139,255,.4); }
+    .gc-item.t-legend { border-color:#ffd45e; box-shadow:0 0 14px rgba(255,212,94,.55); }
+    @keyframes gcPop { from { opacity:0; transform:scale(.6) translateY(10px); } to { opacity:1; transform:none; } }
+    .gc-btns { display:flex; gap:8px; flex-shrink:0; }
+    .gc-btns .btn { flex:1; }
+    .gc-toggle { background:none; border:none; color:#8a7a80; font-family:inherit; font-size:.68rem;
+      cursor:pointer; text-decoration:underline; padding:2px; }
+    .gc-info { display:none; font-size:.66rem; color:#c9bfa8; background:rgba(0,0,0,.28);
+      border-radius:10px; padding:9px 11px; line-height:1.75; }
+    .gc-info.show { display:block; }
+    .gc-info .gi-row { display:flex; justify-content:space-between; }
+    .gc-exch { font-size:.66rem; color:#9a8a90; text-align:center; }
+
     .shop-tile {
       position:relative; background:#1c1424; border:1.5px solid #2a1c30; border-radius:13px;
       padding:12px 4px 8px; display:flex; flex-direction:column; align-items:center; gap:5px;
@@ -1731,6 +1845,10 @@
     #emotePicker .emo-b svg { width:27px; height:27px; display:block; margin:0 auto; }
     .pc-body .gp-rank.gp-art svg { width:24px; height:24px; display:block; }
     .rank-art svg { width:1.2em; height:1.2em; display:inline-block; vertical-align:-.26em; }
+    /* 아바타 — 담는 칸을 꽉 채운다 (프로필 바·내 정보·랭킹에서 칸 크기가 제각각이라) */
+    .ava-art { display:inline-flex; width:1.55em; height:1.55em; vertical-align:-.35em; }
+    .ava-art svg { width:100%; height:100%; display:block; }
+    .pb-ava .ava-art, .mi-ava .ava-art { width:100%; height:100%; vertical-align:0; }
     /* 상점·인벤토리·칭호·라벨용 아이콘 크기 */
     .shop-ico svg { width:34px; height:34px; display:block; }
     .inv-ico svg  { width:26px; height:26px; display:block; }
@@ -2557,6 +2675,31 @@
   </div>
 </div>
 
+<!-- 뽑기 -->
+<div class="lb-modal" id="gachaModal" onclick="if(event.target===this)closeGacha()">
+  <div class="lb-box gacha-box">
+    <div class="lb-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span><span data-ico="🎁"></span> 뽑기</span>
+      <span class="gc-wallet"><span id="gcCoins">0</span> · <b id="gcShards">0</b> 파편</span>
+      <span class="close-x" onclick="closeGacha()">×</span>
+    </div>
+
+    <div id="gcStage" class="gc-stage"><div class="gc-hint">아래 버튼을 눌러 뽑아보세요</div></div>
+
+    <div class="gc-btns">
+      <button class="btn btn-outline" id="gcOne" onclick="doGacha(1)">1회</button>
+      <button class="btn btn-gold" id="gcTen" onclick="doGacha(10)">10연</button>
+    </div>
+
+    <!-- 확률은 서버가 준 값을 그대로 표시한다 (법적 표시 의무) -->
+    <button class="gc-toggle" onclick="toggleGachaInfo()">확률·천장 보기</button>
+    <div class="gc-info" id="gcInfo"></div>
+
+    <div class="gc-exch" id="gcExch"></div>
+    <button class="btn btn-outline" onclick="closeGacha()">닫기</button>
+  </div>
+</div>
+
 <!-- 빠른 대전 매칭 중 -->
 <div class="lb-modal" id="matchModal">
   <div class="lb-box" style="align-items:center; text-align:center;">
@@ -2723,6 +2866,8 @@
 <div id="specialToast"><span data-ico="⚔"></span> 졸개의 배신! 6-10이 2-1을 잡았다</div>
 
 <!-- 공용 확인 다이얼로그 -->
+<div id="victoryFx"></div>
+
 <div class="lb-modal" id="confirmModal" onclick="if(event.target===this)confirmClose(false)">
   <div class="lb-box confirm-box">
     <div class="cf-icon" id="cfIcon">🚪</div>
@@ -2870,6 +3015,10 @@
       <button class="cpn-btn" onclick="submitCoupon()">등록</button>
     </div>
     <div id="cpnMsg" class="cpn-msg"></div>
+    <!-- 뽑기 입구 — 상점 맨 위에 둔다 -->
+    <button class="btn btn-gold gacha-entry" onclick="openGacha()">
+      <span data-ico="🎁"></span> 뽑기 — 새 꾸미기를 운에 맡겨보세요
+    </button>
     <!-- 선택한 상품 상세 + 구매 -->
     <div class="shop-sel" id="shopSel">
       <div class="ss-ico" id="ssIco">🎨</div>

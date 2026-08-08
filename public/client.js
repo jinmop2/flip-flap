@@ -221,6 +221,85 @@ const rankIco = e => {
   return a ? `<span class="rank-art">${a}</span>` : (e || '');
 };
 const titleTag = t => t ? `<span class="title-tag" style="color:${t.color}">${ico(t.icon, 'ti-ico')} ${esc(t.name)}</span>` : '';
+// 프로필 그림 — 아바타를 끼웠으면 그걸, 아니면 지금까지처럼 랭크 아이콘.
+// 아바타는 남의 프로필(랭킹·게임 화면)에서도 보이므로 프로필 객체로 받는다.
+function faceOf(p) {
+  if (!p) return '';
+  const a = (typeof avatarArt === 'function') && avatarArt(p.avatar);
+  if (a) return `<span class="ava-art">${a}</span>`;
+  return rankIco(p.rankIcon);
+}
+
+
+// ── 꾸미기 효과 발동 ────────────────────────────────────────────────────────
+// 낙찰 도장 · 카드 놓을 때 파티클 · 이길 때 화면 연출.
+// 전부 "장착한 사람" 기준이라 프로필에서 읽는다. 안 끼웠으면 기본값으로 돈다.
+
+// 카드를 놓을 때 작은 파티클. 카드 요소 안에 잠깐 얹었다가 지운다.
+function playPlaceFx(cardEl) {
+  if (!cardEl) return;
+  const id = (myAccount && myAccount.placeFx) || 'place_dust';
+  const cls = PLACE_CLS[id]; if (!cls) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const box = document.createElement('div');
+  box.className = 'place-fx ' + cls;
+  for (let i = 0; i < 7; i++) {
+    const b = document.createElement('i');
+    const ang = (Math.PI * 2 * i) / 7 + Math.random() * 0.5;
+    const dist = 16 + Math.random() * 14;
+    b.style.setProperty('--px', Math.round(Math.cos(ang) * dist) + 'px');
+    b.style.setProperty('--py', Math.round(Math.sin(ang) * dist) + 'px');
+    b.style.animationDelay = Math.round(Math.random() * 60) + 'ms';
+    box.appendChild(b);
+  }
+  const pos = getComputedStyle(cardEl).position;
+  if (pos === 'static') cardEl.style.position = 'relative';
+  cardEl.appendChild(box);
+  setTimeout(() => box.remove(), 700);
+}
+
+// 이길 때 화면 연출. 진 사람 화면에서는 돌지 않는다.
+function playVictoryFx() {
+  const host = document.getElementById('victoryFx'); if (!host) return;
+  const id = (myAccount && myAccount.victoryFx) || null;
+  const cls = id && VFX_CLS[id]; if (!cls) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  host.className = cls; host.innerHTML = '';
+  if (cls === 'vx-thunder') {
+    host.appendChild(document.createElement('b'));
+  } else if (cls === 'vx-firework') {
+    // 세 군데에서 터진다
+    for (let burst = 0; burst < 3; burst++) {
+      const cx = 25 + Math.random() * 50, cy = 25 + Math.random() * 35;
+      for (let i = 0; i < 18; i++) {
+        const b = document.createElement('i');
+        const ang = (Math.PI * 2 * i) / 18;
+        const d = 70 + Math.random() * 60;
+        b.style.left = cx + '%'; b.style.top = cy + '%';
+        b.style.background = ['#ffd94a', '#ff7a6a', '#9fe8ff', '#c88bff', '#7cc45a'][i % 5];
+        b.style.setProperty('--fx', Math.round(Math.cos(ang) * d) + 'px');
+        b.style.setProperty('--fy', Math.round(Math.sin(ang) * d) + 'px');
+        b.style.animationDelay = (burst * 260) + 'ms';
+        host.appendChild(b);
+      }
+    }
+  } else {
+    const colors = ['#e8544a', '#ffd94a', '#5fbdd8', '#7cc45a', '#c88bff', '#ff8ac0'];
+    for (let i = 0; i < 60; i++) {
+      const b = document.createElement('i');
+      b.style.left = Math.round(Math.random() * 100) + '%';
+      b.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
+      b.style.animationDelay = Math.round(Math.random() * 700) + 'ms';
+      b.style.setProperty('--spin', Math.round(360 + Math.random() * 720) + 'deg');
+      if (cls === 'vx-confetti') b.style.background = colors[i % colors.length];
+      host.appendChild(b);
+    }
+  }
+  host.classList.add('show');
+  clearTimeout(playVictoryFx._t);
+  playVictoryFx._t = setTimeout(() => { host.classList.remove('show'); host.innerHTML = ''; }, 3200);
+}
+
 // 하단 고정 프로필 바 (클릭 → 내 정보)
 function renderAccount() {
   const body = document.getElementById('pbBody');
@@ -231,7 +310,7 @@ function renderAccount() {
     const total = p.wins + p.losses;
     body.innerHTML = `
       <span class="pb-lv">Lv.${p.level}</span>
-      <div class="pb-ava" style="color:${p.rankColor}">${rankIco(p.rankIcon)}</div>
+      <div class="pb-ava" style="color:${p.rankColor}">${faceOf(p)}</div>
       <div class="pb-mid">
         <div class="pb-nickrow"><span class="pb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span>${titleTag(p.titleInfo)}</div>
         <div class="pb-stats">${p.wins}승 ${p.losses}패${total ? ` (${p.winRate}%)` : ''} · <span style="color:${p.rankColor}">${esc(p.rank)}</span></div>
@@ -260,7 +339,7 @@ async function openMyInfo() {
   const canNick = !p.nickLocked || ((p.items || {}).nick_change || 0) > 0;
   document.getElementById('miHeader').innerHTML = `
     <div class="mi-head">
-      <div class="mi-ava" style="color:${p.rankColor}">${rankIco(p.rankIcon)}</div>
+      <div class="mi-ava" style="color:${p.rankColor}">${faceOf(p)}</div>
       <div class="mi-info">
         <div class="mi-nick${ncClass(p.nickColor)}">${esc(p.nick)} ${canNick ? '<button class="pc-icon" onclick="closeMyInfo();openNickModal()" title="닉네임 바꾸기">✏️</button>' : ''}</div>
         <div class="mi-line">Lv.<b>${p.level}</b> (XP ${p.xpInLevel}/${p.xpNeeded}) · <span style="color:${p.rankColor}">${esc(p.rank)}</span> <b>${p.rp} RP</b></div>
@@ -504,7 +583,7 @@ async function openLeaderboard() {
       const row = document.createElement('div');
       row.className = 'lb-row' + (myNick && p.nick === myNick ? ' me' : '');
       row.innerHTML = `<span class="lb-no${p.no <= 3 ? ' top' : ''}">${p.no <= 3 ? rankIco(['🥇','🥈','🥉'][p.no-1]) : p.no}</span>
-        <span class="lb-rank" style="color:${p.rankColor}">${rankIco(p.rankIcon)}</span>
+        <span class="lb-rank" style="color:${p.rankColor}">${faceOf(p)}</span>
         <span class="lb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span>
         <span class="lb-wl">${p.wins}승 ${p.losses}패</span>
         <span class="lb-rp">${p.rp} RP</span>`;
@@ -518,7 +597,7 @@ async function openLeaderboard() {
         const me = mr.me;
         const row = document.createElement('div'); row.className = 'lb-row me lb-mine';
         row.innerHTML = `<span class="lb-no">${me.no}</span>
-          <span class="lb-rank" style="color:${me.rankColor}">${rankIco(me.rankIcon)}</span>
+          <span class="lb-rank" style="color:${me.rankColor}">${faceOf(me)}</span>
           <span class="lb-nick${ncClass(me.nickColor)}">${esc(me.nick)}</span>
           <span class="lb-wl">${me.wins}승 ${me.losses}패</span>
           <span class="lb-rp">${me.rp} RP</span>`;
@@ -1379,6 +1458,11 @@ const shopIcon = it => {
     }).join('');
     return `<span class="shop-emprev">${prev}</span>`;
   }
+  if (it.type === 'avatar') { const a = (typeof avatarArt === 'function') && avatarArt(it.id);
+    if (a) return `<span class="shop-avaprev">${a}</span>`; }
+  if (it.type === 'stamp')   return `<span class="shop-stampprev ${STAMP_CLS[it.id] || ''}">${stampLabel(it.id)}</span>`;
+  if (it.type === 'place')   return `<span class="shop-placeprev ${PLACE_CLS[it.id] || ''}"></span>`;
+  if (it.type === 'victory') return `<span class="shop-vfxprev ${VFX_CLS[it.id] || ''}"></span>`;
   if (it.type === 'dye')      return `<div class="shop-dyeprev"></div>`;
   if (it.type === 'dye_rare') return `<div class="shop-dyeprev rare"></div>`;
   return ico(it.icon, 'shop-ico');
@@ -1394,6 +1478,14 @@ const SHOP_GROUPS = [
   { name: '이모트',   types: ['emotes'] },
 ];
 // 서버(accounts.js SLOT)와 짝이 맞아야 한다. 한쪽만 고치면 장착이 안 된다.
+// 낙찰 도장 — 모양마다 다른 클래스와 글자를 쓴다
+const STAMP_CLS = { stamp_win: 'st-win', stamp_seal: 'st-seal', stamp_star: 'st-star', stamp_crown: 'st-crown' };
+const STAMP_TEXT = { stamp_win: 'WIN', stamp_seal: '落札', stamp_star: '★', stamp_crown: '♔' };
+const stampLabel = (id) => STAMP_TEXT[id] || 'WIN';
+// 카드 놓을 때 파티클 · 승리 연출
+const PLACE_CLS = { place_dust: 'pf-dust', place_spark: 'pf-spark', place_ember: 'pf-ember' };
+const VFX_CLS = { vfx_confetti: 'vx-confetti', vfx_coinrain: 'vx-coin', vfx_thunder: 'vx-thunder', vfx_firework: 'vx-firework' };
+
 const EQUIP_SLOT = {
   cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace',
   victory: 'victoryFx', avatar: 'avatar', stamp: 'winStamp', place: 'placeFx',
@@ -1577,10 +1669,12 @@ const NAV_ACTIONS = {
   home:    () => { closeAllNavModals(); },
   mission: () => openMissions(),
   shop:    () => openShop(),
+  gacha:   () => openGacha(),
   friends: () => openFriends(),
   clan:    () => openClan(),
 };
 function closeAllNavModals() {
+  try { closeGacha(); } catch (_) {}
   try { closeMissions(); } catch (_) {}
   try { closeShop(); } catch (_) {}
   try { closeFriends(); } catch (_) {}
@@ -1640,6 +1734,97 @@ function refreshEmotes() {
     });
   }
   paintEmoteButtons();   // 새로 붙인 팩 버튼까지 그림으로 채운다
+}
+
+
+// ── 뽑기 ───────────────────────────────────────────────────────────────────
+// 결과는 전부 서버가 정한다. 여기서는 보여주기만 한다.
+// 확률표도 서버가 준 값을 그대로 찍는다 — 화면과 실제가 어긋날 여지를 없앤다.
+let _gachaInfo = null;
+const TIER_KO = { common: '일반', rare: '고급', epic: '희귀', legend: '전설' };
+
+async function openGacha() {
+  if (!myAccount) { openAuth('login'); return; }
+  closeAllNavModals();
+  document.getElementById('gachaModal').classList.add('show');
+  gachaWallet();
+  document.getElementById('gcStage').innerHTML = '<div class="gc-hint">아래 버튼을 눌러 뽑아보세요</div>';
+  if (!_gachaInfo) {
+    try {
+      const r = await (await fetch('/api/gacha')).json();
+      if (r && r.ok) _gachaInfo = r.info;
+    } catch (_) {}
+  }
+  renderGachaInfo();
+}
+function closeGacha() { document.getElementById('gachaModal').classList.remove('show'); }
+
+function gachaWallet() {
+  document.getElementById('gcCoins').innerHTML = `${ico('🪙')} ${myAccount ? myAccount.coins || 0 : 0}`;
+  document.getElementById('gcShards').textContent = myAccount ? myAccount.shards || 0 : 0;
+  const info = _gachaInfo;
+  const one = document.getElementById('gcOne'), ten = document.getElementById('gcTen');
+  if (info && one && ten) {
+    one.textContent = `1회 ${info.cost}`;
+    ten.textContent = `10연 ${info.cost10}`;
+  }
+  const ex = document.getElementById('gcExch');
+  if (ex && info) {
+    const have = myAccount.shards || 0;
+    ex.innerHTML = `중복은 파편이 됩니다 · 파편 <b style="color:#9fe8ff">${info.exchange}</b>개면 원하는 것 하나를 확정으로 바꿀 수 있어요 (지금 ${have}개)`;
+  }
+}
+
+function renderGachaInfo() {
+  const box = document.getElementById('gcInfo'); if (!box || !_gachaInfo) return;
+  const i = _gachaInfo;
+  box.innerHTML = i.rates.map((r) =>
+    `<div class="gi-row"><span>${TIER_KO[r.tier] || r.tier} · ${r.count}종</span>` +
+    `<span><b>${(r.rate * 100).toFixed(2)}%</b> · 중복 시 ${r.shard}파편</span></div>`
+  ).join('') +
+    `<div class="gi-row" style="margin-top:6px;border-top:1px solid rgba(200,160,0,.2);padding-top:6px">` +
+    `<span>천장</span><span><b>${i.pity}회</b> 안에 전설 확정</span></div>` +
+    `<div style="margin-top:4px;color:#8a7a80">표시된 확률은 천장까지 반영한 실제 값입니다.</div>`;
+}
+function toggleGachaInfo() { document.getElementById('gcInfo').classList.toggle('show'); }
+
+let _gachaBusy = false;
+async function doGacha(count) {
+  if (_gachaBusy || !myAccount) return;
+  _gachaBusy = true;
+  const one = document.getElementById('gcOne'), ten = document.getElementById('gcTen');
+  one.disabled = ten.disabled = true;
+  const stage = document.getElementById('gcStage');
+  stage.innerHTML = '<div class="gc-hint">뽑는 중…</div>';
+  try {
+    const r = await apiPost('/api/gacha/roll', { token: authToken(), count });
+    if (!r || r.error) { stage.innerHTML = `<div class="gc-hint">${esc((r && r.error) || '뽑기에 실패했어요')}</div>`; return; }
+    myAccount = r.profile || myAccount;
+    renderAccount(); gachaWallet();
+    stage.innerHTML = '';
+    // 한 장씩 차례로 뒤집히듯 나타난다
+    r.results.forEach((g, idx) => {
+      const el = document.createElement('div');
+      el.className = 'gc-item t-' + g.tier;
+      el.style.animationDelay = (idx * 90) + 'ms';
+      const art = shopArtFor(g.id, g.icon);
+      el.innerHTML = `<span class="gi-ico">${art}</span><span class="gi-nm">${esc(g.name)}</span>` +
+                     (g.dup ? `<span class="gi-dup">+${g.shard} 파편</span>` : `<span class="gi-dup" style="color:#7dd87d">NEW</span>`);
+      stage.appendChild(el);
+    });
+    const legend = r.results.filter((g) => g.tier === 'legend').length;
+    playSound(legend ? 'setwin' : 'card');
+  } finally {
+    _gachaBusy = false;
+    one.disabled = ten.disabled = false;
+  }
+}
+
+// 뽑기 결과에 보여줄 그림 — 상점 미리보기와 같은 걸 쓴다
+function shopArtFor(id, icon) {
+  const it = (shopItems || []).find((x) => x.id === id);
+  if (it) { try { return shopIcon(it); } catch (_) {} }
+  return ico(icon || '🎁');
 }
 
 // ── 로비 다이얼로그 ─────────────────────────────────────────
@@ -1895,6 +2080,7 @@ const ESC_TARGETS = [
   ['soloModal',    () => closeModePanels()],
   ['multiModal',   () => closeModePanels()],
   ['quadModal',    () => (typeof q4Close === 'function') && q4Close()],
+  ['gachaModal',   () => closeGacha()],
   ['createModal',  () => closeCreate()],
   ['codeModal',    () => closeCode()],
   ['itemUseModal', () => closeItemUse()],
@@ -2492,6 +2678,7 @@ function getStats() { try { return JSON.parse(localStorage.getItem('ff_stats')) 
 function recordResult(winner, mi) {
   const s = getStats();
   if (winner === 0) s.draw++; else if (winner === mi) s.win++; else s.loss++;
+  if (winner === mi) { try { playVictoryFx(); } catch (_) {} }   // 내가 이긴 판만
   localStorage.setItem('ff_stats', JSON.stringify(s));
   renderLobbyStats();
 }
@@ -2720,7 +2907,8 @@ function makeCard(card, opts = {}) {
   if (opts.selected) el.classList.add('selected');
   if (opts.selectable) {
     el.classList.add('selectable');
-    el.addEventListener('click', () => { playSound('select'); opts.onClick(card); });
+    // 두 번째 인자로 카드 요소도 넘긴다 — 그 자리에 파티클을 얹으려면 필요하다
+    el.addEventListener('click', () => { playSound('select'); opts.onClick(card, el); });
   }
   return el;
 }
@@ -2994,7 +3182,11 @@ function renderAuction(changed) {
     const btn = document.createElement('button');
     btn.className = 'btn btn-gold btn-sm'; btn.style.marginTop = '10px';
     btn.textContent = `${selectedBidCard.kind}번 (${selectedBidCard.grade}등급) 배팅 확정`;
-    btn.onclick = () => { playSound('place'); socket.emit('submit_bid', { cardId: selectedBidCard.id }); selectedBidCard = null; };
+    btn.onclick = () => {
+      playSound('place');
+      try { playPlaceFx(document.querySelector('#myHand .card.sel') || document.querySelector('#myHand .card')); } catch (_) {}
+      socket.emit('submit_bid', { cardId: selectedBidCard.id }); selectedBidCard = null;
+    };
     action.appendChild(btn);
   }
 
@@ -3041,7 +3233,12 @@ function renderBids() {
     const slot = (iWin ? my : opp).querySelector('.bid-slot');
     if (slot) {
       slot.classList.add('bid-winner');
-      const st = document.createElement('span'); st.className = 'win-stamp'; st.textContent = 'WIN';
+      // 도장 모양은 이긴 사람이 장착한 것으로 (남이 이겼으면 그 사람 것)
+      const winnerProf = gameProfiles && gameProfiles[(iWin ? myIndex : (myIndex === 1 ? 2 : 1)) - 1];
+      const stampId = (winnerProf && winnerProf.winStamp) || 'stamp_win';
+      const st = document.createElement('span');
+      st.className = 'win-stamp ' + (STAMP_CLS[stampId] || 'st-win');
+      st.textContent = stampLabel(stampId);
       slot.appendChild(st);
     }
   }
@@ -3076,7 +3273,11 @@ function renderHand() {
   hand.forEach((card, i) => {
     let cardEl;
     if (offer)
-      cardEl = makeCard(card, { selectable: true, onClick: c => { playSound('place'); socket.emit('offer_card', { cardId: c.id }); } });
+      cardEl = makeCard(card, { selectable: true, onClick: (c, el) => {
+        playSound('place');
+        try { playPlaceFx(el); } catch (_) {}
+        socket.emit('offer_card', { cardId: c.id });
+      } });
     else if (bidding)
       cardEl = makeCard(card, { selectable: true, selected: selectedBidCard?.id === card.id, onClick: c => { selectedBidCard = selectedBidCard?.id === c.id ? null : c; render(); } });
     else
