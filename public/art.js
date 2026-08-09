@@ -321,6 +321,20 @@ const AVATAR_ART = {
     <circle cx="24" cy="9" r="2" fill="#e8544a" stroke="${FS}" stroke-width="1.2"/>
     <circle cx="18.5" cy="28" r="2.2" fill="${FS}"/><circle cx="29.5" cy="28" r="2.2" fill="${FS}"/>
     <path d="M19 35 a7 4 0 0 0 10 0" stroke="${FS}" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`,
+  // 파편 아바타 — 얼굴이 조각으로 갈라져 어긋나 있다
+  ava_shard: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="avshA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#bfe9ff"/><stop offset="1" stop-color="#5aa6d8"/></linearGradient>
+      <linearGradient id="avshB" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fd8f5"/><stop offset="1" stop-color="#3d7fb4"/></linearGradient></defs>
+    <path d="M24 11 L37 20 L34 36 L24 39 z" fill="url(#avshA)" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M24 11 L11 20 L14 36 L24 39 z" fill="url(#avshB)" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M24 11 L24 39" stroke="${FS}" stroke-width="1.6"/>
+    <path d="M11 20 L20 24 L14 36" fill="none" stroke="#e8f7ff" stroke-width="1.4" opacity=".75"/>
+    <path d="M37 20 L28 25 L34 36" fill="none" stroke="#e8f7ff" stroke-width="1.4" opacity=".75"/>
+    <circle cx="18.5" cy="25" r="2" fill="${FS}"/><circle cx="29.5" cy="25" r="2" fill="${FS}"/>
+    <path d="M19 32 l5 2 5 -2" fill="none" stroke="${FS}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M40 9 l1.6 3.6 3.6 1.6 -3.6 1.6 -1.6 3.6 -1.6 -3.6 -3.6 -1.6 3.6 -1.6 z" fill="#dff2ff" stroke="${FS}" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
   ava_phantom: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
     <circle cx="24" cy="26" r="15" fill="#3a3550" stroke="${FS}" stroke-width="2.2"/>
     <path d="M6 12 a4 4 0 0 1 4-4 h28 a4 4 0 0 1 4 4 l-6 5 h-24 z" fill="#1a1626" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
@@ -412,6 +426,16 @@ const ICON_ART = {
     <path d="M10 33 l1.5 3.6 3.6 1.5 -3.6 1.5 -1.5 3.6 -1.5 -3.6 -3.6 -1.5 3.6 -1.5 z"
           fill="#9fe8ff" stroke="${D}" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
   // ── 크리스탈 세트 상품 아이콘 ──
+  // 파편 — 파편 전용 상품 여섯 종의 아이콘
+  '🔷': `<svg viewBox="0 0 48 48">
+    <defs><linearGradient id="shdG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#dff4ff"/><stop offset=".5" stop-color="#7cc4ea"/>
+      <stop offset="1" stop-color="#3a7fb2"/></linearGradient></defs>
+    <path d="M24 4 L40 20 L28 44 L20 26 z" fill="url(#shdG)" stroke="${FS}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M24 4 L20 26 L8 18 z" fill="#9fd8f5" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M24 4 L20 26 L28 44" fill="none" stroke="#f2fbff" stroke-width="1.5" opacity=".8"/>
+    <path d="M11 34 l1.4 3.2 3.2 1.4 -3.2 1.4 -1.4 3.2 -1.4 -3.2 -3.2 -1.4 3.2 -1.4 z"
+          fill="#dff4ff" stroke="${FS}" stroke-width="1.1" stroke-linejoin="round"/></svg>`,
   '🔮': `<svg viewBox="0 0 48 48">
     <path d="M24 4 L38 17 L31 42 h-14 L10 17 z" fill="#7fd8f5" stroke="${D}" stroke-width="2" stroke-linejoin="round"/>
     <path d="M24 4 L31 42 M24 4 L17 42 M10 17 h28" stroke="${D}" stroke-width="1.5" opacity=".55"/>

@@ -207,7 +207,7 @@ async function claimReferral() {
 // 초대 링크(?ref=아이디)로 접속 시 코드 보관
 try { const rp = new URLSearchParams(location.search).get('ref'); if (rp) localStorage.setItem('ff_ref', rp); } catch (_) {}
 const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
-const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby', np_crystal: 'np-crystal', np_obsidian: 'np-obsidian', np_hanji: 'np-hanji' };
+const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby', np_crystal: 'np-crystal', np_obsidian: 'np-obsidian', np_hanji: 'np-hanji', np_shard: 'np-shard' };
 const xpPct = p => Math.max(0, Math.min(100, Math.round((p.xpInLevel || 0) / (p.xpNeeded || 100) * 100)));
 const npClass = p => p && NP_CLASS[p] ? ' ' + NP_CLASS[p] : '';   // 명패 클래스
 // 이모지 → 직접 그린 SVG (art.js). 매핑에 없으면 원래 이모지 그대로.
@@ -267,6 +267,22 @@ function playVictoryFx() {
   host.className = cls; host.innerHTML = '';
   if (cls === 'vx-thunder') {
     host.appendChild(document.createElement('b'));
+  } else if (cls === 'vx-shard') {
+    // 화면 한가운데가 깨져 조각이 사방으로 날아간다.
+    // 조각마다 크기·회전·거리를 달리해야 유리처럼 보인다 — 똑같으면 색종이가 된다.
+    for (let i = 0; i < 26; i++) {
+      const b = document.createElement('i');
+      const ang = (Math.PI * 2 * i) / 26 + (Math.random() - .5) * .3;
+      const d = 90 + Math.random() * 130;
+      const sz = 7 + Math.random() * 13;
+      b.style.left = '50%'; b.style.top = '46%';
+      b.style.width = sz + 'px'; b.style.height = (sz * (.5 + Math.random())) + 'px';
+      b.style.setProperty('--fx', Math.round(Math.cos(ang) * d) + 'px');
+      b.style.setProperty('--fy', Math.round(Math.sin(ang) * d) + 'px');
+      b.style.setProperty('--spin', Math.round((Math.random() - .5) * 900) + 'deg');
+      b.style.animationDelay = Math.round(Math.random() * 220) + 'ms';
+      host.appendChild(b);
+    }
   } else if (cls === 'vx-firework') {
     // 세 군데에서 터진다
     for (let burst = 0; burst < 3; burst++) {
@@ -1440,9 +1456,9 @@ async function openShop() {
 }
 function closeShop() { document.getElementById('shopModal').classList.remove('show'); }
 const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang', back_ruby: 'cb-ruby', back_galaxy: 'cb-galaxy',
-              back_crystal: 'cb-crystal', back_obsidian: 'cb-obsidian', back_hanji: 'cb-hanji' };
-const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest', tbl_crystal: 'tp-crystal', tbl_obsidian: 'tp-obsidian', tbl_hanji: 'tp-hanji' };
-const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold', face_crystal: 'cfp-crystal', face_obsidian: 'cfp-obsidian', face_hanji: 'cfp-hanji' };
+              back_crystal: 'cb-crystal', back_obsidian: 'cb-obsidian', back_hanji: 'cb-hanji' , back_shard: 'cb-shard' };
+const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest', tbl_crystal: 'tp-crystal', tbl_obsidian: 'tp-obsidian', tbl_hanji: 'tp-hanji', tbl_shard: 'tp-shard' };
+const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold', face_crystal: 'cfp-crystal', face_obsidian: 'cfp-obsidian', face_hanji: 'cfp-hanji', face_shard: 'cfp-shard' };
 // 상점 아이콘 = 게임 안 실물 미리보기 (카드백/테이블/카드앞면/명패/이모트/염색)
 const shopIcon = it => {
   if (CBP[it.id])  return `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`;
@@ -1484,7 +1500,7 @@ const STAMP_TEXT = { stamp_win: 'WIN', stamp_seal: '落札', stamp_star: '★', 
 const stampLabel = (id) => STAMP_TEXT[id] || 'WIN';
 // 카드 놓을 때 파티클 · 승리 연출
 const PLACE_CLS = { place_dust: 'pf-dust', place_spark: 'pf-spark', place_ember: 'pf-ember' };
-const VFX_CLS = { vfx_confetti: 'vx-confetti', vfx_coinrain: 'vx-coin', vfx_thunder: 'vx-thunder', vfx_firework: 'vx-firework' };
+const VFX_CLS = { vfx_confetti: 'vx-confetti', vfx_coinrain: 'vx-coin', vfx_thunder: 'vx-thunder', vfx_firework: 'vx-firework', vfx_shard: 'vx-shard' };
 
 const EQUIP_SLOT = {
   cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace',
@@ -1536,6 +1552,9 @@ function renderShop() {
     if (it.type === 'dye_rare') pr = `<span class="pr own">확정권 x${(myAccount.items || {}).dye_rare_ticket || 0}</span>`;
     else if (EQUIP_SLOT[it.type] && owned) pr = `<span class="pr own">${myAccount[EQUIP_SLOT[it.type]] === it.id ? '장착 중' : '보유'}</span>`;
     else if (it.type === 'emotes' && owned) pr = `<span class="pr own">보유</span>`;
+    // 파편 전용품은 코인 값이 0 이라 그냥 두면 "🪙 0" 으로 떠서 공짜처럼 보인다.
+    // 실제로 누르면 거절당하니, 어디서 얼마에 얻는지를 대신 적는다.
+    else if (it.shard > 0) pr = `<span class="pr shard">🔷 ${it.shard} 파편</span>`;
     else pr = `<span class="pr">🪙 ${it.price}</span>${it.type === 'ticket' && owned ? `<span class="pr own">x${owned}</span>` : ''}`;
     tile.dataset.id = it.id;
     tile.innerHTML = `<span class="ico">${shopIcon(it)}</span><span class="nm">${it.name}</span>${pr}`;
@@ -1566,6 +1585,11 @@ function shopSelect(id, keep) {
     btn.onclick = () => equipBack(it.id, on, it.type);
   } else if (it.type === 'emotes' && owned) {
     btn.textContent = '보유 중 ✓'; btn.disabled = true; btn.className = 'shop-buy owned';
+  } else if (it.shard > 0) {
+    // 파편 전용 — 여기서 코인으로 사는 게 아니라 교환소로 보낸다.
+    // 그냥 두면 "구매 🪙 0" 이 떠서 눌렀다가 거절당한다.
+    btn.textContent = `교환소에서 🔷 ${it.shard} 파편`;
+    btn.onclick = () => { closeShop(); openGacha().then(() => gachaTab('exch')); };
   } else {
     btn.textContent = `구매 🪙 ${it.price}`;
     btn.onclick = () => buyShopItem(it.id);
@@ -1803,14 +1827,17 @@ function renderExchange() {
   const have = myAccount ? myAccount.shards || 0 : 0;
   const mine = (myAccount && myAccount.items) || {};
   // 살 수 있는 것 → 파편이 모자란 것 → 이미 가진 것 순. 목표가 눈에 먼저 들어오게.
-  const rank = (p) => (mine[p.id] ? 2 : have >= p.cost ? 0 : 1);
+  // 파편 전용품이 맨 앞. 여기서만 얻을 수 있으니 제일 먼저 보여야 한다.
+  const rank = (p) => (mine[p.id] ? 4 : p.only ? 0 : have >= p.cost ? 1 : 2);
   const pool = _gachaInfo.pool.slice().sort((a, b) =>
     rank(a) - rank(b) || b.cost - a.cost || a.name.localeCompare(b.name));
 
   let html = '', lastSect = null;
   for (const p of pool) {
     const owned = !!mine[p.id], poor = !owned && have < p.cost;
-    const sect = owned ? '이미 가진 것' : poor ? '파편이 더 필요해요' : '지금 바꿀 수 있어요';
+    const sect = owned ? '이미 가진 것'
+      : p.only ? '파편으로만 얻는 것'
+      : poor ? '파편이 더 필요해요' : '지금 바꿀 수 있어요';
     if (sect !== lastSect) { html += `<div class="gc-sect">${sect}</div>`; lastSect = sect; }
     const cls = `gc-buy t-${p.tier}` + (owned ? ' owned' : poor ? ' poor' : '');
     const click = owned || poor ? '' : ` onclick="doExchange('${p.id}')"`;
@@ -2998,12 +3025,14 @@ function screenFx(kind) {
 }
 
 // 내 테이블/카드앞면 스킨을 게임 화면에 적용 (내 시야 기준 코스메틱)
-const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal', tbl_obsidian: 'tbl-obsidian', tbl_hanji: 'tbl-hanji' };
-const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal', face_obsidian: 'cf-obsidian', face_hanji: 'cf-hanji' };
+const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal', tbl_obsidian: 'tbl-obsidian', tbl_hanji: 'tbl-hanji', tbl_shard: 'tbl-shard' };
+const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal', face_obsidian: 'cf-obsidian', face_hanji: 'cf-hanji', face_shard: 'cf-shard' };
 function applyMySkins() {
   const g = document.getElementById('game'); if (!g) return;
-  g.classList.remove('tbl-blue', 'tbl-purple', 'tbl-gold', 'tbl-forest', 'tbl-crystal', 'tbl-obsidian', 'tbl-hanji',
-                     'cf-neon', 'cf-classic', 'cf-gold', 'cf-crystal', 'cf-obsidian', 'cf-hanji');
+  // 벗길 목록을 손으로 적으면 새 스킨을 넣을 때마다 빠뜨린다 —
+  // 실제로 파편 테이블·앞면이 여기서 누락돼 갈아입어도 예전 스킨이 남았다.
+  // 표에서 그대로 끌어오면 추가만 해도 자동으로 따라온다.
+  g.classList.remove(...Object.values(TABLE_CLS), ...Object.values(FACE_CLS));
   const p = myAccount;
   if (p && TABLE_CLS[p.table]) g.classList.add(TABLE_CLS[p.table]);
   if (p && FACE_CLS[p.cardFace]) g.classList.add(FACE_CLS[p.cardFace]);

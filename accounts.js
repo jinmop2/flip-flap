@@ -359,6 +359,23 @@ const SHOP = {
   face_crystal: { name: '크리스탈 카드',   icon: '💠', price: 1100, type: 'cardface',
                   desc: '숫자가 수정처럼 맑게 비치는 앞면' },
 
+  // ── 파편 세트 — 파편으로만 얻는다 ──
+  // 코인으로 못 사고 뽑기에서도 안 나온다. 중복이 굳어 만들어진 물건이라
+  // 중복을 겪은 사람만 가질 수 있게 했다. 뽑기는 컬렉션이 찰수록 값이
+  // 떨어지는데(전부 가지면 남는 건 파편뿐), 이 줄이 그 끝을 받쳐 준다.
+  back_shard:  { name: '파편 카드백',   icon: '🔷', price: 0, type: 'cardback', shard: 550,
+                 desc: '깨진 빛이 맞물린 뒷면 · 파편으로만' },
+  np_shard:    { name: '파편 명패',     icon: '🔷', price: 0, type: 'plate', shard: 650,
+                 desc: '금이 간 결정 명패 · 파편 획득 +10% · 파편으로만' },
+  tbl_shard:   { name: '파편 테이블',   icon: '🔷', price: 0, type: 'table', shard: 500,
+                 desc: '조각난 빛이 깔린 테이블 · 파편으로만' },
+  face_shard:  { name: '파편 카드',     icon: '🔷', price: 0, type: 'cardface', shard: 450,
+                 desc: '숫자가 갈라져 빛나는 앞면 · 파편으로만' },
+  ava_shard:   { name: '파편 아바타',   icon: '🔷', price: 0, type: 'avatar', shard: 400,
+                 desc: '조각으로 이루어진 얼굴 · 파편으로만' },
+  vfx_shard:   { name: '파편 폭발',     icon: '🔷', price: 0, type: 'victory', shard: 600,
+                 desc: '이기면 화면이 조각나 흩어진다 · 파편으로만' },
+
   // ── 단품 ──
   back_obsidian:{ name: '흑요석 카드백',   icon: '🌑', price: 1800, type: 'cardback',
                   desc: '검은 유리에 금이 흐르는 뒷면' },
@@ -439,6 +456,7 @@ const PLATE_FX = {
   np_daily:    {},                              // 출석 +50 은 따로 처리
   np_obsidian: { coin: 0.06 },                  // 최고가지만 과하지 않게
   np_lv50:     { coin: 0.03, xp: 0.03 },        // 마일스톤 — 양쪽 조금씩
+  np_shard:    { shard: 0.10 },                 // 파편으로 산 명패 = 파편이 더 붙는다
 };
 
 // ── 세트 보너스 ────────────────────────────────────────────────────────────
@@ -448,6 +466,7 @@ const SETS = {
   crystal:  { back: 'back_crystal',  plate: 'np_crystal',  table: 'tbl_crystal',  face: 'face_crystal',  name: '크리스탈' },
   obsidian: { back: 'back_obsidian', plate: 'np_obsidian', table: 'tbl_obsidian', face: 'face_obsidian', name: '흑요석' },
   hanji:    { back: 'back_hanji',    plate: 'np_hanji',    table: 'tbl_hanji',    face: 'face_hanji',    name: '한지' },
+  shard:    { back: 'back_shard',    plate: 'np_shard',    table: 'tbl_shard',    face: 'face_shard',    name: '파편' },
 };
 const SET_BONUS = { coin: 0.03, xp: 0.03 };
 
@@ -466,6 +485,7 @@ function bonusOf(u) {
     coin: (p.coin || 0) + (set ? SET_BONUS.coin : 0),
     xp: (p.xp || 0) + (set ? SET_BONUS.xp : 0),
     streak: p.streak || 0,
+    shard: p.shard || 0,        // 뽑기 중복으로 받는 파편에 붙는다
     set,
     setName: set ? SETS[set].name : null,
   };
@@ -505,6 +525,13 @@ const PITY_LEGEND = 50;          // 이 횟수 안에 전설 하나는 반드시
 //   50번 뽑으면 무작위 전설 하나, 700파편을 모으면 원하는 전설 하나.
 // 확정으로 고르는 값이 운에 맡기는 값과 같으니 어느 쪽을 택해도 손해가 아니다.
 const SHARD_COST = { common: 50, rare: 150, epic: 400, legend: 700 };
+
+// 파편으로만 살 수 있는 것. 코인으로도 못 사고 뽑기에서도 안 나온다.
+// 값은 상품 정의의 shard 필드에서 끌어온다 — 두 곳에 적으면 언젠가 어긋난다.
+const SHARD_ONLY = {};
+for (const id of Object.keys(SHOP)) {
+  if (Object.prototype.hasOwnProperty.call(SHOP, id) && SHOP[id].shard > 0) SHARD_ONLY[id] = SHOP[id].shard;
+}
 
 // 어떤 상품이 어느 등급인지. 여기 없는 상품은 뽑기에 안 나온다
 // (닉네임 변경권·확정권처럼 기능성인 것, 마일스톤 한정품).
@@ -559,9 +586,16 @@ function gachaInfo() {
       count: GACHA_TIER[t].filter((id) => Object.prototype.hasOwnProperty.call(SHOP, id)).length,
     })),
     // 교환소에 늘어놓을 목록. 무엇이 얼마인지는 서버가 정하고 화면은 그리기만 한다.
-    pool: TIERS.flatMap((t) => GACHA_TIER[t]
-      .filter((id) => Object.prototype.hasOwnProperty.call(SHOP, id))
-      .map((id) => ({ id, tier: t, cost: SHARD_COST[t], name: SHOP[id].name, icon: SHOP[id].icon }))),
+    // 파편 전용품을 앞에 둔다 — 여기서만 얻을 수 있으니 제일 먼저 보여야 한다.
+    pool: [
+      ...Object.keys(SHARD_ONLY).map((id) => ({
+        id, tier: 'only', cost: SHARD_ONLY[id],
+        name: SHOP[id].name, icon: SHOP[id].icon, only: true,
+      })),
+      ...TIERS.flatMap((t) => GACHA_TIER[t]
+        .filter((id) => Object.prototype.hasOwnProperty.call(SHOP, id))
+        .map((id) => ({ id, tier: t, cost: SHARD_COST[t], name: SHOP[id].name, icon: SHOP[id].icon }))),
+    ],
   };
 }
 
@@ -587,7 +621,9 @@ function rollOne(u) {
   u.items = u.items || {};
   const dup = !!u.items[id];
   if (dup) {
-    const sh = SHARD_ON_DUP[tier] || 5;
+    // 파편 명패를 차고 있으면 중복 파편이 더 붙는다. 올림이라 0이 되진 않는다.
+    const base = SHARD_ON_DUP[tier] || 5;
+    const sh = base + Math.round(base * (bonusOf(u).shard || 0));
     u.shards = (u.shards || 0) + sh;
     return { id, tier, dup: true, shard: sh, name: SHOP[id].name, icon: SHOP[id].icon };
   }
@@ -620,14 +656,17 @@ function exchangeShard(token, itemId) {
   const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
   if (!Object.prototype.hasOwnProperty.call(SHOP, itemId)) return { error: '없는 아이템이에요.' };
-  if (!Object.prototype.hasOwnProperty.call(TIER_OF, itemId)) return { error: '파편으로 바꿀 수 없는 아이템이에요.' };
+  const isOnly = Object.prototype.hasOwnProperty.call(SHARD_ONLY, itemId);
+  if (!isOnly && !Object.prototype.hasOwnProperty.call(TIER_OF, itemId)) {
+    return { error: '파편으로 바꿀 수 없는 아이템이에요.' };
+  }
   if (gachaLocks.has(idl)) return { error: '잠시 후 다시 시도해 주세요.' };
   gachaLocks.add(idl);
   try {
     u.items = u.items || {};
     if (u.items[itemId]) return { error: '이미 보유한 아이템이에요.' };
-    // 값은 서버가 등급에서 뽑는다. 클라이언트가 보낸 값은 쓰지 않는다.
-    const cost = SHARD_COST[TIER_OF[itemId]];
+    // 값은 서버가 정한다. 클라이언트가 보낸 값은 쓰지 않는다.
+    const cost = isOnly ? SHARD_ONLY[itemId] : SHARD_COST[TIER_OF[itemId]];
     if ((u.shards || 0) < cost) return { error: `파편이 부족해요. (보유 ${u.shards || 0} / 필요 ${cost})` };
     u.shards -= cost;
     u.items[itemId] = true;
@@ -712,6 +751,7 @@ function doBuy(idl, u, itemId) {
     return { ok: true, profile: profileOf(u), dye };
   }
   if (it.milestone) return { error: '레벨 보상으로만 얻을 수 있어요.' };   // 마일스톤 아이템은 구매 불가
+  if (it.shard > 0) return { error: '파편으로만 얻을 수 있어요. (뽑기 → 교환소)' };   // 파편 전용
   if ((it.type === 'cardback' || it.type === 'emotes' || it.type === 'plate' || it.type === 'table' || it.type === 'cardface') && u.items[itemId]) return { error: '이미 보유한 아이템이에요.' };
   if (u.coins < it.price) return { error: `코인이 부족해요. (보유 ${u.coins} / 필요 ${it.price})` };
   u.coins -= it.price;
@@ -1748,7 +1788,7 @@ module.exports = {
   viceOf, clanCoinBonus,
   createCoupons, couponList, redeemCoupon,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
-  gachaInfo, rollGacha, exchangeShard, GACHA_TIER, TIER_OF,
+  gachaInfo, rollGacha, exchangeShard, GACHA_TIER, TIER_OF, SHARD_ONLY, bonusOf,
   missionList, titleList, betrayEvent, claimTutorial, applyReferral, deleteAccount,
   // 친구
   friendList, sendFriendReq, acceptFriendReq, declineFriendReq, cancelFriendReq, removeFriend,

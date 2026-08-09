@@ -75,8 +75,48 @@ console.log('\n③ 교환 목록을 서버가 내려주는가');
      (info.pool || []).every((p) => p.cost > 0 && p.name && p.tier && p.id));
   const byTier = {};
   for (const r of info.rates) byTier[r.tier] = r.cost;
-  ok('목록의 값이 등급표와 같다',
-     (info.pool || []).every((p) => p.cost === byTier[p.tier]));
+  // 뽑기에서 나오는 것은 등급값을, 파편 전용은 저마다의 값을 쓴다
+  ok('뽑기 상품의 값이 등급표와 같다',
+     (info.pool || []).filter((p) => !p.only).every((p) => p.cost === byTier[p.tier]));
+}
+
+console.log('\n③-b 파편으로만 살 수 있는 줄');
+{
+  const only = (info.pool || []).filter((p) => p.only);
+  ok('파편 전용품이 있다', only.length > 0, String(only.length) + '종');
+  ok('전용품은 tier 가 only', only.every((p) => p.tier === 'only'));
+  ok('전용품마다 값이 있다', only.every((p) => p.cost > 0));
+
+  // 뽑기에서 나오면 "전용" 이 아니다
+  const inGacha = [];
+  for (const t of ['common', 'rare', 'epic', 'legend']) inGacha.push(...a.GACHA_TIER[t]);
+  const leaked = only.filter((p) => inGacha.includes(p.id));
+  ok('뽑기 풀에는 안 들어 있다', leaked.length === 0, leaked.map((p) => p.id).join(' '));
+
+  // 코인으로 사지면 "파편으로만" 이 아니다
+  const t = a.signup('onlyman', 'pw1234', '전용시험').token;
+  const u = a.byToken(t);
+  u.coins = 1e9; u.items = {}; u.shards = 0;
+  const bought = only.filter((p) => !a.buyItem(t, p.id).error);
+  ok('코인으로는 못 산다', bought.length === 0, bought.map((p) => p.id).join(' '));
+
+  // 파편으로는 살 수 있어야 한다
+  const one = only[0];
+  u.shards = one.cost;
+  const r = a.exchangeShard(t, one.id);
+  ok('파편으로는 살 수 있다', !!(r && r.ok), r && r.error);
+  ok('제 값이 나간다', a.byToken(t).shards === 0);
+  ok('실제로 보유하게 된다', !!a.byToken(t).items[one.id]);
+
+  // 상점 화면에서 "🪙 0" 으로 뜨면 공짜처럼 보이고, 눌러도 거절당한다.
+  // 실제로 그렇게 떴었다. 값은 상점 목록에 실려 나가야 화면이 구분할 수 있다.
+  const listed = a.shopList().filter((x) => x.shard > 0);
+  ok('상점 목록에 파편 값이 실려 나간다', listed.length === only.length,
+     `${listed.length} / ${only.length}`);
+  ok('코인 값은 0 이다', listed.every((x) => !x.price));
+  ok('화면이 파편 값으로 바꿔 적는다', /it\.shard > 0.*파편/s.test(cli));
+  ok('구매 버튼도 교환소로 보낸다', /it\.shard > 0[\s\S]{0,220}gachaTab\('exch'\)/.test(cli));
+  ok('파편 값 색이 따로 있다', /\.pr\.shard\s*\{/.test(html));
 }
 
 console.log('\n④ 교환이 실제로 동작하는가');
@@ -124,9 +164,54 @@ console.log('\n④ 교환이 실제로 동작하는가');
   ok('오염 안 됨', ({}).polluted === undefined);
 }
 
+console.log('\n⑤-b 파편 명패 효과 (파편 획득 +10%)');
+{
+  const t = a.signup('plateman', 'pw1234', '명패시험').token;
+  const u = a.byToken(t);
+  ok('파편 명패에 효과가 붙어 있다', (a.bonusOf({ plate: 'np_shard' }).shard || 0) > 0);
+  ok('다른 명패엔 안 붙는다', !(a.bonusOf({ plate: 'np_gold' }).shard || 0));
+  ok('명패가 없어도 터지지 않는다', (a.bonusOf({}).shard || 0) === 0);
+
+  // 실제로 중복 파편이 더 붙는지.
+  // 합계를 비교하면 등급이 무작위라 편차에 묻힌다 — 실제로 40회씩 돌렸을 때
+  // 645 vs 661 이 나와서, 10% 가 붙었는지 우연인지 구분이 안 됐다.
+  // 그래서 뽑기가 돌려준 등급별 값을 하나하나 기대치와 맞춰 본다.
+  const rollAllDup = (plate, n) => {
+    u.items = {}; u.shards = 0; u.coins = 1e9; u.plate = plate;
+    // 풀 전체를 미리 보유시키면 다음 뽑기는 반드시 중복이다
+    for (const tier of ['common', 'rare', 'epic', 'legend'])
+      for (const id of a.GACHA_TIER[tier]) u.items[id] = true;
+    return a.rollGacha(t, n).results;
+  };
+  const baseOf = {};
+  for (const r of info.rates) baseOf[r.tier] = r.shard;
+
+  const plainRes = rollAllDup(null, 10);
+  ok('명패가 없으면 기본값 그대로',
+     plainRes.every((g) => g.dup && g.shard === baseOf[g.tier]),
+     plainRes.map((g) => `${g.tier}:${g.shard}`).join(' '));
+
+  const rate = a.bonusOf({ plate: 'np_shard' }).shard;
+  const boostRes = rollAllDup('np_shard', 10);
+  const want = (tier) => baseOf[tier] + Math.round(baseOf[tier] * rate);
+  ok('파편 명패를 차면 등급마다 정확히 더 받는다',
+     boostRes.every((g) => g.dup && g.shard === want(g.tier)),
+     boostRes.map((g) => `${g.tier}:${g.shard}(기대 ${want(g.tier)})`).join(' '));
+  ok('실제로 늘어난 값이다', boostRes.every((g) => g.shard > baseOf[g.tier]),
+     '올림 때문에 0이 되면 효과가 없는 것과 같다');
+  console.log(`     +${Math.round(rate * 100)}% — ` +
+    ['common', 'rare', 'epic', 'legend'].map((x) => `${x} ${baseOf[x]}→${want(x)}`).join(' · '));
+
+  // RP 에는 절대 안 붙어야 한다 (랭킹이 RP 순서라 제로섬)
+  const src = accSrc.slice(accSrc.indexOf('const PLATE_FX'), accSrc.indexOf('const PLATE_FX') + 900);
+  ok('명패 효과에 rp 가 없다', !/\brp:/.test(src));
+}
+
 console.log('\n⑥ 화면에 교환소가 배선돼 있는가');
 {
   ok('교환소 탭 버튼', html.includes('id="gcTabExch"'));
+  ok('파편 전용 칸 CSS', /\.gc-buy\.t-only\s*\{/.test(html));
+  ok('전용품을 따로 묶어 보여준다', /파편으로만 얻는 것/.test(cli));
   ok('교환소 화면', html.includes('id="gcPaneExch"'));
   ok('상품이 들어갈 자리', html.includes('id="gcShop"'));
   ok('탭 전환 함수', /function gachaTab/.test(cli));

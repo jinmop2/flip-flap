@@ -484,6 +484,15 @@
       from { opacity:1; transform:translate(0,0) scale(1.2); }
       to   { opacity:0; transform:translate(var(--fx), var(--fy)) scale(.25); }
     }
+    /* 파편 폭발 — 유리 조각이 사방으로. 모서리를 깎아 조각처럼 보이게 한다. */
+    .vx-shard i { top:auto; border-radius:1px; background:linear-gradient(140deg,#eaf9ff,#6ab4e0 55%,#2a72a4);
+      clip-path:polygon(18% 0, 100% 26%, 74% 100%, 0 62%);
+      box-shadow:0 0 10px rgba(150,220,255,.85);
+      animation:vxShard 1.15s cubic-bezier(.15,.75,.3,1) forwards; }
+    @keyframes vxShard {
+      from { opacity:1; transform:translate(0,0) rotate(0) scale(1.15); }
+      to   { opacity:0; transform:translate(var(--fx), var(--fy)) rotate(var(--spin)) scale(.3); }
+    }
     @media (prefers-reduced-motion:reduce) { #victoryFx { display:none !important; } }
 
     /* ── 상점 미리보기 (새 슬롯) ── */
@@ -501,6 +510,10 @@
     .shop-vfxprev.vx-coin { background:radial-gradient(circle at 30% 30%, #fff3c8, #e0a82a 60%, #8a5a12); }
     .shop-vfxprev.vx-thunder { background:linear-gradient(180deg,#2a2a3a,#0e0e18); box-shadow:inset 0 0 10px rgba(255,240,160,.75); }
     .shop-vfxprev.vx-firework { background:radial-gradient(circle at 50% 55%, #ffd94a 0 12%, #ff7a6a 12% 26%, #1a1030 26%); }
+    .shop-vfxprev.vx-shard { background:
+      linear-gradient(118deg, rgba(200,240,255,.75) 0 30%, transparent 30.4%),
+      linear-gradient(-62deg, rgba(90,180,235,.8) 0 52%, transparent 52.4%),
+      radial-gradient(circle at 50% 55%, #cfefff 0 18%, #1a2c3a 18%); }
 
 
     /* ── 뽑기 ── */
@@ -633,15 +646,25 @@
     .gc-tab.active { color:#ffd94a; border-color:#b98d34; background:rgba(185,141,52,.16); }
 
     /* 교환소 상품 — 살 수 있으면 또렷하게, 못 사면 흐리게 */
-    .gc-buy { width:78px; display:flex; flex-direction:column; align-items:center; gap:3px;
+    /* 이름이 한 줄이냐 두 줄이냐에 따라 타일 높이가 달라져 들쭉날쭉했다.
+       칸마다 높이를 못 박고, 이름 자리도 두 줄로 고정한다. */
+    .gc-buy { width:78px; height:104px; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:3px;
       padding:6px 3px; border-radius:9px; border:1px solid rgba(185,141,52,.3);
-      background:rgba(0,0,0,.3); cursor:pointer; }
-    .gc-buy .gi-ico { height:44px; display:flex; align-items:center; justify-content:center; }
-    .gc-buy .gi-nm { font-size:.56rem; color:#c8bcc4; text-align:center; line-height:1.25; }
-    .gc-buy .gi-cost { font-size:.58rem; font-weight:800; color:#9fe8ff; }
+      background:rgba(0,0,0,.3); cursor:pointer; flex-shrink:0; }
+    .gc-buy .gi-ico { height:40px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; }
+    .gc-buy .gi-nm { font-size:.56rem; color:#c8bcc4; text-align:center; line-height:1.25;
+      height:28px; display:flex; align-items:center; justify-content:center;
+      overflow:hidden; word-break:keep-all; }
+    .gc-buy .gi-cost { font-size:.58rem; font-weight:800; color:#9fe8ff; flex-shrink:0; }
     .gc-buy.t-rare   { border-color:rgba(95,168,216,.55); }
     .gc-buy.t-epic   { border-color:rgba(200,139,255,.6); }
     .gc-buy.t-legend { border-color:rgba(255,212,94,.7); box-shadow:0 0 10px rgba(255,212,94,.28); }
+    /* 파편 전용 — 파편 색(하늘)으로 따로 구분한다. 뽑기로는 못 얻는 줄이다. */
+    .gc-buy.t-only { border-color:rgba(140,220,255,.8);
+      background:linear-gradient(160deg,rgba(40,110,160,.3),rgba(0,0,0,.34));
+      box-shadow:0 0 11px rgba(120,205,255,.32); }
     .gc-buy.poor { opacity:.42; cursor:default; }
     .gc-buy.poor .gi-cost { color:#8a7a80; }
     .gc-buy.owned { opacity:.3; cursor:default; }
@@ -663,6 +686,7 @@
       word-break:keep-all; }
     .shop-tile .pr { font-size:.66rem; font-weight:800; color:#ffd94a; }
     .shop-tile .pr.own { color:#7dd87d; }
+    .shop-tile .pr.shard { color:#9fe8ff; }   /* 파편 전용 — 코인이 아니라는 걸 색으로 */
     .shop-tile .shop-cbprev { width:34px; height:47px; }
 
     /* ── 크리스탈 세트 (카드백·명패·테이블·앞면) ── */
@@ -680,6 +704,22 @@
     .card.back.cb-crystal::before { border-color:rgba(230,250,255,.8) !important; }
     .card.back.cb-crystal .bf { background:none; -webkit-text-fill-color:#f2fdff; color:#f2fdff;
       text-shadow:0 0 10px rgba(120,225,255,1), 0 1px 3px rgba(0,40,60,.8); }
+
+    /* 파편 — 깨진 조각이 어긋나 맞물린다. 조각마다 빛이 다르게 꺾인다. */
+    .card.back.cb-shard {
+      background:
+        linear-gradient(118deg, rgba(255,255,255,.62) 0 14%, transparent 14.4%),
+        linear-gradient(-58deg, rgba(150,225,255,.5) 0 24%, transparent 24.4%),
+        linear-gradient(196deg, rgba(255,255,255,.34) 0 38%, transparent 38.4%),
+        linear-gradient(-136deg, rgba(90,190,240,.55) 0 52%, transparent 52.4%),
+        linear-gradient(28deg, rgba(220,250,255,.28) 0 66%, transparent 66.4%),
+        linear-gradient(150deg,#cfefff,#5aa6d8 46%,#1d5f8a) !important;
+      border-color:#eaf9ff !important;
+      box-shadow:0 3px 16px rgba(90,180,240,.6), inset 0 0 14px rgba(255,255,255,.5) !important;
+    }
+    .card.back.cb-shard::before { border-color:rgba(235,250,255,.85) !important; }
+    .card.back.cb-shard .bf { background:none; -webkit-text-fill-color:#f4fdff; color:#f4fdff;
+      text-shadow:0 0 10px rgba(150,225,255,1), 0 1px 3px rgba(0,35,55,.85); }
 
     /* 흑요석 — 검은 유리에 금이 흐른다 (킨츠기) */
     .card.back.cb-obsidian {
@@ -726,11 +766,22 @@
       box-shadow:0 1px 4px rgba(90,60,20,.35); }
     /* 크리스탈 테이블 — 살얼음 */
     .shop-tblprev.tp-crystal { background:radial-gradient(ellipse at 50% 45%, #2d6d8c, #14384c); }
+    .shop-tblprev.tp-shard { background:
+      linear-gradient(124deg, rgba(255,255,255,.16) 0 26%, transparent 26.4%),
+      linear-gradient(-66deg, rgba(170,230,255,.2) 0 46%, transparent 46.4%),
+      radial-gradient(ellipse at 50% 45%, #2a6f95, #10344a); }
     .shop-tblprev.tp-obsidian { background:radial-gradient(ellipse at 50% 45%, #24242f, #0b0b12); }
     .shop-tblprev.tp-hanji { background:radial-gradient(ellipse at 50% 45%, #d9c6a0, #b39c72); }
 
     /* ── 명패 (닉네임 장식) ── */
-    .np-wood, .np-neon, .np-gold, .np-daily, .np-lv50, .np-ruby, .np-crystal, .np-obsidian, .np-hanji { padding:1px 9px; border-radius:8px; display:inline-block; }
+    .np-wood, .np-neon, .np-gold, .np-daily, .np-lv50, .np-ruby, .np-crystal, .np-obsidian, .np-hanji, .np-shard { padding:1px 9px; border-radius:8px; display:inline-block; }
+    /* 파편 명패 — 갈라진 결정. 금 간 자리로 빛이 샌다. */
+    .np-shard { background:
+        linear-gradient(112deg, rgba(255,255,255,.5) 0 22%, transparent 22.5%),
+        linear-gradient(-64deg, rgba(160,230,255,.45) 0 40%, transparent 40.5%),
+        linear-gradient(135deg,#d8f2ff,#6ab4e0 52%,#2a72a4);
+      border:1px solid #eaf9ff; color:#0e3550 !important;
+      box-shadow:0 0 10px rgba(120,200,245,.6), inset 0 0 8px rgba(255,255,255,.5); }
     .np-wood  { background:linear-gradient(135deg,#5a3f24,#3c2a16); border:1px solid #8a6a3a; }
     .np-neon  { background:#160b26; border:1px solid #c39bff; box-shadow:0 0 9px rgba(195,155,255,.55); }
     .np-gold  { background:linear-gradient(135deg,#6a5312,#a8850f); border:1px solid #ffd94a; box-shadow:0 0 8px rgba(255,215,80,.4); }
@@ -1820,6 +1871,12 @@
       linear-gradient(72deg, transparent 0 48%, rgba(200,160,70,.10) 48.3% 48.9%, transparent 49.2%),
       radial-gradient(ellipse 90% 70% at 50% 50%, #1e1e28 0%, #101018 78%, #06060a 100%);
       border-color:#4a3a18; }
+    #game.tbl-shard { background:
+      linear-gradient(124deg, rgba(255,255,255,.055) 0 10%, transparent 10.4%),
+      linear-gradient(-66deg, rgba(170,230,255,.07) 0 20%, transparent 20.4%),
+      linear-gradient(198deg, rgba(255,255,255,.04) 0 32%, transparent 32.4%),
+      radial-gradient(ellipse 90% 70% at 50% 50%, #1e5776 0%, #103247 78%, #071a26 100%);
+      border-color:#3d86ad; }
     #game.tbl-hanji { background:
       repeating-linear-gradient(92deg, rgba(120,90,50,.05) 0 1px, transparent 1px 6px),
       radial-gradient(ellipse 90% 70% at 50% 50%, #6a5a42 0%, #46392a 78%, #2a2118 100%);
@@ -1831,9 +1888,15 @@
     #game.cf-classic .card .c-rank { font-family:'Georgia',serif; }
     #game.cf-gold .card .c-num { color:#ffd94a; text-shadow:0 0 8px rgba(255,200,60,.7),0 1px 2px rgba(0,0,0,.5); }
     #game.cf-gold .card .c-rank { color:#ffe9a8; }
+    /* 파편 앞면 — 숫자가 두 조각으로 어긋나 겹쳐 보인다 */
+    #game.cf-shard .card .c-num { color:#eaf9ff;
+      text-shadow:1.6px -1.2px 0 rgba(120,205,245,.95), -1.6px 1.2px 0 rgba(40,120,175,.95),
+                  0 0 10px rgba(140,220,255,.85), 0 1px 2px rgba(0,30,45,.6); }
+    #game.cf-shard .card .c-rank { color:#a8dcff; text-shadow:1px -.8px 0 rgba(60,150,200,.8); }
     #game.cf-crystal .card .c-num { color:#dffaff; text-shadow:0 0 9px rgba(120,225,255,.9), 0 1px 2px rgba(0,30,45,.6); }
     #game.cf-crystal .card .c-rank { color:#a8e8ff; }
     .shop-cfprev.cfp-crystal { color:#dffaff; text-shadow:0 0 8px rgba(120,225,255,.9); }
+    .shop-cfprev.cfp-shard { color:#eaf9ff; text-shadow:1.5px -1px 0 rgba(120,205,245,.9), -1.5px 1px 0 rgba(40,120,175,.9), 0 0 9px rgba(140,220,255,.8); }
     #game.cf-obsidian .card .c-num { color:#e8c98a; text-shadow:0 0 8px rgba(200,160,70,.7), 0 1px 2px rgba(0,0,0,.7); }
     #game.cf-obsidian .card .c-rank { color:#f0dca8; }
     .shop-cfprev.cfp-obsidian { color:#e8c98a; text-shadow:0 0 8px rgba(200,160,70,.7); }
@@ -3145,7 +3208,7 @@
     <div id="cpnMsg" class="cpn-msg"></div>
     <!-- 뽑기 입구 — 상점 맨 위에 둔다 -->
     <button class="btn btn-gold gacha-entry" onclick="openGacha()">
-      <span data-ico="🎁"></span> 뽑기 — 새 꾸미기를 운에 맡겨보세요
+      <span data-ico="🎁"></span> 뽑기
     </button>
     <!-- 선택한 상품 상세 + 구매 -->
     <div class="shop-sel" id="shopSel">

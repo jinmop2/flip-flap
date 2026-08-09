@@ -57,16 +57,27 @@ console.log('\n② 인게임 표에도 있는가 (상점에만 있으면 판에�
 
 console.log('\n③ 스킨을 벗을 때 이전 클래스를 지우는 목록이 빠짐없는가');
 {
-  const rm = cli.match(/classList\.remove\(([^)]*)\)/g) || [];
+  // 지우는 방법은 두 가지다.
+  //   ㉠ 클래스 이름을 하나하나 적는다 — 새 스킨을 넣을 때 빠뜨리기 쉽다
+  //   ㉡ 표를 통째로 펼친다(...Object.values(MAP)) — 추가만 해도 따라온다
+  // ㉡ 로 적혀 있으면 그 표의 스킨은 전부 지워지는 것으로 본다.
+  // 인자 안에 Object.values(...) 처럼 괄호가 또 나오므로, 문장 끝(`);`)까지 잡는다
+  const rm = cli.match(/classList\.remove\([\s\S]*?\)\s*;/g) || [];
   const removed = new Set();
-  for (const r of rm) for (const m of r.matchAll(/'([^']+)'/g)) removed.add(m[1]);
+  const spread = new Set();
+  for (const r of rm) {
+    for (const m of r.matchAll(/'([^']+)'/g)) removed.add(m[1]);
+    for (const m of r.matchAll(/\.\.\.Object\.values\((\w+)\)/g)) spread.add(m[1]);
+  }
   const all = [];
-  for (const [label, type, mapName] of [['테이블', 'table', 'TABLE_CLS'], ['카드 앞면', 'cardface', 'FACE_CLS']]) {
+  for (const [, type, mapName] of [['테이블', 'table', 'TABLE_CLS'], ['카드 앞면', 'cardface', 'FACE_CLS']]) {
+    if (spread.has(mapName)) continue;          // 표를 통째로 펼쳤으면 빠질 수 없다
     const map = mapOf(mapName) || {};
     for (const id of idsOfType(type)) if (map[id] && !removed.has(map[id])) all.push(map[id]);
   }
   ok('바꿀 때 예전 스킨이 안 남는다', all.length === 0,
      '지우는 목록에 없음: ' + all.join(' '));
+  ok('둘 중 한 방법으로는 지운다', removed.size > 0 || spread.size > 0);
 }
 
 console.log('\n④ CSS 클래스가 실제로 정의돼 있는가');
