@@ -38,6 +38,18 @@
     } catch (_) {}
   }
 
+  // 내 시계. 상태가 올 때만 그리면 초가 안 흐르므로, 서버가 매초 보내는
+  // 가벼운 신호(g4_clock)로도 같은 함수를 부른다.
+  function paintClock(clock, waiting) {
+    const tm = $('q-timer'); if (!tm) return;
+    if (!clock) { tm.style.display = 'none'; return; }
+    const left = Math.max(0, clock[mySeat] || 0);
+    tm.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+    tm.classList.toggle('active', waiting === mySeat);
+    tm.classList.toggle('warn', left <= 30);
+    tm.style.display = '';
+  }
+
   // 덱 더미 — 남은 장수만큼 겹쳐 쌓고, 뽑을 수 있을 때만 빛난다
   function renderDeck4(n, drawable) {
     const el = $('q-deckstack'); if (!el) return;
@@ -277,6 +289,7 @@
       if (typeof renderGameProfile === 'function' && typeof myAccount !== 'undefined')
         renderGameProfile('q-meProfile', myAccount || { guest: true, nick: (typeof getNick === 'function' ? getNick() : '나') });
     } catch (_) {}
+    paintClock(s.clock, s.waitSeat);
     $('q-turn').textContent = `${s.turn}턴`;
     $('q-deck').textContent = `덱 ${s.deckLeft}장`;
 
@@ -688,7 +701,14 @@
       if (!q4Live) return;
       q4 = s; lastRecv = Date.now(); render(); setTimeout(() => showOver(s), 600);
     });
+    socket.on('g4_clock', (d) => { if (q4Live && d) paintClock(d.clock, d.seat); });
     socket.on('g4_error', (m) => { alert(m); window.q4Quit(); });
+    // 시간을 다 쓰면 그 자리는 AI 가 넘겨받는다. 판을 끝내지는 않는다 —
+    // 한 사람 때문에 나머지가 끝나면 억울하기 때문.
+    socket.on('g4_timeout', () => {
+      $('q-status').textContent = '시간을 다 썼어요 — 남은 판은 AI 가 대신합니다';
+      const tm = $('q-timer'); if (tm) { tm.textContent = '0:00'; tm.classList.add('warn'); }
+    });
     socket.on('g4_gone', () => {
       if (!q4Live) return;
       $('q-status').textContent = '연결이 끊겨 판을 이어갈 수 없어요.';

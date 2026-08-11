@@ -89,6 +89,7 @@ function attach4(io) {
         turnToBid: G.turnToBid(g),
       } : null,
       // 지금 누구를 몇 초 기다리는지 — 화면에 남은 시간을 보여주려고
+      clock: g.clock || null,
       waitSeat: (room && room.waitSeat !== undefined) ? room.waitSeat : null,
       waitLeft: (room && room.waitUntil) ? Math.max(0, Math.round((room.waitUntil - Date.now()) / 1000)) : null,
       result: (g.phase === 'settled' || g.phase === 'game_over') ? g.lastResult : null,
@@ -379,6 +380,35 @@ function attach4(io) {
   }
 
   // ── 워치독 ───────────────────────────────────────────────────────────────
+  // ── 체스 시계 ────────────────────────────────────────────────────────────
+  // 자리마다 3분. 지금 입력을 기다리는 사람 것만 줄어든다 — AI 는 즉시 두므로
+  // 실제로는 사람만 쓴다. 감시 루프(3초)와 달리 1초마다 돌아야 초 단위로 보인다.
+  //
+  // 다 쓰면 그 자리를 AI 가 넘겨받는다. 2인전은 시간패지만 다인전에서 한 사람
+  // 때문에 판을 끝내면 나머지가 억울하다 — 이미 있는 자리비움 처리와 같은 결.
+  const clk = setInterval(() => {
+    for (const [roomId, r] of Object.entries(rooms4)) {
+      if (r.dead) continue;
+      const g = r.game;
+      if (!g || !g.clock || g.phase === 'game_over') continue;
+      const seat = humanToAct(g, r);
+      if (seat === null) continue;
+      g.clock[seat] = Math.max(0, (g.clock[seat] || 0) - 1);
+      // 매초 상태를 통째로 보내면 무겁다. 시계만 따로 가볍게 보낸다.
+      for (const sk of r.seats) if (sk.sid) io.to(sk.sid).emit('g4_clock', { clock: g.clock, seat });
+      if (g.clock[seat] > 0) continue;
+      // 시간 소진 — AI 가 대신한다
+      const sk = r.seats[seat];
+      if (sk && !sk.isBot) {
+        dbg('시간 소진 — AI 인계', roomId, 'seat=' + seat);
+        if (sk.sid) io.to(sk.sid).emit('g4_timeout');
+        sk.isBot = true; sk.sid = null; sk.left = true;
+        push(roomId);
+        schedule(roomId, 300);
+      }
+    }
+  }, 1000);
+
   const wd = setInterval(() => {
     const now = Date.now();
     for (const [roomId, r] of Object.entries(rooms4)) {
@@ -430,6 +460,7 @@ function attach4(io) {
     }
   }, 3000);
   if (wd.unref) wd.unref();
+  if (clk.unref) clk.unref();   // 시계도 같이 — 안 하면 프로세스가 안 끝난다
 
   // ── 소켓 ─────────────────────────────────────────────────────────────────
   // 핸들러가 예외로 죽으면 사용자에게는 "아무 반응 없음"으로만 보여 원인을 못 찾는다.

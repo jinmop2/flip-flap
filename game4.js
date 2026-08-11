@@ -93,8 +93,12 @@ function createGame4(names, opts = {}) {
   const seats = [];
   for (let i = 0; i < n; i++)
     seats.push({ name: names[i], isBot: i !== 0, hand: deck.slice(i * hand, (i + 1) * hand), acq: [] });
+  // 체스 시계 — 자리마다 3분. 2인전(5분)보다 짧게 잡은 건 사람이 여럿이라
+  // 한 사람이 오래 끌면 나머지가 그만큼 더 기다리기 때문이다.
+  const clock = {};
+  for (let i = 0; i < n; i++) clock[i] = 180;
   return {
-    n, spec, seats,
+    n, spec, seats, clock,
     deck: deck.slice(n * hand),
     turn: 1,
     auctioneer: Math.floor(Math.random() * n),      // 첫 진행자는 무작위

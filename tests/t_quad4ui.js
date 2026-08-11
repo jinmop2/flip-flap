@@ -181,9 +181,11 @@ console.log('\n⑩ 나가기·설명·설정·프로필');
   ok('좌측 상단 조작', /id="q-controls"/.test(html));
   ok('가로 일렬', /#q-controls \{[^}]*flex-direction:row/.test(html));
   ok('중앙 나가기는 없앴다', !/id="q-quit"/.test(html));
-  ok('상대 자리를 버튼 아래로 내렸다', /#q-opps \{ margin-top:34px/.test(html));
-  ok('내 프로필은 오른쪽 아래', /#q-meProfile \{[^}]*right:8px[^}]*bottom:calc\(170px/.test(html));
-  ok('손패를 안 가린다 (손패+확정 위)', /bottom:calc\(170px \+ var\(--safe-b\)\)/.test(html));
+  ok('상대 자리를 버튼 아래로 내렸다', /#q-opps \{ margin-top:36px/.test(html));
+  ok('내 프로필은 오른쪽 맨 아래', /#q-meProfile \{[^}]*right:8px[^}]*bottom:calc\(6px/.test(html));
+  ok('손패 아래 자리를 비워 둔다', /#q-me \{ padding-bottom:26px/.test(html));
+  ok('시계는 손패 오른쪽', /#q-timer \{[^}]*right:10px[^}]*bottom:calc\(56px/.test(html));
+  ok('조작 버튼을 줄여 자리를 벌었다', /#q-controls \.ctrl-btn \{[^}]*height:34px/.test(html));
   ok('상대 등급·레벨을 보여준다', /q-owho/.test(c4) && /\.q-owho \{/.test(html));
   ok('AI 는 AI 로 적는다', /who\.textContent = 'AI'/.test(c4));
   ok('버튼 셋', (html.match(/id="q-controls"[\s\S]*?<\/div>\s*<\/div>/) || [''])[0].split('ctrl-btn').length - 1 === 3
@@ -216,7 +218,30 @@ console.log('\n⑪ 상대 정보·친구 신청');
   ok('코인·아이템도 안 실린다', !/coins|items/.test(pc));
 }
 
-console.log('\n⑫ 내 정보 · 명패 고르기');
+console.log('\n⑫ 시계 (3분)');
+{
+  const s4 = fs.readFileSync(src + '/server4.js', 'utf8');
+  const g4 = fs.readFileSync(src + '/game4.js', 'utf8');
+  ok('자리마다 3분', /clock\[i\] = 180/.test(g4));
+  ok('서버가 1초마다 센다', /}, 1000\);/.test(s4) && /const clk = setInterval/.test(s4));
+  ok('입력을 기다리는 사람만 깎인다', /const seat = humanToAct\(g, r\);[\s\S]{0,120}g\.clock\[seat\] = Math\.max/.test(s4));
+  ok('타이머를 unref 한다', /clk\.unref\(\)/.test(s4));
+
+  // 매초 상태를 통째로 보내면 무겁다 — 시계만 따로
+  ok('가벼운 시계 신호', /emit\('g4_clock'/.test(s4));
+  ok('화면이 그 신호로 다시 그린다', /socket\.on\('g4_clock'/.test(c4));
+  ok('상태가 올 때도 같은 함수로', /function paintClock/.test(c4)
+     && (c4.match(/paintClock\(/g) || []).length >= 3);
+
+  // 다 쓰면 판을 끝내지 않고 AI 가 넘겨받는다
+  ok('시간 소진 시 AI 인계', /sk\.isBot = true; sk\.sid = null; sk\.left = true;/.test(s4));
+  ok('당사자에게 알린다', /emit\('g4_timeout'\)/.test(s4) && /socket\.on\('g4_timeout'/.test(c4));
+
+  ok('시계 요소', /id="q-timer"/.test(html));
+  ok('30초 남으면 경고', /left <= 30/.test(c4));
+}
+
+console.log('\n⑬ 내 정보 · 명패 고르기');
 {
   ok('전체화면', /#myInfoModal \{ padding:0/.test(html)
      && /\.lb-box\.myinfo-box \{[^}]*height:100dvh/.test(html));

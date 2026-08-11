@@ -1137,13 +1137,31 @@
     /* 좌측 상단에 가로 일렬 — 세로로 쌓으니 상대 자리를 눌렀다 */
     #q-controls { position:absolute; top:calc(8px + var(--safe-t)); left:8px; z-index:40;
       display:flex; flex-direction:row; gap:6px; }
-    /* 내 프로필은 오른쪽 아래 — 내 손패 쪽이라 내 것이라는 게 바로 읽힌다.
-       다만 손패(112px) 와 확정 버튼(44px) 위에 얹혀야 카드를 안 가린다. */
+    /* 오른쪽 아래 — 위에서부터 시계, 그 아래 내 프로필.
+       2인전과 같은 자리라 어느 화면에서도 눈이 같은 곳을 본다.
+       프로필은 손패 아래(맨 밑), 시계는 손패 오른쪽 옆에 얹는다. */
+    #game4 > #q-timer { position:absolute; right:10px; z-index:41;
+      bottom:calc(56px + var(--safe-b)); }
     #game4 > #q-meProfile { position:absolute; right:8px; z-index:40;
-      bottom:calc(170px + var(--safe-b)); }
-    @media (max-height:700px) { #game4 > #q-meProfile { bottom:calc(150px + var(--safe-b)); } }
-    /* 조작 버튼이 차지한 높이만큼 상대 자리를 내린다 */
-    #q-opps { margin-top:34px; }
+      bottom:calc(6px + var(--safe-b)); }
+    /* 다인전은 세로 여유가 빠듯하다. 조작 버튼을 아이콘 위주로 줄여
+       상대 자리를 내릴 공간을 만든다 (52 → 34px).
+       그냥 내리기만 하면 가운데 정렬인 #q-table 이 눌려 배팅 자리와 겹친다 —
+       실제로 margin-top 을 46 주면 18px 겹쳤다. */
+    #q-controls .ctrl-btn { width:42px; height:34px; border-radius:9px; gap:0; }
+    #q-controls .ctrl-btn .ci { font-size:.95rem; }
+    #q-controls .ctrl-btn .cl { font-size:.46rem; letter-spacing:.4px; }
+    /* 여기까지가 세로 예산 싸움이다. #q-table 은 가운데 정렬이라 자기 내용보다
+       짧아지면 위로 삐져나와 배팅 자리를 덮는다(측정 18px). 아래쪽에서 조금씩
+       덜어 #q-table 이 제 내용을 담을 수 있게 한다. */
+    body.quad4 #q-myacq { height:40px; }
+    body.quad4 #q-me { padding-bottom:26px; }
+    body.quad4 #q-typeBtns { height:36px; }
+    body.quad4 #q-mybid { height:96px; }
+    /* 조작 버튼 아래로 상대 이름이 들어가게 (버튼 34 + 여백 8 = 42) */
+    #q-opps { margin-top:36px; }
+    /* 프로필이 앉을 자리를 손패 아래에 비워 둔다 — 안 그러면 카드를 가린다 */
+    #q-me { padding-bottom:34px; }
 
     /* 중앙 경매장 */
     #q-table { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center;
@@ -3498,7 +3516,8 @@
     <div class="ctrl-btn" onclick="toggleRules(true)" title="게임 설명"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span><span class="cl">설명</span></div>
     <div class="ctrl-btn" onclick="toggleSettings()" title="설정"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="cl">설정</span></div>
   </div>
-  <!-- 내 프로필 — 2인전처럼 판에서도 내가 누군지 보인다 -->
+  <!-- 오른쪽 아래 세로줄 — 시계 · 내 프로필 (2인전과 같은 자리) -->
+  <div class="timer pc-timer" id="q-timer">3:00</div>
   <div class="game-pcard" id="q-meProfile" onclick="toggleStats(this)">
     <div class="pc-body"></div><div class="pc-stats"></div>
   </div>
