@@ -1,3 +1,6 @@
+// [기준선] 개선 전 전문가 AI. 새 버전이 정말 더 센지 재려고 남겨 둔 사본이다.
+// 게임에서는 안 쓴다 — tools/duel.js 로 맞대결할 때만 부른다.
+// 건드리지 말 것: 이걸 고치면 "예전보다 나아졌는가" 를 물을 기준이 사라진다.
 // FLIP FLAP 전문가 AI v3 — server.js와 sim.js가 공유
 // 핵심: ① 카드 카운팅(공개 정보 완전 추적) ② 몬테카를로 EV 배팅(배신 저격/방어가 자연 창발)
 //       ③ 종반 확정화 롤아웃(덱≤3 완전 시뮬) ④ 상대 성향 학습(블러핑 빈도)
@@ -26,72 +29,38 @@ const RANK = new Map([...ALL].sort((a, b) => strength(a) - strength(b)).map((c, 
 const power = c => RANK.get(c.id) || 0;
 
 const cnt = (acq, kind) => acq.reduce((n, c) => n + (c.kind === kind ? 1 : 0), 0);
-// 목표 세트 고르기.
-// 예전엔 "가진 비율 + 2·3종에 가산점" 이라, 아무것도 없을 때 늘 2를 골랐다.
-// 2세트는 덱에 두 장뿐이라 둘 다 먹어야 하는 가장 빡빡한 길인데도 그랬다.
-// 그래서 첫 수가 늘 똑같았다 — "전략이 단조롭다" 의 뿌리.
-//
-// 이제 남은 공급으로 실현 가능성을 잰다. 필요량보다 여유가 많은 종류가 편하다.
-//   2: 2장 중 2장 필요 (여유 0)   3: 5중 3 (여유 2)
-//   4: 7중 4 (여유 3)             6: 10중 6 (여유 4)
 function feasibleTarget(myAcq, oppAcq) {
-  let best = null, bestScore = -Infinity;
+  let best = null, bestScore = -1;
   for (const [kind] of SPEC) {
     const myC = cnt(myAcq, kind), oppC = cnt(oppAcq, kind);
+    if (TOTAL[kind] - oppC < kind) continue;
     if (myC >= kind) continue;
-    const left = TOTAL[kind] - myC - oppC;          // 아직 내가 노릴 수 있는 장수
-    const need = kind - myC;
-    if (left < need) continue;                      // 상대가 너무 먹어 불가능
-    // 이미 모은 비율이 가장 중요하고, 남은 여유가 다음이다
-    const score = (myC / kind) * 1.0 + ((left - need) / TOTAL[kind]) * 0.45;
+    const score = myC / kind + (kind <= 3 ? 0.04 : 0);
     if (score > bestScore) { bestScore = score; best = kind; }
   }
   return best ?? 6;
 }
-
-// 경매품이 나에게 얼마나 값나가는가 (0~1).
-//
-// 예전엔 카드마다 값을 매겨 Math.max 를 썼다. 그래서 6이 두 장이든 한 장이든
-// 똑같이 0.167 이었다 — 같은 종류가 두 장이면 두 걸음인데 한 걸음으로 셌다.
-// 이제 종류별로 몇 장인지 세서 "먹은 뒤 진행도" 로 값을 매긴다.
 function wantValue(prize, myAcq, target) {
-  const byKind = {};
-  for (const c of prize) if (c) byKind[c.kind] = (byKind[c.kind] || 0) + 1;
-  let best = 0;
-  for (const k of Object.keys(byKind)) {
-    const kind = +k, n = byKind[k];
-    const have = cnt(myAcq, kind), need = kind - have;
-    if (need <= 0) continue;                        // 이미 완성한 종류
-    let v;
-    if (n >= need) v = 1;                           // 이걸 먹으면 그 자리에서 완성
-    else {
-      // 먹은 뒤 진행도. 지수 0.8 로 살짝 오목하게 — 초반 몇 장도 값을 인정한다.
-      // (선형이면 6세트 초반이 지나치게 싸 보이고, 볼록하면 더 심해진다)
-      v = Math.pow((have + n) / kind, 0.8);
-      if (kind === target) v += 0.07;               // 지금 노리는 길이면 조금 더
-    }
-    best = Math.max(best, Math.min(1, v));
+  let v = 0;
+  for (const c of prize) {
+    if (!c) continue;
+    const need = c.kind - cnt(myAcq, c.kind);
+    let cv = need <= 0 ? 1 : 1 / need;
+    if (c.kind === target) cv = Math.max(cv, 0.75);
+    if (need === 1) cv = Math.max(cv, 0.97);
+    v = Math.max(v, cv);
   }
-  return best;
+  return v;
 }
-
-// 상대에게 넘어가면 얼마나 아픈가. 같은 셈을 상대 기준으로 하되,
-// 막는 것은 내가 먹는 것보다 값이 낮다(이득이 아니라 손실 회피라서).
 function denyValue(prize, oppAcq) {
-  const byKind = {};
-  for (const c of prize) if (c) byKind[c.kind] = (byKind[c.kind] || 0) + 1;
-  let best = 0;
-  for (const k of Object.keys(byKind)) {
-    const kind = +k, n = byKind[k];
-    const have = cnt(oppAcq, kind), need = kind - have;
-    if (need <= 0) continue;
-    let v;
-    if (n >= need) v = 0.95;                        // 넘기면 상대가 바로 이긴다
-    else if (need - n === 1) v = 0.62;              // 넘기면 상대가 한 장 남는다
-    else v = Math.pow((have + n) / kind, 0.8) * 0.55;
-    best = Math.max(best, Math.min(1, v));
+  let v = 0;
+  for (const c of prize) {
+    if (!c) continue;
+    const need = c.kind - cnt(oppAcq, c.kind);
+    if (need === 1) v = Math.max(v, 0.88);
+    else if (need === 2) v = Math.max(v, 0.45);
   }
-  return best;
+  return v;
 }
 
 // ── 메모리 (게임당 1개) ──────────────────────────────────────
@@ -273,10 +242,8 @@ function bidV3(view, mem) {
 
   const pool = unknownPool(view, mem);
   const bluffP = bluffEst(mem);
-  // 종반 완전 시뮬(롤아웃) 범위. 3 → 5 로 넓히니 맞대결 승률이 2%p 올랐다.
-  // 이 구간은 수가 적어 끝까지 읽는 게 표본 추정보다 정확하다.
-  const endgame = view.deckLeft <= 5;
-  const SAMPLES = endgame ? 60 : 96;
+  const endgame = view.deckLeft <= 3;
+  const SAMPLES = endgame ? 40 : 64;
 
   // 상대가 보는 경매품 (클로즈면 출품 카드 안 보임 → 상대는 중앙만으로 판단)
   const prizeForOpp = view.auctionType === 'open' || !view.isAuctioneer
@@ -330,29 +297,13 @@ function bidV3(view, mem) {
       scores.set(c.id, scores.get(c.id) + sc);
     }
   }
-  // 예전엔 "8% 확률로, 5% 이내면 2등" 이라 사실상 늘 1등이었다.
-  // 비슷한 후보들 중에서 고르게 바꿔 같은 판에서도 수가 갈리게 한다.
-  const scored = [...candidates].map((c) => ({ c, s: scores.get(c.id) }))
-    .sort((a, b) => b.s - a.s);
-  return pickNear(scored, 0.06);
-}
-
-// 점수가 비슷한 후보 중에서 고른다.
-// 늘 1등만 두면 같은 판에서 늘 같은 수가 나와 읽힌다("전략이 단조롭다").
-// 그렇다고 아무렇게나 섞으면 약해진다. 그래서 1등과의 격차가 tol 안인 것만
-// 후보로 두고, 그 안에서 점수에 비례해 뽑는다 — 나쁜 수는 애초에 안 들어온다.
-function pickNear(scored, tol) {
-  if (scored.length <= 1) return scored[0] && scored[0].c;
-  const top = scored[0].s;
-  const span = Math.max(Math.abs(top), 1e-6);
-  const near = scored.filter((x) => (top - x.s) / span <= tol);
-  if (near.length === 1) return near[0].c;
-  // 1등에 가까울수록 잘 뽑히게 가중치를 준다
-  const w = near.map((x) => Math.pow(1 - (top - x.s) / (span * tol + 1e-9), 2) + 0.15);
-  const sum = w.reduce((a, b) => a + b, 0);
-  let r = Math.random() * sum;
-  for (let i = 0; i < near.length; i++) { r -= w[i]; if (r <= 0) return near[i].c; }
-  return near[0].c;
+  const ranked = [...candidates].sort((a, b) => scores.get(b.id) - scores.get(a.id));
+  // 패턴 랜덤화: 근소 차이(5% 이내)면 가끔 2등 선택
+  if (ranked.length > 1 && Math.random() < 0.08) {
+    const a = scores.get(ranked[0].id), b = scores.get(ranked[1].id);
+    if (a !== 0 && Math.abs(a - b) / Math.max(Math.abs(a), 1e-9) < 0.05) return ranked[1];
+  }
+  return ranked[0];
 }
 
 // ── 출품 결정 (v3): 목표 보존 + 상대 저지 + 매집 + 최약 방출 ──
@@ -372,8 +323,7 @@ function offerV3(view, mem) {
     else if (oppNeed === 3) s -= 0.2;
     return { c, s };
   }).sort((a, b) => b.s - a.s);
-  // 8% 안쪽으로 비슷한 것들 중에서 고른다 — 같은 판이라도 수가 갈린다
-  return pickNear(scored, 0.08);
+  return scored[0].c;
 }
 
 // ── 경매 방식 결정 (v3) ──────────────────────────────────────
