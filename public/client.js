@@ -464,13 +464,14 @@ function showRewards() {
   (r.missions || []).forEach(m => { add('bd-first', `${ico('🎯')} 미션 완료: ${esc(m.name)} +${m.reward}`, d, true); d += 250; });
   (r.milestones || []).forEach(m => { add('bd-rank', `${m.icon} ${m.label}`, d); d += 250; playSound('setwin'); });
   (r.titles || []).forEach(t => { add('bd-rank', `${ico(t.icon)} 칭호 획득! ${esc(t.name)}`, d, true); d += 250; playSound('setwin'); });
-  // 싸이클링 — 2·3·4·6 세트로 각각 한 번씩 우승하면 한 바퀴
+  // 싸이클링 — 오늘 안에 2·3·4·6 세트로 각각 우승하면 완성 (일일퀘스트)
   if (r.cycle && r.cycle.done) {
-    add('bd-rank', `${ico('🔁')} <b>싸이클링 완성!</b> 2·3·4·6 제패 +${r.cycle.amount}`, d, true);
+    add('bd-rank', `${ico('🏁')} <b>오늘의 싸이클링 완성!</b> 2·3·4·6 제패 +${r.cycle.amount}`, d, true);
     d += 300; playSound('setwin');
   } else if (r.cycle && r.cycle.fresh) {
-    const got = (r.cycle.progress || []).filter((x) => x.done).length;
-    add('bd-first', `${ico('🔁')} 싸이클링 ${r.cycle.kind} 세트 달성 (${got}/4)`, d, true);
+    const left = (r.cycle.progress || []).filter((x) => !x.done).map((x) => x.kind);
+    add('bd-first', `${ico('🏁')} 싸이클링 ${r.cycle.kind} 세트 (${r.cycle.got}/4` +
+        (left.length ? ` · 남은 건 ${left.join('·')}` : '') + ')', d, true);
     d += 250;
   }
   if (r.blocked) {
@@ -679,13 +680,19 @@ async function openMissions() {
   r.list.forEach(m => {
     const row = document.createElement('div');
     row.className = 'mis-row' + (m.claimed ? ' done' : '');
+    // 싸이클링은 "3/4" 만으로는 어느 종류가 남았는지 알 수 없다 —
+    // 2·3·4·6 을 하나씩 보여줘야 "이번엔 6 으로 이겨야지" 가 된다.
+    const detail = m.cycle
+      ? `<div class="mis-cyc">${m.cycle.map((c) =>
+          `<span class="mis-cyc-k${c.done ? ' on' : ''}">${c.kind}</span>`).join('')}</div>`
+      : `<div class="mis-prog">${m.prog}/${m.goal}</div>`;
     row.innerHTML = `
       <div class="mis-info">
-        <div class="mis-name">${m.claimed ? ico('✅') : ico('🎯')} ${esc(m.name)}</div>
+        <div class="mis-name">${m.claimed ? ico('✅') : ico(m.cycle ? '🏁' : '🎯')} ${esc(m.name)}</div>
         <div class="mis-bar"><div class="mis-fill" style="width:${Math.round(m.prog / m.goal * 100)}%"></div></div>
-        <div class="mis-prog">${m.prog}/${m.goal}</div>
+        ${detail}
       </div>
-      <div class="mis-reward">${m.claimed ? '완료!' : `🪙 ${m.reward}`}</div>`;
+      <div class="mis-reward">${m.claimed ? '완료!' : `${ico('🪙')} ${m.reward}`}</div>`;
     list.appendChild(row);
   });
 }

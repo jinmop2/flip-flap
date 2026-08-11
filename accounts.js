@@ -421,7 +421,7 @@ function profileOf(u) {
     winRate: total ? Math.round(u.wins / total * 100) : 0,
     coins: u.coins || 0,
     shards: u.shards || 0,
-    cycle: cycleProgress(u), cycleDone: (u.stats || {}).cycle || 0,
+    cycle: cycleProgress(u), cycleDone: (u.stats || {}).cycle || 0,   // 오늘 진행 · 누적 완성 횟수
     sinceLegend: u.sinceLegend || 0,
     nickColor: u.nickColor || null,          // 염색약 결과 (색 키)
     cardBack: u.cardBack || null,            // 장착 중인 카드백
@@ -1246,41 +1246,46 @@ function betrayEvent(token) {
   pend.titles.push(...checkTitles(u));
   persist(idl);
 }
-// 싸이클링 — 2·3·4·6 세트로 각각 한 번씩 우승하면 한 바퀴 완성.
-// 야구의 싸이클링 안타(단타·2루타·3루타·홈런을 다 쳐야 한다)에서 따왔다.
+// ── 싸이클링 (일일퀘스트) ──────────────────────────────────────────────────
+// 오늘 2·3·4·6 세트로 각각 한 번씩 우승하면 완성. 야구의 싸이클링 안타에서 따왔다.
 //
-// 한 판 안에서가 아니라 판을 넘어 쌓인다. 어떤 종류로 이겼는지를 모아 두고
-// 넷이 다 차면 보상을 주고 판을 비워, 다시 처음부터 모을 수 있게 한다.
-// 그래서 "이번엔 6으로 이겨 봐야지" 하고 목표를 갖고 덱을 짜게 된다.
+// 매일 0시(KST)에 초기화된다 — 진행 상태를 미션 상태 안에 두어 날짜가 바뀌면
+// 미션들과 함께 통째로 리셋되게 했다. 따로 관리하면 리셋 시점이 어긋난다.
 //
-// 6 세트는 23장이 필요해 가장 어렵다. 그래서 한 바퀴가 꽤 걸리고,
-// 일일미션(30~80코인)보다 훨씬 크게 준다.
+// 6 세트는 23장이 필요해 가장 어렵다. 하루 안에 넷을 다 채우려면 노려서
+// 덱을 짜야 하므로, 다른 일일미션(30~80코인)보다 훨씬 크게 준다.
 const CYCLE_KINDS = [2, 3, 4, 6];
 const CYCLE_REWARD = 400;
+const CYCLE_ID = 'm_cycle';
 
-// 지금까지 모은 종류 (화면 표시용)
+// 오늘 어떤 종류로 이겼는지
 function cycleProgress(u) {
-  const got = (u && u.cycleSet) || {};
+  const got = (u && u.missions && u.missions.cycle) || {};
   return CYCLE_KINDS.map((k) => ({ kind: k, done: !!got[k] }));
 }
+const cycleCount = (u) => cycleProgress(u).filter((x) => x.done).length;
 
-// 세트 우승 한 건을 기록한다. 넷이 다 차면 보상 + 판 비우기.
+// 세트 우승 한 건을 기록한다. 넷이 다 차면 오늘치 보상.
 // setKind 가 2·3·4·6 이 아니면(무승부·진행도 판정 등) 아무 일도 안 한다.
 function cycleWin(u, setKind) {
   const k = Number(setKind);
   if (!CYCLE_KINDS.includes(k)) return null;
-  u.cycleSet = u.cycleSet || {};
-  const fresh = !u.cycleSet[k];
-  u.cycleSet[k] = true;
-  if (!CYCLE_KINDS.every((x) => u.cycleSet[x])) {
-    return { kind: k, fresh, done: false, progress: cycleProgress(u) };
+  const m = missionState(u);          // 날짜가 바뀌었으면 여기서 리셋된다
+  m.cycle = m.cycle || {};
+  if (m.claimed[CYCLE_ID]) return null;        // 오늘은 이미 받았다
+  const fresh = !m.cycle[k];
+  m.cycle[k] = true;
+  const got = cycleCount(u);
+  if (got < CYCLE_KINDS.length) {
+    return { kind: k, fresh, done: false, got, total: CYCLE_KINDS.length,
+             progress: cycleProgress(u) };
   }
-  // 한 바퀴 완성 — 보상을 주고 처음부터 다시 모으게 한다
-  u.cycleSet = {};
+  m.claimed[CYCLE_ID] = true;
   u.stats = u.stats || {};
-  u.stats.cycle = (u.stats.cycle || 0) + 1;
+  u.stats.cycle = (u.stats.cycle || 0) + 1;    // 칭호용 누적 (초기화 안 됨)
   u.coins = (u.coins || 0) + CYCLE_REWARD;
-  return { kind: k, fresh, done: true, amount: CYCLE_REWARD, total: u.stats.cycle, progress: cycleProgress(u) };
+  return { kind: k, fresh, done: true, amount: CYCLE_REWARD, total: u.stats.cycle,
+           got, progress: cycleProgress(u) };
 }
 
 // 튜토리얼 완료 보상 — 코인 100 (플래그로 1회만)
@@ -1298,13 +1303,20 @@ function missionList(token) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
   const m = missionState(u);
-  return {
-    ok: true,
-    list: m.set.filter(id => MISSIONS[id]).map(id => { const def = MISSIONS[id]; return {
-      id, name: def.name, goal: def.goal, reward: def.reward,
-      prog: Math.min(m.prog[id] || 0, def.goal), claimed: !!m.claimed[id],
-    }; }),
-  };
+  const list = m.set.filter(id => MISSIONS[id]).map(id => { const def = MISSIONS[id]; return {
+    id, name: def.name, goal: def.goal, reward: def.reward,
+    prog: Math.min(m.prog[id] || 0, def.goal), claimed: !!m.claimed[id],
+  }; });
+  // 싸이클링은 매일 고정으로 붙는다 (무작위 3개와 별개).
+  // 진행도를 숫자 하나로 줄이면 "어느 종류가 남았는지" 를 못 보여주므로
+  // 종류별 상태를 같이 내려보낸다.
+  list.push({
+    id: CYCLE_ID, name: '싸이클링 — 네 종류 모두 우승',
+    goal: CYCLE_KINDS.length, reward: CYCLE_REWARD,
+    prog: cycleCount(u), claimed: !!m.claimed[CYCLE_ID],
+    cycle: cycleProgress(u),
+  });
+  return { ok: true, list };
 }
 // 칭호 현황 (진행도 포함)
 function titleList(token) {

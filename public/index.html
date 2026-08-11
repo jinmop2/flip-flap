@@ -812,6 +812,13 @@
     .mis-fill { height:100%; background:linear-gradient(90deg,var(--yel),var(--gold)); border-radius:4px; transition:width .4s; }
     .mis-row.done .mis-fill { background:linear-gradient(90deg,#4ade80,#22c55e); }
     .mis-prog { font-size:.62rem; color:#8a7a80; margin-top:3px; }
+    /* 싸이클링 — 어느 종류가 남았는지 한눈에 (숫자만으론 안 보인다) */
+    .mis-cyc { display:flex; gap:5px; margin-top:4px; }
+    .mis-cyc-k { width:20px; height:20px; border-radius:6px; display:flex;
+      align-items:center; justify-content:center; font-size:.62rem; font-weight:800;
+      color:#6a5a60; background:rgba(0,0,0,.3); border:1px solid rgba(185,141,52,.28); }
+    .mis-cyc-k.on { color:#2a1c06; background:linear-gradient(180deg,#f3d477,#c99a2e);
+      border-color:var(--gold); box-shadow:0 0 8px rgba(255,215,80,.5); }
     .mis-reward { font-size:.8rem; font-weight:800; color:#ffd94a; flex-shrink:0; }
     .mis-row.done .mis-reward { color:#4ade80; }
     /* ── 관전 목록 ── */

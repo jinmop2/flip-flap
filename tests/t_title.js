@@ -128,7 +128,7 @@ console.log('\n④ 쿠폰이 칭호를 준다 · 한 명만 쓴다');
   ok('관리자 화면에 코드 지정이 있다', /id="code"/.test(srv));
 }
 
-console.log('\n⑤ 싸이클링 (2·3·4·6 세트로 각각 우승)');
+console.log('\n⑤ 싸이클링 (일일퀴스트)');
 {
   ok('필요한 종류가 2·3·4·6', JSON.stringify(a.CYCLE_KINDS) === JSON.stringify([2, 3, 4, 6]));
   ok('보상이 400', a.CYCLE_REWARD === 400);
@@ -140,11 +140,10 @@ console.log('\n⑤ 싸이클링 (2·3·4·6 세트로 각각 우승)');
 
   const c1 = win(2).rewards.cycle;
   ok('2 세트 우승이 기록된다', !!(c1 && c1.fresh && !c1.done && c1.kind === 2), JSON.stringify(c1));
-  ok('진행도가 1/4', c1.progress.filter((x) => x.done).length === 1);
+  ok('진행도가 1/4', c1.got === 1);
 
   const same = win(2).rewards.cycle;
-  ok('같은 종류를 또 이겨도 안 늘어난다', same && !same.fresh && !same.done);
-  ok('진행도 그대로 1/4', same.progress.filter((x) => x.done).length === 1);
+  ok('같은 종류를 또 이겨도 안 늘어난다', same && !same.fresh && !same.done && same.got === 1);
 
   win(3); win(4);
   ok('3/4 까지는 보상 없음', (u.stats.cycle || 0) === 0);
@@ -153,38 +152,53 @@ console.log('\n⑤ 싸이클링 (2·3·4·6 세트로 각각 우승)');
   ok('넷을 채우면 완성', !!(done && done.done), JSON.stringify(done));
   ok('400 코인을 준다', a.byToken(t).coins - before >= 400,
      `${before} → ${a.byToken(t).coins}`);
-  ok('횟수가 쌓인다', a.byToken(t).stats.cycle === 1);
+  ok('누적 횟수가 쌓인다', a.byToken(t).stats.cycle === 1);
   ok('칭호가 풀린다', !!a.byToken(t).titles.t_cycle1);
-  ok('판이 비워져 다시 모은다', a.byToken(t).cycleSet && Object.keys(a.byToken(t).cycleSet).length === 0);
 
-  // 두 바퀴째
-  win(2); win(3); win(4);
-  const two = win(6).rewards.cycle;
-  ok('두 바퀴째도 된다', !!(two && two.done) && a.byToken(t).stats.cycle === 2);
+  // 하루에 한 번만
+  const again = win(2);
+  ok('같은 날 또 완성해도 안 준다', !again.rewards.cycle,
+     JSON.stringify(again.rewards.cycle));
+  ok('누적도 안 늘어난다', a.byToken(t).stats.cycle === 1);
 
-  // 세트 우승이 아닌 판은 안 센다
+  // 날짜가 바뀌면 초기화된다 — 미션 상태에 얹어 뒀으므로 같이 리셋된다
+  a.byToken(t).missions.day = '2000-01-01';
+  const nextDay = win(2).rewards.cycle;
+  ok('다음 날 다시 시작된다', !!(nextDay && nextDay.fresh && nextDay.got === 1),
+     JSON.stringify(nextDay));
+
+  // 미션 목록에 붙어 나오는가
+  const ml = a.missionList(t);
+  const row = ml.list.find((x) => x.id === 'm_cycle');
+  ok('일일미션 목록에 있다', !!row, JSON.stringify(ml.list.map((x) => x.id)));
+  ok('무작위 3개 + 싸이클링', ml.list.length === 4, String(ml.list.length));
+  ok('종류별 상태를 같이 준다', Array.isArray(row.cycle) && row.cycle.length === 4);
+  ok('2 는 완료로 표시', row.cycle.find((c) => c.kind === 2).done === true);
+  ok('3 은 아직', row.cycle.find((c) => c.kind === 3).done === false);
+  ok('목표는 4, 보상은 400', row.goal === 4 && row.reward === 400);
+
+  // 세지 않는 경우
   const t2 = a.signup('cycletwo', 'pw1234', '싸이클둘').token;
-  const noSet = a.recordResult(t2, 'win', { vsBot: true, difficulty: 'easy', turns: 9, playtimeSec: 120 });
-  ok('세트 우승이 아니면 무시', !noSet.rewards.cycle);
-  const odd = a.recordResult(t2, 'win', { vsBot: true, difficulty: 'easy', turns: 9, playtimeSec: 120, setKind: 5 });
-  ok('없는 종류(5)는 무시', !odd.rewards.cycle);
-  const lose = a.recordResult(t2, 'loss', { vsBot: true, difficulty: 'easy', turns: 9, playtimeSec: 120, setKind: 2 });
-  ok('진 판은 안 센다', !lose.rewards.cycle);
+  ok('세트 우승이 아니면 무시',
+     !a.recordResult(t2, 'win', { vsBot: true, difficulty: 'easy', turns: 9, playtimeSec: 120 }).rewards.cycle);
+  ok('없는 종류(5)는 무시',
+     !a.recordResult(t2, 'win', { vsBot: true, difficulty: 'easy', turns: 9, playtimeSec: 120, setKind: 5 }).rewards.cycle);
+  ok('진 판은 안 센다',
+     !a.recordResult(t2, 'loss', { vsBot: true, difficulty: 'easy', turns: 9, playtimeSec: 120, setKind: 2 }).rewards.cycle);
 
-  // 어뷰징으로 걸린 판은 세면 안 된다 — 짧은 판을 돌려 세트만 갈아 끼우는 걸 막는다
   const t3 = a.signup('cyclebad', 'pw1234', '싸이클셋').token;
   const short = a.recordResult(t3, 'win', { vsBot: false, turns: 2, playtimeSec: 5, setKind: 2 });
-  ok('짧은 판은 안 센다', !short.rewards.cycle && !(a.byToken(t3).cycleSet || {})[2]);
+  ok('짧은 판은 안 센다', !short.rewards.cycle);
 
   // 서버가 세트 종류를 실제로 넘기는가
   ok('세트 우승 경로에서만 넘긴다', /finishStats\(room, winner, false, p1Set \|\| p2Set\)/.test(srv));
   ok('recordResult 로 전달된다', /oppUid, forfeit, setKind,/.test(srv));
   ok('시간패·탈주는 안 넘긴다', /function finishStats\(room, winner, forfeit = false, setKind = null\)/.test(srv));
 
-  // 보상 계산은 전부 서버
-  ok('클라는 받아 그리기만 한다', /r\.cycle && r\.cycle\.done/.test(cli));
+  // 화면
+  ok('미션 화면이 종류별로 그린다', /mis-cyc-k/.test(cli));
   ok('클라가 금액을 서버로 안 보낸다', !/emit\('cycle'/.test(cli));
-  ok('프로필에 진행도가 실린다', /cycle: cycleProgress\(u\)/.test(accSrc));
+  ok('진행 상태가 미션 안에 있다', /m\.cycle = m\.cycle \|\| \{\}/.test(accSrc));
 }
 
 console.log('\n⑥ 빨리 끝난 판 기준');
