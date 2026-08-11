@@ -468,10 +468,14 @@ function showRewards() {
   }
   if (r.blocked) {
     const msg = r.reason === 'short' ? '너무 짧은 판 — 보상 없음'
+              : r.reason === 'sameip' ? '같은 접속에서의 대전 — 보상 없음'
               : r.reason === 'friendly' ? '같은 접속·친선 대전 — 보상 없음'
               : r.reason === 'repeat' ? '같은 상대 반복 대전 — 보상 없음'
               : '보상 지급 제외';
     add('bd-warn', `${ico('⚠')} ${esc(msg)}`, d, true); d += 250;
+  } else if (r.noRpFriendly) {
+    // 코인·경험치는 나갔는데 RP 만 안 오른 이유를 알려준다
+    add('bd-warn', `${ico('⚠')} 친선 대전 — 코인·경험치만, RP는 랭킹전에서`, d, true); d += 250;
   }
   // 진행도 노출 — 이전→이후 게이지 상승 모션 (scaleX = GPU 합성 전용, 리플로우 없음)
   if (myAccount && !myAccount.guest) {

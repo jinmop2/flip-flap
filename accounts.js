@@ -1313,9 +1313,19 @@ function recordResult(token, result, opts = {}) {
   const forfeitLoss = opts.forfeit && result === 'loss';
   const quickBotWin = opts.vsBot && result === 'win';   // AI전 승리는 빨리 이겨도 인정 (실력)
   if (tooShort && !forfeitLoss && !quickBotWin) { blocked = true; reason = 'short'; }
-  // 3. 자만추/저격 방지 (PvP 한정): 같은 IP·친선전, 또는 같은 상대와 하루 3판 초과
+  // 3. 자만추/저격 방지 (PvP 한정)
+  //
+  // 친선전(비밀번호 방)은 코인·경험치를 준다. 친구끼리 하는 판을 통째로
+  // 보상에서 빼면 "친구랑 하면 손해" 가 되어 아무도 안 쓴다.
+  // 대신 RP 는 안 준다 — 랭킹은 RP 순서라 짜고 치면 순위가 통째로 망가진다.
+  // 코인·경험치는 각자 쌓는 것이라 짜고 쳐도 남에게 피해가 없다.
+  // 무한 파밍은 아래 세 겹이 막는다: 5턴·30초 최소 진행, 같은 상대 하루 3판.
+  //
+  // 같은 IP 는 성격이 다르다. 친구가 아니라 한 사람이 계정 두 개를 돌리는 것에
+  // 가깝고, 이건 상대 동의가 필요 없어 무한히 찍어낼 수 있다 — 그대로 막는다.
+  const noRpFriendly = !opts.vsBot && !!opts.friendly;
   if (!opts.vsBot && !blocked) {
-    if (opts.sameIp || opts.friendly) { blocked = true; reason = 'friendly'; }
+    if (opts.sameIp) { blocked = true; reason = 'sameip'; }
     else if (opts.oppUid && bumpMatchCount(u.id, opts.oppUid) > MATCH_LIMIT) { blocked = true; reason = 'repeat'; }
   }
 
@@ -1355,7 +1365,9 @@ function recordResult(token, result, opts = {}) {
   if (result === 'win') missions.push(...missionEvent(u, 'win'));
   if (winnable && u.winStreak === 2) missions.push(...missionEvent(u, 'streak2'));
 
-  let coins = base.coins || 0, xp = base.xp || 0, rp = opts.noRank ? 0 : (base.rp || 0);   // 봇매치 등은 RP 미반영
+  // RP 는 랜덤 매칭에서만. 봇매치·아이템전·친선전은 코인·경험치만 준다.
+  let coins = base.coins || 0, xp = base.xp || 0;
+  let rp = (opts.noRank || noRpFriendly) ? 0 : (base.rp || 0);
   let firstWin = 0, streak = 0;
 
   if (blocked) {
@@ -1365,7 +1377,7 @@ function recordResult(token, result, opts = {}) {
     if (winnable && u.lastWinIdx !== today) { firstWin = FIRST_WIN_BONUS; u.lastWinIdx = today; }   // 하루 첫 승
     if (winnable && u.winStreak >= 2) streak = Math.min((u.winStreak - 1) * 10, 50);                // 연승 보너스
     // 플래티넘(500+) 양학 방지: 멀티 3연승 이상 시 RP 가중치 +10 → 강자를 빠르게 상위 티어로
-    if (!opts.vsBot && result === 'win' && u.winStreak >= 3 && (u.rp || 0) >= 500) rp += PLATE_RP_WEIGHT;
+    if (!opts.vsBot && !noRpFriendly && result === 'win' && u.winStreak >= 3 && (u.rp || 0) >= 500) rp += PLATE_RP_WEIGHT;
   }
   // 명패 효과 — 루비 명패는 연승 보너스를 더 준다
   const fx = bonusOf(u);
@@ -1414,7 +1426,7 @@ function recordResult(token, result, opts = {}) {
     profile: profileOf(u),
     rewards: {
       coins, xp, rp, firstWin, streak, clanBonus, plateCoin, plateXp, setName: fx.setName, levelCoins,
-      streakCount: u.winStreak, blocked, reason,
+      streakCount: u.winStreak, blocked, reason, noRpFriendly,
       levelUp: afterLevel > beforeLevel ? afterLevel : 0,
       rankUp: (afterRank !== beforeRank && rp > 0) ? afterRank : 0,
       missions, titles, milestones, cycle,
