@@ -19,11 +19,86 @@
   const top4 = (c) => c && c.kind === 2 && c.grade === 1;
   const bot4 = (c) => c && c.kind === 6 && c.grade === 13;
 
+  // 내 카드백 클래스 (상점에서 산 것). 2인전과 같은 표를 쓴다.
+  function myBackClass() {
+    try {
+      const p = (typeof myAccount !== 'undefined') && myAccount;
+      return (p && typeof CB_CLASS !== 'undefined' && CB_CLASS[p.cardBack]) || null;
+    } catch (_) { return null; }
+  }
+  // 테이블·카드앞면 스킨을 다인전 화면에도 입힌다
+  function applySkins4() {
+    const g = document.getElementById('game4'); if (!g) return;
+    try {
+      if (typeof TABLE_CLS !== 'undefined') g.classList.remove(...Object.values(TABLE_CLS));
+      if (typeof FACE_CLS !== 'undefined') g.classList.remove(...Object.values(FACE_CLS));
+      const p = (typeof myAccount !== 'undefined') && myAccount; if (!p) return;
+      if (typeof TABLE_CLS !== 'undefined' && TABLE_CLS[p.table]) g.classList.add(TABLE_CLS[p.table]);
+      if (typeof FACE_CLS !== 'undefined' && FACE_CLS[p.cardFace]) g.classList.add(FACE_CLS[p.cardFace]);
+    } catch (_) {}
+  }
+
+  // 덱 더미 — 남은 장수만큼 겹쳐 쌓고, 뽑을 수 있을 때만 빛난다
+  function renderDeck4(n, drawable) {
+    const el = $('q-deckstack'); if (!el) return;
+    const sig = n + '|' + drawable + '|' + (myBackClass() || '');
+    if (fx.deckSig !== sig) {
+      fx.deckSig = sig;
+      el.innerHTML = '';
+      if (n > 0) {
+        const layers = Math.min(n, 5);
+        for (let i = 0; i < layers; i++) {
+          const b = card4(null);
+          b.style.transform = `translate(${i * 2}px, ${-i * 2}px)`;
+          b.style.zIndex = String(i);
+          el.appendChild(b);
+        }
+        const c = document.createElement('div');
+        c.className = 'q-dcount'; c.textContent = `덱 ${n}장`;
+        el.appendChild(c);
+      }
+    }
+    el.style.display = n > 0 ? '' : 'none';
+    el.classList.toggle('drawable', !!drawable && n > 0);
+    el.onclick = drawable && n > 0
+      ? () => { sfx('place'); socket.emit('g4_act', { type: 'draw' }); }
+      : null;
+  }
+
+  // 고른 카드에 테두리를 주고, 확정 버튼 문구를 맞춘다
+  let curPick = null;      // 지금 무엇을 고르는 중인가 ('offer' | 'bid' | null)
+  function paintSel() {
+    const hand = $('q-myhand'); if (!hand) return;
+    hand.querySelectorAll('.card').forEach((el) => {
+      el.classList.toggle('sel', !!sel4 && String(el.dataset.id) === String(sel4.id));
+    });
+    const btn = $('q-confirm'); if (!btn) return;
+    const on = !!(curPick && sel4);
+    btn.classList.toggle('show', on);
+    if (on) {
+      btn.textContent = curPick === 'offer'
+        ? `${sel4.kind}번 (${sel4.grade}등급) 출품 확정`
+        : `${sel4.kind}번 (${sel4.grade}등급) 배팅 확정`;
+    }
+  }
+  // 확정 — 여기서만 서버로 나간다
+  window.q4Confirm = function () {
+    if (!curPick || !sel4) return;
+    const id = sel4.id, type = curPick;
+    sel4 = null; curPick = null;              // 연타로 두 번 나가지 않게 먼저 비운다
+    paintSel();
+    sfx('place');
+    socket.emit('g4_act', { type: type === 'offer' ? 'offer' : 'bid', cardId: id });
+  };
+
   function card4(card, opts = {}) {
     const el = document.createElement('div');
     el.className = 'card';
     if (!card) {
       el.classList.add('back');
+      // 산 카드백을 판에서도 쓴다. 예전엔 안 붙여서 다인전만 기본 뒷면이었다.
+      if (opts.backOf !== undefined) { if (opts.backOf) el.classList.add(opts.backOf); }
+      else { const c = myBackClass(); if (c) el.classList.add(c); }
       el.innerHTML = '<span class="bf flip">FLIP</span><span class="bf flap">FLAP</span>';
       return el;
     }
@@ -125,7 +200,9 @@
   // 골라 연출하려면 직전 상태를 따로 기억해야 한다. 안 그러면 같은 카드가 매번
   // 다시 뒤집히고, 딜이 계속 반복된다.
   const fx = { dealt: false, centerId: null, offerId: null, revealed: false,
-               settledTurn: null, acqSeen: new Set() };
+               settledTurn: null, acqSeen: new Set(), handSig: null, deckSig: null };
+  // 고른 카드 (아직 안 낸 것). 서버 상태가 와도 유지된다.
+  let sel4 = null;
   function resetFx() {
     fx.dealt = false; fx.centerId = null; fx.offerId = null;
     fx.revealed = false; fx.settledTurn = null; fx.acqSeen = new Set();
@@ -287,8 +364,8 @@
 
     // 상태 문구 + 손패 선택 가능 여부
     let msg = '', pickMode = null;
-    if (s.phase === 'draw') msg = iAmAuc ? '내가 진행자! 덱을 눌러 카드를 공개하세요' : `${s.seats[s.auctioneer].name} 님이 카드를 공개하는 중…`;
-    else if (s.phase === 'offer') { if (iAmAuc) { msg = '경매에 내놓을 카드를 고르세요'; pickMode = 'offer'; } else msg = `${s.seats[s.auctioneer].name} 님이 출품하는 중…`; }
+    if (s.phase === 'draw') msg = iAmAuc ? '내가 진행자! 덱을 눌러 카드를 뽑으세요' : `${s.seats[s.auctioneer].name} 님이 카드를 공개하는 중…`;
+    else if (s.phase === 'offer') { if (iAmAuc) { msg = '내놓을 카드를 고른 뒤 확정을 누르세요'; pickMode = 'offer'; } else msg = `${s.seats[s.auctioneer].name} 님이 출품하는 중…`; }
     else if (s.phase === 'choose_type') msg = iAmAuc ? '경매 방식을 고르세요' : `${s.seats[s.auctioneer].name} 님이 방식을 고르는 중…`;
     else if (s.phase === 'bidding') {
       const closed = a && a.closed;
@@ -305,7 +382,7 @@
           pickMode = 'bid';
         }
       }
-      else { msg = '배팅 카드를 고르세요'; pickMode = 'bid'; }
+      else { msg = '배팅 카드를 고른 뒤 확정을 누르세요'; pickMode = 'bid'; }
     }
     else if (s.phase === 'reveal') msg = '두구두구… 공개!';
     else if (s.phase === 'settled' && s.result) {
@@ -326,24 +403,42 @@
     $('q-status').textContent = msg;
     $('q-typeBtns').classList.toggle('show', s.phase === 'choose_type' && iAmAuc);
 
-    // 내 손패
-    const hand = $('q-myhand'); hand.innerHTML = '';
+    // ── 내 손패 ──
+    // 고르기와 내기를 나눴다. 예전엔 카드를 누르는 순간 바로 나가서,
+    // 잘못 눌러도 되돌릴 수 없고 서버 상태가 도착해 손패가 다시 그려지는
+    // 순간에 탭이 통째로 사라졌다 ("카드가 안 내진다").
+    //
+    // 손패를 매번 다시 만들지도 않는다. 상태는 자주 오는데 그때마다 DOM 을
+    // 갈아엎으면 누르는 도중에 대상이 사라진다. 내용이 바뀔 때만 다시 만든다.
+    curPick = pickMode;            // 확정 버튼이 무엇을 낼지 알아야 한다
+    const hand = $('q-myhand');
     const sorted = [...s.myHand].sort((x, y) => (x.kind * 100 + x.grade) - (y.kind * 100 + y.grade));
-    for (const c of sorted) {
-      const el = card4(c, {
-        pick: !!pickMode,
-        onPick: (card) => {
-          if (pickMode === 'offer') socket.emit('g4_act', { type: 'offer', cardId: card.id });
-          else if (pickMode === 'bid') socket.emit('g4_act', { type: 'bid', cardId: card.id });
-        },
-      });
-      // 2인전과 같은 부채꼴 — 카드를 칸에 담아야 회전·겹침이 카드 자체 transform 과 안 부딪힌다
-      const slot = document.createElement('div');
-      slot.className = 'fan-slot';
-      slot.appendChild(el);
-      hand.appendChild(slot);
+    const handSig = sorted.map((c) => c.id).join(',') + '|' + (pickMode || '');
+    if (fx.handSig !== handSig) {
+      fx.handSig = handSig;
+      hand.innerHTML = '';
+      for (const c of sorted) {
+        const el = card4(c, {
+          pick: !!pickMode,
+          onPick: (card) => {
+            if (!pickMode) return;
+            sel4 = (sel4 && sel4.id === card.id) ? null : card;   // 다시 누르면 해제
+            sfx('select');
+            paintSel();
+          },
+        });
+        // 2인전과 같은 부채꼴 — 카드를 칸에 담아야 회전·겹침이 카드 자체 transform 과 안 부딪힌다
+        const slot = document.createElement('div');
+        slot.className = 'fan-slot';
+        slot.appendChild(el);
+        hand.appendChild(slot);
+      }
+      if (typeof fanRow === 'function') fanRow(hand, false);
     }
-    if (typeof fanRow === 'function') fanRow(hand, false);
+    // 고른 카드가 손패에서 사라졌으면(냈거나 판이 바뀌었으면) 선택도 푼다
+    if (sel4 && !sorted.some((c) => String(c.id) === String(sel4.id))) sel4 = null;
+    if (!pickMode) sel4 = null;
+    paintSel();
     // 첫 손패는 덱에서 한 장씩 날아오게 — 2인전과 같은 연출
     if (!fx.dealt && sorted.length >= 6 && s.turn <= 1) {
       fx.dealt = true;
@@ -353,10 +448,12 @@
       for (let i = 0; i < sorted.length; i++) setTimeout(() => sfx('deal'), 40 + i * STAGGER);
     }
 
-    // 덱 클릭 = 카드 공개
-    $('q-center').style.cursor = (s.phase === 'draw' && iAmAuc) ? 'pointer' : 'default';
-    $('q-center').onclick = (s.phase === 'draw' && iAmAuc)
-      ? () => socket.emit('g4_act', { type: 'draw' }) : null;
+    // ── 덱 ──
+    // 2인전처럼 덱 더미를 눌러 뽑는다. 예전엔 "공개 카드" 칸을 그대로 눌렀는데,
+    // 뽑기 전에도 그 자리에 카드가 놓여 있어 무엇을 누르는 건지 안 읽혔다.
+    renderDeck4(s.deckLeft, s.phase === 'draw' && iAmAuc);
+    $('q-center').style.cursor = 'default';
+    $('q-center').onclick = null;
 
     // 남은 카드 패널이 열려 있으면 같이 갱신
     if ($('q-leftPanel').classList.contains('show')) renderLeft();
@@ -465,6 +562,7 @@
     q4Live = true; q4 = null; q4Room = null; q4Pend = null;
     lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
     document.body.classList.add('quad4', 'q-waiting');
+    applySkins4();
     $('q-turn').textContent = '대기 중'; $('q-deck').textContent = '';
     $('q-status').textContent = '자리에 앉는 중…';
     sfx('deal');
@@ -482,6 +580,7 @@
     window.q4Close();
     $('q-over').classList.remove('show');
     document.body.classList.add('quad4');
+    applySkins4();
     q4Live = true; q4Room = null; lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
     $('q-status').textContent = '자리 배치 중…';
     sfx('deal');

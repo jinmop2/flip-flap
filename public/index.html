@@ -1087,6 +1087,36 @@
     .q-slabel { font-size:.55rem; color:#9fb8a8; font-weight:700; }
     .q-vs { font-size:.62rem; font-weight:800; color:var(--gold); text-align:center; min-width:52px; }
 
+    /* ── 덱 스택 — 2인전처럼 눌러서 뽑는다 ──
+       예전엔 "공개 카드" 칸을 그대로 눌렀다. 뽑기 전에도 그 자리에 카드가
+       놓여 있어 무엇을 누르는 건지 읽히지 않았다. */
+    #q-deckstack { position:relative; width:46px; height:64px; transition:transform .15s; }
+    #q-deckstack .card { position:absolute; top:0; left:0; width:46px; height:64px;
+      box-shadow:0 2px 6px rgba(0,0,0,.55); }
+    #q-deckstack .q-dcount { position:absolute; bottom:-16px; left:50%; transform:translateX(-50%);
+      font-size:.5rem; color:rgba(255,255,255,.55); font-weight:700; white-space:nowrap; }
+    #q-deckstack.drawable { cursor:pointer; }
+    #q-deckstack.drawable:hover { transform:translateY(-4px); }
+    #q-deckstack.drawable::after {
+      content:''; position:absolute; inset:-5px; border-radius:12px; pointer-events:none;
+      box-shadow:0 0 16px 3px rgba(200,160,0,.6);
+      animation:deckPulse 1.4s ease-in-out infinite; will-change:opacity; }
+    #q-deckstack.drawable .q-dcount { color:#ffe9a8; }
+    .q-deckslot { margin-right:2px; }
+
+    /* ── 배팅 확정 버튼 ──
+       예전엔 카드를 누르는 순간 바로 나갔다. 잘못 눌러도 되돌릴 수 없고,
+       서버 상태가 도착해 손패가 다시 그려지는 순간에 탭이 통째로 사라졌다
+       ("카드가 안 내진다"). 이제 고르기와 내기를 분리한다. */
+    #q-confirm { display:none; margin:0 auto 6px; padding:9px 22px; border-radius:11px;
+      border:1.5px solid var(--gold); background:linear-gradient(180deg,#f3d477,#c99a2e);
+      color:#2a1c06; font-family:inherit; font-size:.82rem; font-weight:800;
+      box-shadow:0 3px 12px rgba(200,160,0,.4); cursor:pointer; }
+    #q-confirm.show { display:block; }
+    #q-confirm:active { transform:scale(.96); }
+    #q-myhand .card.sel { outline:2.5px solid var(--gold); outline-offset:2px;
+      box-shadow:0 0 18px rgba(255,215,80,.75); }
+
     /* 배팅 카드는 각자 자기 앞에 놓인다 — 상대는 패널 바로 아래, 나는 손패 위 */
     /* 비어 있을 때 높이를 0으로 접으면 카드가 놓이는 순간 화면이 통째로 밀린다.
        늘 카드 한 장 높이를 잡아둔다. */
@@ -1858,52 +1888,52 @@
       outline:2px solid #3a281a;
     }
     /* ── 테이블 스킨 (배경 그라데만 교체) ── */
-    #game.tbl-blue   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #1a3a5a 0%, #0f2438 78%, #08131f 100%); }
-    #game.tbl-purple { background:radial-gradient(ellipse 90% 70% at 50% 50%, #3d2350 0%, #251533 78%, #140b1c 100%); }
-    #game.tbl-gold   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #5a4410 0%, #3a2c0a 78%, #1e1605 100%); border-color:#4a3410; }
-    #game.tbl-forest { background:radial-gradient(ellipse 90% 70% at 50% 50%, #14532d 0%, #0d3a20 78%, #061f10 100%); }
-    #game.tbl-crystal { background:
+    #game.tbl-blue   , #game4.tbl-blue   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #1a3a5a 0%, #0f2438 78%, #08131f 100%); }
+    #game.tbl-purple , #game4.tbl-purple { background:radial-gradient(ellipse 90% 70% at 50% 50%, #3d2350 0%, #251533 78%, #140b1c 100%); }
+    #game.tbl-gold   , #game4.tbl-gold   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #5a4410 0%, #3a2c0a 78%, #1e1605 100%); border-color:#4a3410; }
+    #game.tbl-forest , #game4.tbl-forest { background:radial-gradient(ellipse 90% 70% at 50% 50%, #14532d 0%, #0d3a20 78%, #061f10 100%); }
+    #game.tbl-crystal , #game4.tbl-crystal { background:
       linear-gradient(118deg, rgba(255,255,255,.05) 0 12%, transparent 12.4%),
       linear-gradient(-142deg, rgba(190,240,255,.06) 0 22%, transparent 22.4%),
       radial-gradient(ellipse 90% 70% at 50% 50%, #235a75 0%, #123a4e 78%, #08202c 100%);
       border-color:#2f6f8e; }
-    #game.tbl-obsidian { background:
+    #game.tbl-obsidian , #game4.tbl-obsidian { background:
       linear-gradient(72deg, transparent 0 48%, rgba(200,160,70,.10) 48.3% 48.9%, transparent 49.2%),
       radial-gradient(ellipse 90% 70% at 50% 50%, #1e1e28 0%, #101018 78%, #06060a 100%);
       border-color:#4a3a18; }
-    #game.tbl-shard { background:
+    #game.tbl-shard , #game4.tbl-shard { background:
       linear-gradient(124deg, rgba(255,255,255,.055) 0 10%, transparent 10.4%),
       linear-gradient(-66deg, rgba(170,230,255,.07) 0 20%, transparent 20.4%),
       linear-gradient(198deg, rgba(255,255,255,.04) 0 32%, transparent 32.4%),
       radial-gradient(ellipse 90% 70% at 50% 50%, #1e5776 0%, #103247 78%, #071a26 100%);
       border-color:#3d86ad; }
-    #game.tbl-hanji { background:
+    #game.tbl-hanji , #game4.tbl-hanji { background:
       repeating-linear-gradient(92deg, rgba(120,90,50,.05) 0 1px, transparent 1px 6px),
       radial-gradient(ellipse 90% 70% at 50% 50%, #6a5a42 0%, #46392a 78%, #2a2118 100%);
       border-color:#7a6242; }
     /* ── 카드 앞면 스킨 (내 시야 카드 숫자 테마) ── */
-    #game.cf-neon .card .c-num { color:#6ffcff; text-shadow:0 0 8px rgba(90,240,255,.8),0 0 2px rgba(90,240,255,.9); }
-    #game.cf-neon .card .c-rank { color:#ff8ef0; }
-    #game.cf-classic .card .c-num { font-family:'Georgia','Times New Roman',serif; font-weight:700; color:#f4ecd8; text-shadow:0 1px 2px rgba(0,0,0,.5); }
-    #game.cf-classic .card .c-rank { font-family:'Georgia',serif; }
-    #game.cf-gold .card .c-num { color:#ffd94a; text-shadow:0 0 8px rgba(255,200,60,.7),0 1px 2px rgba(0,0,0,.5); }
-    #game.cf-gold .card .c-rank { color:#ffe9a8; }
+    #game.cf-neon .card .c-num , #game4.cf-neon .card .c-num { color:#6ffcff; text-shadow:0 0 8px rgba(90,240,255,.8),0 0 2px rgba(90,240,255,.9); }
+    #game.cf-neon .card .c-rank , #game4.cf-neon .card .c-rank { color:#ff8ef0; }
+    #game.cf-classic .card .c-num , #game4.cf-classic .card .c-num { font-family:'Georgia','Times New Roman',serif; font-weight:700; color:#f4ecd8; text-shadow:0 1px 2px rgba(0,0,0,.5); }
+    #game.cf-classic .card .c-rank , #game4.cf-classic .card .c-rank { font-family:'Georgia',serif; }
+    #game.cf-gold .card .c-num , #game4.cf-gold .card .c-num { color:#ffd94a; text-shadow:0 0 8px rgba(255,200,60,.7),0 1px 2px rgba(0,0,0,.5); }
+    #game.cf-gold .card .c-rank , #game4.cf-gold .card .c-rank { color:#ffe9a8; }
     /* 파편 앞면 — 숫자가 두 조각으로 어긋나 겹쳐 보인다 */
-    #game.cf-shard .card .c-num { color:#eaf9ff;
+    #game.cf-shard .card .c-num , #game4.cf-shard .card .c-num { color:#eaf9ff;
       text-shadow:1.6px -1.2px 0 rgba(120,205,245,.95), -1.6px 1.2px 0 rgba(40,120,175,.95),
                   0 0 10px rgba(140,220,255,.85), 0 1px 2px rgba(0,30,45,.6); }
-    #game.cf-shard .card .c-rank { color:#a8dcff; text-shadow:1px -.8px 0 rgba(60,150,200,.8); }
-    #game.cf-crystal .card .c-num { color:#dffaff; text-shadow:0 0 9px rgba(120,225,255,.9), 0 1px 2px rgba(0,30,45,.6); }
-    #game.cf-crystal .card .c-rank { color:#a8e8ff; }
+    #game.cf-shard .card .c-rank , #game4.cf-shard .card .c-rank { color:#a8dcff; text-shadow:1px -.8px 0 rgba(60,150,200,.8); }
+    #game.cf-crystal .card .c-num , #game4.cf-crystal .card .c-num { color:#dffaff; text-shadow:0 0 9px rgba(120,225,255,.9), 0 1px 2px rgba(0,30,45,.6); }
+    #game.cf-crystal .card .c-rank , #game4.cf-crystal .card .c-rank { color:#a8e8ff; }
     .shop-cfprev.cfp-crystal { color:#dffaff; text-shadow:0 0 8px rgba(120,225,255,.9); }
     .shop-cfprev.cfp-shard { color:#eaf9ff; text-shadow:1.5px -1px 0 rgba(120,205,245,.9), -1.5px 1px 0 rgba(40,120,175,.9), 0 0 9px rgba(140,220,255,.8); }
-    #game.cf-obsidian .card .c-num { color:#e8c98a; text-shadow:0 0 8px rgba(200,160,70,.7), 0 1px 2px rgba(0,0,0,.7); }
-    #game.cf-obsidian .card .c-rank { color:#f0dca8; }
+    #game.cf-obsidian .card .c-num , #game4.cf-obsidian .card .c-num { color:#e8c98a; text-shadow:0 0 8px rgba(200,160,70,.7), 0 1px 2px rgba(0,0,0,.7); }
+    #game.cf-obsidian .card .c-rank , #game4.cf-obsidian .card .c-rank { color:#f0dca8; }
     .shop-cfprev.cfp-obsidian { color:#e8c98a; text-shadow:0 0 8px rgba(200,160,70,.7); }
     /* 먹글씨 — 붓으로 쓴 느낌이라 세리프에 살짝 기울인다 */
-    #game.cf-hanji .card .c-num { font-family:Georgia,'Times New Roman',serif; color:#2a1d10;
+    #game.cf-hanji .card .c-num , #game4.cf-hanji .card .c-num { font-family:Georgia,'Times New Roman',serif; color:#2a1d10;
       text-shadow:0 1px 0 rgba(255,250,235,.35); transform:skewX(-4deg); }
-    #game.cf-hanji .card .c-rank { font-family:Georgia,serif; color:#4a3418; }
+    #game.cf-hanji .card .c-rank , #game4.cf-hanji .card .c-rank { font-family:Georgia,serif; color:#4a3418; }
     .shop-cfprev.cfp-hanji { font-family:Georgia,'Times New Roman',serif; color:#2a1d10; }
     /* 펠트 위 미세 무늬 */
     #game::before {
@@ -3339,6 +3369,7 @@
     </div>
     <div id="q-leftPanel"><div class="q-lhead">아직 안 나온 카드 &nbsp;<span class="q-lkey mine">내 손패</span> <span class="q-lkey gone">이미 나옴</span></div><div id="q-left"></div></div>
     <div id="q-mat">
+      <div class="q-slot q-deckslot"><div class="q-slabel">덱</div><div id="q-deckstack"></div></div>
       <div class="q-slot"><div class="q-slabel">공개 카드</div><div class="q-scard" id="q-center"></div></div>
       <div class="q-vs" id="q-typeTag"></div>
       <div class="q-slot"><div class="q-slabel">출품 카드</div><div class="q-scard" id="q-offer"></div></div>
@@ -3356,6 +3387,7 @@
 
   <!-- 하단: 나 -->
   <div id="q-me">
+    <button id="q-confirm" onclick="q4Confirm()"></button>
     <div id="q-mybid"></div>
     <div id="q-myacq"></div>
     <div id="q-myhand"></div>

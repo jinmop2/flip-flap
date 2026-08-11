@@ -449,7 +449,17 @@ function attach4(io) {
       const roomId = socket.g4room, r = rooms4[roomId];
       if (!r || r.dead) return;
       const me = socket.g4seat;
-      if (me === null || me === undefined || r.seats[me].sid !== socket.id) return;
+      if (me === null || me === undefined || !r.seats[me]) return;
+      // 소켓이 끊겼다 붙으면 id 가 바뀐다. 자리에 적힌 옛 id 와 다르다고 입력을
+      // 통째로 버리면, 그 사람은 아무것도 못 내고 시간만 흘러 AI 가 대신 둔다
+      // ("카드가 안 내진다"의 정체). 자리 임자인지는 서버가 직접 심어 둔
+      // socket.g4room/g4seat 로만 판단하므로, 다시 이어 붙여 준다.
+      const seat = r.seats[me];
+      if (seat.sid !== socket.id) {
+        if (seat.isBot) return;                 // 이미 AI 가 넘겨받은 자리는 못 돌려준다
+        seat.sid = socket.id; seat.orphanAt = null;
+        dbg('자리 다시 연결', roomId, 'seat=' + me);
+      }
       const g = r.game;
       let ok = false;
       if (data.type === 'draw' && g.phase === 'draw' && g.auctioneer === me) ok = G.draw(g);
