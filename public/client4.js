@@ -70,8 +70,35 @@
   function paintSel() {
     const hand = $('q-myhand'); if (!hand) return;
     hand.querySelectorAll('.card').forEach((el) => {
-      el.classList.toggle('sel', !!sel4 && String(el.dataset.id) === String(sel4.id));
+      const on = !!sel4 && String(el.dataset.id) === String(sel4.id);
+      el.classList.toggle('sel', on);
+      // 부채꼴 회전은 카드 자체 transform 에 걸려 있다. 들어 올리는 건 칸에 준다.
+      if (el.parentElement) el.parentElement.classList.toggle('sel', on);
     });
+    // 고른 카드를 배팅 자리에 미리 올린다 — 2인전과 같은 결.
+    // 예전엔 확정을 눌러야 그제야 나타나서, 무엇을 내려는지 판에서 안 보였다.
+    // render 가 아니라 여기서 하는 이유: 고르는 즉시 반영돼야 하는데
+    // render 는 서버 상태가 올 때만 돈다.
+    const mb = $('q-mybid');
+    if (mb) {
+      mb.classList.remove('picking');
+      const already = mb.querySelector('.card');      // 이미 낸 카드가 있으면 손대지 않는다
+      const prev = mb.querySelector('.q-pick-prev');
+      if (prev) prev.remove();
+      if (!already && sel4 && curPick) {
+        const wrap = document.createElement('div');
+        wrap.className = 'q-pick-prev';
+        wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center';
+        wrap.appendChild(card4(sel4));
+        const l = document.createElement('div');
+        l.className = 'q-mylabel';
+        l.textContent = curPick === 'offer' ? '출품 선택 중' : '배팅 선택 중';
+        wrap.appendChild(l);
+        mb.appendChild(wrap);
+        mb.classList.add('picking');
+      }
+    }
+
     const btn = $('q-confirm'); if (!btn) return;
     const on = !!(curPick && sel4);
     btn.classList.toggle('show', on);
@@ -283,6 +310,7 @@
       if (oid && oid !== fx.offerId) play($('q-offer').firstElementChild, 'anim-reveal');
       fx.centerId = cid; fx.offerId = oid;
 
+      // 경매 방식은 턴바에 (매트 한가운데를 비워 카드가 주인공이 되게)
       const tag = a.type === 'open' ? ['👁', '오픈']
                 : (a.type === 'closed' || a.type === 'close') ? ['🙈', '클로즈'] : null;
       if (tag) $('q-typeTag').innerHTML = (typeof ico === 'function' ? ico(tag[0]) : tag[0]) + ' ' + tag[1];

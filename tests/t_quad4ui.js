@@ -111,7 +111,40 @@ console.log('\n⑤ 끊겼다 붙어도 카드를 낼 수 있는가');
   ok('없는 자리는 막는다', /!r\.seats\[me\]\) return;/.test(act));
 }
 
-console.log('\n⑥ 안내 문구가 새 흐름과 맞는가');
+console.log('\n⑥ 2인전과 결이 맞는가');
+{
+  // 고른 카드가 앞으로 나와야 한다. 예전엔 테두리만 둘러서 "골랐다" 는 게
+  // 눈에 안 띄었고, 배팅 자리에는 확정을 눌러야 그제야 나타났다.
+  ok('고른 카드가 위로 들린다', /#q-myhand \.fan-slot\.sel\s*\{[^}]*translateY/.test(html));
+  ok('부채꼴과 안 부딪히게 칸을 든다', /el\.parentElement\.classList\.toggle\('sel'/.test(c4));
+  ok('고른 카드를 배팅 자리에 미리 올린다', /q-pick-prev/.test(c4));
+  ok('무엇을 고르는 중인지 적는다', /출품 선택 중.*배팅 선택 중|배팅 선택 중/.test(c4));
+  ok('이미 낸 카드는 안 건드린다', /const already = mb\.querySelector\('\.card'\)/.test(c4));
+  ok('미리보기는 매번 지우고 다시 만든다', /if \(prev\) prev\.remove\(\)/.test(c4));
+
+  // 고르는 즉시 반영돼야 한다 — render 는 서버 상태가 올 때만 돈다
+  const ps = c4.slice(c4.indexOf('function paintSel'), c4.indexOf('function paintSel') + 1400);
+  ok('미리보기를 paintSel 에서 그린다', /q-pick-prev/.test(ps));
+  ok('render 에는 미리보기가 없다', (c4.match(/q-pick-prev/g) || []).length <= 3);
+
+  // 경매 방식은 매트 가운데가 아니라 턴바에
+  ok('방식 표시가 턴바에 있다', /<span id="q-turnbar">[\s\S]{0,200}id="q-typeTag"/.test(html)
+     || /id="q-turn"><\/span><span id="q-deck"><\/span><span id="q-typeTag">/.test(html));
+  ok('매트 가운데에서 빠졌다', !/<div class="q-vs" id="q-typeTag">/.test(html));
+  ok('비어 있으면 자리도 안 차지', /#q-typeTag:empty \{ display:none/.test(html));
+
+  // 덱과 카드가 붙어 있던 문제
+  ok('매트 간격이 넉넉하다', /#q-mat \{[^}]*gap:20px/.test(html));
+  ok('덱 층이 삐져나오는 만큼 자리를 잡는다', /#q-deckstack \{[^}]*width:54px/.test(html));
+  ok('덱 장수가 매트 밖으로 안 나간다', /#q-deckstack \.q-dcount \{[^}]*bottom:2px/.test(html));
+
+  // 확정 버튼은 손패 바로 위 (고른 카드 → 버튼 → 손패 순)
+  const me = html.slice(html.indexOf('<div id="q-me">'), html.indexOf('<div id="q-me">') + 300);
+  ok('배팅 자리가 버튼보다 위', me.indexOf('q-mybid') < me.indexOf('q-confirm'), me.replace(/\s+/g, ' '));
+  ok('버튼이 손패보다 위', me.indexOf('q-confirm') < me.indexOf('q-myhand'));
+}
+
+console.log('\n⑦ 안내 문구가 새 흐름과 맞는가');
 {
   ok('덱을 뽑으라고 한다', /덱을 눌러 카드를 뽑으세요/.test(c4));
   ok('출품도 확정을 누르라고 한다', /내놓을 카드를 고른 뒤 확정을 누르세요/.test(c4));

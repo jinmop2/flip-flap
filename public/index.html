@@ -1087,21 +1087,28 @@
       justify-content:center; gap:6px; position:relative; }
     #q-turnbar { display:flex; gap:10px; align-items:center; font-size:.62rem; color:#bda; font-weight:700; }
     /* 경매대 — 카드가 허공에 뜬 느낌이 안 나도록 펠트 판을 깔아준다 */
-    #q-mat { display:flex; align-items:center; gap:12px; padding:12px 18px; border-radius:60px;
+    #q-mat { display:flex; align-items:center; gap:20px; padding:14px 22px; border-radius:60px;
       background:radial-gradient(ellipse at 50% 45%, rgba(255,240,200,.10), rgba(0,0,0,.22) 72%);
       box-shadow:inset 0 0 0 1.5px rgba(255,235,180,.16), 0 6px 20px rgba(0,0,0,.35); }
     .q-slot { display:flex; flex-direction:column; align-items:center; gap:3px; }
     .q-slabel { font-size:.55rem; color:#9fb8a8; font-weight:700; }
-    .q-vs { font-size:.62rem; font-weight:800; color:var(--gold); text-align:center; min-width:52px; }
+    /* 경매 방식 — 매트 한가운데를 차지하던 걸 턴바로 옮겼다.
+       배팅 판단에 필요한 정보라 지우진 않되, 판 가운데를 비워 카드가 주인공이 되게. */
+    #q-typeTag { color:var(--gold); font-weight:800; display:inline-flex; align-items:center; gap:3px; }
+    #q-typeTag:empty { display:none; }
 
     /* ── 덱 스택 — 2인전처럼 눌러서 뽑는다 ──
        예전엔 "공개 카드" 칸을 그대로 눌렀다. 뽑기 전에도 그 자리에 카드가
        놓여 있어 무엇을 누르는 건지 읽히지 않았다. */
-    #q-deckstack { position:relative; width:46px; height:64px; transition:transform .15s; }
+    /* 겹쳐 쌓은 층이 오른쪽·위로 8px 삐져나오므로 그만큼 자리를 더 잡는다.
+       안 그러면 옆 카드와 딱 붙어 보인다. */
+    #q-deckstack { position:relative; width:54px; height:72px; transition:transform .15s; }
     #q-deckstack .card { position:absolute; top:0; left:0; width:46px; height:64px;
       box-shadow:0 2px 6px rgba(0,0,0,.55); }
-    #q-deckstack .q-dcount { position:absolute; bottom:-16px; left:50%; transform:translateX(-50%);
-      font-size:.5rem; color:rgba(255,255,255,.55); font-weight:700; white-space:nowrap; }
+    /* 매트 밖으로 나가지 않게 카드 위에 겹쳐 올린다 */
+    #q-deckstack .q-dcount { position:absolute; bottom:2px; left:50%; transform:translateX(-50%);
+      font-size:.46rem; color:rgba(255,255,255,.7); font-weight:800; white-space:nowrap;
+      background:rgba(0,0,0,.55); padding:1px 5px; border-radius:6px; z-index:9; }
     #q-deckstack.drawable { cursor:pointer; }
     #q-deckstack.drawable:hover { transform:translateY(-4px); }
     #q-deckstack.drawable::after {
@@ -1109,20 +1116,30 @@
       box-shadow:0 0 16px 3px rgba(200,160,0,.6);
       animation:deckPulse 1.4s ease-in-out infinite; will-change:opacity; }
     #q-deckstack.drawable .q-dcount { color:#ffe9a8; }
-    .q-deckslot { margin-right:2px; }
+    /* 다른 칸은 위에 라벨이 있고 덱은 없다 — 그만큼 내려 카드 아랫줄을 맞춘다.
+       오른쪽 여백은 겹쳐 쌓은 층이 삐져나오는 8px 을 감안한 것. */
+    .q-deckslot { margin:14px 10px 0 0; }
 
     /* ── 배팅 확정 버튼 ──
        예전엔 카드를 누르는 순간 바로 나갔다. 잘못 눌러도 되돌릴 수 없고,
        서버 상태가 도착해 손패가 다시 그려지는 순간에 탭이 통째로 사라졌다
        ("카드가 안 내진다"). 이제 고르기와 내기를 분리한다. */
-    #q-confirm { display:none; margin:0 auto 6px; padding:9px 22px; border-radius:11px;
+    #q-confirm { display:none; margin:2px auto 4px; padding:9px 22px; border-radius:11px;
       border:1.5px solid var(--gold); background:linear-gradient(180deg,#f3d477,#c99a2e);
       color:#2a1c06; font-family:inherit; font-size:.82rem; font-weight:800;
       box-shadow:0 3px 12px rgba(200,160,0,.4); cursor:pointer; }
     #q-confirm.show { display:block; }
     #q-confirm:active { transform:scale(.96); }
-    #q-myhand .card.sel { outline:2.5px solid var(--gold); outline-offset:2px;
-      box-shadow:0 0 18px rgba(255,215,80,.75); }
+    /* 고른 카드는 앞으로 들린다 — 2인전(.card.selected)과 같은 결.
+       예전엔 테두리만 둘러서 "골랐다" 는 게 눈에 안 띄었다.
+       부채꼴 회전과 부딪히지 않게 칸(.fan-slot)을 들어 올린다. */
+    #q-myhand .fan-slot.sel { transform:translateY(-16px); z-index:20; }
+    #q-myhand .card.sel { box-shadow:0 18px 34px rgba(200,160,0,.55);
+      border-color:var(--gold) !important; }
+    /* 내 배팅 자리에 미리 올라간 카드 — 아직 안 낸 것 */
+    #q-mybid.picking .card { border-color:var(--gold) !important;
+      box-shadow:0 0 20px rgba(255,215,80,.6); }
+    .q-mylabel { font-size:.55rem; color:var(--gold); font-weight:800; margin-top:3px; }
 
     /* 배팅 카드는 각자 자기 앞에 놓인다 — 상대는 패널 바로 아래, 나는 손패 위 */
     /* 비어 있을 때 높이를 0으로 접으면 카드가 놓이는 순간 화면이 통째로 밀린다.
@@ -3370,15 +3387,14 @@
   <!-- 중앙: 경매장 -->
   <div id="q-table">
     <div id="q-turnbar">
-      <span id="q-turn"></span><span id="q-deck"></span>
+      <span id="q-turn"></span><span id="q-deck"></span><span id="q-typeTag"></span>
       <button id="q-leftBtn" onclick="q4ToggleLeft()"><span data-ico="🔍"></span> 남은 카드</button>
       <button id="q-quit" onclick="q4Quit()">나가기</button>
     </div>
     <div id="q-leftPanel"><div class="q-lhead">아직 안 나온 카드 &nbsp;<span class="q-lkey mine">내 손패</span> <span class="q-lkey gone">이미 나옴</span></div><div id="q-left"></div></div>
     <div id="q-mat">
-      <div class="q-slot q-deckslot"><div class="q-slabel">덱</div><div id="q-deckstack"></div></div>
+      <div class="q-slot q-deckslot"><div id="q-deckstack"></div></div>
       <div class="q-slot"><div class="q-slabel">공개 카드</div><div class="q-scard" id="q-center"></div></div>
-      <div class="q-vs" id="q-typeTag"></div>
       <div class="q-slot"><div class="q-slabel">출품 카드</div><div class="q-scard" id="q-offer"></div></div>
     </div>
     <div id="q-status"></div>
@@ -3394,9 +3410,9 @@
 
   <!-- 하단: 나 -->
   <div id="q-me">
-    <button id="q-confirm" onclick="q4Confirm()"></button>
     <div id="q-mybid"></div>
     <div id="q-myacq"></div>
+    <button id="q-confirm" onclick="q4Confirm()"></button>
     <div id="q-myhand"></div>
   </div>
 
