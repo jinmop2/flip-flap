@@ -171,6 +171,19 @@ function modelOppBid(oppHand, oppVal, visMyBid, bluffP) {
   return s[s.length - 1];
 }
 
+// 져도 상대의 배팅 카드를 받는다(교환). 예전엔 진 경우를 0점으로 뒀는데,
+// 그러면 "일부러 세게 불러 상대의 강카드를 빼내는" 수가 아예 안 보인다.
+// 상대가 2-1 을 던져 나를 이기면 그 2-1 이 내 손으로 온다 — 판이 뒤집힌다.
+function recvValue(c, myTarget, myAcq) {
+  if (!c) return 0;
+  let v = power(c) * 0.40;                       // 강할수록 다음 판에 쓸 무기
+  if (c.kind === myTarget) {
+    const need = c.kind - cnt(myAcq, c.kind);
+    if (need > 0) v += 0.18 / need;              // 내 목표 종류면 세트에도 보탬
+  }
+  return v;
+}
+
 // ── 내가 카드를 넘길 때의 비용 (교환 인식) ───────────────────
 function bidCost(c, myTarget, myAcq, oppAcq) {
   let cost = power(c) * 0.5;                                       // 강카드 상실+상대 무장
@@ -325,7 +338,9 @@ function bidV3(view, mem) {
       } else {
         const win = aBeatsB(c, oppBid);
         const prizeVal = myVal + denyValue(prizeKnown, view.oppAcq) * 0.3 + 0.15; // 획득+저지+템포
-        sc = (win ? prizeVal : 0) - bidCost(c, myTarget, view.myAcq, view.oppAcq);
+        // 지면 상대 카드를 받는다 — 0 이 아니다
+        sc = (win ? prizeVal : recvValue(oppBid, myTarget, view.myAcq))
+             - bidCost(c, myTarget, view.myAcq, view.oppAcq);
       }
       scores.set(c.id, scores.get(c.id) + sc);
     }
@@ -398,7 +413,22 @@ function typeV3(view, mem) {
   const myVal = Math.max(wantValue(prize, view.myAcq, myTarget), denyValue(prize, view.oppAcq));
   // 첫 턴은 무조건 오픈 (정보 없는 클로즈는 후공 최소승리에 일방적으로 당한다)
   if (view.myAcq.length + view.oppAcq.length === 0) return 'open';
-  return myVal < 0.25 ? 'closed' : 'open';
+  if (myVal < 0.25) return 'closed';           // 못 가져갈 판 — 싸게 넘긴다
+
+  // 변칙 — 세트에 가까울 때 이따금 클로즈로 간다.
+  //
+  // 클로즈는 내 배팅을 먼저 보여 주는 대신 출품을 숨긴다. 그래서 세트가
+  // 임박했을 때 일부러 세게 불러 상대의 강카드를 빼내는 수가 된다
+  // (배팅 카드는 교환되므로, 상대가 2-1 로 나를 이기면 그 2-1 이 내 손에 온다).
+  //
+  // 다만 AI 끼리는 보이는 배팅에 최소 승리로 완벽 대응해서 이 수가 잘 안 통한다.
+  // 섞는 비율별로 3200판씩 재 보니 10% 까지는 손해가 없고(48.6% ↔ 48.6%),
+  // 20% 부터 밀리기 시작해 30% 면 2%p 손해다. 그래서 10% 로 둔다.
+  // 사람 상대로는 읽히지 않는 값이 되고, AI 상대로는 잃는 게 없다.
+  const have = cnt(view.myAcq, myTarget);
+  const near = (myTarget - have) <= 2;
+  if (near && Math.random() < 0.10) return 'closed';
+  return 'open';
 }
 
 module.exports = {

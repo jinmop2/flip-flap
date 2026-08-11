@@ -137,7 +137,7 @@ console.log('\n⑦ 경매 방식을 제대로 고르는가');
   //   항상 오픈 vs 항상 클로즈 76.7% · 항상 오픈 vs 옛 규칙 54.7%
   // 옛 규칙은 마지막 두 갈래가 똑같이 'closed' 를 반환해 조건 하나가 죽어 있었다.
   const src = require('fs').readFileSync(path.join(ROOT, 'expert3.js'), 'utf8');
-  const fn = src.slice(src.indexOf('function typeV3'), src.indexOf('function typeV3') + 900);
+  const fn = src.slice(src.indexOf('function typeV3'), src.indexOf('function typeV3') + 2200);   // 함수 전체가 들어가게
   ok('죽은 갈래가 없다', !/return 'closed';\s*\/\/[^\n]*\n\s*return 'closed';/.test(fn));
 
   const C2 = (k, g) => ({ kind: k, grade: g, id: k * 100 + g });
@@ -170,10 +170,44 @@ console.log('\n⑦ 경매 방식을 제대로 고르는가');
   const nc = closedRate(NEW), oc = closedRate(OLD);
   console.log(`     클로즈 비율 — 옛 ${oc.toFixed(0)}% · 새 ${nc.toFixed(0)}%`);
   ok('클로즈를 덜 고른다', nc <= oc, `${oc.toFixed(0)}% → ${nc.toFixed(0)}%`);
-  ok('그래도 아예 없애진 않았다 (규칙이 살아 있음)', /myVal < 0\.25 \? 'closed'/.test(fn));
+  ok('그래도 아예 없애진 않았다 (규칙이 살아 있음)', /myVal < 0\.25\) return 'closed'/.test(fn));
+  ok('세트 근접 시 변칙 클로즈를 섞는다', /near && Math\.random\(\) < 0\.10/.test(fn));
 }
 
-console.log('\n⑧ 사람이 기다릴 만한가');
+console.log('\n⑧ 져도 상대 카드를 받는다는 걸 아는가');
+{
+  // 배팅 카드는 낙찰 여부와 무관하게 교환된다. 예전엔 진 경우를 0점으로 둬서,
+  // "일부러 세게 불러 상대의 강카드를 빼내는" 수가 아예 안 보였다.
+  const src = require('fs').readFileSync(path.join(ROOT, 'expert3.js'), 'utf8');
+  ok('받는 카드 값을 센다', /function recvValue/.test(src));
+  ok('진 경우가 0 이 아니다', /win \? prizeVal : recvValue\(/.test(src));
+  ok('옛 버전은 0 이었다 (회귀 확인용)',
+     /\(win \? prizeVal : 0\)/.test(require('fs').readFileSync(path.join(ROOT, 'tools', 'expert3-baseline.js'), 'utf8')));
+}
+
+console.log('\n⑨ 졸개의 배신을 쓰는가');
+{
+  // 상대가 2-1 을 쥔 걸 알면 6-10 이 최약이 아니라 필승패가 된다.
+  // 카드 카운팅(knownOpp) + 몬테카를로가 이걸 스스로 찾아낸다.
+  const C2 = (k, g) => ({ kind: k, grade: g, id: k * 100 + g });
+  const hand = [C2(3, 2), C2(4, 3), C2(6, 4), C2(6, 10), C2(3, 5), C2(4, 6)];
+  const v = () => ({ hand, myAcq: [C2(4, 1)], oppAcq: [C2(3, 1)], center: C2(4, 2),
+                     offered: C2(4, 5), deckLeft: 7, oppHandLen: 6,
+                     isAuctioneer: true, auctionType: 'open', visOpp: null });
+  const rate = (mem) => {
+    let n = 0;
+    for (let i = 0; i < 120; i++) if (NEW.bidV3(v(), mem).id === 610) n++;
+    return n / 120 * 100;
+  };
+  const know = NEW.createMem(); know.knownOpp.add(201);   // 2-1 이 상대 손에 있다
+  const blind = NEW.createMem();
+  const a = rate(know), b = rate(blind);
+  console.log(`     6-10 을 내는 비율 — 2-1 위치를 알 때 ${a.toFixed(0)}% · 모를 때 ${b.toFixed(0)}%`);
+  ok('알면 배신을 노린다', a > 70, `${a.toFixed(0)}%`);
+  ok('모르면 함부로 안 던진다', b < 20, `${b.toFixed(0)}%`);
+}
+
+console.log('\n⑩ 사람이 기다릴 만한가');
 {
   const hand = [C(2, 1), C(3, 2), C(4, 3), C(6, 4), C(6, 9), C(3, 5)];
   const late = { hand, myAcq: [], oppAcq: [], center: C(4, 6), offered: C(3, 3),
@@ -186,7 +220,7 @@ console.log('\n⑧ 사람이 기다릴 만한가');
   ok('종반 판단이 100ms 안', ms < 100, `${ms.toFixed(1)}ms`);
 }
 
-console.log('\n⑨ 치팅하지 않는가');
+console.log('\n⑪ 치팅하지 않는가');
 {
   // 전문가는 자기 손패와 공개 정보만 봐야 한다. 상대 손패를 인자로 받으면 안 된다.
   const src = require('fs').readFileSync(path.join(ROOT, 'expert3.js'), 'utf8');
