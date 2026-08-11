@@ -378,17 +378,27 @@ function offerV3(view, mem) {
 
 // ── 경매 방식 결정 (v3) ──────────────────────────────────────
 // 클로즈=내 배팅이 상대에게 먼저 공개(최소승리 당함) + 출품 은닉 / 오픈=배팅 은닉 + 출품 공개
+// 경매 방식 고르기.
+//
+// 오픈  = 출품 카드가 보인다 · 배팅은 서로 못 본다
+// 클로즈 = 출품 카드를 숨긴다 · 내 배팅을 상대가 먼저 본다(최소 승리 당함)
+//
+// 재 보니 진행자에게 클로즈는 거의 언제나 손해다.
+//   항상 오픈 vs 항상 클로즈 = 76.7%
+//   항상 오픈 vs 옛 규칙     = 54.7%
+// 출품을 숨겨 얻는 이득보다, 내 배팅을 먼저 보여 최소 승리를 당하는 손해가 크다.
+// 문턱을 0·0.15·0.25·0.35 로 바꿔 봐도 전부 "항상 오픈" 과 같았다(50%) —
+// 클로즈가 이득인 구간이 아예 없다는 뜻이다.
+//
+// 그래도 아주 낮은 값일 때만 남겨 둔다. 어차피 못 가져갈 판이라 손해가 없고,
+// 클로즈를 통째로 없애면 그 방식 자체가 판에서 사라져 게임이 단조로워진다.
 function typeV3(view, mem) {
   const prize = [view.center, view.offered].filter(Boolean);
   const myTarget = feasibleTarget(view.myAcq, view.oppAcq);
   const myVal = Math.max(wantValue(prize, view.myAcq, myTarget), denyValue(prize, view.oppAcq));
-  // 첫 턴 진행자는 오픈: 정보 없는 1턴 클로즈는 후공 최소승리에 일방적으로 당함
-  // (시뮬 4000판: 선공 승률 36.5%→43.3%, 2턴까지 확장하면 오히려 손해라 1턴만)
+  // 첫 턴은 무조건 오픈 (정보 없는 클로즈는 후공 최소승리에 일방적으로 당한다)
   if (view.myAcq.length + view.oppAcq.length === 0) return 'open';
-  if (myVal >= 0.5) return 'open';                               // 갖고 싶다 → 내 강배팅 숨김
-  const oppNeedOff = view.offered ? view.offered.kind - cnt(view.oppAcq, view.offered.kind) : 9;
-  if (oppNeedOff <= 2) return 'closed';                          // 상대가 탐낼 출품 → 숨겨서 경합 차단
-  return 'closed';                                               // 저가치 → 싸게 정리
+  return myVal < 0.25 ? 'closed' : 'open';
 }
 
 module.exports = {

@@ -130,7 +130,50 @@ console.log('\n⑥ 실제로 더 세게 두는가 (맞대결)');
   ok('무승부가 드물다', r.draw / r.n < 0.06, `${(r.draw / r.n * 100).toFixed(1)}%`);
 }
 
-console.log('\n⑦ 사람이 기다릴 만한가');
+console.log('\n⑦ 경매 방식을 제대로 고르는가');
+{
+  // 클로즈는 내 배팅을 상대가 먼저 본다 — 최소 승리를 당한다.
+  // 전수로 재 보니 진행자에게 거의 언제나 손해였다:
+  //   항상 오픈 vs 항상 클로즈 76.7% · 항상 오픈 vs 옛 규칙 54.7%
+  // 옛 규칙은 마지막 두 갈래가 똑같이 'closed' 를 반환해 조건 하나가 죽어 있었다.
+  const src = require('fs').readFileSync(path.join(ROOT, 'expert3.js'), 'utf8');
+  const fn = src.slice(src.indexOf('function typeV3'), src.indexOf('function typeV3') + 900);
+  ok('죽은 갈래가 없다', !/return 'closed';\s*\/\/[^\n]*\n\s*return 'closed';/.test(fn));
+
+  const C2 = (k, g) => ({ kind: k, grade: g, id: k * 100 + g });
+  const mid = { myAcq: [C2(4, 1)], oppAcq: [C2(3, 1)], center: C2(4, 2), offered: C2(4, 5),
+                hand: [], deckLeft: 9, oppHandLen: 6, isAuctioneer: true };
+  ok('갖고 싶으면 오픈', NEW.typeV3(mid, NEW.createMem()) === 'open');
+
+  const junk = { myAcq: [C2(4, 1), C2(4, 2), C2(4, 3)], oppAcq: [C2(4, 4)],
+                 center: C2(4, 6), offered: C2(4, 7), hand: [], deckLeft: 9,
+                 oppHandLen: 6, isAuctioneer: true };
+  void junk;
+
+  // 첫 턴은 무조건 오픈 (정보 없는 클로즈는 일방적으로 당한다)
+  const first = { myAcq: [], oppAcq: [], center: C2(6, 3), offered: C2(6, 7),
+                  hand: [], deckLeft: 11, oppHandLen: 6, isAuctioneer: true };
+  ok('첫 턴은 오픈', NEW.typeV3(first, NEW.createMem()) === 'open');
+
+  // 옛 버전은 클로즈를 훨씬 자주 골랐다
+  const { dealFrom, rngOf } = require(path.join(ROOT, 'tools', 'duel.js'));
+  const closedRate = (E) => {
+    let c = 0;
+    for (let t = 0; t < 200; t++) {
+      const { deck, h1 } = dealFrom(rngOf(3000 + t * 97));
+      const v = { hand: h1.slice(1), myAcq: [C2(4, 1)], oppAcq: [C2(3, 1)],
+                  center: deck[0], offered: h1[0], deckLeft: 9, oppHandLen: 6, isAuctioneer: true };
+      if (E.typeV3(v, E.createMem()) === 'closed') c++;
+    }
+    return c / 200 * 100;
+  };
+  const nc = closedRate(NEW), oc = closedRate(OLD);
+  console.log(`     클로즈 비율 — 옛 ${oc.toFixed(0)}% · 새 ${nc.toFixed(0)}%`);
+  ok('클로즈를 덜 고른다', nc <= oc, `${oc.toFixed(0)}% → ${nc.toFixed(0)}%`);
+  ok('그래도 아예 없애진 않았다 (규칙이 살아 있음)', /myVal < 0\.25 \? 'closed'/.test(fn));
+}
+
+console.log('\n⑧ 사람이 기다릴 만한가');
 {
   const hand = [C(2, 1), C(3, 2), C(4, 3), C(6, 4), C(6, 9), C(3, 5)];
   const late = { hand, myAcq: [], oppAcq: [], center: C(4, 6), offered: C(3, 3),
@@ -143,7 +186,7 @@ console.log('\n⑦ 사람이 기다릴 만한가');
   ok('종반 판단이 100ms 안', ms < 100, `${ms.toFixed(1)}ms`);
 }
 
-console.log('\n⑧ 치팅하지 않는가');
+console.log('\n⑨ 치팅하지 않는가');
 {
   // 전문가는 자기 손패와 공개 정보만 봐야 한다. 상대 손패를 인자로 받으면 안 된다.
   const src = require('fs').readFileSync(path.join(ROOT, 'expert3.js'), 'utf8');
