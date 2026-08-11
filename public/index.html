@@ -1129,10 +1129,21 @@
     .q-ck { border-radius:2px; padding:0 3px; color:#fff; font-size:.55rem; }
 
     /* 좌측 상단 조작 — 2인전 #controls 와 같은 자리·모양 */
+    /* 상대 등급·레벨 — 이름만으로는 누구인지 안 보였다 */
+    .q-owho { display:inline-flex; align-items:center; gap:2px; font-weight:800; }
+    .q-owho .rank-art { width:1em; height:1em; display:inline-flex; }
+    .q-owho .rank-art svg { width:100%; height:100%; display:block; }
+
+    /* 좌측 상단에 가로 일렬 — 세로로 쌓으니 상대 자리를 눌렀다 */
     #q-controls { position:absolute; top:calc(8px + var(--safe-t)); left:8px; z-index:40;
-      display:flex; flex-direction:column; gap:6px; }
-    /* 내 프로필은 오른쪽 위 (조작과 안 겹치게) */
-    #game4 > #q-meProfile { position:absolute; top:calc(8px + var(--safe-t)); right:8px; z-index:40; }
+      display:flex; flex-direction:row; gap:6px; }
+    /* 내 프로필은 오른쪽 아래 — 내 손패 쪽이라 내 것이라는 게 바로 읽힌다.
+       다만 손패(112px) 와 확정 버튼(44px) 위에 얹혀야 카드를 안 가린다. */
+    #game4 > #q-meProfile { position:absolute; right:8px; z-index:40;
+      bottom:calc(170px + var(--safe-b)); }
+    @media (max-height:700px) { #game4 > #q-meProfile { bottom:calc(150px + var(--safe-b)); } }
+    /* 조작 버튼이 차지한 높이만큼 상대 자리를 내린다 */
+    #q-opps { margin-top:34px; }
 
     /* 중앙 경매장 */
     #q-table { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center;
@@ -3501,7 +3512,6 @@
     <div id="q-turnbar">
       <span id="q-turn"></span><span id="q-deck"></span><span id="q-typeTag"></span>
       <button id="q-leftBtn" onclick="q4ToggleLeft()"><span data-ico="🔍"></span> 남은 카드</button>
-      <button id="q-quit" onclick="q4Quit()">나가기</button>
     </div>
     <div id="q-leftPanel"><div class="q-lhead">아직 안 나온 카드 &nbsp;<span class="q-lkey mine">내 손패</span> <span class="q-lkey gone">이미 나옴</span></div><div id="q-left"></div></div>
     <div id="q-mat">

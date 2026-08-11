@@ -304,6 +304,19 @@
       nm.appendChild(nmText);
       const meta = document.createElement('div');
       meta.className = 'q-ometa';
+      // 상대가 누군지 — 등급·레벨. 사람인지 AI 인지, 얼마나 센지가 이름만으로는 안 보였다.
+      const who = document.createElement('span');
+      who.className = 'q-owho';
+      if (p.isBot) {
+        who.textContent = 'AI';
+      } else if (p.profile) {
+        const pr = p.profile;
+        who.innerHTML = (typeof rankIco === 'function' ? rankIco(pr.rankIcon) : '') +
+          `<span style="color:${pr.rankColor}">${pr.rank}</span> Lv.${pr.level}`;
+      } else {
+        who.textContent = '게스트';
+      }
+      meta.appendChild(who);
       // "완성까지 남은 장수" 를 -2 처럼 적었는데 무슨 뜻인지 안 읽혔다. 뺐다.
       const hd = document.createElement('span'); hd.textContent = `🂠${p.handLen}`;
       meta.appendChild(hd);

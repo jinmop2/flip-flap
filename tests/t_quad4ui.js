@@ -179,6 +179,13 @@ console.log('\n⑨ 빈 자리와 뒷면을 구분하는가');
 console.log('\n⑩ 나가기·설명·설정·프로필');
 {
   ok('좌측 상단 조작', /id="q-controls"/.test(html));
+  ok('가로 일렬', /#q-controls \{[^}]*flex-direction:row/.test(html));
+  ok('중앙 나가기는 없앴다', !/id="q-quit"/.test(html));
+  ok('상대 자리를 버튼 아래로 내렸다', /#q-opps \{ margin-top:34px/.test(html));
+  ok('내 프로필은 오른쪽 아래', /#q-meProfile \{[^}]*right:8px[^}]*bottom:calc\(170px/.test(html));
+  ok('손패를 안 가린다 (손패+확정 위)', /bottom:calc\(170px \+ var\(--safe-b\)\)/.test(html));
+  ok('상대 등급·레벨을 보여준다', /q-owho/.test(c4) && /\.q-owho \{/.test(html));
+  ok('AI 는 AI 로 적는다', /who\.textContent = 'AI'/.test(c4));
   ok('버튼 셋', (html.match(/id="q-controls"[\s\S]*?<\/div>\s*<\/div>/) || [''])[0].split('ctrl-btn').length - 1 === 3
      || (html.slice(html.indexOf('id="q-controls"'), html.indexOf('id="q-meProfile"')).match(/ctrl-btn/g) || []).length === 3);
   ok('2인전과 같은 자리', /#q-controls \{[^}]*position:absolute[^}]*left:8px/.test(html));
