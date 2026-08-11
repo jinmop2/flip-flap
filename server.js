@@ -229,8 +229,18 @@ app.post('/api/delete-account', rateLimit(10), (req, res) => {   // 구글플레
 
 // ── 친구 ──
 // accounts.js는 소켓을 모르므로, 접속 여부는 서버에서 덧붙인다.
+// 접속 여부 + 지금 판에 들어가 있는지.
+// 초대해 봐야 소용없는 상대를 미리 알려 주려고 둘을 갈라 본다.
+// 2인전은 socket.roomId, 다인전은 socket.g4room 에 방이 들어 있다.
+function busyState(idl) {
+  const sid = accountSockets.get(idl);
+  if (!sid) return { online: false, ingame: false };
+  const sk = io.sockets.sockets.get(sid);
+  if (!sk) return { online: false, ingame: false };
+  return { online: true, ingame: !!(sk.roomId || sk.g4room) };
+}
 function withOnline(list) {
-  return (list || []).map(f => ({ ...f, online: accountSockets.has(f.idl) }));
+  return (list || []).map(f => ({ ...f, ...busyState(f.idl) }));
 }
 function notifyIdl(idl, event, payload) {   // 해당 계정이 접속 중이면 실시간 알림
   const sid = accountSockets.get(idl);

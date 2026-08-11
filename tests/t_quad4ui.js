@@ -182,9 +182,10 @@ console.log('\n⑩ 나가기·설명·설정·프로필');
   ok('가로 일렬', /#q-controls \{[^}]*flex-direction:row/.test(html));
   ok('중앙 나가기는 없앴다', !/id="q-quit"/.test(html));
   ok('상대 자리를 버튼 아래로 내렸다', /#q-opps \{ margin-top:36px/.test(html));
-  ok('내 프로필은 오른쪽 맨 아래', /#q-meProfile \{[^}]*right:8px[^}]*bottom:calc\(6px/.test(html));
-  ok('손패 아래 자리를 비워 둔다', /#q-me \{ padding-bottom:26px/.test(html));
-  ok('시계는 손패 오른쪽', /#q-timer \{[^}]*right:10px[^}]*bottom:calc\(56px/.test(html));
+  // 시계와 프로필은 각자 띄우지 않고 #q-mebar 한 줄로 묶었다(⑥ 참고).
+  ok('내 줄은 오른쪽 맨 아래', /#q-mebar \{[^}]*right:8px[^}]*bottom:calc\(4px/.test(html));
+  ok('손패 아래 자리를 비워 둔다', /#q-me \{ padding-bottom:\d+px/.test(html));
+  ok('시계가 그 줄 안에 있다', /id="q-mebar"[\s\S]{0,400}?id="q-timer"/.test(html));
   ok('조작 버튼을 줄여 자리를 벌었다', /#q-controls \.ctrl-btn \{[^}]*height:34px/.test(html));
   ok('상대 등급·레벨을 보여준다', /q-owho/.test(c4) && /\.q-owho \{/.test(html));
   ok('AI 는 AI 로 적는다', /who\.textContent = 'AI'/.test(c4));
@@ -254,7 +255,7 @@ console.log('\n⑬ 나가기 확인 · 친구 초대 · 상대 명패');
   // 빈자리 + 로 친구 초대
   ok('빈자리에 + 버튼', /plus\.className = 'q-invite'/.test(c4) && /\.q-invite \{/.test(html));
   ok('친구 목록 창', /id="q-inviteModal"/.test(html));
-  ok('접속 중만 누를 수 있다', /q-invrow\$\{on \? '' : ' off'\}/.test(c4));
+  ok('못 누를 줄은 꺼둔다', /q-invrow\$\{can \? '' : ' off'\}/.test(c4));
   ok('서버가 초대를 받는다', /'g4_invite'/.test(s4));
   ok('수락하면 그 방으로', /'g4_accept'/.test(s4) && /joinPending\(socket, nickOf\(data\), p\)/.test(s4));
   ok('지정한 방으로 들어갈 수 있다', /function joinPending\(socket, nick, want\)/.test(s4));
@@ -292,6 +293,43 @@ console.log('\n⑭ 내 정보 · 명패 고르기');
   ok('상점 목록에 실려 나간다', /out\.fxText = plateFxText\(id\)/.test(accSrc));
   ok('화면은 받아 쓰기만 한다', /it\.fxText \? esc\(it\.fxText\)/.test(cli));
   ok('미보유는 못 고른다', /own \? ` onclick="pickPlate/.test(cli));
+}
+
+console.log('\n⑥ 시계·프로필 줄 · 세로 예산');
+{
+  // 시계와 프로필을 따로 띄워 둔 동안 시계가 손패 카드 위에 얹혔다.
+  ok('한 줄로 묶어 둔다', /#q-mebar \{[^}]*display:flex/.test(html));
+  ok('손패 아래 오른쪽', /#q-mebar \{[^}]*right:8px/.test(html)
+     && /#q-mebar \{[^}]*bottom:calc\(4px/.test(html));
+  ok('안의 둘은 절대위치를 버린다', /#q-mebar > #q-timer \{ position:static/.test(html)
+     && /#q-mebar > #q-meProfile \{ position:static/.test(html));
+
+  // 가운데 정렬은 내용이 넘치면 "위로" 샐지고 나온다 — 그러면 턴바가
+  // 바로 위 배팅 자리를 덮는다. safe 가 이걸 막는다.
+  ok('#q-table 은 safe center', /#q-table \{[^}]*justify-content:safe center/.test(html));
+  ok('그냥 center 가 아니다', !/#q-table \{[^}]*justify-content:center/.test(html));
+}
+
+console.log('\n⑦ 게임 중 표시');
+{
+  const s4 = fs.readFileSync(src + '/server4.js', 'utf8');
+  const srv = fs.readFileSync(src + '/server.js', 'utf8');
+
+  // 목록에 상태를 실어 보낸다 — 화면이 지어내면 실제와 어기난다
+  ok('서버가 접속·게임 중을 판단', /function busyState/.test(srv));
+  ok('방 소속으로 게임 중을 본다', /ingame: !!\(sk\.roomId \|\| sk\.g4room\)/.test(srv));
+  ok('친구 목록에 입혀 보낸다', /function withOnline/.test(srv));
+
+  ok('친구줄에 게임 중 불이 들어온다', /f\.ingame \? 'busy'/.test(cli));
+  ok('게임 중 글자도 보인다', /게임 중/.test(cli));
+  ok('게임 중이면 도전장을 숨긴다', /!f\.ingame/.test(cli));
+  ok('불 색이 있다', /\.soc-dot\.busy \{/.test(html));
+
+  // 초대는 서버가 막아야 한다 — 화면만 막으면 우회된다
+  ok('게임 중인 친구 초대를 서버가 거절', /지금 게임 중이에요/.test(s4));
+  ok('초대창에도 게임 중 표시', /f\.ingame \? '게임 중'/.test(c4));
+  ok('게임 중은 누를 수 없다', /const can = !!f\.online && !f\.ingame/.test(c4));
+  ok('쉽게 찾게 정렬한다', /x\.ingame \? 1 : 0/.test(c4));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

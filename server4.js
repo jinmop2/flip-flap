@@ -518,6 +518,11 @@ function attach4(io, hooks = {}) {
 
       const sid = hooks.sidOfIdl && hooks.sidOfIdl(target);
       if (!sid) return socket.emit('g4_invite_res', { error: '지금 접속 중이 아니에요.' });
+      // 이미 판에 들어가 있으면 불러도 소용없다 — 미리 알려 준다
+      const tsk = io.sockets.sockets.get(sid);
+      if (tsk && (tsk.roomId || tsk.g4room)) {
+        return socket.emit('g4_invite_res', { error: '지금 게임 중이에요.' });
+      }
       io.to(sid).emit('g4_invited', {
         roomId: p.id,
         from: accounts.profileOf(me) ? accounts.profileOf(me).nick : '친구',

@@ -1089,17 +1089,18 @@ async function loadFriends() {
 function friendRow(f, kind) {
   const clan = f.clan ? `<span class="soc-clan">[${esc(f.clan.tag)}]</span>` : '';
   const acts = {
-    friend: `${f.online ? `<button class="soc-btn good" onclick="challengeFriendInApp('${esc(f.idl)}')">도전장</button>` : ''}
+    friend: `${f.online && !f.ingame ? `<button class="soc-btn good" onclick="challengeFriendInApp('${esc(f.idl)}')">도전장</button>` : ''}
              <button class="soc-btn bad" onclick="confirmRemoveFriend('${esc(f.idl)}','${esc(f.nick)}')">삭제</button>`,
     in:     `<button class="soc-btn good" onclick="respondFriend('${esc(f.idl)}',true)">수락</button>
              <button class="soc-btn bad" onclick="respondFriend('${esc(f.idl)}',false)">거절</button>`,
     out:    `<button class="soc-btn bad" onclick="cancelFriend('${esc(f.idl)}')">취소</button>`,
   }[kind];
   return `<div class="soc-item">
-    ${kind === 'friend' ? `<span class="soc-dot ${f.online ? 'on' : ''}"></span>` : ''}
+    ${kind === 'friend' ? `<span class="soc-dot ${f.ingame ? 'busy' : (f.online ? 'on' : '')}"></span>` : ''}
     <div class="soc-info">
       <div class="soc-nick">${clan}${esc(f.nick)}</div>
-      <div class="soc-meta">Lv.${f.level} · ${rankIco(f.rankIcon)} ${esc(f.rank)} · ${f.rp} RP${kind === 'friend' ? (f.online ? ' · 접속 중' : '') : ''}</div>
+      <div class="soc-meta">Lv.${f.level} · ${rankIco(f.rankIcon)} ${esc(f.rank)} · ${f.rp} RP${
+        kind === 'friend' ? (f.ingame ? ' · <b style="color:#ffab5e">게임 중</b>' : (f.online ? ' · 접속 중' : '')) : ''}</div>
     </div>
     <div class="soc-acts">${acts}</div>
   </div>`;
@@ -1109,7 +1110,11 @@ function renderFriends() {
   const { friends, reqIn, reqOut } = _friendData;
   const box = document.getElementById('friendListBox');
   box.innerHTML = friends.length
-    ? friends.slice().sort((a, b) => (b.online - a.online) || (b.rp - a.rp)).map(f => friendRow(f, 'friend')).join('')
+    ? friends.slice().sort((a, b) => {
+        // 지금 부를 수 있는 사람이 맨 위 — 접속 중 > 게임 중 > 오프라인
+        const rank = (x) => (x.online ? (x.ingame ? 1 : 0) : 2);
+        return (rank(a) - rank(b)) || (b.rp - a.rp);
+      }).map(f => friendRow(f, 'friend')).join('')
     : '<div class="soc-empty">아직 친구가 없어요.<br>「친구찾기」에서 닉네임으로 추가해보세요!</div>';
   document.getElementById('friendReqIn').innerHTML = reqIn.length
     ? reqIn.map(f => friendRow(f, 'in')).join('') : '<div class="soc-empty">받은 요청이 없어요.</div>';
