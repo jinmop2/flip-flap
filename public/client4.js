@@ -118,6 +118,13 @@
     socket.emit('g4_act', { type: type === 'offer' ? 'offer' : 'bid', cardId: id });
   };
 
+  // 빈 자리. 카드와 똑같은 크기를 차지해야 카드가 놓일 때 화면이 안 밀린다.
+  function slotHole() {
+    const el = document.createElement('div');
+    el.className = 'q-hole';
+    return el;
+  }
+
   function card4(card, opts = {}) {
     const el = document.createElement('div');
     el.className = 'card';
@@ -265,6 +272,11 @@
     q4Pend = null;
     document.body.classList.remove('q-waiting');
     $('q-startPanel').classList.remove('show');
+    // 내 프로필 — 2인전처럼 판에서도 내가 누군지 보인다
+    try {
+      if (typeof renderGameProfile === 'function' && typeof myAccount !== 'undefined')
+        renderGameProfile('q-meProfile', myAccount || { guest: true, nick: (typeof getNick === 'function' ? getNick() : '나') });
+    } catch (_) {}
     $('q-turn').textContent = `${s.turn}턴`;
     $('q-deck').textContent = `덱 ${s.deckLeft}장`;
 
@@ -278,13 +290,21 @@
       nm.className = 'q-oname';
       if (s.auctioneer === i) { const b = document.createElement('span'); b.className = 'q-obadge'; b.textContent = '진행'; nm.appendChild(b); }
       if (!p.isBot) { const b = document.createElement('span'); b.className = 'q-human'; b.textContent = '사람'; nm.appendChild(b); }
-      nm.appendChild(document.createTextNode(p.name));
+      const nmText = document.createElement('span');
+      nmText.textContent = p.name;
+      if (!p.isBot) {
+        // 사람이면 눌러서 정보·친구 신청. AI 는 볼 게 없다.
+        nmText.style.cursor = 'pointer';
+        nmText.title = '상대 정보';
+        nmText.onclick = (e) => {
+          e.stopPropagation();
+          if (typeof openOppInfo === 'function') openOppInfo(p.profile || { nick: p.name, guest: true });
+        };
+      }
+      nm.appendChild(nmText);
       const meta = document.createElement('div');
       meta.className = 'q-ometa';
-      const need = document.createElement('span');
-      need.className = 'q-need' + (p.need <= 1 ? ' r1' : p.need === 2 ? ' r2' : '');
-      need.textContent = p.need <= 0 ? '완성!' : `-${p.need}`;
-      meta.appendChild(need);
+      // "완성까지 남은 장수" 를 -2 처럼 적었는데 무슨 뜻인지 안 읽혔다. 뺐다.
       const hd = document.createElement('span'); hd.textContent = `🂠${p.handLen}`;
       meta.appendChild(hd);
       const acq = document.createElement('div'); acq.className = 'q-oacq';
@@ -301,8 +321,13 @@
     const iAmAuc = s.auctioneer === mySeat;
     $('q-center').innerHTML = ''; $('q-offer').innerHTML = '';
     if (a) {
-      $('q-center').appendChild(card4(a.center));
-      $('q-offer').appendChild(card4(a.offered));       // null 이면 뒷면
+      // 빈 자리와 뒷면을 구분한다. 예전엔 아직 아무것도 없는데도 뒷면이 깔려 있어
+      // "이미 카드가 놓였다" 로 잘못 읽혔다.
+      $('q-center').appendChild(a.center ? card4(a.center) : slotHole());
+      $('q-offer').appendChild(
+        a.offered ? card4(a.offered)          // 보인다
+        : a.hasOffer ? card4(null)            // 냈는데 가려져 있다 (클로즈)
+        : slotHole());                        // 아직 안 냈다
       // 덱 카드·출품 카드가 "방금" 공개된 순간에만 뒤집기 연출을 준다
       const cid = a.center ? a.center.id : null;
       const oid = a.offered ? a.offered.id : null;
@@ -316,8 +341,8 @@
       if (tag) $('q-typeTag').innerHTML = (typeof ico === 'function' ? ico(tag[0]) : tag[0]) + ' ' + tag[1];
       else $('q-typeTag').textContent = '';
     } else {
-      $('q-center').appendChild(card4(null));
-      $('q-offer').appendChild(card4(null));
+      $('q-center').appendChild(slotHole());
+      $('q-offer').appendChild(slotHole());
       $('q-typeTag').textContent = '';
     }
 
@@ -384,10 +409,6 @@
     if (iAmAuc) meLabel.innerHTML = (typeof rankIco === 'function' ? rankIco('👑') : '👑') + ' 나 (진행자)';
     else meLabel.textContent = '나';
     my.appendChild(meLabel);
-    const meNeed = document.createElement('span');
-    meNeed.className = 'q-need' + (me.need <= 1 ? ' r1' : me.need === 2 ? ' r2' : '');
-    meNeed.textContent = me.need <= 0 ? '완성!' : `-${me.need}`;
-    my.appendChild(meNeed);
     for (const g of acqPile(me.acq)) { markNewCards(g, 'me'); my.appendChild(g); }
 
     // 상태 문구 + 손패 선택 가능 여부
@@ -618,6 +639,9 @@
 
   window.q4Quit = function () {
     socket.emit('g4_leave');
+    // 2인전은 나갈 때 페이지를 새로고침해서 배경음악이 저절로 꺼진다.
+    // 다인전은 화면만 숨기므로 직접 멈춰야 한다.
+    try { if (typeof stopBGM === 'function') stopBGM(); } catch (_) {}
     q4Live = false; q4 = null; q4Room = null; q4Pend = null;
     $('q-startPanel').classList.remove('show');
     document.body.classList.remove('quad4', 'q-n3', 'q-waiting');

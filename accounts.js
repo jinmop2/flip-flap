@@ -688,6 +688,21 @@ const PLATE_FX = {
   np_shard:    { shard: 0.10 },                 // 파편으로 산 명패 = 파편이 더 붙는다
 };
 
+// 명패 효과를 사람이 읽을 문구로. 화면에 따로 적어 두면 값을 손댈 때 어긋난다 —
+// 실제로 쓰는 표(PLATE_FX)에서 그대로 만들어 내려보낸다.
+const FX_LABEL = { coin: '골드 획득', xp: '경험치', shard: '파편 획득', streak: '연승 보너스' };
+function plateFxText(id) {
+  const fx = Object.prototype.hasOwnProperty.call(PLATE_FX, id) ? PLATE_FX[id] : null;
+  if (!fx) return null;
+  const parts = [];
+  for (const k of ['coin', 'xp', 'shard', 'streak']) {
+    if (!fx[k]) continue;
+    parts.push(`${FX_LABEL[k]} +${Math.round(fx[k] * 100)}%`);
+  }
+  if (id === 'np_daily') parts.push(`출석 +${PLATE_DAILY_BONUS}`);
+  return parts.length ? parts.join(' · ') : null;
+}
+
 // ── 세트 보너스 ────────────────────────────────────────────────────────────
 // 카드백·명패·테이블·카드앞면을 같은 테마로 맞춰 끼면 덤이 붙는다.
 // 모으는 값어치를 만들되, 한 벌 값이 비싸므로 덤은 작게 잡았다.
@@ -955,7 +970,11 @@ function grantMilestones(u) {
   return got;
 }
 function shopList() {
-  return Object.entries(SHOP).map(([id, it]) => ({ id, ...it }));
+  return Object.entries(SHOP).map(([id, it]) => {
+    const out = { id, ...it };
+    if (it.type === 'plate') out.fxText = plateFxText(id);   // 명패 효과 (표에서 그대로)
+    return out;
+  });
 }
 const buyLocks = new Set();   // 재화 처리 재진입(중복 구매) 방지 락
 function buyItem(token, itemId) {
@@ -2229,7 +2248,7 @@ function reportList(limit = 50) {
 module.exports = {
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, applyRp4, claimDaily, myRank,
   viceOf, clanCoinBonus,
-  createCoupons, couponList, redeemCoupon, TITLES,
+  createCoupons, couponList, redeemCoupon, TITLES, plateFxText,
   // 급수/단/ACE
   RANKS, ACE_CAPACITY, RP_CONFIG, PROMO, rankOf, displayRankOf, rankInfoOf,
   calcRpDelta, refreshRankState, startPromo, promoResult, refreshAce, seasonReset,

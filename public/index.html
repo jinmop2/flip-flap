@@ -381,7 +381,49 @@
     body.quad4 #navBar { display:none !important; }
 
     /* ── 내 정보 ── */
-    .myinfo-box { max-width:400px; }
+    /* 상점과 같은 전체화면 — 인벤토리·칭호가 좁은 상자 안에서 잘렸다.
+       바깥 여백(20px)을 없애야 진짜 끝까지 찬다 — 상점도 같은 방식이다. */
+    #myInfoModal { padding:0; align-items:stretch; justify-content:stretch; }
+    .lb-box.myinfo-box { width:100%; max-width:none; height:100dvh; max-height:none;
+      border-radius:0; border:none; padding:calc(12px + var(--safe-t)) 14px calc(12px + var(--safe-b));
+      gap:9px; overflow:hidden; }
+    @media (min-width:700px) { .lb-box.myinfo-box { max-width:640px; margin:0 auto;
+      border-left:1.5px solid #b98d34; border-right:1.5px solid #b98d34; } }
+
+    /* 인벤토리 / 칭호 / 전적 — 한 번에 하나만 */
+    /* 상대 정보 */
+    .op-head { display:flex; align-items:center; gap:11px; background:#1c1424;
+      border:1px solid #2a1c30; border-radius:12px; padding:11px 13px; }
+    .op-ava { width:48px; height:48px; border-radius:12px; display:flex; align-items:center;
+      justify-content:center; font-size:1.7rem; background:rgba(0,0,0,.35);
+      border:1.5px solid rgba(200,160,0,.4); flex-shrink:0; }
+    .op-ava svg { width:100%; height:100%; display:block; }
+    .op-mid { flex:1; min-width:0; text-align:left; }
+    .op-nick { font-size:.9rem; font-weight:800; }
+    .op-line { font-size:.68rem; color:#c8bcc4; margin-top:3px; }
+    .op-note { font-size:.66rem; color:#8a7a80; text-align:center; }
+
+    /* 명패 고르기 */
+    .pl-note { font-size:.66rem; color:#9a8a90; text-align:center; }
+    .pl-list { display:flex; flex-direction:column; gap:7px; max-height:56vh; overflow-y:auto; }
+    .pl-row { display:flex; align-items:center; gap:10px; background:#1c1424;
+      border:1px solid #2a1c30; border-radius:11px; padding:9px 11px; cursor:pointer; text-align:left; }
+    .pl-row.on { border-color:var(--gold); box-shadow:0 0 10px rgba(255,215,80,.35); }
+    .pl-row.locked { opacity:.42; cursor:default; }
+    .pl-mid { flex:1; min-width:0; }
+    .pl-nm { font-size:.74rem; font-weight:800; color:#e8dfc8; }
+    .pl-fx { font-size:.62rem; color:#7dd87d; margin-top:2px; }
+    .pl-fx.none { color:#8a7a80; }
+    .pl-state { font-size:.62rem; font-weight:800; color:var(--gold); flex-shrink:0; }
+
+    .mi-tabs { display:flex; gap:6px; flex-shrink:0; }
+    .mi-tab { flex:1; background:rgba(0,0,0,.3); border:1px solid rgba(185,141,52,.35);
+      border-radius:8px; padding:8px 0; color:#9a8a90; font-family:inherit; font-size:.76rem;
+      font-weight:800; cursor:pointer; }
+    .mi-tab.active { color:#ffd94a; border-color:#b98d34; background:rgba(185,141,52,.16); }
+    /* 칸 안쪽만 스크롤한다 — 머리말·탭·닫기는 늘 제자리 */
+    .mi-pane { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;
+      display:flex; flex-direction:column; gap:8px; }
     .mi-head { display:flex; align-items:center; gap:12px; background:#1c1424; border:1px solid #2a1c30; border-radius:14px; padding:12px 14px; margin-bottom:4px; }
     .mi-ava { width:56px; height:56px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:2rem; background:rgba(0,0,0,.35); border:1.5px solid rgba(200,160,0,.4); flex-shrink:0; }
     .mi-info { flex:1; min-width:0; text-align:left; }
@@ -393,9 +435,13 @@
     .mi-sec { font-size:.74rem; font-weight:700; color:#8a7a80; letter-spacing:1px; text-align:left; margin:8px 0 2px; flex:none; }
     /* 아이템이 많아지면 인벤토리가 세로로 늘어나 아래 구역(칭호·최근 전적)을 화면 밖으로 밀어냈다.
        구역마다 높이를 제한하고 자체 스크롤을 줘서 항상 다 보이게 한다. */
-    .mi-inv { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; max-height:158px; overflow-y:auto; flex:none; padding-right:2px; overscroll-behavior:contain; }
-    #miTitles { max-height:104px; overflow-y:auto; flex:none; overscroll-behavior:contain; }
-    #miHist { flex:none; min-height:96px; }
+    /* 예전엔 좁은 상자 안에 셋을 다 넣느라 각각 높이를 잘라 뒀다.
+       이제 칸(.mi-pane)이 스크롤을 맡으므로 여기서 자르면 안 된다 —
+       자르면 전체화면으로 키운 의미가 없어진다. */
+    .mi-inv { display:grid; grid-template-columns:repeat(auto-fill, minmax(88px, 1fr));
+      gap:8px; align-content:start; padding-right:2px; }
+    #miTitles { display:flex; flex-direction:column; gap:6px; }
+    #miHist { display:flex; flex-direction:column; gap:6px; }
     .mi-item { position:relative; background:#1c1424; border:1px solid #2a1c30; border-radius:11px; padding:9px 4px 6px; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
     .mi-item .ico { font-size:1.5rem; line-height:1; }
     .mi-item .nm { font-size:.56rem; color:#9a8fa0; text-align:center; line-height:1.25; }
@@ -793,7 +839,7 @@
     .pb-nickrow { display:flex; align-items:center; min-width:0; }
     .pb-nickrow .pb-nick { overflow:hidden; text-overflow:ellipsis; }
     /* 칭호 목록 (내 정보) */
-    .title-list { display:flex; flex-direction:column; gap:6px; max-height:180px; overflow-y:auto; }
+    .title-list { display:flex; flex-direction:column; gap:6px; }
     .title-row { display:flex; align-items:center; gap:10px; background:#1c1424; border:1px solid #2a1c30; border-radius:10px; padding:8px 11px; cursor:pointer; text-align:left; }
     .title-row.locked { opacity:.55; cursor:default; }
     .title-row.on { border-color:var(--gold); box-shadow:0 0 8px rgba(200,160,0,.25); }
@@ -940,7 +986,7 @@
       border:2px solid rgba(255,255,255,.3); box-shadow:0 2px 6px rgba(0,0,0,.45), inset 0 0 6px rgba(0,0,0,.25); }
     .shop-dyeprev.rare { background:conic-gradient(#40e0d0,#ff8ac0,#a8e05a,#40e0d0); }
     /* ── 최근 전적 ── */
-    .hist-list { display:flex; flex-direction:column; gap:6px; max-height:52vh; overflow-y:auto; margin-bottom:10px; }
+    .hist-list { display:flex; flex-direction:column; gap:6px; }
     .hist-row { display:flex; align-items:center; gap:10px; background:#1c1424; border:1px solid #2a1c30; border-radius:9px; padding:8px 12px; }
     .hist-res { width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.82rem; flex-shrink:0; }
     .hist-win { background:rgba(200,160,0,.2); color:#ffd94a; } .hist-loss { background:rgba(120,110,130,.2); color:#a89aae; } .hist-draw { background:rgba(120,140,180,.18); color:#9ab0d0; }
@@ -1082,6 +1128,12 @@
     .q-oacq .q-pn { display:none; }
     .q-ck { border-radius:2px; padding:0 3px; color:#fff; font-size:.55rem; }
 
+    /* 좌측 상단 조작 — 2인전 #controls 와 같은 자리·모양 */
+    #q-controls { position:absolute; top:calc(8px + var(--safe-t)); left:8px; z-index:40;
+      display:flex; flex-direction:column; gap:6px; }
+    /* 내 프로필은 오른쪽 위 (조작과 안 겹치게) */
+    #game4 > #q-meProfile { position:absolute; top:calc(8px + var(--safe-t)); right:8px; z-index:40; }
+
     /* 중앙 경매장 */
     #q-table { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center;
       justify-content:center; gap:6px; position:relative; }
@@ -1124,7 +1176,9 @@
        예전엔 카드를 누르는 순간 바로 나갔다. 잘못 눌러도 되돌릴 수 없고,
        서버 상태가 도착해 손패가 다시 그려지는 순간에 탭이 통째로 사라졌다
        ("카드가 안 내진다"). 이제 고르기와 내기를 분리한다. */
-    #q-confirm { display:none; margin:2px auto 4px; padding:9px 22px; border-radius:11px;
+    /* 버튼이 나타날 때 아래가 밀리지 않게 자리를 늘 잡아 둔다 */
+    .q-confirm-slot { height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+    #q-confirm { display:none; margin:0; padding:9px 22px; border-radius:11px;
       border:1.5px solid var(--gold); background:linear-gradient(180deg,#f3d477,#c99a2e);
       color:#2a1c06; font-family:inherit; font-size:.82rem; font-weight:800;
       box-shadow:0 3px 12px rgba(200,160,0,.4); cursor:pointer; }
@@ -1147,7 +1201,9 @@
     #q-oppbids { display:flex; gap:5px; flex-shrink:0; height:78px; }
     .q-bslot { flex:1; min-width:0; display:flex; flex-direction:column;
       align-items:center; justify-content:flex-start; gap:2px; }
-    #q-mybid { height:92px; flex-shrink:0; display:flex; align-items:center; justify-content:center; gap:5px; }
+    /* 카드(81) + 라벨(약 14) + 여백 = 100. 미리보기가 붙어도 안 넘치게 잡는다.
+       예전엔 92px 이라 "배팅 선택 중" 라벨이 붙는 순간 아래가 밀렸다. */
+    #q-mybid { height:104px; flex-shrink:0; display:flex; align-items:center; justify-content:center; gap:5px; }
     .q-bslot .card, #q-mybid .card { width:46px; height:64px; padding:3px 3px 2px; }
     .q-bslot .card .c-num, #q-mybid .card .c-num { font-size:1.65rem; line-height:1; }
     .q-bslot .card .c-rank, #q-mybid .card .c-rank { font-size:.72rem; padding:1px 4px; min-width:15px; }
@@ -1184,8 +1240,11 @@
 
     #q-status { font-size:.72rem; font-weight:800; color:#ffe9a8; text-align:center;
       min-height:18px; padding:0 8px; }
-    #q-typeBtns { display:none; gap:8px; }
-    #q-typeBtns.show { display:flex; }
+    /* 방식 버튼이 나타났다 사라지면 #q-table 이 가운데 정렬이라 매트가 통째로
+       위아래로 튄다(측정 25px). 보이든 안 보이든 자리를 늘 잡아 둔다. */
+    #q-typeBtns { display:flex; gap:8px; height:46px; align-items:center;
+      visibility:hidden; flex-shrink:0; }
+    #q-typeBtns.show { visibility:visible; }
     .q-tbtn { display:flex; flex-direction:column; align-items:center; gap:1px; cursor:pointer;
       background:linear-gradient(160deg,#3d2a1a,#241608); border:1.5px solid var(--gold);
       color:#ffe9b0; border-radius:10px; padding:7px 12px; font-family:inherit; }
@@ -1215,6 +1274,13 @@
     #q-myhand .card.pick:hover { transform:translateY(-9px); }
     #q-mat .card { width:58px; height:81px; padding:4px 4px 3px; }
     #q-mat .card .c-rank { font-size:.95rem; padding:1px 5px; min-width:21px; }
+    /* 카드 자리는 내용과 무관하게 늘 같은 크기 — 비었든 카드가 놓였든.
+       예전엔 크기 규칙이 없어 자리가 내용에 따라 늘었다 줄었다 했고,
+       그때마다 매트 전체가 밀려 화면이 왔다갔다했다. */
+    .q-scard { width:58px; height:81px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; }
+    .q-hole { width:58px; height:81px; border-radius:9px;
+      border:1.5px dashed rgba(255,235,180,.22); background:rgba(0,0,0,.16); }
 
     #q-quit, #q-leftBtn { background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.2); color:#d8ccb4;
       border-radius:8px; padding:2px 9px; font-size:.58rem; font-family:inherit; cursor:pointer; }
@@ -2797,6 +2863,28 @@
     <div class="pb-body" id="pbBody"></div>
   </div>
 
+  <!-- 상대 정보 — 판에서 상대 닉네임을 누르면 열린다 -->
+  <div class="lb-modal" id="oppModal" onclick="if(event.target===this)closeOppInfo()">
+    <div class="lb-box" style="width:310px">
+      <div class="lb-title"><span data-ico="👤"></span> 상대 정보
+        <span class="close-x" onclick="closeOppInfo()">×</span></div>
+      <div id="oppBody"></div>
+      <div id="oppAct"></div>
+      <button class="btn btn-outline" onclick="closeOppInfo()">닫기</button>
+    </div>
+  </div>
+
+  <!-- 명패 고르기 — 프로필 바의 이름을 누르면 열린다 -->
+  <div class="lb-modal" id="plateModal" onclick="if(event.target===this)closePlate()">
+    <div class="lb-box" style="width:340px">
+      <div class="lb-title"><span data-ico="🏅"></span> 명패 고르기
+        <span class="close-x" onclick="closePlate()">×</span></div>
+      <div class="pl-note">이름 옆에 붙는 명패예요. 효과는 대전 보상에 바로 반영됩니다.</div>
+      <div id="plateList" class="pl-list"></div>
+      <button class="btn btn-outline" onclick="closePlate()">닫기</button>
+    </div>
+  </div>
+
 
   <!-- 하단 탭바 — 미션·상점·친구·클랜을 로비 본문에서 빼내 여기로 모았다 -->
   <nav id="navBar">
@@ -3297,16 +3385,29 @@
       <button class="pc-logout" onclick="logout();closeMyInfo()">로그아웃</button>
     </div>
     <div id="miHeader"></div>
-    <div class="mi-sec"><span data-ico="🎒"></span> 인벤토리</div>
-    <div id="miInv" class="mi-inv"></div>
-    <div class="mi-sec"><span data-ico="🏷️"></span> 칭호</div>
-    <div id="miTitles" class="title-list"></div>
-    <div class="mi-sec"><span data-ico="📜"></span> 최근 전적</div>
-    <div id="miHist" class="hist-list" style="max-height:180px"></div>
-    <div class="mi-danger">
-      <button class="mi-del" onclick="askDeleteAccount()">계정 삭제</button>
-      <span>탈퇴 시 전적·코인·아이템이 모두 사라지며 되돌릴 수 없어요.</span>
+
+    <!-- 셋을 한 화면에 세로로 이어 붙였더니 스크롤이 길어 무엇이 있는지 안 읽혔다.
+         칸을 나눠 한 번에 하나만 본다. -->
+    <div class="mi-tabs">
+      <button class="mi-tab active" data-mi="inv" onclick="miTab('inv')">인벤토리</button>
+      <button class="mi-tab" data-mi="title" onclick="miTab('title')">칭호</button>
+      <button class="mi-tab" data-mi="hist" onclick="miTab('hist')">전적</button>
     </div>
+
+    <div class="mi-pane" id="miPaneInv">
+      <div id="miInv" class="mi-inv"></div>
+    </div>
+    <div class="mi-pane" id="miPaneTitle" style="display:none">
+      <div id="miTitles" class="title-list"></div>
+    </div>
+    <div class="mi-pane" id="miPaneHist" style="display:none">
+      <div id="miHist" class="hist-list"></div>
+      <div class="mi-danger">
+        <button class="mi-del" onclick="askDeleteAccount()">계정 삭제</button>
+        <span>탈퇴 시 전적·코인·아이템이 모두 사라지며 되돌릴 수 없어요.</span>
+      </div>
+    </div>
+
     <button class="btn btn-outline" onclick="closeMyInfo()">닫기</button>
   </div>
 </div>
@@ -3380,6 +3481,17 @@
 
 <!-- ══════════ 4인전 화면 (AI 3명) ══════════ -->
 <div id="game4">
+  <!-- 좌측 상단 조작 — 2인전과 같은 자리, 같은 모양 -->
+  <div id="q-controls">
+    <div class="ctrl-btn" onclick="q4Quit()" title="게임 나가기"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span><span class="cl">나가기</span></div>
+    <div class="ctrl-btn" onclick="toggleRules(true)" title="게임 설명"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span><span class="cl">설명</span></div>
+    <div class="ctrl-btn" onclick="toggleSettings()" title="설정"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="cl">설정</span></div>
+  </div>
+  <!-- 내 프로필 — 2인전처럼 판에서도 내가 누군지 보인다 -->
+  <div class="game-pcard" id="q-meProfile" onclick="toggleStats(this)">
+    <div class="pc-body"></div><div class="pc-stats"></div>
+  </div>
+
   <!-- 상단: 상대 3명 + 각자 앞의 배팅 자리 -->
   <div id="q-opps"></div>
   <div id="q-oppbids"></div>
@@ -3412,7 +3524,7 @@
   <div id="q-me">
     <div id="q-mybid"></div>
     <div id="q-myacq"></div>
-    <button id="q-confirm" onclick="q4Confirm()"></button>
+    <div class="q-confirm-slot"><button id="q-confirm" onclick="q4Confirm()"></button></div>
     <div id="q-myhand"></div>
   </div>
 

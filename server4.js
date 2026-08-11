@@ -68,11 +68,17 @@ function attach4(io) {
       bidders: G.bidderSeats(g), myHand: g.seats[me].hand,
       seats: g.seats.map((s, i) => ({
         name: s.name, isBot: s.isBot, handLen: s.hand.length, acq: s.acq,
+        // 이름을 눌렀을 때 보여줄 정보. 손패 같은 건 절대 안 실린다 —
+        // 여기 넣는 건 상대에게 그대로 보이는 값이다.
+        profile: (!s.isBot && s.token) ? publicCard(s.token) : null,
         need: G.needLeft(s.acq), bidded: !!(a && a.bids[i]),
       })),
       auction: a ? {
         center: a.center,
         offered: openOffer ? a.offered : null,
+        // 클로즈에서 남의 출품은 가려야 하지만, "아직 안 냈다" 와 "냈는데 안 보인다" 는
+        // 다르다. 화면이 빈 자리와 뒷면을 구분해 그릴 수 있게 존재 여부만 따로 준다.
+        hasOffer: !!a.offered,
         type: a.type,
         // 오픈은 전원 뒤집어 냈다가 한 번에 공개.
         // 클로즈는 순서대로 한 명씩 공개 — 이미 낸 사람 것만 보인다.
@@ -88,6 +94,19 @@ function attach4(io) {
       result: (g.phase === 'settled' || g.phase === 'game_over') ? g.lastResult : null,
       over: g.over, rp: rp || null,
     };
+  }
+
+  // 남에게 보여도 되는 값만. profileOf 를 통째로 넘기면 코인·아이템·토큰 같은
+  // 남이 알 필요 없는 것까지 나간다.
+  function publicCard(token) {
+    try {
+      const u = accounts.byToken(token); if (!u) return null;
+      const p = accounts.profileOf(u); if (!p) return null;
+      return { nick: p.nick, level: p.level, rank: p.rank, rankIcon: p.rankIcon,
+               rankColor: p.rankColor, rp: p.rp, wins: p.wins, losses: p.losses,
+               winRate: p.winRate, nickColor: p.nickColor, plate: p.plate,
+               titleInfo: p.titleInfo, avatar: p.avatar };
+    } catch (_) { return null; }
   }
 
   function push(roomId) {

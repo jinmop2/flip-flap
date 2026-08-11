@@ -328,7 +328,7 @@ function renderAccount() {
       <span class="pb-lv">Lv.${p.level}</span>
       <div class="pb-ava" style="color:${p.rankColor}">${faceOf(p)}</div>
       <div class="pb-mid">
-        <div class="pb-nickrow"><span class="pb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span>${titleTag(p.titleInfo)}</div>
+        <div class="pb-nickrow"><span class="pb-nick${ncClass(p.nickColor)}${npClass(p.plate)}" onclick="event.stopPropagation();openPlate()" title="명패 고르기">${esc(p.nick)}</span>${titleTag(p.titleInfo)}</div>
         <div class="pb-stats">${p.wins}승 ${p.losses}패${total ? ` (${p.winRate}%)` : ''} · <span style="color:${p.rankColor}">${esc(p.rank)}</span></div>
       </div>
       <div class="pb-right">
@@ -369,9 +369,61 @@ async function openMyInfo() {
   renderMyInv();
   renderMyTitles();
   renderMiHist();
+  miTab('inv');                       // 다시 열면 늘 인벤토리부터
   document.getElementById('myInfoModal').classList.add('show');
 }
+// ── 명패 고르기 ────────────────────────────────────────────────────────────
+// 프로필 바의 이름을 누르면 열린다. 효과 문구는 서버가 실제 표에서 만들어
+// 내려준다 — 화면에 따로 적어 두면 값을 손댈 때 어긋난다.
+async function openPlate() {
+  if (!myAccount) { openAuth('login'); return; }
+  if (!shopItems) { try { shopItems = (await fetch('/api/shop').then((r) => r.json())).items; } catch (_) {} }
+  renderPlateList();
+  document.getElementById('plateModal').classList.add('show');
+}
+function closePlate() { document.getElementById('plateModal').classList.remove('show'); }
+function renderPlateList() {
+  const box = document.getElementById('plateList'); if (!box) return;
+  const mine = (myAccount && myAccount.items) || {};
+  const plates = (shopItems || []).filter((x) => x.type === 'plate');
+  // 가진 것 먼저, 그 안에서는 효과 있는 것 먼저
+  plates.sort((a, b) => (!!mine[b.id] - !!mine[a.id]) || (!!b.fxText - !!a.fxText));
+  let html = `<button class="pl-row${myAccount.plate ? '' : ' on'}" onclick="pickPlate(null)">
+      <span class="pl-mid"><span class="pl-nm">명패 없음</span>
+      <span class="pl-fx none">이름만 보여요</span></span>
+      ${myAccount.plate ? '' : '<span class="pl-state">사용 중</span>'}</button>`;
+  for (const it of plates) {
+    const own = !!mine[it.id], on = myAccount.plate === it.id;
+    const cls = 'pl-row' + (on ? ' on' : '') + (own ? '' : ' locked');
+    const click = own ? ` onclick="pickPlate('${it.id}')"` : '';
+    html += `<button class="${cls}"${click}>
+      <span class="${npClass(it.id).trim()}">${esc(myAccount.nick || '닉네임')}</span>
+      <span class="pl-mid"><span class="pl-nm">${esc(it.name)}</span>
+      <span class="pl-fx${it.fxText ? '' : ' none'}">${it.fxText ? esc(it.fxText) : '효과 없음 · 장식'}</span></span>
+      <span class="pl-state">${on ? '사용 중' : own ? '' : '\uD83D\uDD12'}</span></button>`;
+  }
+  box.innerHTML = html;
+  paintIcons(box);
+}
+async function pickPlate(id) {
+  const r = await apiPost('/api/equip', { token: authToken(), itemId: id, kind: 'plate' });
+  if (!r || r.error) { toast(esc((r && r.error) || '바꾸지 못했어요')); return; }
+  myAccount = r.profile || myAccount;
+  renderAccount(); renderPlateList();
+  playSound('select');
+}
+
 function closeMyInfo() { document.getElementById('myInfoModal').classList.remove('show'); }
+// 인벤토리 / 칭호 / 전적 — 한 번에 하나만 본다.
+// 셋을 세로로 이어 붙였더니 스크롤이 길어 무엇이 있는지 안 읽혔다.
+function miTab(which) {
+  for (const [k, pane] of [['inv', 'miPaneInv'], ['title', 'miPaneTitle'], ['hist', 'miPaneHist']]) {
+    const on = k === which;
+    document.getElementById(pane).style.display = on ? '' : 'none';
+    const b = document.querySelector(`.mi-tab[data-mi="${k}"]`);
+    if (b) b.classList.toggle('active', on);
+  }
+}
 async function renderMyInv() {
   const inv = document.getElementById('miInv');
   if (!shopItems) { try { shopItems = (await fetch('/api/shop').then(r => r.json())).items; } catch (_) {} }
@@ -2087,9 +2139,59 @@ function renderGameProfile(elId, p) {
     if (stats) stats.innerHTML = `게스트 (기록 없음)`;
   } else {
     body.innerHTML = `<span class="gp-rank gp-art" style="color:${p.rankColor}">${rankIco(p.rankIcon)}</span><span class="gp-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span><span class="gp-lv">Lv.${p.level}</span>`;
+    // 닉네임을 누르면 상대 정보 — 전적을 펼치는 것과 따로 논다
+    const nk = body.querySelector('.gp-nick');
+    if (nk) { nk.style.cursor = 'pointer'; nk.title = '상대 정보';
+      nk.onclick = (e) => { e.stopPropagation(); openOppInfo(p); }; }
     if (stats) stats.innerHTML = (p.titleInfo ? titleTag(p.titleInfo) + ' · ' : '') + `<span style="color:${p.rankColor}">${esc(p.rank)}</span> · <b>${p.wins}승 ${p.losses}패</b> · 승률 ${p.winRate}%`;
   }
 }
+// ── 상대 정보 ──────────────────────────────────────────────────────────────
+// 판에서 상대 닉네임을 누르면 열린다. 프로필은 이미 받아 둔 걸 쓰므로
+// 서버를 다시 부르지 않는다.
+let _oppShown = null;
+function openOppInfo(p) {
+  if (!p) return;
+  _oppShown = p;
+  const body = document.getElementById('oppBody');
+  const act = document.getElementById('oppAct');
+  if (p.bot) {
+    body.innerHTML = `<div class="op-head"><span class="op-ava">${(typeof AI_AVATAR !== 'undefined') ? AI_AVATAR : ''}</span>
+      <span class="op-mid"><div class="op-nick">AI</div><div class="op-line">컴퓨터와의 대전이에요</div></span></div>`;
+    act.innerHTML = '';
+  } else if (p.guest) {
+    body.innerHTML = `<div class="op-head"><span class="op-ava">${ico('👤')}</span>
+      <span class="op-mid"><div class="op-nick">${esc(p.nick)}</div>
+      <div class="op-line">게스트 — 기록이 남지 않아요</div></span></div>`;
+    act.innerHTML = '<div class="op-note">게스트에게는 친구 신청을 보낼 수 없어요.</div>';
+  } else {
+    body.innerHTML = `<div class="op-head">
+      <span class="op-ava" style="color:${p.rankColor}">${faceOf(p)}</span>
+      <span class="op-mid">
+        <div class="op-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</div>
+        <div class="op-line">Lv.<b>${p.level}</b> · <span style="color:${p.rankColor}">${esc(p.rank)}</span> <b>${p.rp || 0} RP</b></div>
+        <div class="op-line"><b>${p.wins}승 ${p.losses}패</b> · 승률 ${p.winRate}%</div>
+        ${p.titleInfo ? `<div class="op-line">${titleTag(p.titleInfo)}</div>` : ''}
+      </span></div>`;
+    const me = myAccount && myAccount.nick;
+    act.innerHTML = !me
+      ? '<div class="op-note">로그인하면 친구 신청을 보낼 수 있어요.</div>'
+      : me === p.nick
+        ? '<div class="op-note">나예요.</div>'
+        : `<button class="btn btn-gold" onclick="addOppFriend()">친구 신청</button>`;
+  }
+  document.getElementById('oppModal').classList.add('show');
+}
+function closeOppInfo() { document.getElementById('oppModal').classList.remove('show'); }
+async function addOppFriend() {
+  if (!_oppShown || !_oppShown.nick) return;
+  const r = await apiPost('/api/friend-add', { token: authToken(), nick: _oppShown.nick });
+  const act = document.getElementById('oppAct');
+  if (!r || r.error) { act.innerHTML = `<div class="op-note">${esc((r && r.error) || '보내지 못했어요')}</div>`; return; }
+  act.innerHTML = `<div class="op-note">${r.accepted ? '친구가 됐어요!' : '친구 신청을 보냈어요.'}</div>`;
+  playSound('setwin');
+}
+
 function toggleStats(el) { el.classList.toggle('show-stats'); }
 // 바깥 클릭 시 프로필 전적 / 이모트 피커 자동 닫기
 document.addEventListener('click', (e) => {
@@ -2250,6 +2352,15 @@ function startBGM() {
     document.addEventListener('pointerdown', kick, { once: true });
   }
 }
+// 배경음악을 멈춘다. 2인전은 나갈 때 페이지를 통째로 새로고침해서 저절로
+// 꺼졌는데, 다인전은 화면만 숨기므로 로비로 돌아가도 계속 흘렀다.
+function stopBGM() {
+  if (!bgmAudio) { bgmOn = false; return; }
+  try { bgmAudio.pause(); bgmAudio.currentTime = 0; } catch (_) {}
+  try { if (bgmGain) bgmGain.disconnect(); } catch (_) {}
+  bgmAudio = null; bgmGain = null; bgmOn = false;
+}
+
 // ── 인게임 설정 패널 (배경음악 / 효과음 / 가이드) ──
 let guideOff = localStorage.getItem('ff_guide') === 'off';
 function applySettings() {   // 저장된 상태를 화면·오디오에 반영

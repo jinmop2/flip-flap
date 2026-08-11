@@ -10,6 +10,7 @@ const src = __dirname + '/..';
 const c4 = fs.readFileSync(src + '/public/client4.js', 'utf8');
 const html = fs.readFileSync(src + '/public/index.html', 'utf8');
 const cli = fs.readFileSync(src + '/public/client.js', 'utf8');
+const accSrc = fs.readFileSync(src + '/accounts.js', 'utf8');
 
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra ? '  ' + extra : ''))); };
@@ -150,6 +151,83 @@ console.log('\n⑦ 안내 문구가 새 흐름과 맞는가');
   ok('출품도 확정을 누르라고 한다', /내놓을 카드를 고른 뒤 확정을 누르세요/.test(c4));
   ok('배팅도 확정을 누르라고 한다', /배팅 카드를 고른 뒤 확정을 누르세요/.test(c4));
   ok('예전 문구가 안 남아 있다', !/배팅 카드를 고르세요/.test(c4));
+}
+
+console.log('\n⑧ 화면이 흔들지 않는가');
+{
+  // 자리 크기가 내용에 따라 변하면 그때마다 매트·손패가 통째로 밀린다.
+  // 실제로 방식 버튼이 나타날 때 매트가 25px 튀었다.
+  ok('카드 자리가 고정 크기', /\.q-scard \{[^}]*width:58px[^}]*height:81px/.test(html));
+  ok('빈 자리도 같은 크기', /\.q-hole \{[^}]*width:58px[^}]*height:81px/.test(html));
+  ok('방식 버튼이 자리를 늘 잡는다', /#q-typeBtns \{[^}]*visibility:hidden/.test(html));
+  ok('방식 버튼을 display 로 껐다 켜지 않는다', !/#q-typeBtns \{ display:none/.test(html));
+  ok('확정 버튼도 자리를 잡는다', /\.q-confirm-slot \{[^}]*height:44px/.test(html));
+  ok('배팅 자리가 라벨까지 담는다', /#q-mybid \{ height:104px/.test(html));
+}
+
+console.log('\n⑨ 빈 자리와 뒷면을 구분하는가');
+{
+  // 아직 아무것도 없는데 뒷면이 깔려 있으면 "이미 카드가 놓였다" 로 잘못 읽힌다.
+  // 다만 클로즈에서 가려진 출품은 뒷면이 맞다 — 이 둘을 갈라야 한다.
+  ok('서버가 존재 여부를 따로 준다', /hasOffer: !!a\.offered/.test(fs.readFileSync(src + '/server4.js', 'utf8')));
+  ok('빈 자리 요소', /function slotHole/.test(c4));
+  ok('셋을 갈라 그린다', /a\.hasOffer \? card4\(null\)/.test(c4));
+  ok('뽑기 전에도 빈 자리', /\$\('q-center'\)\.appendChild\(slotHole\(\)\)/.test(c4));
+  ok('예전처럼 무조건 뒷면을 깔지 않는다', !/\$\('q-offer'\)\.appendChild\(card4\(a\.offered\)\)/.test(c4));
+}
+
+console.log('\n⑩ 나가기·설명·설정·프로필');
+{
+  ok('좌측 상단 조작', /id="q-controls"/.test(html));
+  ok('버튼 셋', (html.match(/id="q-controls"[\s\S]*?<\/div>\s*<\/div>/) || [''])[0].split('ctrl-btn').length - 1 === 3
+     || (html.slice(html.indexOf('id="q-controls"'), html.indexOf('id="q-meProfile"')).match(/ctrl-btn/g) || []).length === 3);
+  ok('2인전과 같은 자리', /#q-controls \{[^}]*position:absolute[^}]*left:8px/.test(html));
+  ok('내 프로필이 판에 보인다', /id="q-meProfile"/.test(html) && /renderGameProfile\('q-meProfile'/.test(c4));
+
+  // 나갈 때 배경음악이 멈춰야 한다 — 2인전은 새로고침으로 저절로 꺼졌다
+  ok('배경음악 정지 함수', /function stopBGM/.test(cli));
+  ok('나갈 때 멈춘다', /q4Quit = function[\s\S]{0,300}stopBGM/.test(c4));
+}
+
+console.log('\n⑪ 상대 정보·친구 신청');
+{
+  ok('상대 정보 창', /id="oppModal"/.test(html));
+  ok('여는 함수', /function openOppInfo/.test(cli));
+  ok('친구 신청', /function addOppFriend/.test(cli) && /api\/friend-add/.test(cli));
+  ok('2인전 닉네임을 누르면 열린다', /nk\.onclick[\s\S]{0,60}openOppInfo/.test(cli));
+  ok('다인전 닉네임도', /openOppInfo\(p\.profile/.test(c4));
+  ok('AI 는 안 열린다', /if \(!p\.isBot\) \{/.test(c4));
+  ok('게스트엔 친구 신청 없음', /게스트에게는 친구 신청/.test(cli));
+  ok('나에게는 안 보낸다', /me === p\.nick/.test(cli));
+
+  // 남에게 보여도 되는 값만 나가야 한다 — 손패·토큰이 새면 치명적
+  const s4 = fs.readFileSync(src + '/server4.js', 'utf8');
+  ok('공개용만 추려 보낸다', /function publicCard/.test(s4));
+  const pc = s4.slice(s4.indexOf('function publicCard'), s4.indexOf('function publicCard') + 700);
+  ok('손패는 안 실린다', !/hand/.test(pc));
+  ok('토큰은 안 실린다', !/token:/.test(pc));
+  ok('코인·아이템도 안 실린다', !/coins|items/.test(pc));
+}
+
+console.log('\n⑫ 내 정보 · 명패 고르기');
+{
+  ok('전체화면', /#myInfoModal \{ padding:0/.test(html)
+     && /\.lb-box\.myinfo-box \{[^}]*height:100dvh/.test(html));
+  ok('탭 셋', (html.match(/class="mi-tab[^"]*" data-mi=/g) || []).length === 3);
+  ok('칸 셋', /id="miPaneInv"/.test(html) && /id="miPaneTitle"/.test(html) && /id="miPaneHist"/.test(html));
+  ok('탭 전환 함수', /function miTab/.test(cli));
+  ok('열면 인벤토리부터', /miTab\('inv'\)/.test(cli));
+  // 좁은 상자 시절의 높이 제한이 남아 있으면 전체화면이 무의미하다
+  ok('옛 높이 제한이 없다', !/\.mi-inv \{[^}]*max-height:158px/.test(html)
+     && !/#miTitles \{[^}]*max-height:104px/.test(html));
+
+  ok('명패 고르기 창', /id="plateModal"/.test(html));
+  ok('이름을 누르면 열린다', /openPlate\(\)/.test(cli));
+  ok('내 정보로 새는 걸 막는다', /event\.stopPropagation\(\);openPlate/.test(cli));
+  ok('효과 문구를 서버가 만든다', /function plateFxText/.test(accSrc));
+  ok('상점 목록에 실려 나간다', /out\.fxText = plateFxText\(id\)/.test(accSrc));
+  ok('화면은 받아 쓰기만 한다', /it\.fxText \? esc\(it\.fxText\)/.test(cli));
+  ok('미보유는 못 고른다', /own \? ` onclick="pickPlate/.test(cli));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
