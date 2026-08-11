@@ -241,7 +241,39 @@ console.log('\n⑫ 시계 (3분)');
   ok('30초 남으면 경고', /left <= 30/.test(c4));
 }
 
-console.log('\n⑬ 내 정보 · 명패 고르기');
+console.log('\n⑬ 나가기 확인 · 친구 초대 · 상대 명패');
+{
+  const s4 = fs.readFileSync(src + '/server4.js', 'utf8');
+
+  // 나가기 — 예전엔 누르는 즉시 나가서 잘못 눌러도 판이 끝났다
+  ok('나가기가 한 번 묻는다', /function q4AskQuit|q4AskQuit = function/.test(c4));
+  ok('버튼이 확인을 거친다', /onclick="q4AskQuit\(\)"/.test(html));
+  ok('바로 안 나간다', !/onclick="q4Quit\(\)" title="게임 나가기"/.test(html));
+  ok('진행 중이면 AI 인계를 알린다', /자리를 AI 가 이어받아요/.test(c4));
+
+  // 빈자리 + 로 친구 초대
+  ok('빈자리에 + 버튼', /plus\.className = 'q-invite'/.test(c4) && /\.q-invite \{/.test(html));
+  ok('친구 목록 창', /id="q-inviteModal"/.test(html));
+  ok('접속 중만 누를 수 있다', /q-invrow\$\{on \? '' : ' off'\}/.test(c4));
+  ok('서버가 초대를 받는다', /'g4_invite'/.test(s4));
+  ok('수락하면 그 방으로', /'g4_accept'/.test(s4) && /joinPending\(socket, nickOf\(data\), p\)/.test(s4));
+  ok('지정한 방으로 들어갈 수 있다', /function joinPending\(socket, nick, want\)/.test(s4));
+
+  // 아무에게나 못 보낸다 — 클라가 보낸 상대를 그대로 믿으면 안 된다
+  ok('친구인지 서버가 확인한다', /friendIdlsOf/.test(s4) && /친구만 초대할 수 있어요/.test(s4));
+  ok('friendIdlsOf 에 idl 을 넘긴다', /friendIdlsOf\(String\(me\.id \|\| ''\)\.toLowerCase\(\)\)/.test(s4));
+  ok('받는 쪽이 눌러야 들어간다', /socket\.on\('g4_invited'/.test(c4) && /askConfirm/.test(c4));
+  ok('수락 시 화면을 실제로 연다', /function enterWaiting/.test(c4)
+     && /enterWaiting\(\);\s*\n\s*socket\.emit\('g4_accept'/.test(c4));
+
+  // 상대 명패·칭호 — 토큰은 게임 자리가 아니라 방 자리에 있다
+  ok('방 자리에서 토큰을 찾는다', /room\.seats\[i\]\.token/.test(s4));
+  ok('게임 자리에서 찾지 않는다', !/\(!s\.isBot && s\.token\)/.test(s4));
+  ok('명패·닉색을 입힌다', /npClass\(p\.profile\.plate\)/.test(c4));
+  ok('칭호도 보여준다', /titleTag\(p\.profile\.titleInfo\)/.test(c4));
+}
+
+console.log('\n⑭ 내 정보 · 명패 고르기');
 {
   ok('전체화면', /#myInfoModal \{ padding:0/.test(html)
      && /\.lb-box\.myinfo-box \{[^}]*height:100dvh/.test(html));

@@ -50,7 +50,8 @@ const RP4 = { 2: [20, -20], 3: [22, 0, -22], 4: [24, 8, -8, -24] };
 // 판을 아무리 돌려도 총량이 늘지 않기 때문이다.
 const RP_MIN_TURNS = 5, RP_MIN_SEC = 20;
 
-function attach4(io) {
+// hooks: { notifyIdl, sidOfIdl } — 계정→소켓 표는 server.js 가 쥐고 있어서 받아 쓴다
+function attach4(io, hooks = {}) {
   const rooms4 = {};
   const DBG = !!process.env.G4_DEBUG;
   const dbg = (...a) => { if (DBG) console.log('[g4]', ...a); };
@@ -70,7 +71,11 @@ function attach4(io) {
         name: s.name, isBot: s.isBot, handLen: s.hand.length, acq: s.acq,
         // 이름을 눌렀을 때 보여줄 정보. 손패 같은 건 절대 안 실린다 —
         // 여기 넣는 건 상대에게 그대로 보이는 값이다.
-        profile: (!s.isBot && s.token) ? publicCard(s.token) : null,
+        //
+        // 토큰은 게임 자리(g.seats)가 아니라 방 자리(room.seats)에 있다.
+        // g.seats 에서 찾다가 늘 null 이 나와 상대가 "게스트" 로만 보였다.
+        profile: (!s.isBot && room && room.seats[i] && room.seats[i].token)
+          ? publicCard(room.seats[i].token) : null,
         need: G.needLeft(s.acq), bidded: !!(a && a.bids[i]),
       })),
       auction: a ? {
@@ -315,10 +320,11 @@ function attach4(io) {
       return;
     }
   }
-  function joinPending(socket, nick) {
+  // want 를 주면 그 방으로 (초대 수락). 없으면 자리 남은 아무 방.
+  function joinPending(socket, nick, want) {
     leavePending(socket.id);
-    // 자리가 남은 방을 찾고, 없으면 새로 연다
-    let p = Object.values(pendings).find((x) => x.seats.some((s) => !s));
+    let p = (want && want.seats.some((s) => !s)) ? want : null;
+    if (!p) p = Object.values(pendings).find((x) => x.seats.some((s) => !s));
     if (!p) { p = { id: 'W' + Math.random().toString(36).slice(2, 7).toUpperCase(), seats: [null, null, null, null] }; pendings[p.id] = p; }
     const i = p.seats.findIndex((s) => !s);
     p.seats[i] = { sid: socket.id, nick, token: socket.token || null, ip: socket.clientIp || null };
@@ -490,6 +496,44 @@ function attach4(io) {
     });
 
     safe(socket, 'g4_cancel', () => { leavePending(socket.id); socket.g4pending = null; socket.emit('g4_cancelled'); });
+
+    // ── 대기방 친구 초대 ─────────────────────────────────────────────────
+    // 빈자리의 + 를 눌러 친구를 부른다. 상대가 접속 중이어야 하고,
+    // 초대를 받은 쪽이 눌러야 들어온다 — 남의 화면을 마음대로 못 끌어온다.
+    safe(socket, 'g4_invite', (data = {}) => {
+      const p = pendings[socket.g4pending];
+      if (!p) return socket.emit('g4_invite_res', { error: '대기방에 있어야 초대할 수 있어요.' });
+      if (!p.seats.some((x) => x && x.sid === socket.id)) return;
+      if (p.seats.filter(Boolean).length >= 4) return socket.emit('g4_invite_res', { error: '자리가 다 찼어요.' });
+      if (!socket.token) return socket.emit('g4_invite_res', { error: '로그인해야 초대할 수 있어요.' });
+
+      const me = accounts.byToken(socket.token);
+      if (!me) return socket.emit('g4_invite_res', { error: '로그인이 필요해요.' });
+      // 친구인지는 서버가 확인한다 — 클라이언트가 보낸 상대를 그대로 믿으면
+      // 아무에게나 초대를 날릴 수 있다.
+      const target = String(data.idl || '');
+      // friendIdlsOf 는 사용자 객체가 아니라 idl(소문자 아이디)을 받는다
+      const friends = accounts.friendIdlsOf(String(me.id || '').toLowerCase());
+      if (!friends.includes(target)) return socket.emit('g4_invite_res', { error: '친구만 초대할 수 있어요.' });
+
+      const sid = hooks.sidOfIdl && hooks.sidOfIdl(target);
+      if (!sid) return socket.emit('g4_invite_res', { error: '지금 접속 중이 아니에요.' });
+      io.to(sid).emit('g4_invited', {
+        roomId: p.id,
+        from: accounts.profileOf(me) ? accounts.profileOf(me).nick : '친구',
+      });
+      socket.emit('g4_invite_res', { ok: true });
+    });
+
+    // 초대를 받은 쪽이 수락 — 그 대기방으로 들어간다
+    safe(socket, 'g4_accept', (data = {}) => {
+      const p = pendings[String(data.roomId || '')];
+      if (!p) return socket.emit('g4_invite_res', { error: '이미 끝난 방이에요.' });
+      if (p.seats.filter(Boolean).length >= 4) return socket.emit('g4_invite_res', { error: '자리가 다 찼어요.' });
+      if (socket.g4room) destroy(socket.g4room, '초대 수락');
+      leavePending(socket.id);
+      joinPending(socket, nickOf(data), p);
+    });
 
     // 대기방에서 "시작" — 지금 앉아 있는 인원으로 몇 인전인지 정해진다.
     safe(socket, 'g4_startnow', () => {

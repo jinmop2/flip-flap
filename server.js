@@ -1119,7 +1119,9 @@ const cleanNick = n => (String(n || '').trim().slice(0, 12)) || '게스트';
 // 현재 접속 인원 브로드캐스트 (5초 주기 + 접속/해제 시)
 function broadcastOnline() { stats.peak(io.engine.clientsCount); io.emit('online', io.engine.clientsCount); }
 setInterval(broadcastOnline, 5000);
-const g4 = attach4(io);              // 4인전 소켓 (g4_* 이벤트)
+// 다인전은 별도 모듈이라 계정→소켓 표(accountSockets)를 모른다.
+// 친구 초대 알림을 보내려면 그 통로가 필요해서 넘겨준다.
+const g4 = attach4(io, { notifyIdl, sidOfIdl: (idl) => accountSockets.get(idl) || null });
 const MAX_ROOMS = 800;               // 서버 전체 방 상한
 const MAX_CONN_PER_IP = 8;           // IP당 소켓 연결 상한
 const connByIp = new Map();

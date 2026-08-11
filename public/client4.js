@@ -38,6 +38,37 @@
     } catch (_) {}
   }
 
+  // ── 친구 초대 ────────────────────────────────────────────────────────────
+  // 빈자리의 + 를 누르면 친구 목록에서 고른다. 접속 중인 친구만 부를 수 있다 —
+  // 초대는 알림이라 상대가 접속해 있어야 닿는다.
+  window.q4CloseInvite = function () { $('q-inviteModal').classList.remove('show'); };
+  async function openInvite() {
+    const box = $('q-inviteList');
+    $('q-inviteModal').classList.add('show');
+    box.innerHTML = '<div class="lb-empty">불러오는 중…</div>';
+    let r = null;
+    try {
+      r = await (typeof apiPost === 'function'
+        ? apiPost('/api/friends', { token: localStorage.getItem('ff_auth') })
+        : null);
+    } catch (_) {}
+    if (!r || r.error || !r.friends) {
+      box.innerHTML = `<div class="lb-empty">${(r && r.error) || '로그인하면 친구를 초대할 수 있어요'}</div>`;
+      return;
+    }
+    if (!r.friends.length) { box.innerHTML = '<div class="lb-empty">아직 친구가 없어요</div>'; return; }
+    box.innerHTML = r.friends.map((f) => {
+      const on = !!f.online;
+      return `<button class="q-invrow${on ? '' : ' off'}"${on ? ` onclick="q4Invite('${f.idl}')"` : ''}>
+        <span class="q-invnm">${typeof esc === 'function' ? esc(f.nick) : f.nick}</span>
+        <span class="q-invst">${on ? '초대' : '접속 중 아님'}</span></button>`;
+    }).join('');
+  }
+  window.q4Invite = function (idl) {
+    socket.emit('g4_invite', { idl });
+    $('q-inviteList').innerHTML = '<div class="lb-empty">보내는 중…</div>';
+  };
+
   // 내 시계. 상태가 올 때만 그리면 초가 안 흐르므로, 서버가 매초 보내는
   // 가벼운 신호(g4_clock)로도 같은 함수를 부른다.
   function paintClock(clock, waiting) {
@@ -224,6 +255,15 @@
       meta.className = 'q-ometa';
       meta.textContent = who ? '준비 완료' : '기다리는 중…';
       d.appendChild(nm); d.appendChild(meta);
+      // 빈자리는 눌러서 친구를 부른다
+      if (!who) {
+        const plus = document.createElement('button');
+        plus.className = 'q-invite';
+        plus.textContent = '+';
+        plus.title = '친구 초대';
+        plus.onclick = (e) => { e.stopPropagation(); openInvite(); };
+        d.appendChild(plus);
+      }
       opps.appendChild(d);
     }
     $('q-oppbids').innerHTML = '';
@@ -305,6 +345,13 @@
       if (!p.isBot) { const b = document.createElement('span'); b.className = 'q-human'; b.textContent = '사람'; nm.appendChild(b); }
       const nmText = document.createElement('span');
       nmText.textContent = p.name;
+      // 산 명패·닉네임 색을 상대에게도 입힌다 — 로비·2인전과 같은 모습이어야
+      // "저 사람 명패 좋네" 가 판에서도 보인다.
+      if (p.profile) {
+        const cls = (typeof ncClass === 'function' ? ncClass(p.profile.nickColor) : '') +
+                    (typeof npClass === 'function' ? npClass(p.profile.plate) : '');
+        if (cls.trim()) nmText.className = cls.trim();
+      }
       if (!p.isBot) {
         // 사람이면 눌러서 정보·친구 신청. AI 는 볼 게 없다.
         nmText.style.cursor = 'pointer';
@@ -330,6 +377,11 @@
         who.textContent = '게스트';
       }
       meta.appendChild(who);
+      if (p.profile && p.profile.titleInfo && typeof titleTag === 'function') {
+        const t = document.createElement('span');
+        t.innerHTML = titleTag(p.profile.titleInfo);
+        meta.appendChild(t);
+      }
       // "완성까지 남은 장수" 를 -2 처럼 적었는데 무슨 뜻인지 안 읽혔다. 뺐다.
       const hd = document.createElement('span'); hd.textContent = `🂠${p.handLen}`;
       meta.appendChild(hd);
@@ -630,7 +682,10 @@
   };
 
   // ── 빠른대전 — 곧바로 게임 화면에 앉아서 기다린다 ────────────────────────
-  window.q4Quick = function () {
+  // 대기 화면 켜기 — 빠른대전과 초대 수락이 같이 쓴다.
+  // 예전엔 이 절차가 q4Quick 안에만 있어서, 초대를 수락해도 화면이 안 열렸다
+  // (q4Open 은 모드 고르는 창만 연다).
+  function enterWaiting() {
     if (typeof closeModePanels === 'function') closeModePanels();
     window.q4Close();
     $('q-over').classList.remove('show');
@@ -642,6 +697,10 @@
     $('q-status').textContent = '자리에 앉는 중…';
     sfx('deal');
     try { if (typeof startBGM === 'function') startBGM(); } catch (_) {}
+  }
+
+  window.q4Quick = function () {
+    enterWaiting();
     socket.emit('g4_quick', { nick: typeof getNick === 'function' ? getNick() : '나' });
   };
   // 방 안에서 시작 — 지금 앉아 있는 인원으로 몇 인전인지 결정된다
@@ -661,6 +720,18 @@
     sfx('deal');
     try { if (typeof startBGM === 'function') startBGM(); } catch (_) {}   // 2인전과 같은 배경음악
     socket.emit('g4_start', { nick: typeof getNick === 'function' ? getNick() : '나', n: lastSoloN });
+  };
+
+  // 나가기는 한 번 묻는다. 예전엔 누르는 즉시 나가서, 잘못 눌러도 판이 끝났다.
+  // 진행 중이면 자리가 AI 로 넘어간다는 것도 알려 준다.
+  window.q4AskQuit = function () {
+    const playing = !!(q4 && !q4.over);
+    if (typeof askConfirm !== 'function') { window.q4Quit(); return; }
+    askConfirm({
+      icon: '\uD83D\uDEAA', title: '게임에서 나갈까요?',
+      desc: playing ? '진행 중인 판은 내 자리를 AI 가 이어받아요.' : '로비로 돌아갑니다.',
+      yes: '나가기', no: '계속하기',
+    }, () => window.q4Quit());
   };
 
   window.q4Quit = function () {
@@ -702,6 +773,24 @@
       q4 = s; lastRecv = Date.now(); render(); setTimeout(() => showOver(s), 600);
     });
     socket.on('g4_clock', (d) => { if (q4Live && d) paintClock(d.clock, d.seat); });
+    socket.on('g4_invite_res', (d) => {
+      const box = $('q-inviteList');
+      if (d && d.ok) { box.innerHTML = '<div class="lb-empty">초대를 보냈어요!</div>';
+        setTimeout(() => window.q4CloseInvite(), 900); }
+      else if (box) box.innerHTML = `<div class="lb-empty">${(d && d.error) || '보내지 못했어요'}</div>`;
+    });
+    // 초대를 받았다 — 누르는 쪽이 결정한다 (남의 화면을 마음대로 끌어오지 않는다)
+    socket.on('g4_invited', (d) => {
+      if (!d || !d.roomId) return;
+      const from = typeof esc === 'function' ? esc(d.from || '친구') : (d.from || '친구');
+      if (typeof askConfirm !== 'function') return;
+      askConfirm({ icon: '\uD83D\uDC65', title: `${from} 님이 다인전에 초대했어요`,
+                   desc: '수락하면 그 대기방으로 들어갑니다.', yes: '들어가기', no: '거절' },
+        () => {
+          enterWaiting();
+          socket.emit('g4_accept', { roomId: d.roomId, nick: typeof getNick === 'function' ? getNick() : '나' });
+        });
+    });
     socket.on('g4_error', (m) => { alert(m); window.q4Quit(); });
     // 시간을 다 쓰면 그 자리는 AI 가 넘겨받는다. 판을 끝내지는 않는다 —
     // 한 사람 때문에 나머지가 끝나면 억울하기 때문.
