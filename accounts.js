@@ -170,25 +170,253 @@ function levelInfo(totalXp) {
 }
 function levelOf(xp) { return levelInfo(xp).level; }
 function xpInLevel(xp) { return levelInfo(xp).inLevel; }
+// ── 급수 / 단 / ACE ────────────────────────────────────────────────────────
+// 바둑식 사다리. 급수는 RP 만 채우면 자동으로 오르고 내려가지 않는다.
+// 단부터는 승단전(5판 3승)을 통과해야 오른다 — RP 를 채우는 것은 "자격"일 뿐이다.
+// 9단 위에는 정원 100명의 ACE 가 있고, 여긴 RP 순위로 자리가 오간다.
+//
+// 아이콘은 이미 그려 둔 그림에서만 골랐다. 그림 없는 이모지를 쓰면 그 등급만
+// 시스템 이모지로 떠서 혼자 이질적으로 보인다.
 const RANKS = [
-  { rp: 0,    name: '브론즈',   icon: '🥉', color: '#b08d57' },
-  { rp: 100,  name: '실버',     icon: '🥈', color: '#b8c0cc' },
-  { rp: 250,  name: '골드',     icon: '🥇', color: '#e0b84a' },
-  { rp: 500,  name: '플래티넘', icon: '💠', color: '#4ec3c0' },
-  { rp: 900,  name: '다이아',   icon: '💎', color: '#7ab8ff' },
-  { rp: 1500, name: '마스터',   icon: '👑', color: '#c88bff' },
+  { id: '10K', name: '10급', tier: 'kyu', min: 0,    max: 99,   icon: '\uD83E\uDD49', color: '#9a8a72' },
+  { id: '9K',  name: '9급',  tier: 'kyu', min: 100,  max: 224,  icon: '\uD83E\uDD49', color: '#a89478' },
+  { id: '8K',  name: '8급',  tier: 'kyu', min: 225,  max: 374,  icon: '\uD83E\uDD49', color: '#b8a07e' },
+  { id: '7K',  name: '7급',  tier: 'kyu', min: 375,  max: 549,  icon: '\uD83E\uDD48', color: '#a8b0bc' },
+  { id: '6K',  name: '6급',  tier: 'kyu', min: 550,  max: 749,  icon: '\uD83E\uDD48', color: '#b8c0cc' },
+  { id: '5K',  name: '5급',  tier: 'kyu', min: 750,  max: 974,  icon: '\uD83E\uDD48', color: '#c8d0dc' },
+  { id: '4K',  name: '4급',  tier: 'kyu', min: 975,  max: 1274, icon: '\uD83E\uDD47', color: '#d8b04a' },
+  { id: '3K',  name: '3급',  tier: 'kyu', min: 1275, max: 1624, icon: '\uD83E\uDD47', color: '#e0b84a' },
+  { id: '2K',  name: '2급',  tier: 'kyu', min: 1625, max: 2024, icon: '\uD83E\uDD47', color: '#eac457' },
+  { id: '1K',  name: '1급',  tier: 'kyu', min: 2025, max: 2474, icon: '\uD83C\uDFC5', color: '#ffd94a' },
+
+  { id: '1D',  name: '초단', tier: 'dan', min: 2475, max: 2824, icon: '\uD83D\uDCA0', color: '#4ec3c0', danLevel: 1 },
+  { id: '2D',  name: '2단',  tier: 'dan', min: 2825, max: 3174, icon: '\uD83D\uDCA0', color: '#4ec9d8', danLevel: 2 },
+  { id: '3D',  name: '3단',  tier: 'dan', min: 3175, max: 3524, icon: '\uD83D\uDCA0', color: '#54c0e8', danLevel: 3 },
+  { id: '4D',  name: '4단',  tier: 'dan', min: 3525, max: 3874, icon: '\uD83D\uDC8E', color: '#6ab4ff', danLevel: 4 },
+  { id: '5D',  name: '5단',  tier: 'dan', min: 3875, max: 4224, icon: '\uD83D\uDC8E', color: '#7ab8ff', danLevel: 5 },
+  { id: '6D',  name: '6단',  tier: 'dan', min: 4225, max: 4574, icon: '\uD83D\uDC8E', color: '#8ea8ff', danLevel: 6 },
+  { id: '7D',  name: '7단',  tier: 'dan', min: 4575, max: 4924, icon: '\uD83D\uDC51', color: '#a88bff', danLevel: 7 },
+  { id: '8D',  name: '8단',  tier: 'dan', min: 4925, max: 5274, icon: '\uD83D\uDC51', color: '#c39bff', danLevel: 8 },
+  { id: '9D',  name: '9단',  tier: 'dan', min: 5275, max: null, icon: '\uD83D\uDC51', color: '#d8a0ff', danLevel: 9 },
 ];
-function rankOf(rp) { let r = RANKS[0]; for (const t of RANKS) if (rp >= t.rp) r = t; return r; }
+const ACE_RANK = { id: 'ACE', name: 'ACE', tier: 'ace', icon: '\u2B50', color: '#ffd94a' };
+const ACE_CAPACITY = 100;
+
+// RP 계산 상수
+const RP_CONFIG = {
+  baseWin: 25, baseLose: -18,
+  promoFailPenalty: -100,
+  rankPoints: { 1: 25, 2: 8, 3: -8, 4: -22 },   // 다인전 순위별
+  streakStart: 3, streakBonusPer: 5, streakBonusMax: 15,
+  mmrHighFactor: 1.3, mmrEvenFactor: 1.0, mmrLowFactor: 0.7, mmrBand: 300,
+};
+const PROMO = { bestOf: 5, winsNeeded: 3 };
+
+const rankIndex = (id) => RANKS.findIndex((r) => r.id === id);
+const LAST_KYU = RANKS.filter((r) => r.tier === 'kyu').slice(-1)[0];   // 1급
+const rankAbove = (id) => { const i = rankIndex(id); return i >= 0 && i < RANKS.length - 1 ? RANKS[i + 1] : null; };
+
+// RP 로만 따진 등급 (자격 판정용). 표시용은 displayRankOf 를 쓴다 —
+// 단부터는 승단전을 통과해야 오르므로 RP 만으로 정할 수 없다.
+function rankOf(rp) {
+  const v = Number(rp) || 0;
+  for (const r of RANKS) {
+    if (r.max === null) { if (v >= r.min) return r; }
+    else if (v >= r.min && v <= r.max) return r;
+  }
+  return RANKS[0];
+}
+
+// 예전 계정에는 rank 가 없다 (RP 만으로 등급을 정하던 시절). 한 번 세워 준다.
+// 안 하면 RP 가 아무리 높아도 전부 10급으로 떨어져 보인다.
+// 단으로는 자동 진입이 없으므로 1급까지만 올린다 — 그 위는 승단전을 거쳐야 한다.
+function ensureRank(u) {
+  if (!u || u.rank) return u;
+  const byRp = rankOf(u.rp || 0);
+  u.rank = byRp.tier === 'kyu' ? byRp.id : LAST_KYU.id;
+  if (u.mmr === undefined || u.mmr === null) u.mmr = u.rp || 0;
+  return u;
+}
+
+// 화면에 보일 등급. ACE 가 가장 위.
+function displayRankOf(u) {
+  if (!u) return RANKS[0];
+  ensureRank(u);
+  if (u.isAce) return { ...ACE_RANK, standing: u.aceStanding || null };
+  const i = rankIndex(u.rank || '10K');
+  return i >= 0 ? RANKS[i] : RANKS[0];
+}
+
+// ── RP 계산 ────────────────────────────────────────────────────────────────
+// MMR 은 RP 와 따로 도는 숨은 실력 점수다. 지금 급수의 기대치보다 실력이 높으면
+// 승급을 가속하고, 낮으면 늦춰서 거품(운으로 올라온 자리)이 오래 남지 않게 한다.
+function mmrFactorOf(u) {
+  const cur = RANKS[rankIndex(u.rank || '10K')] || RANKS[0];
+  const diff = ((u.mmr === undefined || u.mmr === null) ? (u.rp || 0) : u.mmr) - cur.min;
+  if (diff > RP_CONFIG.mmrBand) return RP_CONFIG.mmrHighFactor;
+  if (diff < -RP_CONFIG.mmrBand) return RP_CONFIG.mmrLowFactor;
+  return RP_CONFIG.mmrEvenFactor;
+}
+// 연승 보너스는 이긴 판에만, 상한을 둔다 (연승이 길수록 무한히 벌어지지 않게)
+function streakBonusOf(streak) {
+  if (streak < RP_CONFIG.streakStart) return 0;
+  return Math.min((streak - RP_CONFIG.streakStart + 1) * RP_CONFIG.streakBonusPer,
+                  RP_CONFIG.streakBonusMax);
+}
+// mode: 'winlose'(1:1) | 'rank'(다인전 순위)
+// streak 은 "이 판까지 포함한 연승 수" 를 밖에서 넘긴다.
+// 여기서 직접 세면, 호출부가 이미 연승을 올린 뒤라 한 판씩 앞서간다.
+function calcRpDelta(u, mode, result, streak) {
+  let base, isWin;
+  if (mode === 'rank') {
+    base = RP_CONFIG.rankPoints[result.place];
+    if (base === undefined) base = 0;
+    isWin = result.place === 1;
+  } else {
+    isWin = !!result.didWin;
+    base = isWin ? RP_CONFIG.baseWin : RP_CONFIG.baseLose;
+  }
+  const f = mmrFactorOf(u);
+  const st = (streak === undefined || streak === null) ? (u.winStreak || 0) : streak;
+  const bonus = isWin ? streakBonusOf(st) : 0;
+  return { delta: Math.round(base * f) + bonus, streak: st, bonus, isWin, base, factor: f };
+}
+
+// ── 승급 자격 갱신 ─────────────────────────────────────────────────────────
+// 급수는 RP 만 채우면 자동으로 오르고 내려가지 않는다.
+// 단으로는 자동 진입이 없다 — 자격만 주고, 승단전을 통과해야 오른다.
+function refreshRankState(u) {
+  u.rp = Math.max(0, u.rp || 0);
+  ensureRank(u);
+  if (u.promo) return;                       // 승단전 중에는 등급이 고정된다
+
+  const cur = RANKS[rankIndex(u.rank)] || RANKS[0];
+  if (cur.tier === 'kyu') {
+    // RP 가 급수 구간을 통째로 넘어섰으면 1급까지는 올려 준다.
+    // "급수일 때만 올린다" 로 두면, RP 가 단 구간까지 치솟은 사람이
+    // 낮은 급수에 그대로 묶여 영원히 못 올라간다.
+    const byRp = rankOf(u.rp);
+    const target = byRp.tier === 'kyu' ? byRp : LAST_KYU;
+    if (rankIndex(target.id) > rankIndex(u.rank)) u.rank = target.id;
+  }
+  const next = rankAbove(u.rank);
+  if (next && next.promoteMatch !== false && next.tier === 'dan') {
+    u.promoEligible = (u.rp >= next.min);
+  } else {
+    u.promoEligible = false;
+  }
+}
+
+// ── 승단전 ─────────────────────────────────────────────────────────────────
+function startPromo(u) {
+  if (!u.promoEligible || u.promo) return false;
+  u.promo = { wins: 0, losses: 0 };
+  return true;
+}
+// 결과 한 판 반영. 3승이면 승단, 3패면 실패(RP -100).
+function promoResult(u, didWin) {
+  if (!u.promo) return null;
+  if (didWin) u.promo.wins++; else u.promo.losses++;
+  const need = PROMO.winsNeeded, lim = PROMO.bestOf - PROMO.winsNeeded + 1;
+  if (u.promo.wins >= need) {
+    const next = rankAbove(u.rank);
+    if (next) u.rank = next.id;
+    u.promo = null; u.promoEligible = false;
+    return { done: true, passed: true, rank: u.rank };
+  }
+  if (u.promo.losses >= lim) {
+    u.rp = Math.max(0, (u.rp || 0) + RP_CONFIG.promoFailPenalty);
+    u.promo = null; u.promoEligible = false;
+    return { done: true, passed: false, penalty: RP_CONFIG.promoFailPenalty };
+  }
+  return { done: false, wins: u.promo.wins, losses: u.promo.losses,
+           need, bestOf: PROMO.bestOf };
+}
+
+// ── ACE 정원제 ─────────────────────────────────────────────────────────────
+// 9단과 현 ACE 를 한 줄로 세워 상위 100명만 ACE 로 둔다.
+// 판이 끝날 때마다 전체를 훑으면 사람이 늘수록 무거워지므로,
+// 9단·ACE 가 얽힌 경우에만 돌린다.
+function refreshAce() {
+  const pool = [];
+  for (const idl of Object.keys(db.users)) {
+    const u = db.users[idl];
+    if (u && (u.rank === '9D' || u.isAce)) pool.push(u);
+  }
+  pool.sort((a, b) => (b.rp || 0) - (a.rp || 0));
+  pool.forEach((u, i) => {
+    if (i < ACE_CAPACITY) { u.isAce = true; u.aceStanding = i + 1; }
+    else { u.isAce = false; u.aceStanding = null; u.rank = '9D'; }
+  });
+  return pool.length;
+}
+const aceRelevant = (u) => !!(u && (u.rank === '9D' || u.isAce));
+
+// ── 시즌 소프트 리셋 ───────────────────────────────────────────────────────
+// 급수는 그대로 두고 단·ACE 만 한 단계 아래로 내린다.
+// 최고 기록은 따로 남겨 둔다 — 리셋으로 지워지면 억울하다.
+function seasonReset() {
+  let moved = 0;
+  for (const idl of Object.keys(db.users)) {
+    const u = db.users[idl]; if (!u) continue;
+    const cur = RANKS[rankIndex(u.rank || '10K')] || RANKS[0];
+    if (u.isAce || cur.tier === 'dan') {
+      u.bestRank = bestRankOf(u);
+      const below = Math.max(0, rankIndex(u.rank) - 1);
+      u.rank = RANKS[below].id;
+      u.rp = RANKS[below].min;
+      moved++;
+    }
+    u.isAce = false; u.aceStanding = null;
+    u.winStreak = 0; u.promo = null; u.promoEligible = false;
+    persist(idl);
+  }
+  return { moved };
+}
+// 지금까지 가장 높이 올라간 등급 id
+function bestRankOf(u) {
+  const now = u.isAce ? 'ACE' : (u.rank || '10K');
+  const prev = u.bestRank || '10K';
+  if (now === 'ACE') return 'ACE';
+  if (prev === 'ACE') return 'ACE';
+  return rankIndex(now) > rankIndex(prev) ? now : prev;
+}
+
+// 화면에 그릴 진행 정보 — 다음 등급까지 얼마나 남았는지, 승단전 중인지
+function rankInfoOf(u) {
+  if (!u) return null;
+  ensureRank(u);
+  if (u.isAce) return { tier: 'ace', standing: u.aceStanding || null, capacity: ACE_CAPACITY };
+  const cur = RANKS[rankIndex(u.rank || '10K')] || RANKS[0];
+  const next = rankAbove(cur.id);
+  const out = { tier: cur.tier, rankId: cur.id, nextName: next ? next.name : null };
+  if (u.promo) {
+    out.promo = { wins: u.promo.wins, losses: u.promo.losses,
+                  need: PROMO.winsNeeded, bestOf: PROMO.bestOf };
+  } else if (next && next.tier === 'dan' && (u.rp || 0) >= next.min) {
+    // 저장된 promoEligible 은 대전 결과 때만 갱신된다. 그 값을 믿으면
+    // 로그인 직후처럼 아직 안 돈 시점에 "자격 없음" 으로 보인다.
+    // 여기서는 RP 로 바로 판단해 화면과 실제가 어긋나지 않게 한다.
+    out.promoReady = true;
+  } else if (next) {
+    out.need = Math.max(0, next.min - (u.rp || 0));   // 다음 등급까지 남은 RP
+    out.from = cur.min; out.to = next.min;
+  }
+  return out;
+}
 
 function profileOf(u) {
   if (!u) return null;
-  const rank = rankOf(u.rp);
+  const rank = displayRankOf(u);
   const total = u.wins + u.losses;
   return {
     id: u.id, nick: u.nick, guest: false,
     nickLocked: !!u.nickSet,   // false면 아직 무료 닉 설정 기회 남음 (소셜 첫 로그인 — provider 무관)
     level: levelOf(u.xp), xp: u.xp, xpInLevel: xpInLevel(u.xp), xpNeeded: levelInfo(u.xp).need,
     rp: u.rp, rank: rank.name, rankIcon: rank.icon, rankColor: rank.color,
+    rankId: rank.id, rankTier: rank.tier, aceStanding: rank.standing || null,
+    // 다음 등급까지 얼마나 남았는지 · 승단전 상태
+    rankInfo: rankInfoOf(u),
     wins: u.wins, losses: u.losses,
     winRate: total ? Math.round(u.wins / total * 100) : 0,
     coins: u.coins || 0,
@@ -863,7 +1091,11 @@ const PLATE_DAILY_BONUS = 50;  // 🍀 행운의 명패 착용 시 출석 추가
 // 턴 수(5턴) 쪽이 이미 즉시 포기를 막고 있으므로 시간 기준은 30초로 낮춘다.
 const MIN_TURNS = 5, MIN_PLAYTIME = 30;
 const MATCH_LIMIT = 3;         // 같은 상대와 하루 보상 인정 판수
-const DECAY_RANK_RP = 900, DECAY_DAYS = 3, DECAY_PER_DAY = 10;   // 다이아 이상 미접속 감소
+// 미접속 RP 감소 — 단·ACE 에만 건다.
+// 급수는 "한 번 오르면 안 내려간다" 가 원칙이라 여기서 깎으면 규칙이 어긋난다.
+// 등급 자체는 RP 와 별개로 저장되므로, 깎여도 단이 내려가진 않는다 —
+// 다만 ACE 자리다툼과 다음 승단 자격에는 그대로 반영된다.
+const DECAY_DAYS = 3, DECAY_PER_DAY = 10;
 const PLATE_RP_WEIGHT = 10;    // 플래티넘(500+) 3연승 이상 RP 가중치
 
 // ── 시간 (KST 자정 기준) ──
@@ -1089,11 +1321,14 @@ function titleList(token) {
 
 // 랭크 감소: 다이아(900RP) 이상이 3일 이상 미접속 시 미접속 일수 × 10 RP 차감
 function applyRankDecay(u, todayIdx) {
-  if ((u.rp || 0) < DECAY_RANK_RP || u.lastLoginIdx == null) return 0;
+  const cur = RANKS[rankIndex(u.rank || '10K')] || RANKS[0];
+  if (!(u.isAce || cur.tier === 'dan') || u.lastLoginIdx == null) return 0;
   const days = todayIdx - u.lastLoginIdx;
   if (days < DECAY_DAYS) return 0;
   const dec = days * DECAY_PER_DAY;
   u.rp = Math.max(0, u.rp - dec);
+  refreshRankState(u);          // 승단 자격이 풀릴 수 있다
+  if (aceRelevant(u)) refreshAce();
   return dec;
 }
 // 1일 접속 보상 (KST 자정 기준, 하루 1회)
@@ -1287,14 +1522,42 @@ function redeemCoupon(token, code, ip) {
 // 4인전 온라인 멀티 전용 RP 반영.
 // 승/패 전적·코인·XP 는 건드리지 않는다 — 4인전 기록이 2인전 전적에 섞이면 안 되기 때문.
 // 어뷰징 판단(사람 수·같은 IP·짧은 판)은 호출부에서 끝내고 여기서는 반영만 한다.
-function applyRp4(token, delta) {
+// place 를 주면 순위제 RP 규칙(1위 +25 … 4위 -22)으로 계산한다.
+// delta 만 주는 옛 방식도 그대로 받는다 — 호출부를 한 번에 다 못 바꾸므로.
+function applyRp4(token, delta, place) {
   const idl = tokenIndex[token];
   const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
   if (!u) return null;
   const before = u.rp || 0;
-  u.rp = Math.max(0, before + (Number(delta) || 0));
+  const beforeRankId = u.isAce ? 'ACE' : (u.rank || '10K');
+
+  let promo = null;
+  if (place && u.promo) {
+    // 승단전 중에는 RP 가 아니라 승단전 전적으로 센다 (1위만 승리로 인정)
+    promo = promoResult(u, place === 1);
+  } else {
+    let d;
+    if (place) {
+      const won = place === 1;
+      const st = won ? (u.winStreak || 0) + 1 : 0;
+      d = calcRpDelta(u, 'rank', { place }, st).delta;
+      u.winStreak = st;
+      u.mmr = ((u.mmr === undefined || u.mmr === null) ? before : u.mmr) + (won ? 20 : -15);
+    } else {
+      d = Number(delta) || 0;
+    }
+    u.rp = Math.max(0, before + d);
+  }
+  refreshRankState(u);
+  if (u.promoEligible && !u.promo) { startPromo(u); promo = promo || { started: true,
+    wins: 0, losses: 0, need: PROMO.winsNeeded, bestOf: PROMO.bestOf }; }
+  if (aceRelevant(u)) refreshAce();
+  u.bestRank = bestRankOf(u);
+  const afterRankId = u.isAce ? 'ACE' : u.rank;
+
   persist(idl);
-  return { profile: profileOf(u), before, after: u.rp, delta: u.rp - before };
+  return { profile: profileOf(u), before, after: u.rp, delta: u.rp - before,
+           promo, rankChange: afterRankId !== beforeRankId ? 'up' : null };
 }
 
 // 결과 반영 (result: 'win'|'loss'|'draw') → { profile, rewards }
@@ -1302,7 +1565,7 @@ function applyRp4(token, delta) {
 function recordResult(token, result, opts = {}) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null; if (!u) return null;
   const base = (REWARDS[rewardKey(opts.vsBot, opts.difficulty)] || REWARDS.multi)[result] || { coins: 0, xp: 0 };
-  const beforeLevel = levelOf(u.xp), beforeRank = rankOf(u.rp).name;
+  const beforeLevel = levelOf(u.xp), beforeRank = displayRankOf(u).name;
   const today = kstDayIndex();
 
   // ── 어뷰징 필터 (순차 적용) → 걸리면 모든 보상 0, 전적만 기록 ──
@@ -1367,7 +1630,15 @@ function recordResult(token, result, opts = {}) {
 
   // RP 는 랜덤 매칭에서만. 봇매치·아이템전·친선전은 코인·경험치만 준다.
   let coins = base.coins || 0, xp = base.xp || 0;
-  let rp = (opts.noRank || noRpFriendly) ? 0 : (base.rp || 0);
+  // RP 는 급수/단 사다리 규칙으로 계산한다 (MMR 보정 + 연승 보너스).
+  // 승단전 중이면 RP 가 아니라 승단전 전적으로 처리하므로 여기서는 0.
+  let rp = 0, rpCalc = null;
+  const rankable = !opts.vsBot && !opts.noRank && !noRpFriendly && !blocked && base.rp !== undefined;
+  if (rankable && !u.promo) {
+    // 연승은 위에서 이미 이 판까지 반영됐다 — 그 값을 그대로 쓴다
+    rpCalc = calcRpDelta(u, 'winlose', { didWin: result === 'win' }, u.winStreak || 0);
+    if (result !== 'draw') rp = rpCalc.delta;
+  }
   let firstWin = 0, streak = 0;
 
   if (blocked) {
@@ -1399,7 +1670,33 @@ function recordResult(token, result, opts = {}) {
 
   u.xp += xp;
   u.coins = Math.max(0, (u.coins || 0) + coins);
-  if (rp) u.rp = Math.max(0, u.rp + rp);
+
+  // ── 급수/단 사다리 ──
+  // 승단전 중이면 RP 가 아니라 승단전 전적으로 처리한다. 그래야 승단전 도중에
+  // 등급이 흔들리지 않는다.
+  let promo = null, rankChange = null;
+  if (rankable) {
+    const won = result === 'win';
+    if (u.promo) {
+      promo = promoResult(u, won);
+      if (promo && promo.done) rankChange = promo.passed ? 'up' : 'fail';
+    } else if (rp) {
+      u.rp = Math.max(0, (u.rp || 0) + rp);
+      // MMR 은 RP 와 따로 도는 숨은 실력 점수 — 이기면 +20, 지면 -15
+      u.mmr = ((u.mmr === undefined || u.mmr === null) ? (u.rp || 0) : u.mmr) + (won ? 20 : -15);
+    }
+    const beforeRankId = u.isAce ? 'ACE' : u.rank;
+    refreshRankState(u);
+    // 자격이 찼으면 다음 랭킹전이 곧 승단전이 된다 — 따로 신청할 필요 없이 바로 붙는다
+    if (u.promoEligible && !u.promo) { startPromo(u); promo = promo || { started: true,
+      wins: 0, losses: 0, need: PROMO.winsNeeded, bestOf: PROMO.bestOf }; }
+    if (aceRelevant(u)) refreshAce();
+    const afterRankId = u.isAce ? 'ACE' : u.rank;
+    if (!rankChange && afterRankId !== beforeRankId) rankChange = 'up';
+    u.bestRank = bestRankOf(u);
+  } else if (rp) {
+    u.rp = Math.max(0, u.rp + rp);
+  }
 
   // 레벨업 보상 + 마일스톤 (Lv10/20/50 최초 1회) — XP 반영 후 검사
   const lvNow = levelOf(u.xp);
@@ -1421,7 +1718,7 @@ function recordResult(token, result, opts = {}) {
   }
   persist(idl);
 
-  const afterLevel = levelOf(u.xp), afterRank = rankOf(u.rp).name;
+  const afterLevel = levelOf(u.xp), afterRank = displayRankOf(u).name;
   return {
     profile: profileOf(u),
     rewards: {
@@ -1429,7 +1726,7 @@ function recordResult(token, result, opts = {}) {
       streakCount: u.winStreak, blocked, reason, noRpFriendly,
       levelUp: afterLevel > beforeLevel ? afterLevel : 0,
       rankUp: (afterRank !== beforeRank && rp > 0) ? afterRank : 0,
-      missions, titles, milestones, cycle,
+      missions, titles, milestones, cycle, promo, rankChange, rankInfo: rankInfoOf(u),
     },
   };
 }
@@ -1459,7 +1756,7 @@ function userByNick(nick) {
 function friendCard(idl) {
   const u = Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
   if (!u) return null;
-  const r = rankOf(u.rp);
+  const r = displayRankOf(u);
   return { idl, nick: u.nick, level: levelOf(u.xp), rank: r.name, rankIcon: r.icon, rankColor: r.color,
            rp: u.rp, nickColor: u.nickColor || null, clan: clanTagOf(u) };
 }
@@ -1921,6 +2218,9 @@ module.exports = {
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, applyRp4, claimDaily, myRank,
   viceOf, clanCoinBonus,
   createCoupons, couponList, redeemCoupon, TITLES,
+  // 급수/단/ACE
+  RANKS, ACE_CAPACITY, RP_CONFIG, PROMO, rankOf, displayRankOf, rankInfoOf,
+  calcRpDelta, refreshRankState, startPromo, promoResult, refreshAce, seasonReset,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   gachaInfo, rollGacha, exchangeShard, GACHA_TIER, TIER_OF, SHARD_ONLY, bonusOf,
   missionList, titleList, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,

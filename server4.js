@@ -257,8 +257,11 @@ function attach4(io) {
     if (!table) return;
     const out = {};
     ranked.forEach((seat, k) => {
-      const res = accounts.applyRp4(r.seats[seat].token, table[k]);
-      if (res) out[seat] = { delta: res.delta, rp: res.after, place: k + 1 };
+      // 순위(1~4)를 넘겨 급수/단 규칙으로 계산하게 한다.
+      // 사람이 2~3명이면 RP4 표의 앞쪽만 쓰므로 순위도 그 범위 안이다.
+      const res = accounts.applyRp4(r.seats[seat].token, table[k], k + 1);
+      if (res) out[seat] = { delta: res.delta, rp: res.after, place: k + 1,
+                             promo: res.promo || null, rankChange: res.rankChange || null };
       if (res && r.seats[seat].sid) io.to(r.seats[seat].sid).emit('profile', { profile: res.profile });
     });
     r.rp = out;

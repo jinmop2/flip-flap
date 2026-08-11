@@ -453,7 +453,14 @@ function showRewards() {
   if (r.setName) { add('bd-rank', `${ico('💠')} ${esc(r.setName)} 세트 완성 보너스`, d, true); d += 250; }
   if (r.clanBonus) { add('bd-clan', `${ico('🛡️')} 클랜 보너스 +${r.clanBonus}`, d, true); d += 250; }
   if (r.levelUp) { add('bd-level', `${ico('⬆️')} 레벨 업! Lv.${r.levelUp}${r.levelCoins ? ` (+${r.levelCoins})` : ''}`, d, true); d += 250; playSound('setwin'); }
-  if (r.rankUp) { add('bd-rank', `${rankIco('👑')} 승급! ${r.rankUp}`, d, true); d += 250; playSound('setwin'); }
+  if (r.rankUp) { add('bd-rank', `${rankIco('👑')} 승급! ${esc(String(r.rankUp))}`, d, true); d += 250; playSound('setwin'); }
+  // 승단전 — RP 가 아니라 5판 3승으로 오른다. 상태를 안 알려주면 "왜 RP 가 안 오르지" 가 된다.
+  if (r.promo) {
+    if (r.promo.started) { add('bd-rank', `${ico('🚩')} 승단전 시작! 5판 중 3승하면 승단`, d, true); d += 300; playSound('setwin'); }
+    else if (r.promo.done && r.promo.passed) { add('bd-rank', `${ico('🎉')} 승단 성공!`, d, true); d += 300; playSound('setwin'); }
+    else if (r.promo.done) { add('bd-warn', `${ico('⚠')} 승단 실패 — RP ${r.promo.penalty}`, d, true); d += 300; }
+    else if (r.promo.wins !== undefined) { add('bd-first', `${ico('🚩')} 승단전 ${r.promo.wins}승 ${r.promo.losses}패 (${r.promo.need}승 필요)`, d, true); d += 250; }
+  }
   (r.missions || []).forEach(m => { add('bd-first', `${ico('🎯')} 미션 완료: ${esc(m.name)} +${m.reward}`, d, true); d += 250; });
   (r.milestones || []).forEach(m => { add('bd-rank', `${m.icon} ${m.label}`, d); d += 250; playSound('setwin'); });
   (r.titles || []).forEach(t => { add('bd-rank', `${ico(t.icon)} 칭호 획득! ${esc(t.name)}`, d, true); d += 250; playSound('setwin'); });
@@ -479,7 +486,8 @@ function showRewards() {
   }
   // 진행도 노출 — 이전→이후 게이지 상승 모션 (scaleX = GPU 합성 전용, 리플로우 없음)
   if (myAccount && !myAccount.guest) {
-    const RANK_STEPS = [[0, '브론즈'], [100, '실버'], [250, '골드'], [500, '플래티넘'], [900, '다이아'], [1500, '마스터']];
+    // 등급 구간은 서버가 rankInfo 로 내려준다. 예전엔 여기 표를 따로 적어 뒀는데,
+    // 서버 등급표를 손대면 화면만 옛 구간을 그리는 사고가 난다.
     const need = myAccount.xpNeeded || 100;
     const xpAfter = Math.min(1, (myAccount.xpInLevel || 0) / need);
     const xpBefore = r.levelUp ? 0 : Math.max(0, ((myAccount.xpInLevel || 0) - (r.xp || 0)) / need);
@@ -488,16 +496,37 @@ function showRewards() {
         <div class="rwp-bar"><div class="rwp-fill" id="rwpXp"></div></div>
         <span class="rwp-val">XP ${myAccount.xpInLevel}/${myAccount.xpNeeded}${r.xp ? ` <b style="color:#7dd87d">+${r.xp}</b>` : ''}</span></div>`;
     const rp = myAccount.rp || 0, rpBeforeTotal = rp - (r.rp || 0);
-    const next = RANK_STEPS.find(([t]) => t > rp);
-    let rpAfter = 1, rpBefore = 1;
-    if (next) {
-      const prev = [...RANK_STEPS].reverse().find(([t]) => t <= rp)[0];
-      rpAfter = Math.max(0, Math.min(1, (rp - prev) / (next[0] - prev)));
-      rpBefore = r.rankUp ? 0 : Math.max(0, Math.min(1, (rpBeforeTotal - prev) / (next[0] - prev)));
-      html += `<div class="rwp-row"><span class="rwp-lbl" style="color:${myAccount.rankColor}">${rankIco(myAccount.rankIcon)} ${esc(myAccount.rank)}</span>
+    const info = r.rankInfo || myAccount.rankInfo || null;
+    const rpTag = r.rp ? ` <b style="color:${r.rp > 0 ? '#7dd87d' : '#ff8a8a'}">${r.rp > 0 ? '+' : ''}${r.rp}</b>` : '';
+    const lbl = `<span class="rwp-lbl" style="color:${myAccount.rankColor}">${rankIco(myAccount.rankIcon)} ${esc(myAccount.rank)}</span>`;
+    let rpAfter = 1, rpBefore = 1, drawBar = false;
+    if (info && info.promo) {
+      // 승단전 중 — RP 가 아니라 승단전 전적을 보여준다
+      const w = info.promo.wins, l = info.promo.losses;
+      rpAfter = Math.min(1, w / info.promo.need); rpBefore = rpAfter; drawBar = true;
+      html += `<div class="rwp-row">${lbl}
         <div class="rwp-bar"><div class="rwp-fill rk" id="rwpRp"></div></div>
-        <span class="rwp-val">${next[0] - rp} RP → ${next[1]}${r.rp ? ` <b style="color:${r.rp > 0 ? '#7dd87d' : '#ff8a8a'}">${r.rp > 0 ? '+' : ''}${r.rp}</b>` : ''}</span></div>`;
+        <span class="rwp-val">승단전 ${w}승 ${l}패 (${info.promo.need}승 필요)</span></div>`;
+    } else if (info && info.promoReady) {
+      html += `<div class="rwp-row">${lbl}
+        <div class="rwp-bar"><div class="rwp-fill rk" id="rwpRp"></div></div>
+        <span class="rwp-val">승단전 준비 완료 — 다음 랭킹전${rpTag}</span></div>`;
+      rpAfter = 1; rpBefore = 1; drawBar = true;
+    } else if (info && info.tier === 'ace') {
+      html += `<div class="rwp-row">${lbl}
+        <div class="rwp-bar"><div class="rwp-fill rk" id="rwpRp"></div></div>
+        <span class="rwp-val">ACE #${info.standing || '-'} / ${info.capacity}${rpTag}</span></div>`;
+      rpAfter = 1; rpBefore = 1; drawBar = true;
+    } else if (info && typeof info.need === 'number' && info.to > info.from) {
+      const span = info.to - info.from;
+      rpAfter = Math.max(0, Math.min(1, (rp - info.from) / span));
+      rpBefore = r.rankUp ? 0 : Math.max(0, Math.min(1, (rpBeforeTotal - info.from) / span));
+      drawBar = true;
+      html += `<div class="rwp-row">${lbl}
+        <div class="rwp-bar"><div class="rwp-fill rk" id="rwpRp"></div></div>
+        <span class="rwp-val">${info.need} RP → ${esc(info.nextName || '')}${rpTag}</span></div>`;
     }
+    const next = drawBar;
     // 재접속 유도 — 내일 출석 보상 예고 (연속 유지 시 금액)
     const nextDaily = 30 + Math.min((myAccount.loginStreak || 0) * 10, 70) + (myAccount.plate === 'np_daily' ? 50 : 0);
     html += `<div style="margin-top:8px;font-size:.72rem;color:#c8a86a">📅 내일 접속하면 출석 보상 <b style="color:#ffd94a">🪙 ${nextDaily}</b>${(myAccount.loginStreak || 0) >= 1 ? ` (🔥 ${(myAccount.loginStreak || 0) + 1}일 연속)` : ''}</div>`;
