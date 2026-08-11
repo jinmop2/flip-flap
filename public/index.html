@@ -449,6 +449,15 @@
     .mi-item.equipped { border-color:var(--gold); box-shadow:0 0 8px rgba(200,160,0,.3); }
     .mi-item.equipped::after { content:'장착'; position:absolute; bottom:-1px; left:50%; transform:translateX(-50%); font-size:.5rem; background:var(--gold); color:#140d0a; font-weight:800; border-radius:5px 5px 0 0; padding:0 6px; }
     .mi-empty { grid-column:1/-1; font-size:.74rem; color:#5a4a60; padding:14px 0; text-align:center; }
+    /* 인벤토리도 상점과 같은 순서·같은 이름으로 묶는다. 격자 안의 머리글이라
+       한 줄을 통째로 차지해야 뒤 칸이 옆에 끼어들지 않는다.
+       이름은 .mi-cat — .mi-head 는 이미 내 정보 윗줄이 쓰고 있다(상자 배경이 따라왔다). */
+    .mi-cat { grid-column:1/-1; display:flex; align-items:center; gap:6px;
+      font-size:.66rem; font-weight:800; color:#c9a86a; letter-spacing:.5px;
+      padding:8px 2px 0; }
+    .mi-cat:first-child { padding-top:0; }
+    .mi-cat .n { font-size:.6rem; font-weight:700; color:#6b5a72; }
+    .mi-cat::after { content:''; flex:1; height:1px; background:#2a1c30; }
     /* ── 상점 그리드 ── */
     /* 설명 길이에 따라 이 상자가 커지면 아래 목록이 통째로 밀린다.
        이름 1줄 + 설명 2줄이 들어갈 높이를 미리 잡아 고정한다. */

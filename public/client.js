@@ -429,16 +429,33 @@ async function renderMyInv() {
   if (!shopItems) { try { shopItems = (await fetch('/api/shop').then(r => r.json())).items; } catch (_) {} }
   const items = myAccount.items || {};
   const owned = (shopItems || []).filter(it => items[it.id]);
-  // 염색약 결과(현재 닉 색)도 보여줌
-  let html = '';
-  if (myAccount.nickColor) html += `<div class="mi-item"><span class="ico">🎨</span><span class="nm ${'nc-' + myAccount.nickColor}">${(DYE_NAMES[myAccount.nickColor] || myAccount.nickColor)} 염색</span></div>`;
-  owned.forEach(it => {
+
+  const tile = (it) => {
     const slot = EQUIP_SLOT[it.type];          // 장착 가능 아이템(카드백/명패/테이블/카드앞면)
     const on = slot && myAccount[slot] === it.id;
     const cnt = it.type === 'ticket' ? `<span class="cnt">x${items[it.id]}</span>` : '';
-    html += `<div class="mi-item${on ? ' equipped' : ''}" ${slot ? `onclick="invEquip('${it.id}', ${on}, '${it.type}')"` : ''} title="${it.name}">
+    return `<div class="mi-item${on ? ' equipped' : ''}" ${slot ? `onclick="invEquip('${it.id}', ${on}, '${it.type}')"` : ''} title="${it.name}">
       ${cnt}<span class="ico">${ico(it.icon, 'inv-ico')}</span><span class="nm">${it.name.replace(' 카드백','')}</span></div>`;
-  });
+  };
+  const head = (name, n) => `<div class="mi-cat">${name}<span class="n">${n}</span></div>`;
+
+  // 상점과 같은 묶음·같은 순서로 놓는다(SHOP_GROUPS). 가진 게 늘수록 카드백과
+  // 명패가 뒤섞여 뭘 갖고 있는지 안 읽혔다. 상점에서 본 자리 그대로여야 찾는다.
+  let html = '';
+  const shown = new Set();
+  for (const g of SHOP_GROUPS) {
+    const mine = owned.filter((x) => g.types.includes(x.type));
+    // 염색은 아이템이 아니라 닉 색으로 남는다 — 상점에서 염색약이 있는 묶음에 붙인다.
+    const dye = (myAccount.nickColor && g.types.includes('dye'))
+      ? `<div class="mi-item"><span class="ico">🎨</span><span class="nm ${'nc-' + myAccount.nickColor}">${(DYE_NAMES[myAccount.nickColor] || myAccount.nickColor)} 염색</span></div>` : '';
+    if (!mine.length && !dye) continue;
+    html += head(g.name, mine.length + (dye ? 1 : 0)) + dye + mine.map(tile).join('');
+    for (const x of mine) shown.add(x.id);
+  }
+  // 새 종류를 넣고 SHOP_GROUPS 에 분류를 깜빡하면 여기로 떨어진다 — 사라지지 않게.
+  const rest = owned.filter((x) => !shown.has(x.id));
+  if (rest.length) html += head('그 밖에', rest.length) + rest.map(tile).join('');
+
   inv.innerHTML = html || `<div class="mi-empty">아직 아이템이 없어요 — 상점 구경 가기 ${ico('🛒')}</div>`;
 }
 async function invEquip(itemId, isOn, kind) {
@@ -1596,13 +1613,20 @@ const shopIcon = it => {
 };
 // 장착 슬롯: 상점 타입 → 프로필 필드
 // 상점 진열 순서 — 위에서부터 이 차례로 묶어 보여준다
+// 상점과 인벤토리가 같이 쓴다 — 한쪽만 고치면 같은 물건이 서로 다른 칸에 앉는다.
+// 여기에 없는 종류는 "그 밖에" 로 떨어진다. 실제로 아바타·승리 연출·도장·놓기
+// 연출 넉 줄이 그렇게 한 덩어리로 뭉쳐 있었다.
 const SHOP_GROUPS = [
   { name: '꾸미기·기타', types: ['dye', 'dye_rare', 'ticket'] },
   { name: '카드 뒷면', types: ['cardback'] },
   { name: '카드 앞면', types: ['cardface'] },
   { name: '테이블',   types: ['table'] },
   { name: '명패',     types: ['plate'] },
+  { name: '아바타',   types: ['avatar'] },
   { name: '이모트',   types: ['emotes'] },
+  { name: '승리 연출', types: ['victory'] },
+  { name: '낙찰 도장', types: ['stamp'] },
+  { name: '카드 놓기 연출', types: ['place'] },
 ];
 // 서버(accounts.js SLOT)와 짝이 맞아야 한다. 한쪽만 고치면 장착이 안 된다.
 // 낙찰 도장 — 모양마다 다른 클래스와 글자를 쓴다
