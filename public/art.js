@@ -426,6 +426,15 @@ const ICON_ART = {
     <path d="M10 33 l1.5 3.6 3.6 1.5 -3.6 1.5 -1.5 3.6 -1.5 -3.6 -3.6 -1.5 3.6 -1.5 z"
           fill="#9fe8ff" stroke="${D}" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
   // ── 크리스탈 세트 상품 아이콘 ──
+  // 초대 패왕 — 확성기. 소리가 퍼져 나가는 결로 "불러 모은다" 를 담았다.
+  '📣': `<svg viewBox="0 0 48 48">
+    <path d="M6 20 h7 l17 -10 v28 l-17 -10 h-7 a2 2 0 0 1 -2 -2 v-4 a2 2 0 0 1 2 -2 z"
+          fill="#ff8fc0" stroke="${FS}" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M13 20 v8 l17 10 V10 z" fill="#ffb3d4"/>
+    <rect x="11" y="28" width="6" height="12" rx="2" transform="rotate(14 14 34)"
+          fill="#d8608f" stroke="${FS}" stroke-width="1.9"/>
+    <path d="M35 17 a10 10 0 0 1 0 14" fill="none" stroke="#ffd45e" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M40 12 a17 17 0 0 1 0 24" fill="none" stroke="#ffd45e" stroke-width="2.2" stroke-linecap="round" opacity=".75"/></svg>`,
   // 파편 — 파편 전용 상품 여섯 종의 아이콘
   '🔷': `<svg viewBox="0 0 48 48">
     <defs><linearGradient id="shdG" x1="0" y1="0" x2="1" y2="1">

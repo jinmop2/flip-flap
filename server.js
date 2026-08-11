@@ -111,8 +111,8 @@ function adminOk(req, res) {
 }
 app.post('/api/admin/coupon-new', rateLimit(20), (req, res) => {
   if (!adminOk(req, res)) return;
-  const { count, coins, maxUses, days, memo, minLevel } = req.body || {};
-  res.json(accounts.createCoupons(count, coins, { maxUses, days, memo, minLevel }));
+  const { count, coins, maxUses, days, memo, minLevel, title } = req.body || {};
+  res.json(accounts.createCoupons(count, coins, { maxUses, days, memo, minLevel, title }));
 });
 app.post('/api/admin/coupon-list', rateLimit(30), (req, res) => {
   if (!adminOk(req, res)) return;
@@ -163,6 +163,14 @@ app.get('/admin', rateLimit(20), (req, res) => {
     <div><label>최소 레벨 (0=제한 없음)</label><input id="minLevel" type="number" value="0" min="0"></div>
     <div><label>메모</label><input id="memo" placeholder="예: 오픈채팅 이벤트"></div>
   </div>
+  <div class="row">
+    <div><label>칭호 지급 (선택)</label><select id="title"><option value="">— 없음 —</option>${
+      Object.entries(accounts.TITLES).map(([id, t]) =>
+        `<option value="${id}">${t.icon} ${t.name}</option>`).join('')
+    }</select></div>
+    <div><label>코드 직접 지정 (선택, 영문·숫자 8~20자)</label><input id="code" placeholder="비우면 자동 생성"></div>
+  </div>
+  <div class="msg">칭호만 줄 거면 지급 코인을 0 으로 두세요.</div>
   <div style="margin-top:12px"><button onclick="mk()">발행하기</button></div>
   <div class="msg" id="mkMsg"></div>
   <div class="codes" id="codes"></div>
@@ -186,10 +194,12 @@ async function mk(){
   if(!key()) return $('mkMsg').className='msg err', $('mkMsg').textContent='키를 입력해주세요.';
   const out=await post('/api/admin/coupon-new',{
     coins:+$('coins').value, count:+$('count').value, maxUses:+$('maxUses').value,
-    days:+$('days').value, minLevel:+$('minLevel').value, memo:$('memo').value});
+    days:+$('days').value, minLevel:+$('minLevel').value, memo:$('memo').value,
+    title:$('title').value, code:$('code').value.trim()});
   if(out.error){ $('mkMsg').className='msg err'; $('mkMsg').textContent='⚠ '+out.error; return; }
   $('mkMsg').className='msg ok';
-  $('mkMsg').textContent=out.codes.length+'장 발행 완료 (장당 '+out.coins+'코인)';
+  const what=[]; if(out.coins) what.push(out.coins+'코인'); if(out.title) what.push('칭호 '+out.title);
+  $('mkMsg').textContent=out.codes.length+'장 발행 완료'+(what.length?' (장당 '+what.join(' + ')+')':'');
   $('codes').innerHTML=out.codes.map(c=>'<code>'+c+'</code>').join('');
   load();
 }
@@ -198,12 +208,13 @@ async function load(){
   const out=await post('/api/admin/coupon-list',{});
   if(out.error){ $('keyMsg').className='msg err'; $('keyMsg').textContent='⚠ '+out.error; $('list').innerHTML=''; return; }
   $('keyMsg').className='msg ok'; $('keyMsg').textContent='확인됨';
-  const rows=out.coupons.map(c=>'<tr class="'+(c.dead?'dead':'')+'"><td><code>'+c.code+'</code></td><td>'+c.coins+
+  const rows=out.coupons.map(c=>'<tr class="'+(c.dead?'dead':'')+'"><td><code>'+c.code+'</code></td><td>'+
+    (c.titleName?c.titleName:c.coins)+
     '</td><td>'+c.uses+(c.maxUses?'/'+c.maxUses:'/∞')+'</td><td>'+
     (c.expiresAt?new Date(c.expiresAt).toLocaleDateString('ko-KR'):'-')+'</td><td>'+
     (c.minLevel||'-')+'</td><td>'+(c.memo||'')+'</td></tr>').join('');
   $('list').innerHTML=out.coupons.length
-    ? '<table><tr><th>코드</th><th>코인</th><th>사용</th><th>만료</th><th>최소Lv</th><th>메모</th></tr>'+rows+'</table>'
+    ? '<table><tr><th>코드</th><th>지급</th><th>사용</th><th>만료</th><th>최소Lv</th><th>메모</th></tr>'+rows+'</table>'
     : '<div class="msg">아직 발행한 쿠폰이 없어요.</div>';
 }
 $('key').addEventListener('change',load);
@@ -1770,7 +1781,7 @@ function settle(roomId) {
     broadcast(roomId);
     setTimeout(() => {
       if (!rooms[roomId]) return;
-      finishStats(room, winner);
+      finishStats(room, winner, false, p1Set || p2Set);
       room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_over', { winner, setKind: p1Set || p2Set, myIndex: i + 1 }); });
     }, 1700);
     return;
@@ -1800,7 +1811,9 @@ function advanceTurn(roomId) {
 const SETTLE_PAUSE = 1600;   // reveal(결과공개) 뒤 정산 카드 이동·더미 확인 시간
 
 // 로그인 유저의 전적/랭크/레벨/코인 반영 + 갱신된 프로필·보상 전송
-function finishStats(room, winner, forfeit = false) {
+// setKind — 세트를 완성해서 이긴 경우 그 종류(2·3·4·6). 싸이클링 판정에 쓴다.
+// 시간패·탈주·진행도 판정으로 끝난 판은 세트 우승이 아니므로 넘기지 않는다.
+function finishStats(room, winner, forfeit = false, setKind = null) {
   room.lastWinner = winner;   // 관전자 도전 대상
   if (!room.tokens) return;
   stats.bump('games');
@@ -1824,7 +1837,7 @@ function finishStats(room, winner, forfeit = false) {
     const oppUid = room.vsBot ? null : uidOf(room.tokens[1 - i]);
     const out = accounts.recordResult(tok, result, {
       vsBot: room.vsBot, difficulty: room.difficulty, oppLabel,
-      sameIp, friendly, turns, playtimeSec, oppUid, forfeit,
+      sameIp, friendly, turns, playtimeSec, oppUid, forfeit, setKind,
       noRank: !!room.botMatch || !!room.itemMode,   // 위장 봇 매치·아이템전은 코인·XP만, RP는 랭킹 무결성 위해 미반영
     });
     if (out && room.players[i]) io.to(room.players[i]).emit('profile', { profile: out.profile, result, rewards: out.rewards });

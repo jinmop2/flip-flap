@@ -456,7 +456,16 @@ function showRewards() {
   if (r.rankUp) { add('bd-rank', `${rankIco('👑')} 승급! ${r.rankUp}`, d, true); d += 250; playSound('setwin'); }
   (r.missions || []).forEach(m => { add('bd-first', `${ico('🎯')} 미션 완료: ${esc(m.name)} +${m.reward}`, d, true); d += 250; });
   (r.milestones || []).forEach(m => { add('bd-rank', `${m.icon} ${m.label}`, d); d += 250; playSound('setwin'); });
-  (r.titles || []).forEach(t => { add('bd-rank', `${t.icon} 칭호 획득! ${t.name}`, d); d += 250; playSound('setwin'); });
+  (r.titles || []).forEach(t => { add('bd-rank', `${ico(t.icon)} 칭호 획득! ${esc(t.name)}`, d, true); d += 250; playSound('setwin'); });
+  // 싸이클링 — 2·3·4·6 세트로 각각 한 번씩 우승하면 한 바퀴
+  if (r.cycle && r.cycle.done) {
+    add('bd-rank', `${ico('🔁')} <b>싸이클링 완성!</b> 2·3·4·6 제패 +${r.cycle.amount}`, d, true);
+    d += 300; playSound('setwin');
+  } else if (r.cycle && r.cycle.fresh) {
+    const got = (r.cycle.progress || []).filter((x) => x.done).length;
+    add('bd-first', `${ico('🔁')} 싸이클링 ${r.cycle.kind} 세트 달성 (${got}/4)`, d, true);
+    d += 250;
+  }
   if (r.blocked) {
     const msg = r.reason === 'short' ? '너무 짧은 판 — 보상 없음'
               : r.reason === 'friendly' ? '같은 접속·친선 대전 — 보상 없음'
@@ -1433,7 +1442,12 @@ async function submitCoupon() {
   msg.className = 'cpn-msg'; msg.textContent = '확인 중…';
   const res = await apiPost('/api/coupon', { token: localStorage.getItem('ff_auth'), code });
   if (res.error) { msg.className = 'cpn-msg err'; msg.textContent = '⚠️ ' + res.error; return; }
-  msg.className = 'cpn-msg ok'; msg.textContent = `🪙 ${res.amount} 코인을 받았어요!`;
+  // 칭호만 주는 쿠폰은 코인이 0 이다. 그냥 두면 "🪙 0 코인을 받았어요" 가 뜬다.
+  msg.className = 'cpn-msg ok';
+  const got = [];
+  if (res.amount) got.push(`🪙 ${res.amount} 코인`);
+  if (res.title) got.push(`${res.title.icon} <b style="color:${res.title.color}">${esc(res.title.name)}</b> 칭호`);
+  msg.innerHTML = got.length ? got.join(' + ') + '을(를) 받았어요!' : '쿠폰을 사용했어요!';
   inp.value = '';
   myAccount = res.profile;          // 서버가 계산한 잔액으로 갱신 (클라이언트 값은 신뢰하지 않는다)
   renderAccount();
@@ -2304,6 +2318,10 @@ function showEmote(emoji, side) {
   b.className = 'emote-bubble';
   const art = (typeof emoteArt === 'function') && emoteArt(emoji);
   if (art) b.innerHTML = art; else b.textContent = emoji;   // 상점 팩 등 매핑 없는 건 이모지 그대로
+  // 티백은 위아래로 담갔다 뺀다 — 그게 이 이모트의 전부다.
+  // 예전엔 상점 미리보기와 피커 버튼에만 붙어 있어서, 정작 판에서 보내면
+  // 가만히 있는 주전자가 떴다("티배깅 작동 안 됨").
+  if (emoji === '🫖') b.classList.add('em-teabag');
   let x = window.innerWidth / 2, y = side === 'me' ? window.innerHeight - 160 : 120;
   // 내 이모티콘은 이모트 버튼 바로 위에서 뜸 (중앙 X). 상대 것은 상대 손패 근처
   const anchor = side === 'me'

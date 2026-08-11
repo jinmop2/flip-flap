@@ -193,6 +193,7 @@ function profileOf(u) {
     winRate: total ? Math.round(u.wins / total * 100) : 0,
     coins: u.coins || 0,
     shards: u.shards || 0,
+    cycle: cycleProgress(u), cycleDone: (u.stats || {}).cycle || 0,
     sinceLegend: u.sinceLegend || 0,
     nickColor: u.nickColor || null,          // 염색약 결과 (색 키)
     cardBack: u.cardBack || null,            // 장착 중인 카드백
@@ -857,7 +858,10 @@ function rewardKey(vsBot, difficulty) {
 const DAILY_LOGIN = 30;        // 1일 접속 보상
 const FIRST_WIN_BONUS = 100;   // 하루 첫 승 보너스 (PvP승 or 전문가 AI승)
 const PLATE_DAILY_BONUS = 50;  // 🍀 행운의 명패 착용 시 출석 추가
-const MIN_TURNS = 5, MIN_PLAYTIME = 60;   // 진행 조건 필터
+// 진행 조건 필터 — 이보다 짧으면 "판을 돌리기만 한 것"으로 보고 보상을 안 준다.
+// 60초였는데 실제 판이 대부분 그 아래라 정상적으로 끝낸 판까지 걸렸다.
+// 턴 수(5턴) 쪽이 이미 즉시 포기를 막고 있으므로 시간 기준은 30초로 낮춘다.
+const MIN_TURNS = 5, MIN_PLAYTIME = 30;
 const MATCH_LIMIT = 3;         // 같은 상대와 하루 보상 인정 판수
 const DECAY_RANK_RP = 900, DECAY_DAYS = 3, DECAY_PER_DAY = 10;   // 다이아 이상 미접속 감소
 const PLATE_RP_WEIGHT = 10;    // 플래티넘(500+) 3연승 이상 RP 가중치
@@ -880,18 +884,63 @@ function bumpMatchCount(a, b) {
 setInterval(() => { const day = kstDayIndex(); for (const [k, e] of matchLogs) if (e.day !== day) matchLogs.delete(k); }, 3600000);
 
 // ── 칭호 (조건 달성 시 자동 획득) ──
+// 칭호는 지표마다 세 단계다. 하나를 달성해도 다음 목표가 남아 있어야
+// "다 모았다" 로 끝나지 않는다. 위로 갈수록 대략 3~5배씩 벌린다.
+// goalKey '__never' 는 조건으로 절대 안 풀린다는 뜻 — 수동·쿠폰 지급 전용.
 const TITLES = {
-  t_founder:{ name: '창단 멤버',     icon: '🏛️', color: '#ffd94a', cond: '초기 가입자',        goalKey: '__never',    goal: Infinity },   // 가입 시 수동 지급
-  t_tutor:  { name: '새내기 졸업',   icon: '🎓', color: '#7dd87d', cond: '첫 승리',            goalKey: 'wins',       goal: 1 },
-  t_streak: { name: '연승 제조기',   icon: '🔥', color: '#ffab5e', cond: '5연승 달성',          goalKey: 'bestStreak', goal: 5 },
-  t_betray: { name: '배신의 달인',   icon: '⚔️', color: '#ff8a8a', cond: '졸개의 배신 5회',     goalKey: 'betray',     goal: 5 },
-  t_expert: { name: '전문가 사냥꾼', icon: '🎯', color: '#ffd94a', cond: '전문가 AI 10승',      goalKey: 'expertWins', goal: 10 },
-  t_multi:  { name: '경매왕',        icon: '👑', color: '#c39bff', cond: '멀티플레이 20승',     goalKey: 'multiWins',  goal: 20 },
-  t_debut:  { name: '온라인 데뷔',   icon: '🌐', color: '#7ab8ff', cond: '첫 멀티플레이 승리',  goalKey: 'multiWins',  goal: 1 },
-  t_daily7: { name: '성실한 단골',   icon: '📅', color: '#8fe08a', cond: '7일 연속 출석',       goalKey: 'loginStreak', goal: 7 },
-  t_lv10:   { name: '숙련된 승부사', icon: '🎖️', color: '#ffab5e', cond: '레벨 10 달성',        goalKey: 'level',      goal: 10 },
-  t_rich:   { name: '큰손',          icon: '💰', color: '#ffd94a', cond: '코인 2,000 보유',     goalKey: 'coins',      goal: 2000 },
-  t_vet:    { name: '백전노장',      icon: '🛡️', color: '#c8a86a', cond: '누적 50판 플레이',    goalKey: 'games',      goal: 50 },
+  // ── 수동 지급 ──
+  t_founder:  { name: '창단 멤버',     icon: '🏛️', color: '#ffd94a', cond: '초기 가입자',          goalKey: '__never',     goal: Infinity },
+  t_invite:   { name: '초대 패왕',     icon: '📣', color: '#ff6fae', cond: '단 한 명에게만',        goalKey: '__never',     goal: Infinity },
+
+  // ── 총 승수 ──
+  t_tutor:    { name: '새내기 졸업',   icon: '🎓', color: '#7dd87d', cond: '첫 승리',              goalKey: 'wins',        goal: 1 },
+  t_win50:    { name: '승리의 맛',     icon: '🏅', color: '#8fe08a', cond: '통산 50승',            goalKey: 'wins',        goal: 50 },
+  t_win200:   { name: '승리 수집가',   icon: '⭐', color: '#ffd94a', cond: '통산 200승',           goalKey: 'wins',        goal: 200 },
+
+  // ── 연승 ──
+  t_streak:   { name: '연승 제조기',   icon: '🔥', color: '#ffab5e', cond: '5연승 달성',           goalKey: 'bestStreak',  goal: 5 },
+  t_streak10: { name: '파죽지세',      icon: '⚡', color: '#ff8a3a', cond: '10연승 달성',          goalKey: 'bestStreak',  goal: 10 },
+  t_streak20: { name: '무패의 폭풍',   icon: '❤️‍🔥', color: '#ff5a5a', cond: '20연승 달성',          goalKey: 'bestStreak',  goal: 20 },
+
+  // ── 졸개의 배신 ──
+  t_betray:   { name: '배신의 달인',   icon: '⚔️', color: '#ff8a8a', cond: '졸개의 배신 5회',      goalKey: 'betray',      goal: 5 },
+  t_betray20: { name: '배신의 화신',   icon: '🌑', color: '#c07a9a', cond: '졸개의 배신 20회',     goalKey: 'betray',      goal: 20 },
+  t_betray50: { name: '배신의 군주',   icon: '🃏', color: '#e05a8a', cond: '졸개의 배신 50회',     goalKey: 'betray',      goal: 50 },
+
+  // ── 전문가 AI ──
+  t_expert:   { name: '전문가 사냥꾼', icon: '🎯', color: '#ffd94a', cond: '전문가 AI 10승',       goalKey: 'expertWins',  goal: 10 },
+  t_expert30: { name: '기계 사냥꾼',   icon: '🔍', color: '#ffc23a', cond: '전문가 AI 30승',       goalKey: 'expertWins',  goal: 30 },
+  t_expert100:{ name: '기계 학살자',   icon: '♠️', color: '#e8a020', cond: '전문가 AI 100승',      goalKey: 'expertWins',  goal: 100 },
+
+  // ── 멀티플레이 ──
+  t_debut:    { name: '온라인 데뷔',   icon: '🌐', color: '#7ab8ff', cond: '첫 멀티플레이 승리',   goalKey: 'multiWins',   goal: 1 },
+  t_multi:    { name: '경매왕',        icon: '👑', color: '#c39bff', cond: '멀티플레이 20승',      goalKey: 'multiWins',   goal: 20 },
+  t_multi60:  { name: '경매 제왕',     icon: '🎪', color: '#a86fff', cond: '멀티플레이 60승',      goalKey: 'multiWins',   goal: 60 },
+
+  // ── 출석 ──
+  t_daily7:   { name: '성실한 단골',   icon: '📅', color: '#8fe08a', cond: '7일 연속 출석',        goalKey: 'loginStreak', goal: 7 },
+  t_daily30:  { name: '개근상',        icon: '🍀', color: '#6fd07a', cond: '30일 연속 출석',       goalKey: 'loginStreak', goal: 30 },
+  t_daily100: { name: '터줏대감',      icon: '🌙', color: '#5ab8d8', cond: '100일 연속 출석',      goalKey: 'loginStreak', goal: 100 },
+
+  // ── 레벨 ──
+  t_lv10:     { name: '숙련된 승부사', icon: '🎖️', color: '#ffab5e', cond: '레벨 10 달성',         goalKey: 'level',       goal: 10 },
+  t_lv25:     { name: '노련한 승부사', icon: '📜', color: '#e0a860', cond: '레벨 25 달성',         goalKey: 'level',       goal: 25 },
+  t_lv50:     { name: '완숙한 승부사', icon: '🏁', color: '#f0e0c0', cond: '레벨 50 달성',         goalKey: 'level',       goal: 50 },
+
+  // ── 코인 ──
+  t_rich:     { name: '큰손',          icon: '💰', color: '#ffd94a', cond: '코인 2,000 보유',      goalKey: 'coins',       goal: 2000 },
+  t_rich5k:   { name: '갑부',          icon: '💎', color: '#ffe27a', cond: '코인 5,000 보유',      goalKey: 'coins',       goal: 5000 },
+  t_rich15k:  { name: '재벌',          icon: '🎩', color: '#fff0a8', cond: '코인 15,000 보유',     goalKey: 'coins',       goal: 15000 },
+
+  // ── 누적 판수 ──
+  t_vet:      { name: '백전노장',      icon: '🛡️', color: '#c8a86a', cond: '누적 50판 플레이',     goalKey: 'games',       goal: 50 },
+  t_vet200:   { name: '천전노장',      icon: '🚩', color: '#b09050', cond: '누적 200판 플레이',    goalKey: 'games',       goal: 200 },
+  t_vet500:   { name: '만전노장',      icon: '🎖', color: '#9a7a40', cond: '누적 500판 플레이',    goalKey: 'games',       goal: 500 },
+
+  // ── 싸이클링 (2·3·4·6 으로 한 번씩 낙찰 승리) ──
+  t_cycle1:   { name: '사이클 입문',   icon: '🔁', color: '#7ad8c8', cond: '싸이클링 1회 완성',    goalKey: 'cycle',       goal: 1 },
+  t_cycle5:   { name: '사이클 장인',   icon: '🔄', color: '#4ec8b8', cond: '싸이클링 5회 완성',    goalKey: 'cycle',       goal: 5 },
+  t_cycle20:  { name: '사이클 마스터', icon: '🎊', color: '#2fb8a8', cond: '싸이클링 20회 완성',   goalKey: 'cycle',       goal: 20 },
 };
 function statOf(u, key) {
   if (key === 'wins') return u.wins || 0;
@@ -965,6 +1014,43 @@ function betrayEvent(token) {
   pend.titles.push(...checkTitles(u));
   persist(idl);
 }
+// 싸이클링 — 2·3·4·6 세트로 각각 한 번씩 우승하면 한 바퀴 완성.
+// 야구의 싸이클링 안타(단타·2루타·3루타·홈런을 다 쳐야 한다)에서 따왔다.
+//
+// 한 판 안에서가 아니라 판을 넘어 쌓인다. 어떤 종류로 이겼는지를 모아 두고
+// 넷이 다 차면 보상을 주고 판을 비워, 다시 처음부터 모을 수 있게 한다.
+// 그래서 "이번엔 6으로 이겨 봐야지" 하고 목표를 갖고 덱을 짜게 된다.
+//
+// 6 세트는 23장이 필요해 가장 어렵다. 그래서 한 바퀴가 꽤 걸리고,
+// 일일미션(30~80코인)보다 훨씬 크게 준다.
+const CYCLE_KINDS = [2, 3, 4, 6];
+const CYCLE_REWARD = 400;
+
+// 지금까지 모은 종류 (화면 표시용)
+function cycleProgress(u) {
+  const got = (u && u.cycleSet) || {};
+  return CYCLE_KINDS.map((k) => ({ kind: k, done: !!got[k] }));
+}
+
+// 세트 우승 한 건을 기록한다. 넷이 다 차면 보상 + 판 비우기.
+// setKind 가 2·3·4·6 이 아니면(무승부·진행도 판정 등) 아무 일도 안 한다.
+function cycleWin(u, setKind) {
+  const k = Number(setKind);
+  if (!CYCLE_KINDS.includes(k)) return null;
+  u.cycleSet = u.cycleSet || {};
+  const fresh = !u.cycleSet[k];
+  u.cycleSet[k] = true;
+  if (!CYCLE_KINDS.every((x) => u.cycleSet[x])) {
+    return { kind: k, fresh, done: false, progress: cycleProgress(u) };
+  }
+  // 한 바퀴 완성 — 보상을 주고 처음부터 다시 모으게 한다
+  u.cycleSet = {};
+  u.stats = u.stats || {};
+  u.stats.cycle = (u.stats.cycle || 0) + 1;
+  u.coins = (u.coins || 0) + CYCLE_REWARD;
+  return { kind: k, fresh, done: true, amount: CYCLE_REWARD, total: u.stats.cycle, progress: cycleProgress(u) };
+}
+
 // 튜토리얼 완료 보상 — 코인 100 (플래그로 1회만)
 function claimTutorial(token) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
@@ -1085,8 +1171,14 @@ function createCoupons(count, coins, opts = {}) {
   // maxUses:0 은 "무제한"이라는 뜻이라 그 0 을 반드시 살려야 한다.
   const intOr = (v, dflt) => { const x = Math.floor(Number(v)); return Number.isFinite(x) ? x : dflt; };
 
-  const amount = intOr(coins, NaN);
-  if (!Number.isFinite(amount) || amount < 1) return { error: '지급할 코인을 1 이상으로 입력해주세요.' };
+  // 칭호만 주는 쿠폰이면 코인은 0 이어도 된다.
+  // hasOwnProperty 로 막지 않으면 '__proto__' 같은 걸 칭호로 넘길 수 있다.
+  const title = opts.title ? String(opts.title) : null;
+  if (title && !Object.prototype.hasOwnProperty.call(TITLES, title)) return { error: '없는 칭호예요.' };
+
+  const amount = intOr(coins, title ? 0 : NaN);
+  if (!Number.isFinite(amount) || amount < 0) return { error: '지급할 코인을 0 이상으로 입력해주세요.' };
+  if (!title && amount < 1) return { error: '지급할 코인을 1 이상으로 입력해주세요.' };
   if (amount > 100000) return { error: '한 장에 줄 수 있는 코인은 100,000까지예요.' };
 
   const n = Math.max(1, Math.min(200, intOr(count, 1)));
@@ -1095,16 +1187,27 @@ function createCoupons(count, coins, opts = {}) {
   const expiresAt = days > 0 ? Date.now() + days * 86400000 : null;
   const memo = String(opts.memo || '').slice(0, 60);
   const minLevel = Math.max(0, Math.min(99, intOr(opts.minLevel, 0)));
+  // 코드를 직접 정할 수 있다 (예: 초대 패왕처럼 사람에게 직접 건네는 한 장).
+  // 직접 정할 땐 한 장만 만든다 — 여러 장이면 코드가 겹친다.
+  const want = opts.code ? normCoupon(opts.code) : null;
+  if (want) {
+    if (want.length < 8 || want.length > 20) return { error: '코드는 영문·숫자 8~20자로 정해주세요.' };
+    if (Object.prototype.hasOwnProperty.call(db.coupons, want)) return { error: '이미 있는 코드예요.' };
+    if (n > 1) return { error: '코드를 직접 정할 땐 1장만 만들 수 있어요.' };
+  }
+
   const out = [];
   for (let i = 0; i < n; i++) {
-    let code;
-    do { code = normCoupon(genCouponCode()); }
-    while (Object.prototype.hasOwnProperty.call(db.coupons, code));
-    db.coupons[code] = { code, coins: amount, maxUses, uses: 0, usedBy: {}, expiresAt, minLevel, memo, createdAt: Date.now() };
+    let code = want;
+    if (!code) {
+      do { code = normCoupon(genCouponCode()); }
+      while (Object.prototype.hasOwnProperty.call(db.coupons, code));
+    }
+    db.coupons[code] = { code, coins: amount, title, maxUses, uses: 0, usedBy: {}, expiresAt, minLevel, memo, createdAt: Date.now() };
     persistCoupon(code);
     out.push(prettyCoupon(code));
   }
-  return { ok: true, codes: out, coins: amount, maxUses, expiresAt, memo };
+  return { ok: true, codes: out, coins: amount, title, maxUses, expiresAt, memo };
 }
 
 function couponList() {
@@ -1113,6 +1216,8 @@ function couponList() {
     .slice(0, 300)
     .map((c) => ({
       code: prettyCoupon(c.code), coins: c.coins, uses: c.uses, maxUses: c.maxUses,
+      title: c.title || null,
+      titleName: c.title && Object.prototype.hasOwnProperty.call(TITLES, c.title) ? TITLES[c.title].name : null,
       expiresAt: c.expiresAt, memo: c.memo, minLevel: c.minLevel, createdAt: c.createdAt,
       dead: (c.maxUses > 0 && c.uses >= c.maxUses) || (c.expiresAt && Date.now() > c.expiresAt),
     }));
@@ -1160,12 +1265,22 @@ function redeemCoupon(token, code, ip) {
     if (c.maxUses > 0 && c.uses >= c.maxUses) return { error: '이미 모두 사용된 쿠폰이에요.' };
     if (c.minLevel && levelOf(u.xp) < c.minLevel) return { error: `레벨 ${c.minLevel} 이상만 쓸 수 있어요.` };
 
+    // 이미 그 칭호를 가진 사람이 또 쓰면 한 장이 헛되이 사라진다.
+    // 한 명만 쓸 수 있는 쿠폰이라 더더욱 막아야 한다.
+    if (c.title && (u.titles || {})[c.title]) return { error: '이미 가진 칭호예요.' };
+
     c.usedBy[idl] = Date.now();
     c.uses++;
-    u.coins = (u.coins || 0) + c.coins;
+    if (c.coins) u.coins = (u.coins || 0) + c.coins;
+    let title = null;
+    if (c.title && Object.prototype.hasOwnProperty.call(TITLES, c.title)) {
+      u.titles = u.titles || {};
+      u.titles[c.title] = true;
+      title = { id: c.title, name: TITLES[c.title].name, icon: TITLES[c.title].icon, color: TITLES[c.title].color };
+    }
     persistCoupon(key);
     persist(idl);
-    return { ok: true, amount: c.coins, profile: profileOf(u) };
+    return { ok: true, amount: c.coins, title, profile: profileOf(u) };
   } finally { cpnLocks.delete(lockKey); }
 }
 
@@ -1224,6 +1339,13 @@ function recordResult(token, result, opts = {}) {
     if (opts.vsBot && opts.difficulty === 'expert') u.stats.expertWins = (u.stats.expertWins || 0) + 1;
     if (!opts.vsBot) u.stats.multiWins = (u.stats.multiWins || 0) + 1;
   }
+
+  // 싸이클링 — 어떤 세트로 이겼는지 모은다. 넷을 다 채우면 400코인.
+  // 어뷰징으로 걸린 판(blocked)은 세지 않는다 — 안 그러면 짧은 판을 돌려
+  // 세트만 갈아 끼우는 식으로 뚫린다. 세트 우승이 아니면(진행도 판정 등)
+  // cycleWin 이 스스로 무시한다.
+  let cycle = null;
+  if (result === 'win' && !blocked) cycle = cycleWin(u, opts.setKind);
 
   // 일일 미션 진행 (자동 수령 — 코인 즉시 지급)
   const missions = [];
@@ -1295,7 +1417,7 @@ function recordResult(token, result, opts = {}) {
       streakCount: u.winStreak, blocked, reason,
       levelUp: afterLevel > beforeLevel ? afterLevel : 0,
       rankUp: (afterRank !== beforeRank && rp > 0) ? afterRank : 0,
-      missions, titles, milestones,
+      missions, titles, milestones, cycle,
     },
   };
 }
@@ -1786,10 +1908,10 @@ function reportList(limit = 50) {
 module.exports = {
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, applyRp4, claimDaily, myRank,
   viceOf, clanCoinBonus,
-  createCoupons, couponList, redeemCoupon,
+  createCoupons, couponList, redeemCoupon, TITLES,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   gachaInfo, rollGacha, exchangeShard, GACHA_TIER, TIER_OF, SHARD_ONLY, bonusOf,
-  missionList, titleList, betrayEvent, claimTutorial, applyReferral, deleteAccount,
+  missionList, titleList, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,
   // 친구
   friendList, sendFriendReq, acceptFriendReq, declineFriendReq, cancelFriendReq, removeFriend,
   friendIdlsOf, nickOfIdl,
