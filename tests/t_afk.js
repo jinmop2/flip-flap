@@ -76,6 +76,14 @@ function play(p) {
   console.log('    가장 오래 멈춰 있던 시간: ' + sec + '초');
   ok('무한 대기가 없다 (40초 이내에 반드시 진행)', longestStall < 40000, sec + '초 멈춤');
   ok('AI 가 대신 둔 흔적이 있다', sawTakeover || (P[0].st && P[0].st.turn > 1));
+  // 손 놓은 자리가 언제 AI 로 넘어가는지는 그 사람 차례가 몇 번 돌아왔느냐에
+  // 달려서, 75초 안에 볼 수도 못 볼 수도 있다. 시간에 기대는 단정 대신 규칙
+  // 자체를 본다 — 이게 없으면 대신 두기만 반복하며 판이 안 굴러갔다.
+  const s4 = require('fs').readFileSync(__dirname + '/../server4.js', 'utf8');
+  ok('대신 두기가 실패했는지 확인한다', /played = !!autoPlayFor\(r\.game, waiting\)/.test(s4));
+  ok('못 두거나 여러 번 넘기면 자리를 AI 에게 넘긴다',
+     /if \(!played \|\| r\.afk\[waiting\] >= AFK_GIVEUP\)/.test(s4));
+  ok('넘기는 기준이 정해져 있다', /const AFK_GIVEUP = \d+;/.test(s4));
   ok('오류 없음', P.every((p) => !p.errors.length), P.map((p) => p.errors.join(',')).join('|'));
 
   P.forEach((p) => { try { p.s.close(); } catch (_) {} });

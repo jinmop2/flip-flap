@@ -89,5 +89,14 @@ console.log('\n④ 원문이 바뀌면 짝이 끊긴다');
   ok('사전이 비어 있지 않다', Object.keys(FF.DICT).length >= 150, String(Object.keys(FF.DICT).length));
 }
 
+console.log('\n⑤ 화면 밖에서도 따라잡는가');
+{
+  // requestAnimationFrame 은 탭이 화면에 없으면 아예 안 불린다. 그동안 그려진
+  // 것들이 한국어로 굳는다 — 폰에서 앱을 내렸다 올리면 그대로 재현됐다.
+  ok('rAF 로 미루지 않는다', !/requestAnimationFrame\(\(\) => \{\s*queued = false/.test(i18nSrc));
+  ok('타이머로 미룬다', /setTimeout\(\(\) => \{\s*queued = false/.test(i18nSrc));
+  ok('돌아오면 한 번 더 훑는다', /visibilitychange[\s\S]{0,120}?apply\(document\.body\)/.test(i18nSrc));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

@@ -29,6 +29,9 @@ const TURN_MS = 25000;
 // 연속으로 넘기면 대기를 확 줄이고, 그 사람이 다시 두면 원래대로 돌린다.
 const TURN_MS_AFK = 6000;
 const AFK_AFTER = 2;        // 연속 이만큼 넘기면 자리비움으로 본다
+// 이만큼 연속으로 넘기면 사람이 없는 것으로 보고 자리를 AI 에게 아주 넘긴다.
+// 25 + 6 + 6 ≈ 37초 — 남은 사람이 기다릴 만한 한계선.
+const AFK_GIVEUP = 3;
 const ORPHAN_MS = 120000;   // 솔로 — 접속이 끊긴 뒤 이만큼 지나면 방을 정리
 const SEAT_GRACE = 20000;   // 멀티 — 이만큼 안 돌아오면 그 자리는 AI가 대신한다
 
@@ -449,10 +452,25 @@ function attach4(io, hooks = {}) {
         r.afk[waiting] = (r.afk[waiting] || 0) + 1;
         console.warn('[g4] 시간 초과 — AI 가 대신 둡니다 room=' + roomId + ' seat=' + waiting
                      + ' phase=' + r.game.phase + ' (연속 ' + r.afk[waiting] + '회)');
+        let played = false;
         try {
-          autoPlayFor(r.game, waiting);
+          played = !!autoPlayFor(r.game, waiting);
         } catch (e) {
           console.error('[g4] 대리 진행 실패:', e);
+        }
+        // 여기가 오래 새던 구멍이다. 대신 두지 못했는데도 markWait 을 지우면,
+        // 다음 step 이 같은 자리를 "새 차례" 로 보고 25초를 다시 잰다. 그 자리가
+        // 계속 못 두면 25초씩 무한히 늘어나 판이 영영 안 굴러간다.
+        // 못 뒀거나 몇 번씩 넘겼으면, 그 자리는 사람이 없는 것으로 보고 AI 에게 넘긴다.
+        if (!played || r.afk[waiting] >= AFK_GIVEUP) {
+          const gone = r.seats[waiting];
+          if (gone && !gone.isBot) {
+            console.warn('[g4] 자리를 AI 에게 넘깁니다 room=' + roomId + ' seat=' + waiting
+                         + (played ? ' (연속 ' + r.afk[waiting] + '회 넘김)' : ' (대신 두지 못함)'));
+            if (gone.sid) io.to(gone.sid).emit('g4_timeout');
+            gone.isBot = true; gone.sid = null; gone.left = true;
+            r.game.seats[waiting].isBot = true;
+          }
         }
         markWait(r, null);
         r.lastStep = now;
