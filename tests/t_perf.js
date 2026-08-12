@@ -108,5 +108,21 @@ console.log('\n④ 누른 즉시 반응하는가 (2인전)');
      && /slot\.className = 'bid-confirm-slot'/.test(cli));
 }
 
+console.log('\n⑤ 아이템전 진입 위치');
+{
+  // 전에는 로비에 따로 버튼이 있고 거기서 다시 "솔로 / 빠른플레이" 를 물었다.
+  // AI전은 솔로 안, 온라인 매칭은 멀티 안에 있는 게 찾기 쉽다 — 한 번 덜 묻는다.
+  const solo = html.slice(html.indexOf('id="soloModal"'), html.indexOf('id="multiModal"'));
+  const multi = html.slice(html.indexOf('id="multiModal"'), html.indexOf('id="multiModal"') + 2200);
+  ok('솔로 안에 AI 아이템전', /onclick="startItemGame\(\)"/.test(solo));
+  ok('멀티 안에 빠른 아이템전', /onclick="quickMatch\(true\)"/.test(multi));
+  ok('솔로에는 빠른매칭이 없다', !/quickMatch\(true\)/.test(solo));
+  ok('멀티에는 AI전이 없다', !/startItemGame\(\)/.test(multi));
+  // 로비의 별도 버튼과, 거기서 다시 묻던 창은 사라져야 한다
+  ok('로비에 따로 있던 버튼이 없다', !/mode-card mini item/.test(html));
+  ok('다시 묻는 창도 없다', !/function openItemMode/.test(cli));
+  ok('시작하면 팝업을 닫는다', /window\.startItemGame = function \(\) \{\s*\n\s*closeModePanels\(\);/.test(cli));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

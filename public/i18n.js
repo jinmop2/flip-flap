@@ -26,6 +26,13 @@
     '멀티플레이': 'Multiplayer',
     '온라인 대전': 'Online Match',
     '아이템전': 'Item Battle',
+    '\ud83c\udfaa 아이템전 — AI와 대전': '\ud83c\udfaa Item Battle — vs AI',
+    '\ud83c\udfaa 아이템전 — 빠른 대전': '\ud83c\udfaa Item Battle — Quick Match',
+    '경매에서 지면 아이템을 받아요 · 랭킹 미반영, 코인·경험치만':
+      'Lose an auction, get an item · no rank change, coins and XP only',
+    '아이템전끼리 매칭돼요 · 랭킹 미반영, 코인·경험치만':
+      'Matched with other Item Battle players · no rank change, coins and XP only',
+
     '이벤트': 'Event',
     '다인전': 'Multiplayer',
     '3·4인': '3-4 Players',

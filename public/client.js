@@ -831,18 +831,14 @@ let isItemMode = false;
 let _iuItem = null, _iuCard = null;
 
 // 로비 → 아이템전: 솔로(AI) / 빠른플레이(유저 매칭) 선택
-function openItemMode() {
-  askConfirm(
-    { icon: '🎪', title: '아이템전 (이벤트)',
-      desc: '경매에서 지면 아이템을 받아요! 12종 아이템으로 뒤집는 캐주얼 모드예요.\n랭킹에는 반영되지 않고 코인·경험치만 받아요.',
-      yes: '👤 솔로 (AI와)', no: '⚡ 빠른플레이' },
-    () => startItemGame(),                       // 솔로
-    () => quickMatch(true));                     // 빠른플레이 — 아이템전 유저끼리 매칭
-}
-function startItemGame() {
+// 아이템전 진입은 솔로·멀티 팝업 안으로 옮겼다. 전에는 로비에 따로 버튼이
+// 있고 거기서 다시 "솔로 / 빠른플레이" 를 물었는데, AI전은 솔로 안에,
+// 온라인 매칭은 멀티 안에 있는 게 찾기 쉽다 — 한 번 덜 묻는다.
+window.startItemGame = function () {
+  closeModePanels();
   isVsBot = true; isItemMode = true;
   socket.emit('create_room', { vsBot: true, difficulty: 'normal', pid: PID, nick: getNick(), itemMode: true });
-}
+};
 
 // 슬롯 3칸 렌더 — 지금 쓸 수 있는 것만 밝게
 function renderItems(s) {
