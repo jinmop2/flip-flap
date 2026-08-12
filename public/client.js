@@ -3632,8 +3632,8 @@ function fanRow(container, isTop) {
 function renderAuction(changed) {
   const s = state;
   // 내용이 안 바뀌었으면 중앙 DOM 재생성 스킵 (끊김·깜빡임 방지)
-  const sig = JSON.stringify([s.phase, s.auctioneer, s.pick, s.auction, selectedBidCard && selectedBidCard.id]);
-  if (lastSig.auction === sig) return;
+  const sig = JSON.stringify([s.phase, s.auctioneer, s.pick, s.auction]);
+  if (lastSig.auction === sig) { paintBidSel(); return; }
   lastSig.auction = sig;
   const items = document.getElementById('auctionItems');
   const action = document.getElementById('actionArea'), badge = document.getElementById('auctionTypeBadge');
@@ -3697,20 +3697,54 @@ function renderAuction(changed) {
     row.appendChild(bo); row.appendChild(bc); action.appendChild(row);
   }
 
-  // 안내 문구는 매트 아래 statusBar가 담당 — 여기엔 확정 버튼만 (중복 제거)
-  const myTurnToBid = !isSpec && s.phase === 'bidding' && !a.myBid && (mine || a.oppBidSubmitted);
-  if (myTurnToBid && selectedBidCard) {
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-gold btn-sm'; btn.style.marginTop = '10px';
-    btn.textContent = `${selectedBidCard.kind}번 (${selectedBidCard.grade}등급) 배팅 확정`;
-    btn.onclick = () => {
-      playSound('place');
-      try { playPlaceFx(document.querySelector('#myHand .card.sel') || document.querySelector('#myHand .card')); } catch (_) {}
-      socket.emit('submit_bid', { cardId: selectedBidCard.id }); selectedBidCard = null;
-    };
-    action.appendChild(btn);
-  }
+  // 확정 버튼은 고를 때마다 나타났다 사라진다. 자리를 미리 비워 두지 않으면
+  // 버튼이 생길 때 아래가 밀려 판이 들썩인다.
+  const slot = document.createElement('div');
+  slot.className = 'bid-confirm-slot';
+  action.appendChild(slot);
+  paintBidSel();
+}
 
+// 고른 카드 표시 + 확정 버튼. DOM 을 새로 만들지 않고 여기서만 손댄다.
+// 예전엔 카드를 누를 때마다 render() 를 통째로 불러 손패·매트·더미가 전부
+// 다시 그려졌다. 누른 느낌이 한 박자 늦는 건 대개 이런 이유다.
+function paintBidSel() {
+  const s = state; if (!s) return;
+  const a = s.auction || {};
+  document.querySelectorAll('#myHand .card').forEach((el) => {
+    const on = !!selectedBidCard && String(el.dataset.id) === String(selectedBidCard.id);
+    el.classList.toggle('sel', on);
+    if (el.parentElement) el.parentElement.classList.toggle('sel', on);
+  });
+
+  const slot = document.querySelector('.bid-confirm-slot');
+  if (!slot) return;
+  const isSpec = s.myIndex === null || s.myIndex === undefined;
+  const mine = s.auctioneer === s.myIndex;
+  const myTurnToBid = !isSpec && s.phase === 'bidding' && !a.myBid && (mine || a.oppBidSubmitted);
+  if (!myTurnToBid || !selectedBidCard) { slot.innerHTML = ''; return; }
+
+  let btn = slot.firstElementChild;
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.className = 'btn btn-gold btn-sm';
+    slot.appendChild(btn);
+  }
+  btn.textContent = `${selectedBidCard.kind}번 (${selectedBidCard.grade}등급) 배팅 확정`;
+  btn.onclick = () => {
+    const card = selectedBidCard; if (!card) return;
+    playSound('place');
+    const el = document.querySelector('#myHand .card.sel');
+    try { playPlaceFx(el); } catch (_) {}
+    // 서버 응답을 기다리지 않고 먼저 손에서 뺀다. 왕복이 100ms 만 돼도
+    // "눌렀는데 가만히 있는" 순간이 생긴다. 서버가 받아들이면 다음 상태가
+    // 그대로 덮어쓰고, 거절하면 그 상태가 카드를 되돌려 놓는다.
+    if (el && el.parentElement) el.parentElement.remove();
+    selectedBidCard = null;
+    slot.innerHTML = '';
+    lastSig.hand = null;                    // 다음 상태에서 손패를 다시 맞춘다
+    socket.emit('submit_bid', { cardId: card.id });
+  };
 }
 // 배팅 카드를 각자 앞에 배치
 function bidSlot(label, card, { back = false, reveal = false, mine = false } = {}) {
@@ -3786,9 +3820,12 @@ function renderHand() {
   const bidding = s.phase === 'bidding' && a && !a.myBid && (mine || a.oppBidSubmitted);
   // 등급순 정렬로 손에 든 느낌
   const hand = [...s.myHand].sort((a, b) => a.kind - b.kind || a.grade - b.grade);
-  // 손패·상호작용·선택 상태 그대로면 재생성 스킵
-  const sig = hand.map(c => c.id).join(',') + '|' + (offer ? 'o' : '') + (bidding ? 'b' : '') + '|' + (selectedBidCard ? selectedBidCard.id : '');
-  if (lastSig.hand === sig) return; lastSig.hand = sig;
+  // 손패·상호작용이 그대로면 재생성 스킵.
+  // 예전엔 여기에 "고른 카드" 까지 넣어서, 카드를 한 번 누를 때마다 손패 여섯 장을
+  // 통째로 다시 만들고 부채꼴까지 다시 계산했다 — 그게 탭이 굼뜨게 느껴지던 이유다.
+  // 고른 표시는 DOM 을 새로 만들 일이 아니라 클래스만 바꾸면 되는 일이다.
+  const sig = hand.map(c => c.id).join(',') + '|' + (offer ? 'o' : '') + (bidding ? 'b' : '');
+  if (lastSig.hand === sig) { paintBidSel(); return; } lastSig.hand = sig;
   const deal = needsDeal && hand.length >= 6;   // 첫 손패 완성 시 딜 모션
   el.innerHTML = '';
   hand.forEach((card, i) => {
@@ -3797,10 +3834,15 @@ function renderHand() {
       cardEl = makeCard(card, { selectable: true, onClick: (c, el) => {
         playSound('place');
         try { playPlaceFx(el); } catch (_) {}
+        // 출품은 서버가 답할 때까지 손패가 그대로다. 왕복이 100ms 만 돼도
+        // "눌렀는데 가만히 있는" 순간이 생긴다. 배팅처럼 미리 빼 버릴 수는 없다 —
+        // 이미 낸 카드가 손으로 돌아오는 교체 단계라 판단을 화면이 흉내 내면 어긋난다.
+        // 그래서 뺴지는 않고, 누른 그 카드만 "가는 중" 으로 띄워 둔다.
+        el.classList.add('sending');
         socket.emit('offer_card', { cardId: c.id });
       } });
     else if (bidding)
-      cardEl = makeCard(card, { selectable: true, selected: selectedBidCard?.id === card.id, onClick: c => { selectedBidCard = selectedBidCard?.id === c.id ? null : c; render(); } });
+      cardEl = makeCard(card, { selectable: true, selected: selectedBidCard?.id === card.id, onClick: c => { selectedBidCard = selectedBidCard?.id === c.id ? null : c; paintBidSel(); } });
     else
       cardEl = makeCard(card);
     const slot = document.createElement('div'); slot.className = 'fan-slot';

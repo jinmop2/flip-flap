@@ -75,5 +75,35 @@ console.log('\n③ 내려받는 무게');
   ok('그림·음악·폰트는 캐시한다', /max-age=604800/.test(srv));
 }
 
+console.log('\n④ 누른 즉시 반응하는가 (2인전)');
+{
+  // 카드를 고를 때마다 render() 를 통째로 불렀다. 손패 여섯 장을 다시 만들고
+  // 부채꼴까지 다시 계산하니, 톡 누를 때마다 한 박자씩 늦었다.
+  ok('고르기는 표시만 바꾼다', /paintBidSel\(\); \} \}\);/.test(cli)
+     || /selectedBidCard\?\.id === c\.id \? null : c; paintBidSel\(\)/.test(cli));
+  ok('고를 때 render 를 안 부른다',
+     !/selectedBidCard\?\.id === c\.id \? null : c; render\(\)/.test(cli));
+  ok('표시만 바꾸는 함수가 있다', /function paintBidSel/.test(cli));
+
+  // 재생성 여부를 가르는 열쇠에서 "고른 카드" 를 뺀다 — 손패도 매트도.
+  ok('손패 열쇠에 선택이 없다',
+     !/const sig = hand\.map\(c => c\.id\)\.join\(','\)[^\n]*selectedBidCard/.test(cli));
+  ok('매트 열쇠에도 선택이 없다',
+     !/JSON\.stringify\(\[s\.phase, s\.auctioneer, s\.pick, s\.auction, selectedBidCard/.test(cli));
+
+  // 확정을 누르면 서버 답을 기다리지 않고 먼저 손에서 버린다
+  ok('손에서 먼저 민다', /if \(el && el\.parentElement\) el\.parentElement\.remove\(\)/.test(cli));
+  ok('다음 상태에서 다시 맞춘다', /lastSig\.hand = null;/.test(cli));
+
+  // 출품은 교체가 되는 단계라 미리 빼면 안 된다 — 대신 누름을 바로 보여 준다
+  ok('출품은 미리 빼지 않는다',
+     /el\.classList\.add\('sending'\);\n        socket\.emit\('offer_card'/.test(cli));
+  ok('가는 중 표시 CSS', /#myHand \.card\.sending \{/.test(html));
+
+  // 버튼이 생기며 아래가 밀리면 판이 들썿거린다
+  ok('확정 버튼 자리를 비워 둔다', /\.bid-confirm-slot \{/.test(html)
+     && /slot\.className = 'bid-confirm-slot'/.test(cli));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

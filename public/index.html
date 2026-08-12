@@ -2688,6 +2688,11 @@
     .a-label { font-size:.6rem; color:rgba(255,220,150,.55); text-transform:uppercase; letter-spacing:1.5px; font-weight:700; }
     .vs-tag { align-self:center; font-family:'Bangers'; font-size:1.1rem; color:rgba(255,215,120,.45); padding:0 2px; }
     #actionArea { height:44px; flex-shrink:0; display:flex; justify-content:center; align-items:center; }
+    /* 확정 버튼이 앉을 자리. 비어 있어도 자리를 지켜 버튼이 생길 때 판이 안 들썩인다. */
+    .bid-confirm-slot { display:flex; align-items:center; justify-content:center; }
+    /* 눌렀다는 걸 서버 답을 기다리지 않고 바로 보여 준다 */
+    #myHand .card.sending { transform:translateY(-14px) scale(1.04); opacity:.55;
+      transition:transform .12s ease-out, opacity .12s ease-out; pointer-events:none; }
 
     /* 배팅 카드 = 각자 앞에 놓임 */
     .bid-area { height:118px; flex-shrink:0; display:flex; justify-content:center; align-items:center; margin:6px 0; }
