@@ -1127,7 +1127,7 @@ function broadcastRooms() {
   if (roomsBcTimer) return;
   roomsBcTimer = setTimeout(() => { roomsBcTimer = null; io.to('lobby').emit('rooms', openRoomList()); }, 400);
 }
-const cleanNick = n => (String(n || '').trim().slice(0, 12)) || '게스트';
+const cleanNick = n => (String(n || '').trim().slice(0, 8)) || '게스트';   // 닉 최대 8자 (accounts.NICK_MAX 와 맞춘다)
 // 현재 접속 인원 브로드캐스트 (5초 주기 + 접속/해제 시)
 function broadcastOnline() { stats.peak(io.engine.clientsCount); io.emit('online', io.engine.clientsCount); }
 setInterval(broadcastOnline, 5000);

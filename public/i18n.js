@@ -494,7 +494,6 @@
     '닉네임': 'nickname',
     '을 정해주세요.': 'you will use in game.',
     '다른 플레이어에게 이 이름으로 보여요.': 'This is how other players will see you.',
-    '닉네임 (1~12자)': 'Nickname (1–12 characters)',
     '이 닉네임으로 시작': 'Start with this name',
     '나중에 정할게요': "I'll decide later",
     '지금 안 정하면, 나중엔 상점의 닉네임 변경권이 필요할 수 있어요': 'If you skip now, you may need a Nickname Change Ticket from the shop later',
@@ -752,6 +751,14 @@
     '아직 아이템이 없어요 — 상점 구경 가기': 'No items yet — take a look at the shop',
     '중복은 파편이 됩니다 ·': 'Duplicates become shards ·',
     '교환소': 'Exchange',
+
+    // ── 닉네임 규칙 안내 ──
+    '닉네임 (2~8자)': 'Nickname (2\u20138 characters)',
+    '닉네임은 2자 이상이어야 해요.': 'Your nickname needs at least 2 characters.',
+    '닉네임은 8자 이내여야 해요.': 'Your nickname can be at most 8 characters.',
+    '자음·모음만으로는 만들 수 없어요.': 'Letters alone (like \u314b\u314b) are not allowed.',
+    '사용할 수 없는 표현이 들어 있어요.': 'That contains language we do not allow.',
+    '사용할 수 없는 닉네임이에요.': 'That nickname cannot be used.',
 
     // ── 친구·클랜 ──
     '접속 중': 'Online',

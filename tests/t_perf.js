@@ -18,7 +18,10 @@ console.log('① 아무 일 없을 때는 쉬어야 한다');
   // 예전엔 0.4초마다 모달 상태를 훑었다. 아무도 안 눌러도 초당 2.5번 깨어난다.
   ok('모달 상태를 폴링하지 않는다', !/setInterval\(navRefresh/.test(cli));
   ok('class 변화를 지켜본다', /MutationObserver/.test(cli) && /attributeFilter: \['class'\]/.test(cli));
-  ok('한 프레임에 한 번만 부른다', /requestAnimationFrame\(\(\) => \{ watchModals\.q = false; navRefresh\(\); \}\)/.test(cli));
+  // 한 번의 변화로 여러 번 부르지 않게 미뤄 부르되, rAF 는 쓰지 않는다 —
+  // 탭이 화면에 없으면 아예 안 불려서 탭 표시가 굳는다.
+  ok('묶어서 한 번만 부른다', /watchModals\.q = true;\s*\n\s*const run = \(\) => \{ watchModals\.q = false; navRefresh\(\); \};/.test(cli));
+  ok('rAF 로 미루지 않는다', !/requestAnimationFrame\([^)]*navRefresh/.test(cli));
 
   // 다인전 재시도 타이머 — 보낸 게 있을 때만 돈다
   ok('재시도 타이머는 필요할 때만', /pendTimer = pendAct \? setInterval\(checkPend, 700\) : null/.test(c4));

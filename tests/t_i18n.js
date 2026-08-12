@@ -104,6 +104,19 @@ console.log('\n⑤ 화면 밖에서도 따라잡는가');
   ok('돌아오면 한 번 더 훑는다', /visibilitychange[\s\S]{0,120}?apply\(document\.body\)/.test(i18nSrc));
 }
 
+console.log('\n⑤′ 로비 설정 탭');
+{
+  // 설정은 게임 안에서만 열렸다 — 언어를 바꾸려고 판을 시작해야 했다.
+  ok('상단 탭에 설정이 있다', /data-nav="settings"/.test(html));
+  ok('탭이 설정을 연다', /settings: \(\) => \{ document\.body\.classList\.add\('lobby-settings'\)/.test(cli));
+  ok('다른 탭으로 가면 닫힌다', /toggleSettings\(false\); document\.body\.classList\.remove\('lobby-settings'\)/.test(cli));
+  ok('로비에서는 가운데로 내려온다', /body\.lobby-settings #settingsPanel \{ left:calc\(50% - 105px\)/.test(html));
+  // transform 으로 가운데를 잡으면 slideDown 애니메이션이 이겨 오른쪽으로 삐져나간다
+  ok('가운데 정렬에 transform 을 안 쓴다',
+     !/body\.lobby-settings #settingsPanel \{[^}]*transform:/.test(html));
+  ok('탭 표시가 화면 밖에서도 따라온다', !/requestAnimationFrame\(\(\) => \{ watchModals\.q/.test(cli));
+}
+
 console.log('\n⑥ 사람이 쓴 글은 건드리지 않는다');
 {
   // 닉네임·클랜 이름은 사용자 데이터다. 사전에 없으니 그대로 지나가야 한다 —

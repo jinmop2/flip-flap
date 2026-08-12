@@ -444,10 +444,55 @@ function profileOf(u) {
 // ── API ──
 // __proto__/constructor 등 예약어 차단 — 객체 키로 쓰이므로 프로토타입 오염 방지
 const RESERVED_KEY = /^(__proto__|constructor|prototype|hasownproperty|tostring|valueof)$/i;
-// 욕설·비하 닉네임 차단 (강한 표현 위주 — 오탐 최소화)
-const BADWORDS = /시발|씨발|씨빨|쉬발|시빨|ㅅㅂ|병신|븅신|빙신|지랄|새끼|색기|섹스|좆|존나|니미|애미|에미|느금|보지|자지|걸레|창녀|fuck|shit|bitch|nigg|sex|porn|운영자|관리자|admin|gm/i;
+// 욕설·비하 차단.
+//
+// 두 갈래로 나눠 둔다.
+//   · SUB  — 어디에 끼어 있든 걸러야 하는 말 (닉네임 안에 숨겨 써도 잡힌다)
+//   · WORD — 짧고 흔한 영단어라 단어 경계로만 잡는 것. 안 그러면 'Sextet',
+//            'Assassin', 'Grass' 같은 멀쩡한 이름이 같이 걸린다.
+//
+// 사이에 기호·숫자를 끼워 피해 가는 걸 막으려고, 검사 전에 한 번 눌러 편다
+// (normForBad): 기호 제거 + 흔한 치환(0→o, 1→i, 3→e, @→a, $→s) + 자모 분리 복원.
+const BAD_SUB = /시발|씨발|씨빨|쉬발|시빨|십발|씹|병신|븅신|빙신|지랄|새끼|색기|섹스|좆|존나|니미|애미|에미|느금|보지|자지|걸레|창녀|창년|미친놈|미친년|개새|호로|썅|썩을|엠창|틀딱|짱깨|쪽바리|한남충|김치녀|메갈|일베|운영자|관리자|fuck|fuk|fck|shit|bitch|bastard|asshole|nigg|nigr|cunt|slut|whore|dick|pussy|penis|vagina|blowjob|handjob|porn|hentai|rape|pedo|nazi|hitler|kkk|retard|faggot|fagot|motherfuck|wtf|stfu|admin|moderator/i;
+const BAD_WORD = /^(?:sex|ass|anal|cum|tit|tits|boob|boobs|damn|hell|crap|piss|suck|sucks|gay|homo|jap|chink|gook|spic|kike|coon|die|kill|gm|op|god)$/i;
+
+// 검사 전에 눌러 펴기 — s1_2#발 같은 우회를 막는다
+function normForBad(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[\s._\-*~^!?,'"`|/\\+=()\[\]{}<>:;]/g, '')
+    .replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e')
+    .replace(/4/g, 'a').replace(/5/g, 's').replace(/7/g, 't')
+    .replace(/@/g, 'a').replace(/\$/g, 's');
+}
+function hasBadWord(s) {
+  const n = normForBad(s);
+  if (!n) return false;
+  if (BAD_SUB.test(n)) return true;
+  // 짧은 영단어는 통째로 같을 때만 (Assassin 같은 멀쩡한 이름을 살리려고)
+  return BAD_WORD.test(n);
+}
+
+// 닉네임 규칙
+//   · 2~8자 (예전엔 1~12자였다. 한 글자는 서로 못 알아보고, 열두 글자는 판에서 잘렸다)
+//   · 자음·모음만으로는 안 된다 (ㅋㅋ, ㅏㅏ 같은 건 이름이 아니다)
+//   · 욕설·비속어는 한국어·영어 모두 차단
+const NICK_MIN = 2, NICK_MAX = 8;
+// 완성되지 않은 한글 낱자 (ㄱ~ㅎ, ㅏ~ㅣ)
+const JAMO_ONLY = /^[\u3131-\u318E]+$/;
 function validId(id)   { return /^[A-Za-z0-9_]{3,16}$/.test(id || '') && !RESERVED_KEY.test(id); }
-function validNick(n)  { const s = String(n || '').trim(); return s.length >= 1 && s.length <= 12 && !RESERVED_KEY.test(s) && !BADWORDS.test(s.replace(/[\s._-]/g, '')); }
+// 왜 문제인지까지 돌려준다 — "사용할 수 없어요" 만 뜨면 뭘 고쳐야 할지 모른다
+function nickProblem(n) {
+  const s = String(n || '').trim();
+  // 문구를 템플릿으로 짜면 소스에 통째로 안 남아, 번역 사전의 짝 검사가 못 본다
+  if (s.length < NICK_MIN) return '닉네임은 2자 이상이어야 해요.';
+  if (s.length > NICK_MAX) return '닉네임은 8자 이내여야 해요.';
+  if (JAMO_ONLY.test(s.replace(/\s/g, ''))) return '자음·모음만으로는 만들 수 없어요.';
+  if (RESERVED_KEY.test(s)) return '사용할 수 없는 닉네임이에요.';
+  if (hasBadWord(s)) return '사용할 수 없는 표현이 들어 있어요.';
+  return null;
+}
+function validNick(n) { return nickProblem(n) === null; }
 
 const TOKEN_TTL = 30 * 24 * 3600 * 1000;   // 토큰 30일 만료
 // 신규 계정 창단 보너스 — 코인 200 + '창단 멤버' 칭호 (플래그로 1회만)
@@ -464,7 +509,7 @@ function signup(id, pw, nick) {
   if (!validId(id)) return { error: '아이디는 영문/숫자 3~16자예요.' };
   if (/^kakao_/i.test(id)) return { error: '사용할 수 없는 아이디예요.' };   // 카카오 계정 키와 충돌 방지
   if (String(pw || '').length < 6) return { error: '비밀번호는 6자 이상이어야 해요.' };
-  if (!validNick(nick)) return { error: '닉네임은 1~12자예요.' };
+  { const bad = nickProblem(nick); if (bad) return { error: bad }; }
   const idl = id.toLowerCase(), nickl = nick.toLowerCase();
   if (db.users[idl]) return { error: '이미 있는 아이디예요.' };
   if (db.nickTaken[nickl]) return { error: '이미 사용 중인 닉네임이에요.' };
@@ -529,10 +574,7 @@ function setNick(token, nick) {
   const hasTicket = ((u.items || {}).nick_change || 0) > 0;
   if (!freeSet && !hasTicket) return { error: '닉네임 변경권이 필요해요. (상점에서 구매)' };
   nick = String(nick || '').trim();
-  const cleaned = nick.replace(/[\s._-]/g, '');
-  if (nick.length < 1 || nick.length > 12) return { error: '닉네임은 1~12자예요.' };
-  if (BADWORDS.test(cleaned) || RESERVED_KEY.test(nick)) return { error: '사용할 수 없는 닉네임이에요.' };
-  if (!validNick(nick)) return { error: '사용할 수 없는 닉네임이에요.' };
+  { const bad = nickProblem(nick); if (bad) return { error: bad }; }
   const nl = nick.toLowerCase();
   if (db.nickTaken[nl] && db.nickTaken[nl] !== idl) return { error: '이미 사용 중인 닉네임이에요.' };
   if (u.nick) delete db.nickTaken[u.nick.toLowerCase()];
@@ -2010,7 +2052,7 @@ function createClan(token, name, tag) {
   name = String(name || '').trim(); tag = String(tag || '').trim().toUpperCase();
   if (!CLAN_NAME_RE.test(name)) return { error: '클랜 이름은 한글·영문·숫자 2~12자예요.' };
   if (!CLAN_TAG_RE.test(tag))  return { error: '태그는 영문 대문자·숫자 2~4자예요.' };
-  if (BADWORDS.test(name.replace(/[\s._-]/g, '')) || BADWORDS.test(tag)) return { error: '사용할 수 없는 이름이에요.' };
+  if (hasBadWord(name) || hasBadWord(tag)) return { error: '사용할 수 없는 이름이에요.' };
   if (clanNameTaken(name)) return { error: '이미 있는 클랜 이름이에요.' };
   if (clanTagTaken(tag))   return { error: '이미 사용 중인 태그예요.' };
   const lv = levelOf(u.xp);
@@ -2135,7 +2177,7 @@ function setClanNotice(token, notice) {
   if (!c) return { error: '클랜이 없어요.' };
   if (c.owner !== idl) return { error: '클랜장만 할 수 있어요.' };
   const n = String(notice || '').trim().slice(0, 60);
-  if (n && BADWORDS.test(n.replace(/[\s._-]/g, ''))) return { error: '사용할 수 없는 문구예요.' };
+  if (n && hasBadWord(n)) return { error: '사용할 수 없는 문구예요.' };
   c.notice = n;
   persistClan(c.id);
   return { ok: true, notice: n };
@@ -2227,7 +2269,7 @@ function clanChatSend(token, text) {
   let t = String(text || '').replace(/\s+/g, ' ').trim();
   if (!t) return { error: '내용을 입력해주세요.' };
   if (t.length > CHAT_MAX_LEN) t = t.slice(0, CHAT_MAX_LEN);
-  if (BADWORDS.test(t.replace(/[\s._\-*]/g, ''))) return { error: '사용할 수 없는 표현이 있어요.' };
+  if (hasBadWord(t)) return { error: '사용할 수 없는 표현이 있어요.' };
 
   // 도배 방지 — 연속 간격 + 짧은 시간 내 개수
   const now = Date.now();

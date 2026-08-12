@@ -1868,6 +1868,8 @@ const NAV_ACTIONS = {
   gacha:   () => openGacha(),
   friends: () => openFriends(),
   clan:    () => openClan(),
+  // 설정은 원래 게임 안에서만 열렸다. 언어를 바꾸려고 판을 시작해야 했다.
+  settings: () => { document.body.classList.add('lobby-settings'); toggleSettings(true); },
 };
 function closeAllNavModals() {
   try { closeGacha(); } catch (_) {}
@@ -1875,6 +1877,7 @@ function closeAllNavModals() {
   try { closeShop(); } catch (_) {}
   try { closeFriends(); } catch (_) {}
   try { closeClan(); } catch (_) {}
+  try { toggleSettings(false); document.body.classList.remove('lobby-settings'); } catch (_) {}
 }
 function navGo(key) {
   const act = Object.prototype.hasOwnProperty.call(NAV_ACTIONS, key) ? NAV_ACTIONS[key] : null;
@@ -1891,20 +1894,27 @@ function navSync(key) {
 }
 function navRefresh() {
   const open = (id) => { const e = document.getElementById(id); return e && e.classList.contains('show'); };
+  const sp = document.getElementById('settingsPanel');
+  const setOpen = !!sp && sp.classList.contains('show') && document.body.classList.contains('lobby-settings');
   navSync(open('missionModal') ? 'mission' : open('shopModal') ? 'shop'
-        : open('friendsModal') ? 'friends' : open('clanModal') ? 'clan' : 'home');
+        : open('friendsModal') ? 'friends' : open('clanModal') ? 'clan'
+        : setOpen ? 'settings' : 'home');
 }
 // 모달은 여러 경로(ESC·바깥 클릭·닫기 버튼)로 닫히므로 상태를 맞춰 줘야 한다.
 // 예전엔 0.4초마다 계속 훑었다 — 아무 일이 없어도 초당 2.5번 깨어나 폰이
 // 쉬지를 못했다. 창이 열리고 닫히는 건 class 가 바뀌는 일이니, 그걸 지켜본다.
 (function watchModals() {
   const obs = new MutationObserver(() => {
-    // 한 번의 변화로 여러 번 부르지 않게 다음 프레임에 한 번만
+    // 한 번의 변화로 여러 번 부르지 않게 한 번만 미뤄 부른다.
+    // rAF 는 안 된다 — 탭이 화면에 없으면 아예 안 불려서 탭 표시가 굳는다.
+    // (i18n 에서 같은 이유로 이미 한 번 데였다.)
     if (watchModals.q) return;
     watchModals.q = true;
-    requestAnimationFrame(() => { watchModals.q = false; navRefresh(); });
+    const run = () => { watchModals.q = false; navRefresh(); };
+    if (typeof queueMicrotask === 'function') queueMicrotask(run);
+    else Promise.resolve().then(run);
   });
-  for (const id of ['missionModal', 'shopModal', 'friendsModal', 'clanModal', 'gachaModal']) {
+  for (const id of ['missionModal', 'shopModal', 'friendsModal', 'clanModal', 'gachaModal', 'settingsPanel']) {
     const el = document.getElementById(id);
     if (el) obs.observe(el, { attributes: true, attributeFilter: ['class'] });
   }
@@ -2558,6 +2568,10 @@ function toggleSettings(force) {
   const show = force === undefined ? !p.classList.contains('show') : force;
   p.classList.toggle('show', show);
   if (show) applySettings();
+  else {
+    document.body.classList.remove('lobby-settings');   // 로비 자리 표시도 같이 뗀다
+    if (typeof navRefresh === 'function') navRefresh();  // 탭 표시를 '홈' 으로 되돌린다
+  }
 }
 function toggleBgm() {
   bgmOff = !bgmOff; localStorage.setItem('ff_bgm', bgmOff ? 'off' : 'on');
@@ -2571,10 +2585,16 @@ function toggleGuide() {
   guideOff = !guideOff; localStorage.setItem('ff_guide', guideOff ? 'off' : 'on');
   applySettings();
 }
-// 패널 바깥 클릭 시 닫기
+// 패널 바깥 클릭 시 닫기.
+// 로비 탭(설정)도 예외로 둔다 — 안 그러면 누르는 순간 pointerdown 이 먼저 닫고
+// 곧이어 click 이 다시 여는 깜빡임이 생긴다.
 document.addEventListener('pointerdown', e => {
   const p = document.getElementById('settingsPanel');
-  if (p && p.classList.contains('show') && !e.target.closest('#settingsPanel') && !e.target.closest('#settingsBtn')) toggleSettings(false);
+  if (!p || !p.classList.contains('show')) return;
+  if (e.target.closest('#settingsPanel') || e.target.closest('#settingsBtn')
+      || e.target.closest('[data-nav="settings"]')) return;
+  toggleSettings(false);
+  document.body.classList.remove('lobby-settings');
 });
 window.addEventListener('DOMContentLoaded', applySettings);   // 저장된 상태 반영
 window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); paintIcons(); } catch (_) {} });   // 기본 이모트·라벨 아이콘
