@@ -1056,7 +1056,9 @@
     .q-nmeta { font-size:.55rem; color:#a89880; }
 
     /* ══ 4인전 화면 ══ */
-    #game4 { display:none; position:fixed; inset:0; z-index:60; flex-direction:column;
+    /* z-index 는 창들보다 낮아야 한다. 60 이었을 때 설명(40)·나가기 확인(45)
+       같은 창이 판 뒤에서 열려, 눌러도 아무 일도 안 일어나는 것처럼 보였다. */
+    #game4 { display:none; position:fixed; inset:0; z-index:30; flex-direction:column;
       background:radial-gradient(ellipse at 50% 34%, #2c5a44 0%, #17392a 62%, #0d2419 100%);
       padding:calc(6px + var(--safe-t)) 8px calc(6px + var(--safe-b)); gap:6px; overflow:hidden; }
     body.quad4 #game4 { display:flex; }
@@ -1454,7 +1456,6 @@
 
     /* 상대 보유 아이템 수 — 상대 시계 바로 아래 (좌상단은 나가기·설명·설정 버튼 자리) */
     #oppItemBadge {
-      position:absolute; right:16px; top:calc(92px + var(--safe-t)); z-index:7;
       display:flex; align-items:center; gap:4px; padding:4px 9px; border-radius:11px;
       background:rgba(74,42,106,.85); border:1px solid #8f6fc0; color:#e8d8ff; font-size:.72rem; font-weight:700;
     }
@@ -2141,8 +2142,10 @@
     #exitBtn { border-color:rgba(255,96,96,.35); color:#ff9a9a; }
     #exitBtn:hover { background:rgba(255,96,96,.18); }
     /* ── 인게임 설정 패널 ── */
+    /* 두 판이 같이 쓴다. #game 안에 두었더니 다인전에서는 그 판이 숨어 있어
+       설정이 아예 뜨지 않았다. 몸통 직속 + fixed 로 바꿔 어느 판에서든 뜬다. */
     #settingsPanel {
-      position:absolute; top:calc(74px + var(--safe-t)); left:16px; z-index:12; width:210px;
+      position:fixed; top:calc(74px + var(--safe-t)); left:16px; z-index:46; width:210px;
       display:none; flex-direction:column; gap:2px; padding:8px;
       background:linear-gradient(180deg,#3a1018,#22090e); border:1.5px solid #b98d34; border-radius:14px;
       box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 12px 30px rgba(0,0,0,.6);
@@ -2175,12 +2178,15 @@
     #myProfile { text-align:right; }
     #myProfile .pc-body, #myProfile .pc-diff, #myProfile .pc-stats { margin-left:auto; }
     .game-pcard:hover { border-color:rgba(200,160,0,.75); box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 4px 14px rgba(0,0,0,.5); }
-    #oppProfile { top:calc(6px + var(--safe-t)); right:16px; }
-    #myProfile  { bottom:calc(14px + var(--safe-b)); right:16px; }
-    /* 프로필 옆 시간: 상대는 프로필 아래, 나는 프로필 위 */
-    .pc-timer { position:absolute; z-index:6; margin:0; }
-    #oppTimer { top:calc(56px + var(--safe-t)); right:16px; }
-    #myTimer  { bottom:calc(64px + var(--safe-b)); right:16px; }
+    /* 오른쪽 위/아래는 각각 한 세로줄이다. 예전엔 프로필 6 · 시계 56 · 배지 92
+       처럼 저마다 top 을 박아 뒀는데, 프로필이 난이도 배지 때문에 커지자
+       (50 → 52px) 시계를 10px 덮었다. 쌓아 놓으면 크기가 변해도 안 겹친다. */
+    #oppbar { position:absolute; top:calc(6px + var(--safe-t)); right:16px; z-index:7;
+      display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
+    #mebar { position:absolute; bottom:calc(14px + var(--safe-b)); right:16px; z-index:7;
+      display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+    #oppbar > *, #mebar > * { position:static; }
+    .pc-timer { z-index:6; margin:0; }
     .pc-body { display:flex; align-items:center; gap:6px; min-width:0; }
     .pc-body .gp-rank { font-size:1.1rem; line-height:1; flex-shrink:0; }
     .pc-body .gp-nick { font-size:.82rem; font-weight:700; color:#f0ead8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -2190,7 +2196,7 @@
     .game-pcard.show-stats .pc-stats { max-height:20px; opacity:1; margin-top:4px; }
 
     /* 이모트 버튼 — 내 시간 위 (우측 하단) */
-    #emoteWrap { position:absolute; bottom:calc(104px + var(--safe-b)); right:16px; z-index:7; }
+    #emoteWrap { position:relative; z-index:7; }
     .emote-fab {
       width:36px; height:36px; border-radius:50%; cursor:pointer;
       background:linear-gradient(135deg,#3a2a48,#241a2e); border:1px solid rgba(200,160,0,.4);
@@ -2300,11 +2306,11 @@
     #rematchNote { color:#ffe9a8; font-size:.82rem; min-height:18px; margin-bottom:10px; }
 
     /* 룰 모달 */
-    #rulesModal {
+    .rules-modal {
       display:none; position:fixed; inset:0; background:rgba(8,2,4,.88); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
       z-index:40; align-items:center; justify-content:center; padding:20px; animation:fadeIn .3s;
     }
-    #rulesBox {
+    .rules-box {
       background:
         url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/><feColorMatrix type='matrix' values='0 0 0 0 0.28 0 0 0 0 0.08 0 0 0 0 0.10 0 0 0 0.28 0'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>"),
         linear-gradient(180deg,#3a1018,#22090e);
@@ -2313,19 +2319,45 @@
       max-width:480px; width:100%; max-height:86vh; overflow-y:auto; animation:slideDown .35s cubic-bezier(.34,1.4,.64,1);
       position:relative;
     }
-    #rulesBox h2 { font-family:'Bangers'; font-size:2rem; letter-spacing:2px; margin-bottom:4px;
+    .rules-box h2 { font-family:'Bangers'; font-size:2rem; letter-spacing:2px; margin-bottom:4px;
       background:linear-gradient(180deg,#fff3c8,#f5cf6e 45%,#c8912e); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
       filter:drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
-    #rulesBox h3 { font-size:.98rem; color:#ffd97a; margin:18px 0 7px; padding-bottom:5px; border-bottom:1px solid rgba(185,141,52,.3); }
-    #rulesBox p, #rulesBox li { font-size:.84rem; line-height:1.65; color:#e0cba0; }
-    #rulesBox ul { padding-left:18px; }
-    #rulesBox b { color:#ffe9a8; }
-    #rulesBox .r-tag { display:inline-block; padding:1px 7px; border-radius:5px; font-weight:600; font-size:.78rem; }
-    #rulesBox .close-x { position:absolute; top:12px; right:12px; width:40px; height:40px; display:flex;
+    .rules-box h3 { font-size:.98rem; color:#ffd97a; margin:18px 0 7px; padding-bottom:5px; border-bottom:1px solid rgba(185,141,52,.3); }
+    .rules-box p, .rules-box li { font-size:.84rem; line-height:1.65; color:#e0cba0; }
+    .rules-box ul { padding-left:18px; }
+    .rules-box b { color:#ffe9a8; }
+    /* ── 다인전 설명에만 쓰는 것들 ── */
+    .rules-box .r4-tag { font-family:system-ui,sans-serif; font-size:.72rem; font-weight:800;
+      letter-spacing:0; vertical-align:middle; padding:2px 8px; border-radius:7px;
+      background:rgba(92,214,156,.16); border:1px solid rgba(92,214,156,.5); color:#5cd69c;
+      -webkit-text-fill-color:#5cd69c; }
+    .rules-box .r4-tbl { margin:8px 0 2px; border:1px solid rgba(185,141,52,.3); border-radius:10px; overflow:hidden; }
+    .rules-box .r4-row { display:flex; font-size:.82rem; color:#e0cba0; }
+    .rules-box .r4-row > span { flex:1; padding:6px 10px; text-align:center; }
+    .rules-box .r4-row + .r4-row { border-top:1px solid rgba(185,141,52,.18); }
+    .rules-box .r4-head { background:rgba(185,141,52,.14); color:#ffd97a; font-weight:700; font-size:.76rem; }
+    .rules-box .r4-steps { display:flex; flex-direction:column; gap:6px; margin:8px 0 4px; }
+    .rules-box .r4-step { display:flex; align-items:flex-start; gap:9px; font-size:.82rem; line-height:1.5; color:#e0cba0; }
+    .rules-box .r4-step > b { flex-shrink:0; width:20px; height:20px; border-radius:50%; margin-top:1px;
+      display:flex; align-items:center; justify-content:center; font-size:.72rem;
+      background:rgba(185,141,52,.22); border:1px solid rgba(185,141,52,.5); color:#ffd97a; }
+    .rules-box .r4-two { display:flex; gap:8px; margin:8px 0 4px; flex-wrap:wrap; }
+    .rules-box .r4-card { flex:1; min-width:150px; border:1px solid rgba(185,141,52,.3); border-radius:11px;
+      padding:9px 11px; background:rgba(0,0,0,.22); }
+    .rules-box .r4-ct { font-size:.84rem; font-weight:800; color:#ffd97a; margin-bottom:4px; }
+    .rules-box .r4-card p { font-size:.78rem; line-height:1.55; margin:0; }
+    .rules-box .r4-flow { display:flex; flex-direction:column; gap:6px; margin:8px 0 4px; }
+    /* 줄 접힘이 제각각이라 두 줄이 어긋나 보였다 — 칸을 맞춰 고정한다 */
+    .rules-box .r4-fr { display:grid; grid-template-columns:auto auto 1fr; align-items:center; gap:7px;
+      font-size:.79rem; line-height:1.5; color:#e0cba0; }
+    .rules-box .r4-fl { font-weight:700; color:#ffd97a; background:rgba(185,141,52,.16);
+      border-radius:6px; padding:2px 8px; font-size:.75rem; text-align:center; white-space:nowrap; }
+    .rules-box .r-tag { display:inline-block; padding:1px 7px; border-radius:5px; font-weight:600; font-size:.78rem; }
+    .rules-box .close-x { position:absolute; top:12px; right:12px; width:40px; height:40px; display:flex;
       align-items:center; justify-content:center; cursor:pointer; color:#e0cba0; font-size:1.7rem; line-height:1;
       border-radius:50%; background:rgba(0,0,0,.28); border:1px solid rgba(185,141,52,.35);
       -webkit-tap-highlight-color:transparent; transition:background .15s, color .15s; z-index:2; }
-    #rulesBox .close-x:hover, #rulesBox .close-x:active { color:#fff; background:rgba(140,30,45,.6); }
+    .rules-box .close-x:hover, .rules-box .close-x:active { color:#fff; background:rgba(140,30,45,.6); }
 
     /* ── 설명서 그림/다이어그램 ── */
     .rc {
@@ -2346,14 +2378,14 @@
     .rc-back{ background:repeating-linear-gradient(45deg,#241a2e 0 5px,#2e2138 5px 10px)!important; border-color:#4a3a5e!important; align-items:center; justify-content:center; }
     .rc-back .rc-num{ font-family:'Bangers'; font-size:.8rem; color:#7a6a9e; }
 
-    #rulesBox .r-cards{ display:flex; gap:5px; align-items:center; flex-wrap:wrap; margin:8px 0 4px; }
+    .rules-box .r-cards{ display:flex; gap:5px; align-items:center; flex-wrap:wrap; margin:8px 0 4px; }
     .r-comp{ display:flex; flex-direction:column; gap:7px; margin:8px 0; }
     .r-comp-row{ display:flex; align-items:center; gap:11px; font-size:.85rem; color:#c8bcc4; }
     .r-comp-row b{ color:#ffe9a8; }
     .r-comp-g{ color:#6a5a70; font-size:.76rem; }
-    #rulesBox .r-arrow{ color:#8a7a80; font-size:1.1rem; font-weight:700; margin:0 2px; }
-    #rulesBox .r-win{ color:#5cd69c; font-weight:700; font-size:.82rem; }
-    #rulesBox .r-eq{ color:#ffe9a8; font-weight:700; }
+    .rules-box .r-arrow{ color:#8a7a80; font-size:1.1rem; font-weight:700; margin:0 2px; }
+    .rules-box .r-win{ color:#5cd69c; font-weight:700; font-size:.82rem; }
+    .rules-box .r-eq{ color:#ffe9a8; font-weight:700; }
 
     /* 카드 해부도 콜아웃 */
     .r-anatomy{ display:flex; gap:16px; align-items:center; margin:8px 0; }
@@ -2765,12 +2797,8 @@
       .ctrl-btn .ci { font-size:1.05rem; }
       .ctrl-btn .cl { font-size:.52rem; }
       /* 프로필·시간 모바일 위치 */
-      #oppProfile { top:calc(4px + var(--safe-t)); right:10px; }
-      #oppTimer { top:calc(46px + var(--safe-t)); right:10px; }
-      #myProfile { bottom:calc(10px + var(--safe-b)); right:10px; left:auto; }
-      #myTimer { bottom:calc(56px + var(--safe-b)); right:10px; left:auto; }
-      #emoteWrap { bottom:calc(96px + var(--safe-b)); right:10px; left:auto; }
-      #oppItemBadge { top:calc(80px + var(--safe-t)); right:10px; }
+      #oppbar { top:calc(4px + var(--safe-t)); right:10px; gap:4px; }
+      #mebar { bottom:calc(10px + var(--safe-b)); right:10px; gap:5px; }
       #itemBar { bottom:calc(88px + var(--safe-b)); left:8px; }
       .ib-slot { width:40px; height:40px; font-size:1.2rem; }
       #oppZone { padding-top:56px; margin-top:0; }   /* 상대 손패가 프로필·컨트롤 아래로 */
@@ -2783,7 +2811,7 @@
       .lobby-btns { width:290px; }
 
       /* 룰 모달 */
-      #rulesBox { padding:22px 20px; }
+      .rules-box { padding:22px 20px; }
 
       /* ── 모바일 프로필: 카드 안 가리게 축소 ── */
       .game-pcard { padding:3px 8px; max-width:128px; }
@@ -2799,7 +2827,7 @@
       .emote-bubble { filter:none; }
       #tableLogo { opacity:.04; }
       /* backdrop-filter 는 모바일 GPU에서 값이 비싸다. 배경을 조금 더 진하게 깔아 대체한다. */
-      .lb-modal, #rulesModal, #itemGetFx {
+      .lb-modal, .rules-modal, #itemGetFx {
         backdrop-filter:none; -webkit-backdrop-filter:none;
         background:rgba(8,2,4,.92);
       }
@@ -3190,21 +3218,18 @@
     <div class="ctrl-btn" id="rulesBtn" title="게임 설명" onclick="toggleRules(true)"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span><span class="cl">설명</span></div>
     <div class="ctrl-btn" id="settingsBtn" title="설정" onclick="toggleSettings()"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="cl">설정</span></div>
   </div>
-  <!-- 인게임 설정 패널 -->
-  <div id="settingsPanel">
-    <div class="sp-title">⚙️ 설정</div>
-    <div class="sp-row" onclick="toggleBgm()"><span class="sp-lbl">🎵 배경음악</span><span class="sp-toggle" id="togBgm"><span class="sp-knob"></span></span></div>
-    <div class="sp-row" onclick="toggleSfx()"><span class="sp-lbl">🔊 효과음</span><span class="sp-toggle" id="togSfx"><span class="sp-knob"></span></span></div>
-    <div class="sp-row" onclick="toggleGuide()"><span class="sp-lbl"><span data-ico="💡"></span> 턴 안내</span><span class="sp-toggle" id="togGuide"><span class="sp-knob"></span></span></div>
+  <!-- 우측 상단 한 줄: 상대 프로필 · 시계 · 아이템 배지.
+       각자 top 값을 박아 두었더니 프로필이 난이도 배지로 커질 때 시계를 덮었다. -->
+  <div id="oppbar">
+    <div class="game-pcard" id="oppProfile" onclick="toggleStats(this)">
+      <div class="pc-body"></div><div class="pc-stats"></div>
+      <div class="pc-diff" id="cpuDiff" style="display:none"></div>
+    </div>
+    <div class="timer pc-timer" id="oppTimer">7:00</div>
+    <div id="oppItemBadge" style="display:none"><span>🎁</span><b id="oppItemCount">0</b></div>
   </div>
-
-  <!-- 상대 프로필 (우측 상단, 클릭하면 전적) + 시간은 프로필 아래 -->
-  <div class="game-pcard" id="oppProfile" onclick="toggleStats(this)">
-    <div class="pc-body"></div><div class="pc-stats"></div>
-    <div class="pc-diff" id="cpuDiff" style="display:none"></div>
-  </div>
-  <div class="timer pc-timer" id="oppTimer">7:00</div>
-  <!-- 내 프로필 (클릭하면 전적) + 이모트 버튼(프로필 위) -->
+  <!-- 우측 하단 한 줄: 이모트 · 시계 · 내 프로필 -->
+  <div id="mebar">
   <div class="emote-wrap" id="emoteWrap">
     <button class="emote-fab" id="emoteBtn" data-ico="😀" title="이모트" onclick="toggleEmotes()"></button>
     <div id="emotePicker">
@@ -3219,10 +3244,10 @@
       <button id="emoteMuteBtn" class="emote-mute" onclick="toggleEmoteMute()" title="상대 이모트 차단">🔔 상대 이모트</button>
     </div>
   </div>
-  <!-- 내 시간은 내 프로필 위 -->
-  <div class="timer pc-timer" id="myTimer">7:00</div>
-  <div class="game-pcard" id="myProfile" onclick="toggleStats(this)">
-    <div class="pc-body"></div><div class="pc-stats"></div>
+    <div class="timer pc-timer" id="myTimer">7:00</div>
+    <div class="game-pcard" id="myProfile" onclick="toggleStats(this)">
+      <div class="pc-body"></div><div class="pc-stats"></div>
+    </div>
   </div>
 
   <!-- 상대 (맞은편) -->
@@ -3255,7 +3280,6 @@
   <div id="itemBar" style="display:none">
     <div class="ib-slots" id="itemSlots"></div>
   </div>
-  <div id="oppItemBadge" style="display:none"><span>🎁</span><b id="oppItemCount">0</b></div>
   <div id="fxBanner" style="display:none"></div>
 </div>
 
@@ -3310,8 +3334,116 @@
 </div>
 
 <!-- 게임 설명서 -->
-<div id="rulesModal" onclick="if(event.target===this)toggleRules(false)">
-  <div id="rulesBox">
+<!-- 인게임 설정 패널 — 2인전·다인전이 같이 쓴다.
+     예전엔 #game 안에 있어 다인전에서는 그 판이 숨겨 설정이 안 떴다. -->
+  <!-- 인게임 설정 패널 -->
+  <div id="settingsPanel">
+    <div class="sp-title">⚙️ 설정</div>
+    <div class="sp-row" onclick="toggleBgm()"><span class="sp-lbl">🎵 배경음악</span><span class="sp-toggle" id="togBgm"><span class="sp-knob"></span></span></div>
+    <div class="sp-row" onclick="toggleSfx()"><span class="sp-lbl">🔊 효과음</span><span class="sp-toggle" id="togSfx"><span class="sp-knob"></span></span></div>
+    <div class="sp-row" onclick="toggleGuide()"><span class="sp-lbl"><span data-ico="💡"></span> 턴 안내</span><span class="sp-toggle" id="togGuide"><span class="sp-knob"></span></span></div>
+  </div>
+
+<!-- 다인전(3·4인) 설명 — 2인전과 덧수·분배·클로즈가 다르다.
+     한 창에 둘 다 담으면 "내가 보는 판은 어느 쪽인지" 가 헷갈려 따로 둔다. -->
+<div id="rules4Modal" class="rules-modal" onclick="if(event.target===this)toggleRules4(false)">
+  <div id="rulesBox4" class="rules-box">
+    <span class="close-x" onclick="toggleRules4(false)">×</span>
+    <h2>FLIP FLAP <span class="r4-tag">3·4인전</span></h2>
+    <p style="color:#8a7a80">기본은 2인전과 같다 — <b style="color:#ffe9a8">세트</b>를 먼저 완성하면 승리!<br>
+    사람이 늘어나면서 달라진 것만 모았다.</p>
+
+    <h3><span data-ico="🎯"></span> 이기는 법</h3>
+    <p>같은 종류를 <b>그 숫자만큼</b> 모으면 그 자리에서 바로 승리.<br>
+    <span style="font-size:.78rem">종류별 필요 장수: <b>2</b>→2장 · <b>3</b>→3장 · <b>4</b>→4장 · <b>6</b>→6장<br>
+    <span data-ico="⚠"></span> 경매로 따서 <b>내 앞에 깔 카드만</b> 인정 (손에 든 카드는 X)<br>
+    <span data-ico="🏁"></span> 덱이 다 떨어지면 <b>세트에 가장 근접한 사람</b>이 승리</span></p>
+
+    <h3><span data-ico="🗂"></span> 카드 구성 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 총 38장</span></h3>
+    <p style="font-size:.78rem;margin-top:-2px">2인전(24장)보다 두툼하다. 3인·4인이 <b>같은 한 벌</b>을 쓰고, 손패 장수로 균형을 맞춘다.</p>
+    <div class="r-comp">
+      <div class="r-comp-row">
+        <div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
+        <span><b>2짜리</b> · 4장 <span class="r-comp-g">(등급 1–4)</span></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="3"><span class="rc-rank">1</span><span class="rc-num">3</span></div>
+        <span><b>3짜리</b> · 6장 <span class="r-comp-g">(등급 1–6)</span></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="4"><span class="rc-rank">1</span><span class="rc-num">4</span></div>
+        <span><b>4짜리</b> · 10장 <span class="r-comp-g">(등급 1–10)</span></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
+        <span><b>6짜리</b> · 18장 <span class="r-comp-g">(등급 1–18)</span></span>
+      </div>
+    </div>
+    <div class="r4-tbl">
+      <div class="r4-row r4-head"><span>인원</span><span>손패</span><span>중앙 덱</span></div>
+      <div class="r4-row"><span>3인</span><span>7장</span><span>17장</span></div>
+      <div class="r4-row"><span>4인</span><span>6장</span><span>14장</span></div>
+    </div>
+
+    <h3><span data-ico="🔄"></span> 한 번의 경매</h3>
+    <div class="r4-steps">
+      <div class="r4-step"><b>1</b><span>덱에서 <b>공개 카드</b> 한 장을 뒤집는다</span></div>
+      <div class="r4-step"><b>2</b><span>진행자가 손패에서 <b>출품 카드</b> 한 장을 더한다 — 이 둘이 경매품</span></div>
+      <div class="r4-step"><b>3</b><span>진행자가 <b>오픈 / 클로즈</b>를 고른다</span></div>
+      <div class="r4-step"><b>4</b><span><b>전원</b>이 배팅 카드를 낸다 — 진행자도 같이 낸다</span></div>
+      <div class="r4-step"><b>5</b><span>가장 <b>강한</b> 배팅이 경매품 2장을 가져간다</span></div>
+    </div>
+    <p style="font-size:.78rem"><span data-ico="⚠"></span> 손패가 비면 그 사람은 입찰을 건너뛰고, 아무도 못 내면 <b>유찰</b>되어 진행자가 회수한다.</p>
+
+    <h3><span data-ico="👁"></span> 오픈과 클로즈 — 여기가 다르다</h3>
+    <div class="r4-two">
+      <div class="r4-card">
+        <div class="r4-ct">오픈</div>
+        <p>경매품을 <b>보여 준다</b>.<br>
+        배팅은 모두 덮어 낸 뒤 <b>한 번에 공개</b>.<br>
+        물건은 알지만 남을 못 읽는다.</p>
+      </div>
+      <div class="r4-card">
+        <div class="r4-ct">클로즈</div>
+        <p>경매품을 <b>감춘다</b>.<br>
+        대신 진행자부터 <b>시계방향으로 한 명씩</b> 공개하며 낸다.<br>
+        뒤에 내는 사람은 앞사람 카드를 다 보고 정한다.</p>
+      </div>
+    </div>
+    <p style="font-size:.78rem">클로즈는 순서제라 <b>먼저 내는 사람이 세게 질러 뒤를 물러나게</b> 만드는 허세가 생긴다.
+    2인전처럼 동시에 내면, 한 명을 읽어도 나머지에게 뺏기는 판이라 심리전이 안 생긴다.</p>
+
+    <h3><span data-ico="🎁"></span> 배팅 카드는 역순으로 돌아온다</h3>
+    <p>낸 카드는 버려지지 않고 서로 바꾸어 갖는다.
+    <b>약하게 부른 사람이 가장 강한 카드</b>를 가져간다.</p>
+    <div class="r4-flow">
+      <div class="r4-fr"><span class="r4-fl">1위로 부름</span><span class="r-arrow">→</span><span>경매품 2장 획득 · 대신 <b>가장 약한</b> 배팅 카드를 받음</span></div>
+      <div class="r4-fr"><span class="r4-fl">꼴등</span><span class="r-arrow">→</span><span>경매품은 못 받지만 <b>가장 강한</b> 배팅 카드를 받음</span></div>
+    </div>
+    <p style="font-size:.78rem">그래서 <b>지는 것도 수가 된다</b> — 일부러 약하게 내서 강한 손패를 챙기는 수가 있다.</p>
+
+    <div class="r-special">
+      <div class="r-st"><span data-ico="⚔"></span> 반전! 졸개의 배신</div>
+      <div class="r-match" style="margin:4px 0 0">
+        <div class="rc gold" data-kind="6"><span class="rc-rank">18</span><span class="rc-num">6</span></div>
+        <span class="r-arrow" data-ico="⚔"></span>
+        <div class="rc gold" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
+        <span class="r-arrow">→</span>
+        <span class="r-win">6-18 승리!</span>
+      </div>
+      <p style="font-size:.76rem;margin-top:6px">가장 약한 <b style="color:var(--gold)">6-18</b>이 가장 강한 <b style="color:var(--gold)">2-1</b>만은 잡아요.
+      (2인전은 6-10 — 덱이 달라 최약 카드도 다르다)<br>
+      배신이 터지면 그 두 장은 <b>각자에게 되돌아간다</b> — 경매품까지 먹고 최강 카드까지 받으면 너무 크게 기울어서예요.</p>
+    </div>
+
+    <h3><span data-ico="⏱"></span> 제한 시간</h3>
+    <p>한 사람당 <b>3분</b>. 내 차례일 때만 줄어든다.
+    다 쓰면 그 자리는 <b>AI 가 이어서 둔다</b>.</p>
+  </div>
+</div>
+
+<div id="rulesModal" class="rules-modal" onclick="if(event.target===this)toggleRules(false)">
+  <div id="rulesBox" class="rules-box">
     <span class="close-x" onclick="toggleRules(false)">×</span>
     <h2>FLIP FLAP</h2>
     <p style="color:#8a7a80">경매로 카드를 모아 <b style="color:#ffe9a8">세트</b>를 먼저 완성하면 승리!</p>

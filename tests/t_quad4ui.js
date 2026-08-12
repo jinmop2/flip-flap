@@ -332,5 +332,63 @@ console.log('\n⑦ 게임 중 표시');
   ok('쉽게 찾게 정렬한다', /x\.ingame \? 1 : 0/.test(c4));
 }
 
+console.log('\n⑧ 창이 판 위로 올라오는가');
+{
+  // 다인전 판이 z-index 60 이라 설명(40)·나가기 확인(45) 같은 창이
+  // 판 뒤에서 열렸다 — 눌러도 아무 일도 안 생기는 것처럼 보였다.
+  const z = (re) => { const m = html.match(re); return m ? Number(m[1]) : null; };
+  const g4 = z(/#game4 \{[^}]*z-index:(\d+)/);
+  ok('다인전 판 z-index 를 찾았다', g4 !== null, String(g4));
+  ok('설명보다 아래', g4 < z(/\.rules-modal \{[^}]*z-index:(\d+)/), `판 ${g4}`);
+  ok('창들보다 아래', g4 < z(/\.lb-modal \{[^}]*z-index:(\d+)/), `판 ${g4}`);
+
+  // 설정 패널은 #game 안에 있어 다인전에서는 아예 뜼지 않았다
+  // 순서만 보면 마크업을 옮길 때마다 같이 틀어진다. #game 이 실제로 어디서
+  // 닫히는지 세어 그 밖인지 본다.
+  const endOfGame = (() => {
+    let i = html.indexOf('<div id="game" ');
+    if (i < 0) i = html.indexOf('<div id="game"');
+    let depth = 0;
+    const re = /<div\b|<\/div>/g;
+    re.lastIndex = i;
+    let m;
+    while ((m = re.exec(html))) {
+      depth += m[0] === '</div>' ? -1 : 1;
+      if (depth === 0) return m.index;
+    }
+    return -1;
+  })();
+  ok('#game 이 닫히는 곳을 찾았다', endOfGame > 0);
+  ok('설정 패널이 그 밖에 있다', html.indexOf('id="settingsPanel"') > endOfGame);
+  ok('설정 패널은 fixed', /#settingsPanel \{[^}]*position:fixed/.test(html));
+  ok('설정 패널이 판보다 위', z(/#settingsPanel \{[^}]*z-index:(\d+)/) > g4);
+}
+
+console.log('\n⑨ 다인전 설명서');
+{
+  ok('따로 있다', /id="rules4Modal"/.test(html) && /id="rulesBox4"/.test(html));
+  // 두 벌을 복사해 두면 같이 낡는다 — 껍데기는 공용 클래스로
+  ok('껍데기를 나눠 쓴다', /\.rules-box \{/.test(html) && /\.rules-modal \{/.test(html));
+  ok('둘 다 공용 클래스를 달았다',
+     (html.match(/class="rules-box"/g) || []).length === 2);
+  ok('여닫는 함수', /function toggleRules4/.test(cli));
+  ok('다인전에서는 그쪽이 뜬다', /classList\.contains\('quad4'\)\) return toggleRules4\(true\)/.test(cli));
+  ok('ESC 로도 닫힌다', /\['rules4Modal',\s*\(\) => toggleRules4\(false\)\]/.test(cli));
+
+  // 내용이 실제 규칙과 맞는가 (game4.js 가 진짜다)
+  const g4src = fs.readFileSync(src + '/game4.js', 'utf8');
+  const box = html.slice(html.indexOf('id="rulesBox4"'), html.indexOf('id="rulesModal"'));
+  ok('덱 38장', /DECK38 = \[\[2, 4\], \[3, 6\], \[4, 10\], \[6, 18\]\]/.test(g4src) && /38장/.test(box));
+  ok('4종 10장·6종 18장', /4짜리<\/b> · 10장/.test(box) && /6짜리<\/b> · 18장/.test(box));
+  ok('손패 3인 7·4인 6', /HAND = \{ 3: 7, 4: 6 \}/.test(g4src)
+     && /<span>3인<\/span><span>7장<\/span>/.test(box) && /<span>4인<\/span><span>6장<\/span>/.test(box));
+  ok('진행자도 같이 낸다', /전원<\/b>이 배팅 카드를 낸다/.test(box));
+  ok('클로즈는 순차 공개', /<b>시계방향으로 한 명씩<\/b>/.test(box));
+  ok('역순 분배', /약하게 부른 사람이 가장 강한 카드<\/b>/.test(box));
+  // 최약 카드는 덤마다 다르다 — 2인전 6-10 을 그대로 베끼면 틀린 설명이 된다
+  ok('배신은 6-18', /6-18/.test(box) && !/6-10<\/b>이 가장/.test(box));
+  ok('제한 시간 3분', /<b>3분<\/b>/.test(box));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

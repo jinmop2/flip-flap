@@ -2425,8 +2425,14 @@ window.addEventListener('DOMContentLoaded', applySettings);   // 저장된 상�
 window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); paintIcons(); } catch (_) {} });   // 기본 이모트·라벨 아이콘
 
 // ── 게임 설명서 ─────────────────────────────────────────────
+// 다인전은 덱·분배·클로즈가 달라 설명서를 따로 둔다. 판을 보고 알아서 고른다 —
+// 다인전 화면에서 2인전 설명이 뜨면 "내가 보는 판" 과 안 맞아 더 헷갈린다.
 function toggleRules(show) {
+  if (show && document.body.classList.contains('quad4')) return toggleRules4(true);
   document.getElementById('rulesModal').style.display = show ? 'flex' : 'none';
+}
+function toggleRules4(show) {
+  document.getElementById('rules4Modal').style.display = show ? 'flex' : 'none';
 }
 
 // ── ESC 로 닫기 ─────────────────────────────────────────────
@@ -2435,6 +2441,7 @@ function toggleRules(show) {
 // 단순히 show 클래스만 떼면 서버 상태와 어긋난다.
 const ESC_TARGETS = [
   ['rulesModal',   () => toggleRules(false)],
+  ['rules4Modal',  () => toggleRules4(false)],
   ['lbModal',      () => closeLb()],
   ['shopModal',    () => closeShop()],
   ['missionModal', () => closeMissions()],
