@@ -1894,8 +1894,22 @@ function navRefresh() {
   navSync(open('missionModal') ? 'mission' : open('shopModal') ? 'shop'
         : open('friendsModal') ? 'friends' : open('clanModal') ? 'clan' : 'home');
 }
-// 모달은 여러 경로(ESC·바깥 클릭·닫기 버튼)로 닫히므로, 상태를 주기적으로 맞춘다.
-setInterval(navRefresh, 400);
+// 모달은 여러 경로(ESC·바깥 클릭·닫기 버튼)로 닫히므로 상태를 맞춰 줘야 한다.
+// 예전엔 0.4초마다 계속 훑었다 — 아무 일이 없어도 초당 2.5번 깨어나 폰이
+// 쉬지를 못했다. 창이 열리고 닫히는 건 class 가 바뀌는 일이니, 그걸 지켜본다.
+(function watchModals() {
+  const obs = new MutationObserver(() => {
+    // 한 번의 변화로 여러 번 부르지 않게 다음 프레임에 한 번만
+    if (watchModals.q) return;
+    watchModals.q = true;
+    requestAnimationFrame(() => { watchModals.q = false; navRefresh(); });
+  });
+  for (const id of ['missionModal', 'shopModal', 'friendsModal', 'clanModal', 'gachaModal']) {
+    const el = document.getElementById(id);
+    if (el) obs.observe(el, { attributes: true, attributeFilter: ['class'] });
+  }
+  navRefresh();
+})();
 
 function paintIcons(root) {
   (root || document).querySelectorAll('[data-ico]').forEach(el => {
@@ -2071,7 +2085,12 @@ const TIER_RANK = { common: 0, rare: 1, epic: 2, legend: 3 };
 const gcWait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let _skipReveal = false;
-function skipGachaReveal() { _skipReveal = true; }
+function skipGachaReveal(e) {
+  // 카드를 누른 건 "그 한 장만 열어 달라" 는 뜻이다. 여기서 전부 넘겨 버리면
+  // 한 장 열기가 아무 소용이 없어진다 — 빈 곳을 눌렀을 때만 전부 넘긴다.
+  if (e && e.target && e.target.closest && e.target.closest('.gc-item')) return;
+  _skipReveal = true;
+}
 function gachaOpen() { return document.getElementById('gachaModal').classList.contains('show'); }
 
 function gcCardHtml(g) {
@@ -2167,6 +2186,21 @@ function gcSummary(results) {
     (shard ? `<span class="s-shard">🔷 +${shard}</span>` : '') + '</div>';
 }
 
+// 한 장 뒤집기. 저절로 뒤집히는 차례에도, 손으로 눌렀을 때도 같은 길을 쓴다 —
+// 두 벌로 나누면 소리나 연출이 한쪽에만 붙는다. 이미 뒤집힌 건 아무 일도 안 한다.
+function gcFlipOne(el, g, quiet) {
+  if (!el || el.classList.contains('flipped')) return false;
+  el.classList.add('flipped');
+  el.onclick = null;
+  el.classList.remove('gc-tap');
+  if (quiet || _skipReveal || !gachaOpen()) return true;
+  const rank = TIER_RANK[g.tier] || 0;
+  if (rank >= 1) el.classList.add('lit', 'pop-' + g.tier);
+  if (rank >= 3) { gcFlash(); gcRay(); gcQuake(700); }
+  playSound(rank >= 3 ? 'setwin' : rank >= 2 ? 'reveal' : rank >= 1 ? 'ping' : 'flip');
+  return true;
+}
+
 async function revealGacha(stage, results) {
   const top = results.reduce((m, g) => Math.max(m, TIER_RANK[g.tier] || 0), 0);
 
@@ -2178,35 +2212,37 @@ async function revealGacha(stage, results) {
   stage.innerHTML = '';
   const els = shown.map((g, i) => {
     const el = document.createElement('div');
-    el.className = 'gc-item t-' + g.tier;
+    el.className = 'gc-item t-' + g.tier + (_skipReveal ? '' : ' gc-tap');
     el.style.animationDelay = (_skipReveal ? 0 : i * 55) + 'ms';
     el.innerHTML = gcCardHtml(g);
+    // 궁금한 걸 먼저 열어 볼 수 있게. 순서를 기다리는 게 답답하다는 얘기가 있었다.
+    el.onclick = () => gcFlipOne(el, g);
     stage.appendChild(el);
     return el;
   });
   if (shown.length > 1 && !_skipReveal) {
-    stage.insertAdjacentHTML('beforeend', '<div class="gc-skip">아무 데나 누르면 바로 보기</div>');
+    stage.insertAdjacentHTML('beforeend',
+      '<div class="gc-skip">카드를 누르면 먼저 열려요 · 빈 곳을 누르면 전부</div>');
   }
   if (!_skipReveal) { playSound('deal'); await gcWait(shown.length * 55 + 260); }
 
-  // ③ 한 장씩 뒤집힌다 — 등급이 높을수록 오래 머문다
+  // ③ 한 장씩 뒤집힌다 — 등급이 높을수록 오래 머문다.
+  //    손으로 이미 연 건 건너뛴다(gcFlipOne 이 false 를 준다).
   for (let i = 0; i < els.length; i++) {
     const g = shown[i], el = els[i];
-    el.classList.add('flipped');
-    // 도중에 창을 닫았으면 남은 건 조용히 다 뒤집고 끝낸다.
-    // 안 그러면 닫힌 뒤에 화면이 번쩍이고 소리가 난다.
+    if (!gcFlipOne(el, g)) continue;
     if (_skipReveal || !gachaOpen()) continue;
     const rank = TIER_RANK[g.tier] || 0;
-    if (rank >= 1) { el.classList.add('lit', 'pop-' + g.tier); }
-    if (rank >= 3) { gcFlash(); gcRay(); gcQuake(700); }
-    playSound(rank >= 3 ? 'setwin' : rank >= 2 ? 'reveal' : rank >= 1 ? 'ping' : 'flip');
     await gcWait(rank >= 3 ? 1000 : rank >= 2 ? 420 : 165);
   }
+  // 넘기기로 들어왔으면 남은 건 조용히 다 뒤집는다
+  for (let i = 0; i < els.length; i++) gcFlipOne(els[i], shown[i], true);
   const skip = stage.querySelector('.gc-skip');
   if (skip) skip.remove();
 
   // ④ 한 줄 정리 — 열 장을 다 훑지 않아도 뭘 얻었는지 보인다
-  if (gachaOpen()) stage.insertAdjacentHTML('beforeend', gcSummary(results));
+  if (gachaOpen() && !stage.querySelector('.gc-sum'))
+    stage.insertAdjacentHTML('beforeend', gcSummary(results));
 }
 
 let _gachaBusy = false;

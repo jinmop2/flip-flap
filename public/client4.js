@@ -167,22 +167,29 @@
   function sendAct(payload) {
     pendAct = { payload, at: Date.now(), sig: stateSig(), tries: 0 };
     socket.emit('g4_act', payload);
+    watchPend();
   }
   // 상태가 실제로 바뀌었으면 먹힌 것이다
   function noteState() {
-    if (pendAct && stateSig() !== pendAct.sig) pendAct = null;
+    if (pendAct && stateSig() !== pendAct.sig) { pendAct = null; watchPend(); }
   }
-  setInterval(() => {
-    if (!pendAct || !q4Live || !q4Room) return;
+  // 보낸 게 있을 때만 깨어난다. 계속 도는 타이머는 아무 일이 없어도 폰을 깨운다.
+  let pendTimer = null;
+  function watchPend() {
+    clearInterval(pendTimer);
+    pendTimer = pendAct ? setInterval(checkPend, 700) : null;
+  }
+  function checkPend() {
+    if (!pendAct || !q4Live || !q4Room) return watchPend();
     if (Date.now() - pendAct.at < 1800) return;
     if (pendAct.tries >= 2) {                // 두 번 더 해 보고도 안 되면 솔직히 말한다
       $('q-status').textContent = '서버가 응답하지 않아요 — 잠시 후 다시 눌러주세요';
-      pendAct = null; return;
+      pendAct = null; return watchPend();
     }
     pendAct.tries++; pendAct.at = Date.now();
     resume();                                // 자리부터 다시 잇고
     setTimeout(() => { if (pendAct) socket.emit('g4_act', pendAct.payload); }, 300);
-  }, 700);
+  }
 
   // 확정 — 여기서만 서버로 나간다
   window.q4Confirm = function () {

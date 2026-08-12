@@ -133,5 +133,26 @@ console.log('\n⑩ 카드백 미리보기 크기');
     ok(`${c} 도 칸에 맞췄다`, new RegExp(`\\.gi-ico \\.${c} \\{`).test(html));
 }
 
+console.log('\n⑪ 눌러서 먼저 열기');
+{
+  // 순서를 기다리는 게 답답하다는 얼궜다. 궁금한 걸 먼저 열 수 있게 한다.
+  ok('한 장 뒤집기 함수', /function gcFlipOne/.test(cli));
+  ok('이미 뒤집힌 건 그대로 둔다', /el\.classList\.contains\('flipped'\)\) return false/.test(cli));
+  ok('카드마다 누를 수 있다', /el\.onclick = \(\) => gcFlipOne\(el, g\)/.test(cli));
+  // 자동 차례와 손으로 누르는 걸 두 벌로 나누면 한쪽에만 연출이 붙는다
+  ok('자동 차례도 같은 길을 쓴다', /if \(!gcFlipOne\(el, g\)\) continue/.test(cli));
+  ok('넣기기면 나머지를 조용히 뒤집는다', /gcFlipOne\(els\[i\], shown\[i\], true\)/.test(cli));
+
+  // 카드를 눌렀는데 전체가 넘어가면 한 장 열기가 무의미해진다
+  ok('카드 클릭은 전체 넘기기가 아니다', /closest\('\.gc-item'\)\) return/.test(cli));
+  ok('안내 문구도 바뀌었다', /카드를 누르면 먼저 열려요/.test(html) || /카드를 누르면 먼저 열려요/.test(cli));
+
+  // 눌러도 된다는 표시 — 다시 그리지 않는 opacity 로만 움직여야 한다
+  ok('누를 수 있다는 표시', /\.gc-item\.gc-tap \{/.test(html));
+  ok('깜빡임은 opacity 만', /@keyframes gcTapHint \{ 0%,100% \{ opacity:0; \} 50% \{ opacity:1; \} \}/.test(html));
+  ok('box-shadow 를 깜빡이지 않는다', !/@keyframes gcTapHint[\s\S]{0,160}?box-shadow:/.test(html));
+  ok('무늬 부분(::after)과 안 부딪친다', /\.gc-item\.gc-tap \.gc-back::before \{/.test(html));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

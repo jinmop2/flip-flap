@@ -593,6 +593,21 @@
     .gc-inner { position:relative; width:100%; height:100%;
       transform-style:preserve-3d; transition:transform .52s cubic-bezier(.4,.05,.2,1); }
     .gc-item.flipped .gc-inner { transform:rotateY(180deg); }
+    /* 아직 안 뒤집힌 카드는 눌러서 먼저 열 수 있다 — 눌러도 된다는 걸 보여 준다.
+       box-shadow 를 깜빡이게 했더니 열 장이 동시에 매 프레임 다시 그려졌다.
+       테두리는 고정으로 두고, 움직이는 건 겹쳐 둔 한 겹의 opacity 뿐이다
+       (opacity 는 다시 그리지 않고 합성만 한다). */
+    .gc-item.gc-tap { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    /* ::after 는 이미 뒷면 무늬가 쓰고 있어 ::before 를 쓴다.
+       원래 안쪽 그림자를 지우지 않게 뒤에 덧붙인다. */
+    .gc-item.gc-tap .gc-back {
+      box-shadow:inset 0 0 18px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,215,120,.5); }
+    .gc-item.gc-tap .gc-back::before {
+      content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:1;
+      box-shadow:inset 0 0 0 1.5px rgba(255,215,120,.95);
+      animation:gcTapHint 1.8s ease-in-out infinite; will-change:opacity; }
+    .gc-item.gc-tap:active { transform:scale(.94); }
+    @keyframes gcTapHint { 0%,100% { opacity:0; } 50% { opacity:1; } }
     .gc-face { position:absolute; inset:0; backface-visibility:hidden;
       -webkit-backface-visibility:hidden; border-radius:11px;
       display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
@@ -713,7 +728,7 @@
     /* 모션을 줄여 달라고 한 기기에서는 전부 즉시 보여 준다 */
     @media (prefers-reduced-motion:reduce) {
       .gc-item, .gc-inner, .gc-aura, .gc-orb, .gc-orb::after,
-      .gc-quake, .gc-ray, .gc-sum,
+      .gc-quake, .gc-ray, .gc-sum, .gc-item.gc-tap .gc-back::before,
       .gc-flash, .gc-front .gi-dup { animation:none !important; transition:none !important; }
     }
     .gc-btns { display:flex; gap:8px; flex-shrink:0; }
@@ -930,8 +945,14 @@
       box-shadow:0 0 10px rgba(255,215,80,.28); -webkit-tap-highlight-color:transparent;
       animation:misPulse 1.6s ease-in-out infinite; }
     .mis-claim:active { transform:translateY(1px); }
-    @keyframes misPulse { 0%,100% { box-shadow:0 0 10px rgba(255,215,80,.28); }
-                          50%     { box-shadow:0 0 16px rgba(255,215,80,.6); } }
+    /* box-shadow 를 깜빡이면 매 프레임 다시 그린다. 겹쳐 둔 한 겹의 opacity 만
+       움직여 합성으로 끝낸다 (뽑기 카드 힌트와 같은 방식). */
+    .mis-claim { position:relative; }
+    .mis-claim::after {
+      content:''; position:absolute; inset:-1px; border-radius:inherit; pointer-events:none;
+      box-shadow:0 0 16px rgba(255,215,80,.6);
+      animation:misPulse 1.6s ease-in-out infinite; will-change:opacity; }
+    @keyframes misPulse { 0%,100% { opacity:0; } 50% { opacity:1; } }
     /* ── 관전 목록 ── */
     .rl-item.rl-live { border-color:rgba(255,100,100,.35); }
     /* ── 범용 토스트 ── */
