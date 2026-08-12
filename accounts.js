@@ -2289,6 +2289,107 @@ function clanChatSend(token, text) {
   return { ok: true, msg: { ...msg, nick: u.nick }, targets, clanId: c.id };
 }
 
+// ══════════════════════════════════════════════════════════
+//  친구 1:1 채팅
+// ══════════════════════════════════════════════════════════
+// 클랜 채팅과 같은 규칙(길이·도배·욕설·차단)을 그대로 쓴다. 다른 건 저장 위치다.
+//
+// 대화를 따로 모아 두는 대신 각자 자기 기록을 갖는다.
+//   · 저장은 두 배가 되지만 기록 하나가 사람 하나에 붙어, 계정을 지우면 같이 사라진다.
+//   · 기존 persist(idl) 를 그대로 쓴다 — 새 표를 만들면 Postgres 쪽도 같이 손봐야 한다.
+const DM_KEEP = 60;              // 대화 하나당 보관 메시지 수
+const DM_THREADS = 30;           // 사람당 보관할 대화 수 (오래 안 쓴 것부터 버림)
+
+function dmBook(u) { if (!u.dm || typeof u.dm !== 'object') u.dm = {}; return u.dm; }
+function dmThread(u, other) {
+  const book = dmBook(u);
+  if (!Object.prototype.hasOwnProperty.call(book, other)) book[other] = { msgs: [], unread: 0, at: 0 };
+  const t = book[other];
+  if (!Array.isArray(t.msgs)) t.msgs = [];
+  return t;
+}
+// 오래 안 쓴 대화부터 버린다 — 안 그러면 계정 하나가 무한히 커진다
+function dmTrim(u) {
+  const book = dmBook(u);
+  const keys = Object.keys(book);
+  if (keys.length <= DM_THREADS) return;
+  keys.sort((a, b) => (book[b].at || 0) - (book[a].at || 0));
+  for (const k of keys.slice(DM_THREADS)) delete book[k];
+}
+
+// 대화 하나 읽기. 여는 순간 안 읽음은 0 으로.
+function dmList(token, otherIdl) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const other = String(otherIdl || '').toLowerCase();
+  if (!other || other === idl) return { error: '상대를 찾을 수 없어요.' };
+  if (!friendIdlsOf(idl).includes(other)) return { error: '친구끼리만 대화할 수 있어요.' };
+
+  const t = dmThread(u, other);
+  const blocked = blockedOf(u);
+  const msgs = t.msgs
+    .filter((m) => !blocked.includes(m.idl))
+    .map((m) => ({ id: m.id, idl: m.idl, nick: nickOfIdl(m.idl) || m.nick, text: m.text, at: m.at,
+                   mine: m.idl === idl }));
+  if (t.unread) { t.unread = 0; persist(idl); }
+  return { ok: true, messages: msgs, me: idl, other, otherNick: nickOfIdl(other) || other };
+}
+
+// 안 읽은 개수 (친구 목록·버튼 배지용)
+function dmUnread(token) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const book = dmBook(u), by = {};
+  let total = 0;
+  for (const k of Object.keys(book)) {
+    const n = Number(book[k].unread) || 0;
+    if (n > 0) { by[k] = n; total += n; }
+  }
+  return { ok: true, total, by };
+}
+
+function dmSend(token, otherIdl, text) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const other = String(otherIdl || '').toLowerCase();
+  if (!other || other === idl) return { error: '상대를 찾을 수 없어요.' };
+  if (!friendIdlsOf(idl).includes(other)) return { error: '친구끼리만 대화할 수 있어요.' };
+  const peer = Object.prototype.hasOwnProperty.call(db.users, other) ? db.users[other] : null;
+  if (!peer) return { error: '상대를 찾을 수 없어요.' };
+
+  let t = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!t) return { error: '내용을 입력해주세요.' };
+  if (t.length > CHAT_MAX_LEN) t = t.slice(0, CHAT_MAX_LEN);
+  if (hasBadWord(t)) return { error: '사용할 수 없는 표현이 있어요.' };
+
+  // 도배 방지 — 클랜 채팅과 같은 계량기를 쓴다(창을 나눠 놓으면 양쪽으로 두 배 보낸다)
+  const now = Date.now();
+  if (u.chatLast && now - u.chatLast < CHAT_COOLDOWN) return { error: '조금 천천히 보내주세요.' };
+  u.chatHits = (u.chatHits || []).filter((ts) => now - ts < CHAT_BURST_WINDOW);
+  if (u.chatHits.length >= CHAT_BURST) return { error: '잠시 후 다시 보내주세요.' };
+  u.chatHits.push(now); u.chatLast = now;
+
+  const msg = { id: crypto.randomBytes(6).toString('hex'), idl, nick: u.nick, text: t, at: now };
+  const push = (owner, key, unread) => {
+    const th = dmThread(owner, key);
+    th.msgs.push(msg);
+    if (th.msgs.length > DM_KEEP) th.msgs.splice(0, th.msgs.length - DM_KEEP);
+    th.at = now;
+    if (unread) th.unread = (th.unread || 0) + 1;
+    dmTrim(owner);
+  };
+  push(u, other, false);
+  // 나를 차단한 사람에게는 남기지 않는다 — 차단은 이후 메시지도 막는다
+  const blockedMe = blockedOf(peer).includes(idl);
+  if (!blockedMe) push(peer, idl, true);
+  persist(idl); if (!blockedMe) persist(other);
+
+  return { ok: true, msg: { ...msg, nick: u.nick, mine: false }, target: blockedMe ? null : other };
+}
+
 // 차단 — 차단한 사람의 메시지는 내 화면에서 사라지고, 이후 메시지도 안 온다
 function blockUser(token, targetIdl, on) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
@@ -2339,7 +2440,7 @@ module.exports = {
   calcRpDelta, refreshRankState, startPromo, promoResult, refreshAce, seasonReset,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   gachaInfo, rollGacha, exchangeShard, GACHA_TIER, TIER_OF, SHARD_ONLY, bonusOf,
-  missionList, claimMission, titleList, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,
+  missionList, claimMission, titleList, dmList, dmSend, dmUnread, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,
   // 친구
   friendList, sendFriendReq, acceptFriendReq, declineFriendReq, cancelFriendReq, removeFriend,
   friendIdlsOf, nickOfIdl,

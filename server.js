@@ -331,6 +331,21 @@ app.post('/api/clan-chat-send', rateLimit(40), (req, res) => {
   for (const m of r.targets) notifyIdl(m, 'clan_chat', { msg: r.msg });
   res.json({ ok: true, msg: r.msg });
 });
+// ── 친구 1:1 채팅 ──
+app.post('/api/dm', rateLimit(90), (req, res) => {
+  const { token, idl } = req.body || {};
+  res.json(accounts.dmList(token, idl));
+});
+app.post('/api/dm-send', rateLimit(40), (req, res) => {
+  const { token, idl, text } = req.body || {};
+  const r = accounts.dmSend(token, idl, text);
+  if (!r.ok) return res.json(r);
+  // 상대가 접속 중이면 바로 띄운다. 나를 차단했으면 target 이 null 이라 안 간다.
+  if (r.target) notifyIdl(r.target, 'dm', { from: r.msg.idl, msg: r.msg });
+  res.json({ ok: true, msg: { ...r.msg, mine: true } });
+});
+app.post('/api/dm-unread', rateLimit(60), (req, res) => res.json(accounts.dmUnread((req.body || {}).token)));
+
 app.post('/api/chat-block', rateLimit(30), (req, res) => {
   const { token, idl, on } = req.body || {};
   res.json(accounts.blockUser(token, idl, on));

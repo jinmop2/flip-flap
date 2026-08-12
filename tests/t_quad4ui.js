@@ -190,8 +190,15 @@ console.log('\n⑩ 나가기·설명·설정·프로필');
   ok('조작 버튼을 줄여 자리를 벌었다', /#q-controls \.ctrl-btn \{[^}]*height:34px/.test(html));
   ok('상대 등급·레벨을 보여준다', /q-owho/.test(c4) && /\.q-owho \{/.test(html));
   ok('AI 는 AI 로 적는다', /who\.textContent = 'AI'/.test(c4));
-  ok('버튼 셋', (html.match(/id="q-controls"[\s\S]*?<\/div>\s*<\/div>/) || [''])[0].split('ctrl-btn').length - 1 === 3
-     || (html.slice(html.indexOf('id="q-controls"'), html.indexOf('id="q-meProfile"')).match(/ctrl-btn/g) || []).length === 3);
+  // 개수를 박아 두면 버튼이 하나 늘 때마다 깨진다. 있어야 할 것이 다 있는지를 본다.
+  {
+    const bar = html.slice(html.indexOf('id="q-controls"'), html.indexOf('id="q-meProfile"'));
+    for (const [name, re] of [['나가기', /q4AskQuit\(\)/], ['채팅', /toggleGameChat\(\)/],
+                              ['설명', /toggleRules\(true\)/], ['설정', /toggleSettings\(\)/]])
+      ok(`${name} 버튼이 있다`, re.test(bar));
+    ok('2인전과 같은 것들만', (bar.match(/ctrl-btn/g) || []).length === 4,
+       String((bar.match(/ctrl-btn/g) || []).length));
+  }
   ok('2인전과 같은 자리', /#q-controls \{[^}]*position:absolute[^}]*left:8px/.test(html));
   ok('내 프로필이 판에 보인다', /id="q-meProfile"/.test(html) && /renderGameProfile\('q-meProfile'/.test(c4));
 

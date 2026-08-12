@@ -87,6 +87,7 @@ socket.on('auth_ok', ({ profile }) => {
   myAccount = profile; renderAccount();
   if (typeof updateSocialBadges === 'function') updateSocialBadges();   // 친구요청·가입신청 알림 표시
   refreshMissionDot();                                                  // 받아 갈 미션 보상 표시
+  if (typeof gcRefreshUnread === 'function') gcRefreshUnread();          // 안 읽은 1:1 메시지 표시
 });
 socket.on('dup_login', () => {   // 다른 기기에서 같은 계정 로그인 → 이 세션 종료
   clearSession();
@@ -2598,6 +2599,134 @@ document.addEventListener('pointerdown', e => {
 });
 window.addEventListener('DOMContentLoaded', applySettings);   // 저장된 상태 반영
 window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); paintIcons(); } catch (_) {} });   // 기본 이모트·라벨 아이콘
+
+// ── 인게임 채팅 (친구 1:1 · 클랜) ────────────────────────────
+// 판을 나가지 않고도 얘기할 수 있게. 목록·대화 그리기는 여기 한 곳에서만 한다.
+let gcTab = 'friend', gcWith = null;      // 지금 보고 있는 탭 / 대화 중인 친구 idl
+let gcUnread = {};                        // idl → 안 읽은 수
+
+function gameChatOpen() { const p = document.getElementById('gameChat'); return !!p && p.classList.contains('show'); }
+window.toggleGameChat = function (force) {
+  const p = document.getElementById('gameChat'); if (!p) return;
+  const show = force === undefined ? !p.classList.contains('show') : force;
+  p.classList.toggle('show', show);
+  if (!show) return;
+  if (!myAccount) { document.getElementById('gcFriendList').innerHTML =
+      '<div class="gc-empty">로그인하면 채팅할 수 있어요</div>'; return; }
+  gameChatTab(gcTab);
+};
+window.gameChatTab = function (which) {
+  gcTab = which;
+  document.querySelectorAll('.gcx-tab').forEach((b) => b.classList.toggle('active', b.dataset.gct === which));
+  document.getElementById('gcFriendPane').style.display = which === 'friend' ? 'flex' : 'none';
+  document.getElementById('gcClanPane').style.display = which === 'clan' ? 'flex' : 'none';
+  if (which === 'friend') { gcWith ? gcLoadTalk(gcWith) : gcLoadFriends(); }
+  else gcLoadClan();
+};
+window.gameChatBack = function () { gcWith = null; gcLoadFriends(); };
+
+async function gcLoadFriends() {
+  document.getElementById('gcFriendTalk').style.display = 'none';
+  const box = document.getElementById('gcFriendList');
+  box.style.display = '';
+  box.innerHTML = '<div class="gc-empty">불러오는 중…</div>';
+  const r = await apiPost('/api/friends', { token: authToken() });
+  if (!r || r.error || !r.friends) { box.innerHTML = `<div class="gc-empty">${esc((r && r.error) || '불러오기 실패')}</div>`; return; }
+  if (!r.friends.length) { box.innerHTML = '<div class="gc-empty">아직 친구가 없어요</div>'; return; }
+  await gcRefreshUnread();
+  // 안 읽은 게 있는 사람부터, 그다음 접속 중인 사람
+  const rank = (f) => (gcUnread[f.idl] ? 0 : f.online ? 1 : 2);
+  box.innerHTML = r.friends.slice().sort((a, b) => rank(a) - rank(b)).map((f) => {
+    const un = gcUnread[f.idl];
+    const tail = un ? `<span class="gc-un">${un}</span>`
+                    : `<span class="gc-off">${f.ingame ? '게임 중' : f.online ? '접속 중' : '오프라인'}</span>`;
+    return `<button class="gc-frow" onclick="gcOpenTalk('${esc(f.idl)}')">${esc(f.nick)}${tail}</button>`;
+  }).join('');
+}
+window.gcOpenTalk = function (idl) { gcWith = idl; gcLoadTalk(idl); };
+
+async function gcLoadTalk(idl) {
+  document.getElementById('gcFriendList').style.display = 'none';
+  document.getElementById('gcFriendTalk').style.display = 'flex';
+  const box = document.getElementById('gcFriendMsgs');
+  box.innerHTML = '<div class="gc-empty">불러오는 중…</div>';
+  const r = await apiPost('/api/dm', { token: authToken(), idl });
+  if (!r || r.error) { box.innerHTML = `<div class="gc-empty">${esc((r && r.error) || '불러오기 실패')}</div>`; return; }
+  gcPaint(box, r.messages, false);
+  delete gcUnread[idl]; gcPaintDot();
+}
+
+async function gcLoadClan() {
+  const box = document.getElementById('gcClanMsgs');
+  box.innerHTML = '<div class="gc-empty">불러오는 중…</div>';
+  const r = await apiPost('/api/clan-chat', { token: authToken() });
+  if (!r || r.error) { box.innerHTML = `<div class="gc-empty">${esc((r && r.error) || '불러오기 실패')}</div>`; return; }
+  gcPaint(box, r.messages, true);
+}
+
+// 메시지 그리기. 클랜은 누가 썼는지 이름이 필요하고, 1:1 은 필요 없다.
+function gcPaint(box, msgs, showName) {
+  if (!msgs || !msgs.length) { box.innerHTML = '<div class="gc-empty">아직 대화가 없어요</div>'; return; }
+  box.innerHTML = msgs.map((m) =>
+    `<div class="gc-m${m.mine ? ' mine' : ''}">` +
+    (showName && !m.mine ? `<span class="gc-who">${esc(m.nick)}</span>` : '') +
+    `${esc(m.text)}</div>`).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+window.gameChatSend = async function () {
+  const clan = gcTab === 'clan';
+  const input = document.getElementById(clan ? 'gcClanInput' : 'gcFriendInput');
+  const text = input.value.trim(); if (!text) return;
+  if (!clan && !gcWith) return;
+  input.value = '';
+  const r = clan
+    ? await apiPost('/api/clan-chat-send', { token: authToken(), text })
+    : await apiPost('/api/dm-send', { token: authToken(), idl: gcWith, text });
+  if (!r || r.error) { toast(esc((r && r.error) || '보내지 못했어요')); input.value = text; return; }
+  // 보낸 건 바로 붙인다 — 서버를 한 번 더 다녀오면 느리게 느껴진다
+  const box = document.getElementById(clan ? 'gcClanMsgs' : 'gcFriendMsgs');
+  const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
+  box.insertAdjacentHTML('beforeend', `<div class="gc-m mine">${esc(text)}</div>`);
+  box.scrollTop = box.scrollHeight;
+};
+
+// 안 읽음 — 버튼의 점과 친구 목록 배지에 쓴다
+async function gcRefreshUnread() {
+  if (!myAccount) { gcUnread = {}; gcPaintDot(); return; }
+  const r = await apiPost('/api/dm-unread', { token: authToken() });
+  gcUnread = (r && r.ok && r.by) ? r.by : {};
+  gcPaintDot();
+}
+function gcPaintDot() {
+  const on = Object.keys(gcUnread).length > 0;
+  for (const id of ['chatDot', 'chatDot4']) {
+    const d = document.getElementById(id); if (d) d.style.display = on ? '' : 'none';
+  }
+}
+// 새 1:1 메시지가 도착
+socket.on('dm', ({ from, msg }) => {
+  if (gameChatOpen() && gcTab === 'friend' && gcWith === from) {
+    const box = document.getElementById('gcFriendMsgs');
+    const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
+    box.insertAdjacentHTML('beforeend', `<div class="gc-m">${esc(msg.text)}</div>`);
+    box.scrollTop = box.scrollHeight;
+    apiPost('/api/dm', { token: authToken(), idl: from });   // 읽음 처리
+    return;
+  }
+  gcUnread[from] = (gcUnread[from] || 0) + 1;
+  gcPaintDot();
+  if (gameChatOpen() && gcTab === 'friend' && !gcWith) gcLoadFriends();
+});
+// 클랜 메시지도 열려 있으면 바로 붙인다
+socket.on('clan_chat', ({ msg }) => {
+  if (!gameChatOpen() || gcTab !== 'clan') return;
+  const box = document.getElementById('gcClanMsgs');
+  const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
+  box.insertAdjacentHTML('beforeend',
+    `<div class="gc-m"><span class="gc-who">${esc(msg.nick)}</span>${esc(msg.text)}</div>`);
+  box.scrollTop = box.scrollHeight;
+});
 
 // ── 게임 설명서 ─────────────────────────────────────────────
 // 다인전은 덱·분배·클로즈가 달라 설명서를 따로 둔다. 판을 보고 알아서 고른다 —

@@ -760,6 +760,22 @@
     '사용할 수 없는 표현이 들어 있어요.': 'That contains language we do not allow.',
     '사용할 수 없는 닉네임이에요.': 'That nickname cannot be used.',
 
+    // ── 인게임 채팅 ──
+    '채팅': 'Chat',
+    '친구·클랜 채팅': 'Friend & clan chat',
+    '‹ 목록': '\u2039 List',
+    '메시지…': 'Message...',
+    '아직 대화가 없어요': 'No messages yet',
+    '로그인하면 채팅할 수 있어요': 'Log in to chat',
+    '오프라인': 'Offline',
+    '친구끼리만 대화할 수 있어요.': 'You can only chat with friends.',
+    '상대를 찾을 수 없어요.': 'Could not find that player.',
+    '내용을 입력해주세요.': 'Please type something.',
+    '조금 천천히 보내주세요.': 'Please slow down a little.',
+    '잠시 후 다시 보내주세요.': 'Please try again in a moment.',
+    '사용할 수 없는 표현이 있어요.': 'That contains language we do not allow.',
+    '클랜에 가입해야 채팅할 수 있어요.': 'Join a clan to use clan chat.',
+
     // ── 친구·클랜 ──
     '접속 중': 'Online',
     '게임 중': 'In game',
