@@ -747,6 +747,12 @@
     '큰손 미스박': 'Big Spender Park',
     '도박사 병철': 'Gambler Byeongcheol',
 
+    '가입신청': 'Apply',
+    '「친구찾기」에서 닉네임으로 추가해보세요!': 'Add someone by nickname from "Find Friends"!',
+    '아직 아이템이 없어요 — 상점 구경 가기': 'No items yet — take a look at the shop',
+    '중복은 파편이 됩니다 ·': 'Duplicates become shards ·',
+    '교환소': 'Exchange',
+
     // ── 친구·클랜 ──
     '접속 중': 'Online',
     '게임 중': 'In game',
@@ -811,6 +817,13 @@
     [/^\u26a1 (.+) 선공!$/, '\u26a1 $1 goes first!'],
     [/^(.+) 님이 낙찰!\s+\(내 손패로 (\d+)-(\d+) 들어옴\)$/, '$1 wins the lot!  ($2-$3 comes into your hand)'],
     [/^내가 낙찰!\s+\(내 손패로 (\d+)-(\d+) 들어옴\)$/, 'You win the lot!  ($1-$2 comes into your hand)'],
+    [/^(\d+)승 (\d+)패 ·$/, '$1W $2L ·'],
+    [/^· 승률 (\d+)%$/, '· $1% win rate'],
+    [/^(\d+)회 (\d+)$/, 'x$1 \u00b7 $2'],
+    [/^(\d+)연 (\d+)$/, 'x$1 \u00b7 $2'],
+    [/^파편부터 원하는 것을 확정으로 바꿀 수 있어요 — 위$/, 'shards let you pick exactly what you want — see'],
+    [/^탭 \(지금 (\d+)개\)$/, 'tab (you have $1)'],
+    [/^(\d+)\/(\d+)명 · (\d+) RP · 클랜장 (.+)$/, '$1/$2 members \u00b7 $3 RP \u00b7 Leader $4'],
     [/^(\d+)\/(\d+) 리치!$/, '$1/$2 — one away!'],
     [/^완성까지 (\d+)장$/, '$1 more to complete'],
   ];
