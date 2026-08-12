@@ -2239,6 +2239,16 @@
       -webkit-tap-highlight-color:transparent;
     }
     #settingsPanel .sp-row:hover { background:rgba(200,160,0,.1); }
+    /* 언어는 켜고 끄는 게 아니라 고르는 것이라 토글 대신 두 칸 버튼 */
+    #settingsPanel .sp-lang { cursor:default; }
+    #settingsPanel .sp-lang:hover { background:none; }
+    .sp-seg { display:flex; gap:0; border:1px solid rgba(185,141,52,.45); border-radius:9px; overflow:hidden; }
+    .sp-segb { border:0; cursor:pointer; font-family:inherit; font-size:.72rem; font-weight:700;
+      padding:5px 10px; background:transparent; color:#c8bcc4; -webkit-tap-highlight-color:transparent; }
+    .sp-segb + .sp-segb { border-left:1px solid rgba(185,141,52,.45); }
+    .sp-segb.on { background:linear-gradient(180deg,#f3d477,#c99a2e); color:#2a1c06; }
+    .nick-lang { display:flex; align-items:center; justify-content:center; gap:9px; margin:-2px 0 2px; }
+    .nick-lang .nl-lbl { font-size:.72rem; font-weight:700; color:#c8a86a; }
     #settingsPanel .sp-lbl { font-size:.86rem; font-weight:600; color:#f5e6c0; }
     .sp-toggle { position:relative; width:42px; height:24px; border-radius:99px; flex-shrink:0;
       background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.15); transition:background .18s, border-color .18s; }
@@ -3256,6 +3266,14 @@
   <div class="lb-box" style="text-align:center;gap:10px">
     <div class="nw-emblem">🎉</div>
     <div class="lb-title" style="font-size:1.2rem">환영합니다!</div>
+    <!-- 기기 언어로 미리 골라 두되, 여기서 바꿀 수 있게. 처음 한 번만 물어본다. -->
+    <div class="nick-lang">
+      <span class="nl-lbl">🌐 언어 / Language</span>
+      <span class="sp-seg">
+        <button class="sp-segb" data-lang="ko" onclick="pickLang('ko')">한국어</button>
+        <button class="sp-segb" data-lang="en" onclick="pickLang('en')">English</button>
+      </span>
+    </div>
     <p class="auth-hint" style="text-align:center;margin:-2px 0 4px">게임에서 사용할 <b style="color:#ffe9a8">닉네임</b>을 정해주세요.<br>다른 플레이어에게 이 이름으로 보여요.</p>
     <input id="nickNew" type="text" maxlength="12" placeholder="닉네임 (1~12자)" onkeydown="if(event.key==='Enter')submitNick()" style="text-align:center">
     <div id="nickErr" class="auth-err"></div>
@@ -3427,12 +3445,18 @@
     <div class="sp-row" onclick="toggleBgm()"><span class="sp-lbl">🎵 배경음악</span><span class="sp-toggle" id="togBgm"><span class="sp-knob"></span></span></div>
     <div class="sp-row" onclick="toggleSfx()"><span class="sp-lbl">🔊 효과음</span><span class="sp-toggle" id="togSfx"><span class="sp-knob"></span></span></div>
     <div class="sp-row" onclick="toggleGuide()"><span class="sp-lbl"><span data-ico="💡"></span> 턴 안내</span><span class="sp-toggle" id="togGuide"><span class="sp-knob"></span></span></div>
+    <div class="sp-row sp-lang"><span class="sp-lbl">🌐 언어</span>
+      <span class="sp-seg">
+        <button class="sp-segb" data-lang="ko" onclick="pickLang('ko')">한국어</button>
+        <button class="sp-segb" data-lang="en" onclick="pickLang('en')">English</button>
+      </span>
+    </div>
   </div>
 
 <!-- 다인전(3·4인) 설명 — 2인전과 덧수·분배·클로즈가 다르다.
      한 창에 둘 다 담으면 "내가 보는 판은 어느 쪽인지" 가 헷갈려 따로 둔다. -->
 <div id="rules4Modal" class="rules-modal" onclick="if(event.target===this)toggleRules4(false)">
-  <div id="rulesBox4" class="rules-box">
+  <div id="rulesBox4" class="rules-box" data-i18n-block="rules4">
     <span class="close-x" onclick="toggleRules4(false)">×</span>
     <h2>FLIP FLAP <span class="r4-tag">3·4인전</span></h2>
     <p style="color:#8a7a80">기본은 2인전과 같다 — <b style="color:#ffe9a8">세트</b>를 먼저 완성하면 승리!<br>
@@ -3528,7 +3552,7 @@
 </div>
 
 <div id="rulesModal" class="rules-modal" onclick="if(event.target===this)toggleRules(false)">
-  <div id="rulesBox" class="rules-box">
+  <div id="rulesBox" class="rules-box" data-i18n-block="rules2">
     <span class="close-x" onclick="toggleRules(false)">×</span>
     <h2>FLIP FLAP</h2>
     <p style="color:#8a7a80">경매로 카드를 모아 <b style="color:#ffe9a8">세트</b>를 먼저 완성하면 승리!</p>
@@ -3864,6 +3888,7 @@
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.8.1/kakao.min.js" integrity="sha384-OL+ylM/iuPLtW5U3XcvLSGhE8JzReKDank5InqlHGWPhb4140/yrBw0bg0y7+C9J" crossorigin="anonymous"></script>
 <script src="item-icons.js"></script>
+<script src="i18n.js"></script>
 <script src="art.js"></script>
 <script src="client.js"></script>
 <script src="client4.js"></script>

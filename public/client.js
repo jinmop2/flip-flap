@@ -2541,6 +2541,17 @@ function applySettings() {   // 저장된 상태를 화면·오디오에 반영
   const sb = document.getElementById('statusBar'); if (sb) sb.style.display = guideOff ? 'none' : '';
   const set = (id, on) => { const t = document.getElementById(id); if (t) t.classList.toggle('on', on); };
   set('togBgm', !bgmOff); set('togSfx', !sfxOff); set('togGuide', !guideOff);
+  const cur = (window.FF && FF.lang()) || 'ko';
+  document.querySelectorAll('.sp-segb[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === cur));
+}
+// 언어를 바꾸면 이미 그려진 화면을 그 자리에서 다시 칠한다.
+// 새로고침을 시키면 진행 중인 판이 끊긴다.
+function pickLang(l) {
+  if (!window.FF) return;
+  if (FF.lang() === l) return;
+  FF.setLang(l);
+  playSound('select');
+  applySettings();
 }
 function toggleSettings(force) {
   const p = document.getElementById('settingsPanel'); if (!p) return;
