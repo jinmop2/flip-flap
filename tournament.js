@@ -5,16 +5,27 @@
 // 서버를 띄우지 않고 확인할 수 있다 — 대진이 틀리면 대회 전체가 틀어진다.
 //
 // 규칙
-//   · 참가비 200코인, 정원 8명, 첫 사람이 들어온 뒤 30초에 시작
-//   · 30초에 8명이 안 차면 나머지는 AI 로 채운다 (사람이 하나여도 시작한다)
+//   · 참가비 200코인, 정원 8명
+//   · 매시 정각과 30분에 열린다. 그 사이엔 언제든 접수하고, 시작 시각에 출발한다.
+//   · 시작할 때 8명이 안 차면 나머지는 AI 로 채운다 (사람이 하나여도 시작한다)
 //   · 8강 → 4강 → 결승, 모든 경기는 2인전
+//   · 8강·4강은 단판, 결승만 3판 2선승
 //   · 우승 1000코인, 준우승 200코인 (준우승은 참가비를 돌려받는 셈)
 
 const SIZE = 8;                 // 정원 (2의 거듭제곱이어야 대진이 맞는다)
 const ENTRY_FEE = 200;
 const PRIZE = { 1: 1000, 2: 200 };
-const START_DELAY = 30000;      // 첫 사람이 들어온 뒤 시작까지
+const PERIOD_MS = 30 * 60 * 1000;   // 30분마다
 const ROUND_NAMES = ['8강', '4강', '결승'];
+// 라운드별 판수. 결승만 3판 2선승 — 우승은 한 판 운으로 갈리지 않게.
+const BEST_OF = [1, 1, 3];
+const winsNeeded = (bestOf) => Math.floor((bestOf || 1) / 2) + 1;
+
+// 다음 개최 시각 — 매시 0분·30분. now 를 주면 그 시점 기준으로 계산한다(테스트용).
+function nextStartAt(now) {
+  const t = now === undefined ? Date.now() : now;
+  return Math.floor(t / PERIOD_MS) * PERIOD_MS + PERIOD_MS;
+}
 
 // 자리 섞기 — 매칭은 무작위다. 시드를 주면 같은 대진을 다시 만들 수 있다(테스트용).
 function shuffle(arr, rand) {
@@ -40,16 +51,19 @@ function createBracket(entrants, rand) {
     seats: seats.slice(0, SIZE),
     round: 0,                       // 0=8강, 1=4강, 2=결승
     // rounds[r] = [{ a, b, winner }]  — a·b 는 seats 의 자리 번호
-    rounds: [pairsOf([...Array(SIZE).keys()])],
+    rounds: [pairsOf([...Array(SIZE).keys()], BEST_OF[0])],
     over: false,
     rank: {},                       // seat → 등수 (1·2 만 상금)
   };
 }
 
 // 이웃끼리 짝짓기 — [0,1], [2,3] …
-function pairsOf(list) {
+// score 는 그 자리가 딴 판수. 단판이면 한 판에 결판나고, 결승은 2승이 필요하다.
+function pairsOf(list, bestOf) {
   const out = [];
-  for (let i = 0; i < list.length; i += 2) out.push({ a: list[i], b: list[i + 1], winner: null });
+  const bo = bestOf || 1;
+  for (let i = 0; i < list.length; i += 2)
+    out.push({ a: list[i], b: list[i + 1], winner: null, bestOf: bo, score: { [list[i]]: 0, [list[i + 1]]: 0 } });
   return out;
 }
 
@@ -71,6 +85,15 @@ function reportWin(t, matchIndex, winnerSeat) {
   if (m.winner !== null) return { ok: false, reason: 'done' };
   if (winnerSeat !== m.a && winnerSeat !== m.b) return { ok: false, reason: 'not-in-match' };
 
+  // 한 판을 딴 것으로 적는다. 3판 2선승이면 여기서 바로 안 끝난다.
+  m.score = m.score || { [m.a]: 0, [m.b]: 0 };
+  m.score[winnerSeat] = (m.score[winnerSeat] || 0) + 1;
+  const need = winsNeeded(m.bestOf);
+  if (m.score[winnerSeat] < need) {
+    return { ok: true, advanced: false, seriesGame: true,
+             score: { ...m.score }, need, matchIndex };   // 다음 판을 더 해야 한다
+  }
+
   m.winner = winnerSeat;
   const loser = winnerSeat === m.a ? m.b : m.a;
   // 진 사람의 등수 — 이번 라운드에서 떨어진 사람들은 같은 등수를 나눠 갖는다.
@@ -87,7 +110,7 @@ function reportWin(t, matchIndex, winnerSeat) {
     return { ok: true, advanced: false, finished: true, champion: winners[0] };
   }
   t.round++;
-  t.rounds.push(pairsOf(winners));
+  t.rounds.push(pairsOf(winners, BEST_OF[t.round]));
   return { ok: true, advanced: true };
 }
 
@@ -101,6 +124,11 @@ function forfeit(t, seat) {
     if (idx < 0) break;                              // 이 라운드에 그 자리의 경기가 없다
     const m = list[idx];
     const other = m.a === seat ? m.b : m.a;
+    // 3판 2선승이어도 나간 사람을 기다릴 이유가 없다 — 남은 판을 한 번에 준다.
+    m.score = m.score || { [m.a]: 0, [m.b]: 0 };
+    m.score[other] = winsNeeded(m.bestOf);
+    m.score[seat] = Math.min(m.score[seat] || 0, winsNeeded(m.bestOf) - 1);
+    m.score[other] -= 1;                       // reportWin 이 한 판을 더할 자리를 남긴다
     const r = reportWin(t, idx, other);
     out.push({ round: t.round, matchIndex: idx, winner: other });
     if (!r.ok) break;
@@ -118,7 +146,8 @@ function view(t, mySeat) {
                                     me: mySeat === i })),
     rounds: t.rounds.map((ms, r) => ({
       round: r, name: roundName(r),
-      matches: ms.map((m) => ({ a: m.a, b: m.b, winner: m.winner })),
+      matches: ms.map((m) => ({ a: m.a, b: m.b, winner: m.winner,
+                                bestOf: m.bestOf || 1, score: m.score || {} })),
     })),
     mySeat: mySeat === undefined ? null : mySeat,
     myRank: mySeat === undefined ? null : (t.rank[mySeat] || null),
@@ -128,7 +157,7 @@ function view(t, mySeat) {
 const prizeFor = (rank) => PRIZE[rank] || 0;
 
 module.exports = {
-  SIZE, ENTRY_FEE, PRIZE, START_DELAY, ROUND_NAMES,
+  SIZE, ENTRY_FEE, PRIZE, PERIOD_MS, ROUND_NAMES, BEST_OF, winsNeeded, nextStartAt,
   createBracket, reportWin, forfeit, pendingMatches, curRound, seatOf, roundName, view, prizeFor,
   _shuffle: shuffle, _pairsOf: pairsOf,
 };

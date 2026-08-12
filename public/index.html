@@ -3561,19 +3561,21 @@
     <!-- 참가 안내 -->
     <div id="tourIntro">
       <p class="auth-hint" style="text-align:center;margin:2px 0 8px">
-        8강 단판 승부 · 모든 경기는 2인전<br>
+        8강 · 4강은 단판, <b style="color:#ffe9a8">결승은 3판 2선승</b> · 모든 경기는 2인전<br>
         참가비 <b style="color:#ffd94a">🪙200</b> · 우승 <b style="color:#ffd94a">🪙1000</b> · 준우승 <b style="color:#ffd94a">🪙200</b>
       </p>
-      <p class="auth-hint" style="text-align:center;margin:0 0 10px;font-size:.7rem">
-        첫 참가자가 들어온 뒤 30초에 시작해요. 그때까지 안 차면 AI 가 자리를 채웁니다.
+      <p class="auth-hint" style="text-align:center;margin:0 0 4px;font-size:.7rem">
+        매시 <b style="color:#ffe9a8">정각</b>과 <b style="color:#ffe9a8">30분</b>에 열려요.
+        시작할 때 자리가 비면 AI 가 채웁니다.
       </p>
+      <p class="auth-hint" id="tourNextAt" style="text-align:center;margin:0 0 10px;font-size:.72rem;color:#ffd94a"></p>
       <button class="btn btn-gold" onclick="tourJoin()">🪙200 내고 참가</button>
       <div id="tourErr" class="auth-err"></div>
     </div>
 
     <!-- 대기 -->
     <div id="tourWait" style="display:none">
-      <div class="tw-count"><b id="tourLeft">30</b><span>초 뒤 시작</span></div>
+      <div class="tw-count"><b id="tourLeft">–</b><span>뒤 시작</span></div>
       <div class="tw-slots" id="tourSlots"></div>
       <p class="auth-hint" style="text-align:center;margin:8px 0 0" id="tourWaitNote"></p>
       <button class="btn btn-outline" onclick="tourLeave()">나가기 (참가비 환불)</button>

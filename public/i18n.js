@@ -779,6 +779,9 @@
     // ── 토너먼트 ──
     '토너먼트': 'Tournament',
     '8강 · \ud83e\ude99200': 'Top 8 · \ud83e\ude99200',
+    '곧 시작해요. 다음 회차에 참가해주세요.': 'Starting now — please join the next one.',
+    '뒤 시작': 'until start',
+
     '\ud83e\ude99200 내고 참가': 'Enter for \ud83e\ude99200',
     '나가기 (참가비 환불)': 'Leave (entry fee refunded)',
     '빈 자리': 'Empty',
@@ -874,6 +877,10 @@
     [/^파편부터 원하는 것을 확정으로 바꿀 수 있어요 — 위$/, 'shards let you pick exactly what you want — see'],
     [/^탭 \(지금 (\d+)개\)$/, 'tab (you have $1)'],
     [/^(\d+)\/(\d+)명 · (\d+) RP · 클랜장 (.+)$/, '$1/$2 members \u00b7 $3 RP \u00b7 Leader $4'],
+    [/^다음 대회는 (\d+:\d+) 시작 \((.+)\) 뒤\)$/, 'Next tournament at $1 (in $2)'],
+    [/^다음 대회는 (\d+:\d+) 시작 \((.+) 뒤\)$/, 'Next tournament at $1 (in $2)'],
+    [/^지금은 대회가 진행 중이에요\. 다음 회차는 (\d+:\d+) 시작$/, 'A tournament is running. Next one starts at $1'],
+    [/^(\d+)분 (\d+)초$/, '$1m $2s'],
     [/^(\d+)위$/, 'Rank $1'],
     [/^상금 \ud83e\ude99 (\d+)$/u, 'Prize \ud83e\ude99 $1'],
     [/^(\d+)\/(\d+)명 · 시작할 때 빈 자리는 AI 가 채워요$/, '$1/$2 joined · empty seats are filled by AI at start'],

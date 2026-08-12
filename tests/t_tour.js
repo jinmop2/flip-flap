@@ -55,8 +55,10 @@ console.log('\n② 한 대회를 끝까지');
   ok('4강 승자 둘이 결승', [T.curRound(t)[0].a, T.curRound(t)[0].b].sort().join() === r4.slice().sort().join());
 
   const fin = T.curRound(t)[0];
+  const g1 = T.reportWin(t, 0, fin.a);
+  ok('결승 한 판으로는 안 끝난다', g1.seriesGame === true && t.over === false, JSON.stringify(g1));
   const r = T.reportWin(t, 0, fin.a);
-  ok('대회가 끝난다', t.over === true && r.finished === true);
+  ok('두 판을 이기면 끝난다', t.over === true && r.finished === true);
   ok('우승자가 나온다', r.champion === fin.a, String(r.champion));
 }
 
@@ -67,7 +69,7 @@ console.log('\n③ 등수와 상금');
   for (let i = 0; i < 4; i++) { const m = T.curRound(t)[i]; drop8.push(m.b); T.reportWin(t, i, m.a); }
   for (let i = 0; i < 2; i++) { const m = T.curRound(t)[i]; drop4.push(m.b); T.reportWin(t, i, m.a); }
   const fin = T.curRound(t)[0];
-  T.reportWin(t, 0, fin.a);
+  T.reportWin(t, 0, fin.a); T.reportWin(t, 0, fin.a);   // 결승은 2선승
 
   ok('우승 1위', t.rank[fin.a] === 1);
   ok('준우승 2위', t.rank[fin.b] === 2);
@@ -78,7 +80,7 @@ console.log('\n③ 등수와 상금');
   ok('준우승 상금 200', T.prizeFor(2) === 200);
   ok('3위부터는 없다', T.prizeFor(3) === 0 && T.prizeFor(5) === 0);
   ok('참가비 200', T.ENTRY_FEE === 200);
-  ok('시작까지 30초', T.START_DELAY === 30000);
+  ok('30분 주기', T.PERIOD_MS === 30 * 60 * 1000);
 }
 
 console.log('\n④ 같은 경기를 두 번 적지 않는다');
@@ -110,7 +112,8 @@ console.log('\n⑤ 중간에 나가면');
   ok('4강으로 넘어간다', t.round === 1);
   for (const pm of T.pendingMatches(t)) T.reportWin(t, pm.index, pm.a);
   ok('결승까지 간다', t.round === 2);
-  T.reportWin(t, 0, T.curRound(t)[0].a);
+  const f = T.curRound(t)[0];
+  T.reportWin(t, 0, f.a); T.reportWin(t, 0, f.a);
   ok('끝난다', t.over === true);
 }
 
@@ -135,6 +138,53 @@ console.log('\n⑦ 화면에 내려보낼 모양');
   ok('아직 등수는 없다', v.myRank === null);
   T.forfeit(t, 0);
   ok('탈락하면 등수가 뜬다', T.view(t, 0).myRank === 5);
+}
+
+console.log('\n⑧′ 결승은 3판 2선승');
+{
+  ok('8강·4강은 단판', T.BEST_OF[0] === 1 && T.BEST_OF[1] === 1);
+  ok('결승은 3판', T.BEST_OF[2] === 3);
+  ok('2승이 필요하다', T.winsNeeded(3) === 2 && T.winsNeeded(1) === 1);
+
+  const t = T.createBracket(people(8), rngOf(31));
+  for (let i = 0; i < 4; i++) T.reportWin(t, i, T.curRound(t)[i].a);
+  for (let i = 0; i < 2; i++) T.reportWin(t, i, T.curRound(t)[i].a);
+  const m = T.curRound(t)[0];
+  ok('결승 경기에 판수가 붙어 있다', m.bestOf === 3, String(m.bestOf));
+
+  // 한 판씩 주고받아도 끝나면 안 된다
+  const r1 = T.reportWin(t, 0, m.a);
+  ok('1승은 시리즈 진행', r1.seriesGame === true && t.over === false);
+  const r2 = T.reportWin(t, 0, m.b);
+  ok('1:1 도 진행', r2.seriesGame === true && t.over === false, JSON.stringify(r2));
+  ok('점수가 쌓인다', r2.score[m.a] === 1 && r2.score[m.b] === 1, JSON.stringify(r2.score));
+  const r3 = T.reportWin(t, 0, m.b);
+  ok('2승이면 끝', t.over === true && r3.champion === m.b, String(r3.champion));
+  ok('진 쪽이 준우승', t.rank[m.a] === 2);
+
+  // 결승에서 나가면 남은 판을 기다리지 않고 바로 끝난다
+  const t2 = T.createBracket(people(8), rngOf(37));
+  for (let i = 0; i < 4; i++) T.reportWin(t2, i, T.curRound(t2)[i].a);
+  for (let i = 0; i < 2; i++) T.reportWin(t2, i, T.curRound(t2)[i].a);
+  const f = T.curRound(t2)[0];
+  T.reportWin(t2, 0, f.a);            // 1승 해 둔 상태에서
+  T.forfeit(t2, f.a);                 // 이기고 있던 쪽이 나가면
+  ok('나가면 바로 끝난다', t2.over === true, String(t2.over));
+  ok('상대가 우승', t2.rank[f.b] === 1, JSON.stringify(t2.rank));
+  ok('나간 쪽이 준우승', t2.rank[f.a] === 2);
+}
+
+console.log('\n⑧″ 30분마다 열린다');
+{
+  const half = 30 * 60 * 1000;
+  // 정각 12:00 이면 다음은 12:30
+  const noon = Date.UTC(2026, 0, 1, 12, 0, 0);
+  ok('정각이면 30분 뒤', T.nextStartAt(noon) === noon + half,
+     new Date(T.nextStartAt(noon)).toISOString());
+  ok('12:01 이면 12:30', T.nextStartAt(noon + 60000) === noon + half);
+  ok('12:29 이면 12:30', T.nextStartAt(noon + 29 * 60000) === noon + half);
+  ok('12:31 이면 13:00', T.nextStartAt(noon + 31 * 60000) === noon + 2 * half);
+  ok('언제 불러도 앞으로 간다', T.nextStartAt(noon) > noon);
 }
 
 console.log('\n⑧ 참가비와 상금 (돈이 오가는 길)');
@@ -189,8 +239,17 @@ console.log('\n⑨ 서버가 붙여 놓은 길');
 
   ok('참가는 서버가 받는다', /socket\.on\('tour_join'/.test(srv));
   ok('참가비는 서버가 뺀다', /accounts\.tourEnter\(socket\.token, TOUR\.ENTRY_FEE\)/.test(srv));
-  ok('첫 사람부터 30초', /setTimeout\(\(\) => tourStart\(\), TOUR\.START_DELAY\)/.test(srv));
+  ok('30분마다 대기실을 연다', /function tourEnsureLobby/.test(srv)
+     && /startAt: TOUR\.nextStartAt\(\)/.test(srv));
+  ok('서버가 뜨면 접수를 연다', /tourEnsureLobby\(\);\s*\/\/ 서버가 뜨면/.test(srv));
+  ok('끝나면 다음 회차를 연다', /tourEnsureLobby\(\);\s*\/\/ 다음 회차/.test(srv));
+  ok('참가자가 없으면 다음 회차로', /if \(!entrants\.length\) \{ tourEnsureLobby\(\); return; \}/.test(srv));
   ok('다 차면 바로 시작', /entrants\.length >= TOUR\.SIZE/.test(srv));
+  ok('시작 직전에는 안 받는다', /startAt - Date\.now\(\) < 3000/.test(srv));
+  // 3판 2선승 — 승부가 안 났으면 그 경기의 다음 판을 다시 연다
+  ok('시리즈 다음 판을 연다', /if \(r\.seriesGame\)/.test(srv)
+     && /tourMakeMatch\(index, m\.a, m\.b\)/.test(srv));
+  ok('방 기록을 비워야 다시 만든다', /delete tour\.rooms\[roundKey\(b\.round, index\)\]/.test(srv));
   ok('대회 경기는 RP 미반영', /noRank: !!room\.itemMode \|\| !!room\.noRank/.test(srv));
   // 모든 종료 경로가 finishStats 를 지난다 — 거기 한 곳에서만 보고한다
   ok('끝난 판을 대진표에 적는다', /if \(room\.tour && tour && room\.tour\.id === tour\.id\)/.test(srv));
@@ -201,6 +260,9 @@ console.log('\n⑨ 서버가 붙여 놓은 길');
   ok('대회 중에는 새로고침하지 않는다', /window\.tourBackToBracket = function/.test(cli));
   ok('판 중에는 대진표를 안 덮는다', /if \(tourInGame\(\)\) \{ tourPending = v/.test(cli));
   ok('대회 시작하면 창을 접는다', /if \(d && d\.tour\) document\.getElementById\('tourModal'\)\.classList\.remove\('show'\)/.test(cli));
+  ok('결승 점수를 보여준다', /m\.bestOf > 1/.test(cli));
+  ok('남은 시간을 분·초로', /function tourLeftText/.test(cli));
+  ok('다음 개최 시각을 적는다', /function tourClock/.test(cli));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

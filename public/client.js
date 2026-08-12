@@ -2604,6 +2604,15 @@ window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); p
 // 화면은 네 모습을 오간다: 참가 안내 → 대기(30초) → 대진표 → 결과.
 // 어느 것을 보여줄지는 서버가 보내는 상태가 정한다 — 화면이 스스로 정하면 어긋난다.
 let tourTick = null, tourLeftMs = 0;
+// 30분마다 열리므로 남은 시간이 분 단위로 길어진다 — 초만 세면 읽기 힘들다
+function tourLeftText(ms) {
+  const sec = Math.max(0, Math.ceil(ms / 1000));
+  return sec >= 60 ? `${Math.floor(sec / 60)}분 ${String(sec % 60).padStart(2, '0')}초` : `${sec}초`;
+}
+function tourClock(at) {
+  const d = new Date(at);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 function tourFace(which) {
   for (const [id, on] of [['tourIntro', which === 'intro'], ['tourWait', which === 'wait'],
@@ -2641,10 +2650,19 @@ socket.on('tour_left', () => { clearInterval(tourTick); tourTick = null; tourFac
 socket.on('tour_lobby', (d) => {
   if (!d || !d.open) { tourFace('intro'); return; }
   document.getElementById('tourModal').classList.add('show');
+  // 아직 참가 전이면 안내 화면에 다음 개최 시각만 적어 준다
+  if (!d.joined) {
+    tourFace('intro');
+    const note = document.getElementById('tourNextAt');
+    if (note) note.textContent = d.running
+      ? '지금은 대회가 진행 중이에요. 다음 회차는 ' + tourClock(d.startAt) + ' 시작'
+      : '다음 대회는 ' + tourClock(d.startAt) + ' 시작 (' + tourLeftText(d.leftMs) + ' 뒤)';
+    return;
+  }
   tourFace('wait');
   tourLeftMs = d.leftMs;
   const paint = () => {
-    document.getElementById('tourLeft').textContent = Math.max(0, Math.ceil(tourLeftMs / 1000));
+    document.getElementById('tourLeft').textContent = tourLeftText(tourLeftMs);
     tourLeftMs -= 250;
   };
   clearInterval(tourTick); paint(); tourTick = setInterval(paint, 250);
@@ -2687,8 +2705,11 @@ function tourRenderBoard(v) {
       const cls = (seat) => 'tb-p'
         + (m.winner === null ? '' : (m.winner === seat ? ' win' : ' lose'))
         + (v.mySeat === seat ? ' me' : '');
-      return `<div class="tb-m"><span class="${cls(m.a)}">${esc(nameOf(m.a))}</span>` +
-             `<span class="tb-vs">VS</span>` +
+      // 3판 2선승은 점수를 보여줘야 몇 판째인지 안다
+      const sc = m.bestOf > 1
+        ? `<span class="tb-vs">${(m.score || {})[m.a] || 0}:${(m.score || {})[m.b] || 0}</span>`
+        : '<span class="tb-vs">VS</span>';
+      return `<div class="tb-m"><span class="${cls(m.a)}">${esc(nameOf(m.a))}</span>` + sc +
              `<span class="${cls(m.b)}">${esc(nameOf(m.b))}</span></div>`;
     }).join('') + '</div>').join('');
   document.getElementById('tourNote').textContent = v.myRank
