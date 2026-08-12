@@ -1234,6 +1234,11 @@ const TITLES = {
   t_cycle1:   { name: '사이클 입문',   icon: '🔁', color: '#7ad8c8', cond: '싸이클링 1회 완성',    goalKey: 'cycle',       goal: 1 },
   t_cycle5:   { name: '사이클 장인',   icon: '🔄', color: '#4ec8b8', cond: '싸이클링 5회 완성',    goalKey: 'cycle',       goal: 5 },
   t_cycle20:  { name: '사이클 마스터', icon: '🎊', color: '#2fb8a8', cond: '싸이클링 20회 완성',   goalKey: 'cycle',       goal: 20 },
+
+  // ── 토너먼트 (8강 · 2인전) ──
+  t_tour1:    { name: '토너먼트 우승',   icon: '🏆', color: '#ffd94a', cond: '토너먼트 우승 1회',   goalKey: 'tourWins',    goal: 1 },
+  t_tour5:    { name: '토너먼트 강자',   icon: '🥇', color: '#ffc93a', cond: '토너먼트 우승 5회',   goalKey: 'tourWins',    goal: 5 },
+  t_tour20:   { name: '무관의 제왕',     icon: '👑', color: '#ffb62a', cond: '토너먼트 우승 20회',  goalKey: 'tourWins',    goal: 20 },
 };
 function statOf(u, key) {
   if (key === 'wins') return u.wins || 0;
@@ -1385,6 +1390,64 @@ function missionList(token) {
     cycle: cycleProgress(u),
   });
   return { ok: true, list };
+}
+
+// ══════════════════════════════════════════════════════════
+//  토너먼트 참가비·상금
+// ══════════════════════════════════════════════════════════
+// 돈이 오가므로 금액은 전부 여기서 정한다. 화면이 보낸 값은 쓰지 않는다.
+// 참가비는 들어갈 때 한 번 빠지고, 대회가 못 열리면 돌려준다.
+const tourLocks = new Set();
+
+function tourEnter(token, fee) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const cost = Number(fee) || 0;
+  if (cost <= 0) return { error: '참가비가 올바르지 않아요.' };
+  if (tourLocks.has(idl)) return { error: '잠시 후 다시 시도해 주세요.' };
+  tourLocks.add(idl);
+  try {
+    if ((u.coins || 0) < cost) return { error: '코인이 부족해요.' };
+    u.coins -= cost;
+    persist(idl);
+    return { ok: true, coins: u.coins, profile: profileOf(u) };
+  } finally { tourLocks.delete(idl); }
+}
+
+// 참가비 환불 (정원 미달로 못 열렸거나, 시작 전에 나갔을 때)
+function tourRefund(token, fee) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  u.coins = (u.coins || 0) + (Number(fee) || 0);
+  persist(idl);
+  return { ok: true, coins: u.coins, profile: profileOf(u) };
+}
+
+// 상금. 같은 대회에서 두 번 받지 못하게 대회 번호를 적어 둔다 —
+// 여기가 새면 상금이 두 번 나간다.
+function tourPrize(token, tourId, rank, amount) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const amt = Number(amount) || 0;
+  const key = String(tourId || '');
+  if (!key) return { error: '대회를 알 수 없어요.' };
+  if (!u.tourPaid || typeof u.tourPaid !== 'object') u.tourPaid = {};
+  if (Object.prototype.hasOwnProperty.call(u.tourPaid, key)) return { error: '이미 받은 상금이에요.' };
+  u.tourPaid[key] = rank;
+  // 기록이 무한히 쌓이지 않게 최근 것만 남긴다
+  const keys = Object.keys(u.tourPaid);
+  if (keys.length > 30) for (const k of keys.slice(0, keys.length - 30)) delete u.tourPaid[k];
+
+  u.stats = u.stats || {};
+  if (rank === 1) u.stats.tourWins = (u.stats.tourWins || 0) + 1;
+  u.stats.tourPlays = (u.stats.tourPlays || 0) + 1;
+  if (amt > 0) u.coins = (u.coins || 0) + amt;
+  const titles = checkTitles(u);
+  persist(idl);
+  return { ok: true, amount: amt, rank, coins: u.coins, titles, profile: profileOf(u) };
 }
 
 // 미션 보상 수령. 서버에서만 판정한다 — 화면이 보낸 금액은 절대 믿지 않는다.
@@ -2440,7 +2503,8 @@ module.exports = {
   calcRpDelta, refreshRankState, startPromo, promoResult, refreshAce, seasonReset,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   gachaInfo, rollGacha, exchangeShard, GACHA_TIER, TIER_OF, SHARD_ONLY, bonusOf,
-  missionList, claimMission, titleList, dmList, dmSend, dmUnread, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,
+  missionList, claimMission, titleList, dmList, dmSend, dmUnread,
+  tourEnter, tourRefund, tourPrize, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,
   // 친구
   friendList, sendFriendReq, acceptFriendReq, declineFriendReq, cancelFriendReq, removeFriend,
   friendIdlsOf, nickOfIdl,

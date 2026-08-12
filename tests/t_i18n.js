@@ -86,7 +86,8 @@ console.log('\n④ 원문이 바뀌면 짝이 끊긴다');
   // 안 고치면 여기서 걸린다. (값이 섞이는 말은 패턴이 맡으므로 제외)
   const all = html + cli + fs.readFileSync(src + '/public/client4.js', 'utf8')
     + fs.readFileSync(src + '/accounts.js', 'utf8') + fs.readFileSync(src + '/server.js', 'utf8')
-    + fs.readFileSync(src + '/server4.js', 'utf8') + fs.readFileSync(src + '/items.js', 'utf8');
+    + fs.readFileSync(src + '/server4.js', 'utf8') + fs.readFileSync(src + '/items.js', 'utf8')
+    + fs.readFileSync(src + '/tournament.js', 'utf8');
   const orphan = Object.keys(FF.DICT).filter((k) => !all.includes(k));
   ok('사전에 유령 열쇠가 없다', orphan.length === 0, orphan.slice(0, 8).join(' | '));
   ok('사전이 비어 있지 않다', Object.keys(FF.DICT).length >= 150, String(Object.keys(FF.DICT).length));

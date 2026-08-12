@@ -2600,6 +2600,150 @@ document.addEventListener('pointerdown', e => {
 window.addEventListener('DOMContentLoaded', applySettings);   // 저장된 상태 반영
 window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); paintIcons(); } catch (_) {} });   // 기본 이모트·라벨 아이콘
 
+// ── 토너먼트 (8강 · 2인전) ───────────────────────────────────
+// 화면은 네 모습을 오간다: 참가 안내 → 대기(30초) → 대진표 → 결과.
+// 어느 것을 보여줄지는 서버가 보내는 상태가 정한다 — 화면이 스스로 정하면 어긋난다.
+let tourTick = null, tourLeftMs = 0;
+
+function tourFace(which) {
+  for (const [id, on] of [['tourIntro', which === 'intro'], ['tourWait', which === 'wait'],
+                          ['tourBoard', which === 'board'], ['tourResult', which === 'result']]) {
+    const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none';
+  }
+}
+window.tourOpen = function () {
+  if (!myAccount) { alert('토너먼트는 로그인하면 참가할 수 있어요!'); openAuth('login'); return; }
+  closeModePanels();
+  document.getElementById('tourErr').textContent = '';
+  tourFace('intro');
+  document.getElementById('tourModal').classList.add('show');
+  socket.emit('tour_peek');
+};
+window.tourClose = function () {
+  document.getElementById('tourModal').classList.remove('show');
+  clearInterval(tourTick); tourTick = null;
+};
+window.tourJoin = function () {
+  document.getElementById('tourErr').textContent = '';
+  socket.emit('tour_join');
+};
+window.tourLeave = function () { socket.emit('tour_leave'); };
+
+socket.on('tour_error', (m) => {
+  const box = document.getElementById('tourErr');
+  if (box) box.textContent = m;
+  else toast(esc(m));
+  tourFace('intro');
+});
+socket.on('tour_left', () => { clearInterval(tourTick); tourTick = null; tourFace('intro'); });
+
+// 대기 — 남은 시간은 서버가 준 값에서 시작해 화면에서 센다
+socket.on('tour_lobby', (d) => {
+  if (!d || !d.open) { tourFace('intro'); return; }
+  document.getElementById('tourModal').classList.add('show');
+  tourFace('wait');
+  tourLeftMs = d.leftMs;
+  const paint = () => {
+    document.getElementById('tourLeft').textContent = Math.max(0, Math.ceil(tourLeftMs / 1000));
+    tourLeftMs -= 250;
+  };
+  clearInterval(tourTick); paint(); tourTick = setInterval(paint, 250);
+
+  const box = document.getElementById('tourSlots');
+  const me = myAccount ? myAccount.nick : null;
+  let html = '';
+  for (let i = 0; i < d.size; i++) {
+    const nick = d.nicks[i];
+    html += nick
+      ? `<div class="tw-slot${nick === me ? ' me' : ''}">${esc(nick)}</div>`
+      : '<div class="tw-slot empty">빈 자리</div>';
+  }
+  box.innerHTML = html;
+  document.getElementById('tourWaitNote').textContent =
+    `${d.count}/${d.size}명 · 시작할 때 빈 자리는 AI 가 채워요`;
+});
+
+// 대진표.
+// 내 판이 열려 있으면 띄우지 않는다 — 대회 창이 판을 덮으면 자기 경기를 못 본다.
+let tourPending = null;                 // 판이 끝나면 보여줄 대진표
+function tourInGame() {
+  const g = document.getElementById('game');
+  return !!g && getComputedStyle(g).display !== 'none';
+}
+socket.on('tour_state', (v) => {
+  clearInterval(tourTick); tourTick = null;
+  if (tourInGame()) { tourPending = v; document.getElementById('tourModal').classList.remove('show'); return; }
+  tourPending = null;
+  tourPaintBoard(v);
+});
+
+// 대진표 그리기 — 새 상태가 올 때와 판이 끝난 뒤 두 곳에서 쓴다
+function tourRenderBoard(v) {
+  document.getElementById('tourRoundName').textContent = v.roundName;
+  const nameOf = (i) => { const s = v.seats[i]; return s.isBot ? 'AI' : (s.nick || '?'); };
+  document.getElementById('tourBracket').innerHTML = v.rounds.map((r) => `
+    <div class="tb-r"><div class="tb-rn">${esc(r.name)}</div>` +
+    r.matches.map((m) => {
+      const cls = (seat) => 'tb-p'
+        + (m.winner === null ? '' : (m.winner === seat ? ' win' : ' lose'))
+        + (v.mySeat === seat ? ' me' : '');
+      return `<div class="tb-m"><span class="${cls(m.a)}">${esc(nameOf(m.a))}</span>` +
+             `<span class="tb-vs">VS</span>` +
+             `<span class="${cls(m.b)}">${esc(nameOf(m.b))}</span></div>`;
+    }).join('') + '</div>').join('');
+  document.getElementById('tourNote').textContent = v.myRank
+    ? `탈락했어요 — 최종 ${v.myRank}위. 남은 경기를 지켜보세요.`
+    : '내 경기가 시작되면 자동으로 판이 열려요.';
+}
+
+// 결과
+let tourOverPending = null;
+socket.on('tour_over', (d) => {
+  clearInterval(tourTick); tourTick = null;
+  if (tourInGame()) { tourOverPending = d; return; }   // 판이 끝난 뒤에 보여준다
+  tourShowOver(d);
+});
+function tourShowOver(d) {
+  document.getElementById('tourModal').classList.add('show');
+  tourFace('result');
+  const label = d.rank === 1 ? '🏆 우승!' : d.rank === 2 ? '🥈 준우승' : `${d.rank}위`;
+  document.getElementById('tourRank').textContent = label;
+  document.getElementById('tourPrize').innerHTML = d.amount > 0
+    ? `상금 ${ico('🪙')} <b>${d.amount}</b>`
+    : '아쉽지만 상금은 없어요. 다음 대회에서 만나요!';
+  if (d.profile) { myAccount = d.profile; renderAccount(); }
+  if (d.rank === 1) playSound('setwin');
+}
+
+// 대회 경기가 시작되면 대회 창을 접는다 (판을 가리면 안 된다)
+socket.on('game_start', (d) => { if (d && d.tour) document.getElementById('tourModal').classList.remove('show'); });
+let isTourMatch = false;
+// 대회 경기가 끝났을 때 — 로비로 "돌아가되" 새로고침은 하지 않는다.
+// goLobby() 는 fastReload 를 부르는데, 새로고침하면 소켓 id 가 바뀌어
+// 대진표가 가리키던 자리를 잃는다(그 자리는 부전패 처리된다).
+window.tourBackToBracket = function () {
+  document.getElementById('gameOver').style.display = 'none';
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('lobby').style.display = 'flex';
+  document.body.classList.remove('ingame');
+  isTourMatch = false;
+  try { clearSession(); } catch (_) {}
+  tourAfterGame();
+};
+// 판이 끝나면 미뤄 둔 대진표·결과를 보여준다
+function tourAfterGame() {
+  if (tourOverPending) { const d = tourOverPending; tourOverPending = null; tourPending = null; tourShowOver(d); return; }
+  // tour_peek 을 부르면 안 된다. 대회가 이미 시작돼 대기실이 닫혔으므로
+  // { open:false } 가 돌아오고, 그 핸들러가 화면을 참가 안내로 되돌린다.
+  if (tourPending) { const v = tourPending; tourPending = null; tourPaintBoard(v); }
+}
+function tourPaintBoard(v) {
+  document.getElementById('tourModal').classList.add('show');
+  tourFace('board');
+  tourRenderBoard(v);
+}
+
+
 // ── 인게임 채팅 (친구 1:1 · 클랜) ────────────────────────────
 // 판을 나가지 않고도 얘기할 수 있게. 목록·대화 그리기는 여기 한 곳에서만 한다.
 let gcTab = 'friend', gcWith = null;      // 지금 보고 있는 탭 / 대화 중인 친구 idl
@@ -3200,7 +3344,8 @@ socket.on('spec_challenge_fail', () => {
 });
 
 socket.on('error', msg => alert(msg));
-socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spectate, itemMode }) => {
+socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spectate, itemMode, tour }) => {
+  isTourMatch = !!tour;          // 대회 경기면 끝난 뒤 대진표로 돌아간다
   isVsBot = vsBot;
   isSpec = !!spectate;
   isItemMode = !!itemMode;
@@ -3441,6 +3586,26 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
   // 몰수 게임은 방이 사라져서 재대결 불가
   const rb = document.getElementById('rematchBtn');
   if (rb) rb.style.display = (forfeit && !isVsBot) ? 'none' : '';
+  // 대회 경기는 재대결·로비 대신 대진표로 돌아간다.
+  // 로비 버튼은 새로고침을 하는데, 새로고침하면 소켓이 바뀌어 자리를 잃는다.
+  const goBtns = document.getElementById('goBtns');
+  if (isTourMatch && goBtns) {
+    if (rb) rb.style.display = 'none';
+    let back = document.getElementById('tourBackBtn');
+    if (!back) {
+      back = document.createElement('button');
+      back.id = 'tourBackBtn'; back.className = 'btn btn-gold';
+      back.textContent = '🏆 대진표로';
+      back.onclick = () => tourBackToBracket();
+      goBtns.appendChild(back);
+    }
+    back.style.display = '';
+    goBtns.querySelectorAll('button').forEach((b) => {
+      if (b !== back) b.style.display = 'none';
+    });
+  } else {
+    const back = document.getElementById('tourBackBtn'); if (back) back.style.display = 'none';
+  }
   setTimeout(() => { document.getElementById('gameOver').style.display = 'flex'; showRewards(); }, delay);
 });
 

@@ -2224,6 +2224,36 @@
     /* ── 인게임 설정 패널 ── */
     /* 두 판이 같이 쓴다. #game 안에 두었더니 다인전에서는 그 판이 숨어 있어
        설정이 아예 뜨지 않았다. 몸통 직속 + fixed 로 바꿔 어느 판에서든 뜬다. */
+    /* ── 토너먼트 ── */
+    .mode-card.tour { border-color:rgba(255,215,120,.5);
+      background:linear-gradient(150deg, rgba(90,60,10,.5), rgba(40,25,5,.5)); }
+    .tw-count { text-align:center; margin:2px 0 10px; }
+    .tw-count b { font-size:2.2rem; font-weight:800; color:var(--gold); font-family:'Bangers',cursive;
+      letter-spacing:2px; }
+    .tw-count span { font-size:.8rem; color:#c8bcc4; margin-left:4px; }
+    /* 여덟 자리 — 찬 자리와 빈 자리를 한눈에 */
+    .tw-slots { display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; }
+    .tw-slot { height:44px; border-radius:10px; border:1px solid #2a1c30; background:#1c1424;
+      display:flex; align-items:center; justify-content:center; text-align:center;
+      font-size:.68rem; font-weight:700; color:#f0ead8; padding:2px 4px; line-height:1.2;
+      word-break:keep-all; overflow:hidden; }
+    .tw-slot.empty { color:#5a4a60; border-style:dashed; }
+    .tw-slot.me { border-color:var(--gold); color:#ffe9a8; box-shadow:0 0 8px rgba(255,215,80,.25); }
+    .tb-round { text-align:center; font-size:.9rem; font-weight:800; color:var(--gold); margin-bottom:8px; }
+    .tb-wrap { display:flex; flex-direction:column; gap:10px; max-height:44vh; overflow-y:auto; }
+    .tb-r { border:1px solid rgba(185,141,52,.28); border-radius:11px; padding:8px; }
+    .tb-rn { font-size:.68rem; font-weight:800; color:#c8a86a; margin-bottom:6px; }
+    .tb-m { display:flex; align-items:center; gap:6px; font-size:.72rem; margin-bottom:4px; }
+    .tb-p { flex:1; min-width:0; padding:5px 8px; border-radius:8px; background:#1c1424;
+      border:1px solid #2a1c30; color:#c8bcc4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .tb-p.win { border-color:rgba(120,216,120,.5); color:#bdf0bd; }
+    .tb-p.lose { opacity:.45; }
+    .tb-p.me { box-shadow:inset 0 0 0 1px var(--gold); color:#ffe9a8; }
+    .tb-vs { flex-shrink:0; font-size:.62rem; color:#6b5a72; font-weight:800; }
+    .tr-rank { text-align:center; font-size:1.4rem; font-weight:800; color:var(--gold);
+      font-family:'Bangers',cursive; letter-spacing:1px; margin:6px 0 2px; }
+    .tr-prize { text-align:center; font-size:.9rem; color:#ffe9a8; font-weight:700; margin-bottom:10px; }
+
     /* ── 인게임 채팅 ── */
     /* 판 위에 떠야 하므로 판(z 30)보다 위, 설정(46)과 같은 층에 둔다. */
     #gameChat {
@@ -3115,6 +3145,10 @@
         <span class="mc-title">다인전</span>
         <span class="mc-tag beta">3·4인</span>
       </button>
+      <button class="mode-card mini tour" onclick="tourOpen()">
+        <span class="mc-title">토너먼트</span>
+        <span class="mc-tag">8강 · 🪙200</span>
+      </button>
     </div>
 
     <!-- 부가 — 눈에 덜 띄게 아래로 -->
@@ -3519,6 +3553,48 @@
 <!-- 다인전(3·4인) 설명 — 2인전과 덧수·분배·클로즈가 다르다.
      한 창에 둘 다 담으면 "내가 보는 판은 어느 쪽인지" 가 헷갈려 따로 둔다. -->
 <!-- 인게임 채팅 — 친구 1:1 과 클랜. 판을 나가지 않고도 얘기할 수 있게. -->
+<!-- 토너먼트 — 대기(30초 카운트) → 대진표 → 결과 -->
+<div class="lb-modal" id="tourModal" onclick="if(event.target===this)tourClose()">
+  <div class="lb-box" style="max-width:420px">
+    <div class="lb-title"><span data-ico="🏆"></span> 토너먼트</div>
+
+    <!-- 참가 안내 -->
+    <div id="tourIntro">
+      <p class="auth-hint" style="text-align:center;margin:2px 0 8px">
+        8강 단판 승부 · 모든 경기는 2인전<br>
+        참가비 <b style="color:#ffd94a">🪙200</b> · 우승 <b style="color:#ffd94a">🪙1000</b> · 준우승 <b style="color:#ffd94a">🪙200</b>
+      </p>
+      <p class="auth-hint" style="text-align:center;margin:0 0 10px;font-size:.7rem">
+        첫 참가자가 들어온 뒤 30초에 시작해요. 그때까지 안 차면 AI 가 자리를 채웁니다.
+      </p>
+      <button class="btn btn-gold" onclick="tourJoin()">🪙200 내고 참가</button>
+      <div id="tourErr" class="auth-err"></div>
+    </div>
+
+    <!-- 대기 -->
+    <div id="tourWait" style="display:none">
+      <div class="tw-count"><b id="tourLeft">30</b><span>초 뒤 시작</span></div>
+      <div class="tw-slots" id="tourSlots"></div>
+      <p class="auth-hint" style="text-align:center;margin:8px 0 0" id="tourWaitNote"></p>
+      <button class="btn btn-outline" onclick="tourLeave()">나가기 (참가비 환불)</button>
+    </div>
+
+    <!-- 대진표 -->
+    <div id="tourBoard" style="display:none">
+      <div class="tb-round" id="tourRoundName">8강</div>
+      <div id="tourBracket" class="tb-wrap"></div>
+      <p class="auth-hint" style="text-align:center;margin:8px 0 0" id="tourNote">곧 경기가 시작돼요…</p>
+    </div>
+
+    <!-- 결과 -->
+    <div id="tourResult" style="display:none">
+      <div class="tr-rank" id="tourRank"></div>
+      <div class="tr-prize" id="tourPrize"></div>
+      <button class="btn btn-gold" onclick="tourClose()">확인</button>
+    </div>
+  </div>
+</div>
+
 <div id="gameChat">
   <div class="gc-head">
     <button class="gcx-tab active" data-gct="friend" onclick="gameChatTab('friend')">친구</button>
@@ -3893,7 +3969,7 @@
     <div id="goRewards"></div>
     <div id="goStats"></div>
     <div id="rematchNote"></div>
-    <div style="display:flex; gap:8px; justify-content:center;">
+    <div id="goBtns" style="display:flex; gap:8px; justify-content:center;">
       <button class="btn btn-gold" id="rematchBtn" style="width:auto" onclick="rematch(this)"><svg class="btni" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M21 3v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>한 판 더!</button>
       <button class="btn btn-outline" style="width:auto" onclick="goLobby()">로비로</button>
     </div>

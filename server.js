@@ -1271,6 +1271,39 @@ io.on('connection', (socket) => {
     return { nick: cleanNick(nick), guest: true };
   }
 
+  // ── 토너먼트 ──
+  socket.on('tour_join', () => {
+    if (tour && !tour.done) return socket.emit('tour_error', '이미 진행 중인 대회가 있어요. 잠시 후 다시 시도해주세요.');
+    if (!socket.token) return socket.emit('tour_error', '로그인해야 참가할 수 있어요.');
+    if (socket.tourWaiting) return socket.emit('tour_lobby', tourLobbyView());
+    if (socket.roomId && rooms[socket.roomId]) return socket.emit('tour_error', '게임 중에는 참가할 수 없어요.');
+    if (tourLobby && tourLobby.entrants.length >= TOUR.SIZE) return socket.emit('tour_error', '자리가 다 찼어요.');
+    // 같은 계정이 두 자리를 먹지 못하게
+    const u = accounts.byToken(socket.token);
+    if (!u) return socket.emit('tour_error', '로그인이 필요해요.');
+    const idl = String(u.id).toLowerCase();
+    if (tourLobby && tourLobby.entrants.some((e) => e.idl === idl)) return socket.emit('tour_error', '이미 참가 중이에요.');
+
+    // 참가비 — 서버에서만 뺀다
+    const paid = accounts.tourEnter(socket.token, TOUR.ENTRY_FEE);
+    if (paid.error) return socket.emit('tour_error', paid.error);
+    socket.emit('profile', { profile: paid.profile });
+
+    if (!tourLobby) {
+      // 첫 사람이 들어온 순간부터 30초
+      tourLobby = { entrants: [], startAt: Date.now() + TOUR.START_DELAY, timer: null };
+      tourLobby.timer = setTimeout(() => tourStart(), TOUR.START_DELAY);
+    }
+    tourLobby.entrants.push({ key: socket.id, idl, nick: accounts.profileOf(u).nick,
+                              isBot: false, token: socket.token });
+    socket.tourWaiting = true;
+    socket.leave('lobby');
+    pushTourLobby();
+    if (tourLobby.entrants.length >= TOUR.SIZE) { clearTimeout(tourLobby.timer); setTimeout(() => tourStart(), 400); }
+  });
+  socket.on('tour_leave', () => { tourLeaveLobby(socket, true); socket.emit('tour_left'); });
+  socket.on('tour_peek', () => socket.emit('tour_lobby', tourLobbyView()));
+
   socket.on('enter_lobby', () => { socket.join('lobby'); socket.emit('rooms', openRoomList()); });
 
   // 친구에게 도전장 — 내가 만든 비밀방 코드를 접속 중인 친구에게 실시간 전달
@@ -1617,6 +1650,19 @@ io.on('connection', (socket) => {
     if (c <= 0) connByIp.delete(ip); else connByIp.set(ip, c);
     if (socket.accountId && accountSockets.get(socket.accountId) === socket.id) accountSockets.delete(socket.accountId);
     dequeue(socket.id);  // 매칭 대기열에서 제거 (봇 타이머 포함)
+    // 토너먼트 — 대기 중이면 참가비를 돌려주고, 대회 중이면 그 자리는 남은 경기를 진다.
+    // 붙들고 있으면 나머지 사람들이 다음 라운드로 못 넘어간다.
+    if (socket.tourWaiting) tourLeaveLobby(socket, true);
+    if (socket.tourSeat !== undefined && socket.tourSeat !== null && tour && !tour.done) {
+      const seat = socket.tourSeat;
+      socket.tourSeat = undefined;
+      setTimeout(() => {
+        // 잠깐 사이에 다시 붙었으면(재접속) 그대로 둔다
+        const back = tour && !tour.done && tour.bracket.seats[seat]
+          && io.sockets.sockets.get(tour.bracket.seats[seat].key);
+        if (!back) tourForfeitSeat(seat);
+      }, 20000);
+    }
     const roomId = socket.roomId;
     const room = roomId && rooms[roomId];
     if (!room) return;
@@ -1837,6 +1883,203 @@ function advanceTurn(roomId) {
   broadcast(roomId);
   setTimeout(() => maybeCpuAct(roomId), 500);
 }
+// ══════════════════════════════════════════════════════════
+//  토너먼트 (8강 · 2인전)
+// ══════════════════════════════════════════════════════════
+// 대진표는 tournament.js 가 계산한다. 여기서는 사람·방·코인만 다룬다.
+//
+// 한 번에 하나만 연다. 여러 대회를 동시에 굴리면 정원이 쪼개져 아무 데도 안 찬다.
+// 첫 사람이 들어온 뒤 30초에 시작하고, 그때까지 안 찬 자리는 AI 가 메운다.
+const TOUR = require('./tournament');
+let tour = null;                       // { id, bracket, seatOf, rooms, done }
+let tourLobby = null;                  // { entrants:[], timer, startAt }
+
+const tourSeatKey = (socket) => socket.id;
+
+function tourLobbyView() {
+  if (!tourLobby) return { open: false };
+  return {
+    open: true,
+    count: tourLobby.entrants.length,
+    size: TOUR.SIZE,
+    fee: TOUR.ENTRY_FEE,
+    leftMs: Math.max(0, tourLobby.startAt - Date.now()),
+    nicks: tourLobby.entrants.map((e) => e.nick),
+  };
+}
+function pushTourLobby() {
+  if (!tourLobby) return;
+  for (const e of tourLobby.entrants) io.to(e.key).emit('tour_lobby', tourLobbyView());
+}
+
+// 대기 중 나가기 — 참가비를 돌려준다 (아직 시작 전이므로)
+function tourLeaveLobby(socket, refund = true) {
+  if (!tourLobby) return;
+  const i = tourLobby.entrants.findIndex((e) => e.key === socket.id);
+  if (i < 0) return;
+  const [gone] = tourLobby.entrants.splice(i, 1);
+  socket.tourWaiting = false;
+  if (refund && gone.token) {
+    const r = accounts.tourRefund(gone.token, TOUR.ENTRY_FEE);
+    if (r.ok) io.to(gone.key).emit('profile', { profile: r.profile });
+  }
+  if (!tourLobby.entrants.length) {      // 아무도 안 남으면 대기 자체를 접는다
+    clearTimeout(tourLobby.timer); tourLobby = null; return;
+  }
+  pushTourLobby();
+}
+
+function tourStart() {
+  if (!tourLobby) return;
+  const entrants = tourLobby.entrants.slice();
+  clearTimeout(tourLobby.timer);
+  tourLobby = null;
+  if (!entrants.length) return;
+  // 이미 한 대회가 돌고 있으면 참가비를 돌려주고 접는다 (여기까지 오면 안 되지만 방어)
+  if (tour && !tour.done) {
+    for (const e of entrants) {
+      if (e.token) { const r = accounts.tourRefund(e.token, TOUR.ENTRY_FEE); if (r.ok) io.to(e.key).emit('profile', { profile: r.profile }); }
+      io.to(e.key).emit('tour_error', '이미 진행 중인 대회가 있어요. 참가비를 돌려드렸어요.');
+    }
+    return;
+  }
+
+  const bracket = TOUR.createBracket(entrants);
+  tour = { id: 'T' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+           bracket, rooms: {}, done: false };
+  // 자리 번호로 빠르게 찾기
+  for (let i = 0; i < bracket.seats.length; i++) {
+    const st = bracket.seats[i];
+    if (!st.isBot && st.key) { const sk = io.sockets.sockets.get(st.key); if (sk) { sk.tourSeat = i; sk.tourWaiting = false; } }
+  }
+  pushTour();
+  setTimeout(() => tourRunRound(), 1200);
+}
+
+// 지금 라운드의 경기들을 실제 방으로 만든다
+function tourRunRound() {
+  if (!tour || tour.done) return;
+  const b = tour.bracket;
+  for (const pm of TOUR.pendingMatches(b)) {
+    if (tour.rooms[roundKey(b.round, pm.index)]) continue;   // 이미 만들었다
+    tourMakeMatch(pm.index, pm.a, pm.b);
+  }
+}
+const roundKey = (round, index) => round + '-' + index;
+
+// 경기 하나 = 2인전 방 하나. 사람 vs 사람, 사람 vs AI, AI vs AI 모두 여기서 처리.
+function tourMakeMatch(index, seatA, seatB) {
+  if (!tour) return;
+  const b = tour.bracket;
+  const A = b.seats[seatA], B = b.seats[seatB];
+  const key = roundKey(b.round, index);
+
+  // AI 끼리는 판을 만들 필요가 없다 — 동전 던지기로 올린다
+  if (A.isBot && B.isBot) {
+    const win = Math.random() < 0.5 ? seatA : seatB;
+    setTimeout(() => tourReport(b.round, index, win), 600);
+    return;
+  }
+  if (Object.keys(rooms).length >= MAX_ROOMS) { setTimeout(() => tourRunRound(), 3000); return; }
+
+  const roomId = makeRoomId();
+  const humanFirst = !A.isBot;
+  const p0 = humanFirst ? A : B, p1 = humanFirst ? B : A;
+  const s0 = io.sockets.sockets.get(p0.key);
+  // 사람이 나갔으면 부전패
+  if (!s0) { tourForfeitSeat(humanFirst ? seatA : seatB); return; }
+
+  const prof0 = p0.token ? (accounts.byToken(p0.token) ? accounts.profileOf(accounts.byToken(p0.token)) : { nick: p0.nick, guest: true })
+                         : { nick: p0.nick, guest: true };
+  const botName = 'AI';
+  const s1 = p1.isBot ? null : io.sockets.sockets.get(p1.key);
+  if (!p1.isBot && !s1) { tourForfeitSeat(humanFirst ? seatB : seatA); return; }
+  const prof1 = p1.isBot ? { nick: botName, guest: true, bot: true }
+    : (p1.token && accounts.byToken(p1.token) ? accounts.profileOf(accounts.byToken(p1.token)) : { nick: p1.nick, guest: true });
+
+  rooms[roomId] = {
+    players: [p0.key, p1.isBot ? null : p1.key],
+    pids: [null, null],
+    nicks: [prof0.nick, prof1.nick],
+    profiles: [prof0, prof1],
+    tokens: [p0.token || null, p1.isBot ? null : (p1.token || null)],
+    name: '토너먼트 ' + TOUR.roundName(b.round), game: null,
+    vsBot: false, difficulty: 'expert',
+    secret: false, password: '', itemMode: false,
+    // 토너먼트 표식 — 끝났을 때 어디로 보고할지
+    tour: { id: tour.id, round: b.round, index, seats: [humanFirst ? seatA : seatB, humanFirst ? seatB : seatA] },
+    noRank: true,                                  // 대회는 RP 를 건드리지 않는다
+  };
+  if (p1.isBot) { rooms[roomId].cpuIndex = 1; rooms[roomId].aiMem = expert3.createMem(); }
+
+  const join = (sk, idx) => { if (!sk) return; sk.leave('lobby'); sk.join(roomId); sk.roomId = roomId; sk.playerIndex = idx; };
+  join(s0, 0); if (s1) join(s1, 1);
+  rooms[roomId].game = createGame(false);
+  rooms[roomId].startedAt = Date.now();
+  tour.rooms[roundKey(b.round, index)] = roomId;
+
+  io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: rooms[roomId].nicks,
+                                     profiles: rooms[roomId].profiles, tour: true });
+  broadcast(roomId);
+  startClock(roomId);
+  if (p1.isBot) setTimeout(() => maybeCpuAct(roomId), 800);
+}
+
+// 경기 결과를 대진표에 적는다
+function tourReport(round, index, winnerSeat) {
+  if (!tour || tour.done) return;
+  const b = tour.bracket;
+  if (b.round !== round) return;                    // 이미 지난 라운드의 뒤늦은 보고
+  const before = b.round;
+  const r = TOUR.reportWin(b, index, winnerSeat);
+  if (!r.ok) return;
+  pushTour();
+  if (r.finished) return tourFinish();
+  if (r.advanced || b.round !== before) setTimeout(() => tourRunRound(), 1500);
+}
+
+// 그 자리가 남은 경기를 전부 진다 (나갔거나 접속이 끊겼을 때)
+function tourForfeitSeat(seat) {
+  if (!tour || tour.done) return;
+  const b = tour.bracket;
+  TOUR.forfeit(b, seat);
+  pushTour();
+  if (b.over) return tourFinish();
+  setTimeout(() => tourRunRound(), 1200);
+}
+
+function tourFinish() {
+  if (!tour || tour.done) return;
+  tour.done = true;
+  const b = tour.bracket;
+  for (let i = 0; i < b.seats.length; i++) {
+    const st = b.seats[i];
+    const rank = b.rank[i] || null;
+    if (st.isBot || !rank) continue;
+    const amount = TOUR.prizeFor(rank);
+    let payload = { rank, amount, view: TOUR.view(b, i) };
+    if (st.token) {
+      const r = accounts.tourPrize(st.token, tour.id, rank, amount);
+      if (r.ok) { payload.profile = r.profile; payload.titles = r.titles; io.to(st.key).emit('profile', { profile: r.profile }); }
+    }
+    io.to(st.key).emit('tour_over', payload);
+    const sk = io.sockets.sockets.get(st.key);
+    if (sk) { sk.tourSeat = undefined; }
+  }
+  const finished = tour;
+  setTimeout(() => { if (tour === finished) tour = null; }, 30000);   // 결과를 잠시 보관
+}
+
+function pushTour() {
+  if (!tour) return;
+  const b = tour.bracket;
+  for (let i = 0; i < b.seats.length; i++) {
+    const st = b.seats[i];
+    if (st.isBot || !st.key) continue;
+    io.to(st.key).emit('tour_state', TOUR.view(b, i));
+  }
+}
+
 const SETTLE_PAUSE = 1600;   // reveal(결과공개) 뒤 정산 카드 이동·더미 확인 시간
 
 // 로그인 유저의 전적/랭크/레벨/코인 반영 + 갱신된 프로필·보상 전송
@@ -1871,12 +2114,21 @@ function finishStats(room, winner, forfeit = false, setKind = null) {
       // 유저 입장에서는 사람과 붙은 것과 구별되지 않는데 보상만 다르면 억울하다.
       // 대가로 RP 는 더 이상 유저끼리 제로섬이 아니게 된다 — 봇은 잃지 않으니
       // 이긴 만큼이 새로 생긴다. 아이템전은 그대로 제외(코인·XP만).
-      noRank: !!room.itemMode,
+      noRank: !!room.itemMode || !!room.noRank,   // 아이템전·토너먼트는 RP 미반영
     });
     if (out && room.players[i]) io.to(room.players[i]).emit('profile', { profile: out.profile, result, rewards: out.rewards });
   });
   // 관전자에게 종료 알림
   (room.specs || []).forEach(sid => io.to(sid).emit('game_over', { winner, spec: true, nicks: room.nicks }));
+
+  // 토너먼트 경기였으면 대진표에 결과를 적는다.
+  // 모든 종료 경로(세트승·시간패·탈주·진행도)가 이 함수를 지나므로 여기 한 곳이면 된다.
+  if (room.tour && tour && room.tour.id === tour.id) {
+    // winner 는 1·2 (0=무승부). 무승부면 앞자리를 올린다 — 대진은 한 명만 올라간다.
+    const idx = winner === 2 ? 1 : 0;
+    const seat = room.tour.seats[idx];
+    setTimeout(() => tourReport(room.tour.round, room.tour.index, seat), 900);
+  }
 }
 
 // 전역 예외 방어 — 처리 안 된 오류로 프로세스가 죽어 모든 실시간 게임이 끊기지 않게
