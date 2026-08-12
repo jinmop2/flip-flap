@@ -150,8 +150,13 @@ console.log('\n⑤ 싸이클링 (일일퀴스트)');
   const before = a.byToken(t).coins;
   const done = win(6).rewards.cycle;
   ok('넷을 채우면 완성', !!(done && done.done), JSON.stringify(done));
-  ok('400 코인을 준다', a.byToken(t).coins - before >= 400,
+  // 코인은 완성 시점이 아니라 미션 창에서 수령할 때 들어온다.
+  ok('완성만으로는 400 이 안 들어온다', a.byToken(t).coins - before < 400,
      `${before} → ${a.byToken(t).coins}`);
+  const beforeClaim = a.byToken(t).coins;
+  const got = a.claimMission(t, 'm_cycle');
+  ok('수령하면 400 코인', got.ok && a.byToken(t).coins - beforeClaim === 400,
+     `${beforeClaim} → ${a.byToken(t).coins}`);
   ok('누적 횟수가 쌓인다', a.byToken(t).stats.cycle === 1);
   ok('칭호가 풀린다', !!a.byToken(t).titles.t_cycle1);
 

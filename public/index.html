@@ -876,6 +876,17 @@
       border-color:var(--gold); box-shadow:0 0 8px rgba(255,215,80,.5); }
     .mis-reward { font-size:.8rem; font-weight:800; color:#ffd94a; flex-shrink:0; }
     .mis-row.done .mis-reward { color:#4ade80; }
+    /* 다 채웠지만 아직 안 받은 줄 — 눈에 띄어야 받으러 온다 */
+    .mis-row.ready { border-color:var(--gold); background:linear-gradient(180deg,#241a2e,#1c1424); }
+    .mis-claim { flex-shrink:0; cursor:pointer; font-size:.78rem; font-weight:800;
+      color:#2a1c06; background:linear-gradient(180deg,#f3d477,#c99a2e);
+      border:1px solid var(--gold); border-radius:9px; padding:7px 11px;
+      display:flex; align-items:center; gap:4px; white-space:nowrap;
+      box-shadow:0 0 10px rgba(255,215,80,.28); -webkit-tap-highlight-color:transparent;
+      animation:misPulse 1.6s ease-in-out infinite; }
+    .mis-claim:active { transform:translateY(1px); }
+    @keyframes misPulse { 0%,100% { box-shadow:0 0 10px rgba(255,215,80,.28); }
+                          50%     { box-shadow:0 0 16px rgba(255,215,80,.6); } }
     /* ── 관전 목록 ── */
     .rl-item.rl-live { border-color:rgba(255,100,100,.35); }
     /* ── 범용 토스트 ── */
@@ -3590,7 +3601,7 @@
 <div class="lb-modal" id="missionModal" onclick="if(event.target===this)closeMissions()">
   <div class="lb-box">
     <div class="lb-title"><span data-ico="🎯"></span> 일일 미션</div>
-    <p class="auth-hint" style="margin:0 0 6px">완료하면 코인이 바로 지급돼요 · 매일 자정 리셋</p>
+    <p class="auth-hint" style="margin:0 0 6px">다 채우면 <b>수령</b>을 눌러 코인을 받으세요 · 매일 자정 리셋</p>
     <div id="missionList" class="mis-list"></div>
     <button class="btn btn-outline" onclick="closeMissions()">닫기</button>
   </div>

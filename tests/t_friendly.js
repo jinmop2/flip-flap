@@ -125,5 +125,28 @@ console.log('\n⑧ 화면 문구');
   ok('막힘과 따로 그린다', /\} else if \(r\.noRpFriendly\)/.test(cli));
 }
 
+console.log('\n⑤ 위장 봇 매치도 사람과 같은 보상');
+{
+  // 15초 매칭이 안 되면 전문가봇이 유저처럼 들어온다. 유저는 구별할 수
+  // 없는데 보상만 다르면 억울하다 — 코인·XP 는 원래 같았고, RP 도 준다.
+  // 방 쪽은 vsBot:false 로 꾸미므로(server.js startBotMatch) 여기서도 같이 꾸민다.
+  const t = player();
+  const r = a.recordResult(t, 'win', { vsBot: false, turns: 10, playtimeSec: 60 });
+  ok('코인을 받는다', r.rewards.coins > 0, String(r.rewards.coins));
+  ok('RP 도 받는다', r.rewards.rp > 0, String(r.rewards.rp));
+
+  // 서버가 이제 botMatch 를 RP 에서 빼지 않는지 확인한다.
+  // 이건 생성된 값이 아니라 불러지는 자리라 소스로 본다.
+  const srv = fs.readFileSync(src + '/server.js', 'utf8');
+  ok('위장 봇 매치는 RP 제외 목록에 없다', !/noRank:[^,\n]*room\.botMatch/.test(srv));
+  ok('아이템전은 그대로 제외', /noRank: !!room\.itemMode/.test(srv));
+
+  // noRank 를 주면 여전히 RP 가 안 붙어야 한다 (아이템전 경로)
+  const t2 = player();
+  const r2 = a.recordResult(t2, 'win', { vsBot: false, turns: 10, playtimeSec: 60, noRank: true });
+  ok('noRank 면 RP 0', !r2.rewards.rp, String(r2.rewards.rp));
+  ok('그래도 코인은 나온다', r2.rewards.coins > 0, String(r2.rewards.coins));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

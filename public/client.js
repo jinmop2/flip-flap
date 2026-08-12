@@ -86,6 +86,7 @@ socket.on('connect', () => {
 socket.on('auth_ok', ({ profile }) => {
   myAccount = profile; renderAccount();
   if (typeof updateSocialBadges === 'function') updateSocialBadges();   // 친구요청·가입신청 알림 표시
+  refreshMissionDot();                                                  // 받아 갈 미션 보상 표시
 });
 socket.on('dup_login', () => {   // 다른 기기에서 같은 계정 로그인 → 이 세션 종료
   clearSession();
@@ -480,6 +481,7 @@ let pendingRewards = null;
 socket.on('profile', ({ profile, result, rewards }) => {
   myAccount = profile; renderAccount(); refreshEmotes();
   pendingRewards = rewards || null;   // 결과창이 뜬 뒤 showRewards()에서 연출
+  refreshMissionDot();                // 판이 끝나며 미션이 찼을 수 있다
 });
 // 숫자 카운트업
 function countUp(el, to, prefix = '', ms = 800) {
@@ -530,12 +532,13 @@ function showRewards() {
     else if (r.promo.done) { add('bd-warn', `${ico('⚠')} 승단 실패 — RP ${r.promo.penalty}`, d, true); d += 300; }
     else if (r.promo.wins !== undefined) { add('bd-first', `${ico('🚩')} 승단전 ${r.promo.wins}승 ${r.promo.losses}패 (${r.promo.need}승 필요)`, d, true); d += 250; }
   }
-  (r.missions || []).forEach(m => { add('bd-first', `${ico('🎯')} 미션 완료: ${esc(m.name)} +${m.reward}`, d, true); d += 250; });
+  // 코인은 이제 미션 창에서 직접 받는다 — "+30" 만 띄우면 이미 받은 줄 안다.
+  (r.missions || []).forEach(m => { add('bd-first', `${ico('🎯')} 미션 완료: ${esc(m.name)} — 미션에서 ${ico('🪙')} ${m.reward} 수령`, d, true); d += 250; });
   (r.milestones || []).forEach(m => { add('bd-rank', `${m.icon} ${m.label}`, d); d += 250; playSound('setwin'); });
   (r.titles || []).forEach(t => { add('bd-rank', `${ico(t.icon)} 칭호 획득! ${esc(t.name)}`, d, true); d += 250; playSound('setwin'); });
   // 싸이클링 — 오늘 안에 2·3·4·6 세트로 각각 우승하면 완성 (일일퀘스트)
   if (r.cycle && r.cycle.done) {
-    add('bd-rank', `${ico('🏁')} <b>오늘의 싸이클링 완성!</b> 2·3·4·6 제패 +${r.cycle.amount}`, d, true);
+    add('bd-rank', `${ico('🏁')} <b>오늘의 싸이클링 완성!</b> 2·3·4·6 제패 — 미션에서 ${ico('🪙')} ${r.cycle.amount} 수령`, d, true);
     d += 300; playSound('setwin');
   } else if (r.cycle && r.cycle.fresh) {
     const left = (r.cycle.progress || []).filter((x) => !x.done).map((x) => x.kind);
@@ -738,6 +741,17 @@ async function openLeaderboard() {
 function closeLb() { document.getElementById('lbModal').classList.remove('show'); }
 
 // ── 일일 미션 ──
+// 수령식으로 바꾸면서 "받을 게 있다" 를 어딘가 알려야 한다 — 안 그러면
+// 미션 창을 열어 보기 전엔 모른다. 탭바의 점(마크업만 있고 아무도 안 켜던
+// #missionDot)을 여기서 켠다.
+async function refreshMissionDot() {
+  const dot = document.getElementById('missionDot');
+  if (!dot) return;
+  if (!myAccount) { dot.style.display = 'none'; return; }
+  const r = await apiPost('/api/missions', { token: localStorage.getItem('ff_auth') });
+  const ready = !r.error && (r.list || []).some((m) => m.done && !m.claimed);
+  dot.style.display = ready ? '' : 'none';
+}
 async function openMissions() {
   if (!myAccount) { alert('미션은 로그인하면 이용할 수 있어요!'); openAuth('login'); return; }
   const list = document.getElementById('missionList');
@@ -745,25 +759,48 @@ async function openMissions() {
   document.getElementById('missionModal').classList.add('show');
   const r = await apiPost('/api/missions', { token: localStorage.getItem('ff_auth') });
   if (r.error || !r.list) { list.innerHTML = '<div class="lb-empty">불러오기 실패</div>'; return; }
+  // 받을 게 있는 것부터 위로. 아래로 내려야 보이면 받는 걸 놓친다.
+  const rank = (m) => (m.done && !m.claimed ? 0 : m.claimed ? 2 : 1);
   list.innerHTML = '';
-  r.list.forEach(m => {
+  r.list.slice().sort((a, b) => rank(a) - rank(b)).forEach(m => {
     const row = document.createElement('div');
-    row.className = 'mis-row' + (m.claimed ? ' done' : '');
+    row.className = 'mis-row' + (m.claimed ? ' done' : (m.done ? ' ready' : ''));
     // 싸이클링은 "3/4" 만으로는 어느 종류가 남았는지 알 수 없다 —
     // 2·3·4·6 을 하나씩 보여줘야 "이번엔 6 으로 이겨야지" 가 된다.
     const detail = m.cycle
       ? `<div class="mis-cyc">${m.cycle.map((c) =>
           `<span class="mis-cyc-k${c.done ? ' on' : ''}">${c.kind}</span>`).join('')}</div>`
       : `<div class="mis-prog">${m.prog}/${m.goal}</div>`;
+    // 다 채웠으면 수령 버튼, 받았으면 완료, 아니면 액수만.
+    const right = m.claimed
+      ? `<div class="mis-reward">완료!</div>`
+      : m.done
+        ? `<button class="mis-claim" onclick="claimMission('${m.id}')">${ico('🪙')} ${m.reward} 수령</button>`
+        : `<div class="mis-reward">${ico('🪙')} ${m.reward}</div>`;
     row.innerHTML = `
       <div class="mis-info">
         <div class="mis-name">${m.claimed ? ico('✅') : ico(m.cycle ? '🏁' : '🎯')} ${esc(m.name)}</div>
         <div class="mis-bar"><div class="mis-fill" style="width:${Math.round(m.prog / m.goal * 100)}%"></div></div>
         ${detail}
       </div>
-      <div class="mis-reward">${m.claimed ? '완료!' : `${ico('🪙')} ${m.reward}`}</div>`;
+      ${right}`;
     list.appendChild(row);
   });
+}
+// 수령. 금액은 서버가 정한다 — 여기서는 어느 미션인지만 보낸다.
+let misClaiming = false;
+async function claimMission(id) {
+  if (misClaiming) return;                       // 연타로 두 번 보내지 않게
+  misClaiming = true;
+  try {
+    const r = await apiPost('/api/mission-claim', { token: localStorage.getItem('ff_auth'), id });
+    if (r.error) { toast(esc(r.error)); return; }
+    myAccount = r.profile || myAccount;
+    renderAccount();
+    playSound('setwin');
+    toast(`🪙 ${r.amount} 코인을 받았어요!`);
+    await openMissions();                        // 목록 다시 그려 상태 맞춤
+  } finally { misClaiming = false; }
 }
 function closeMissions() { document.getElementById('missionModal').classList.remove('show'); }
 

@@ -1242,17 +1242,19 @@ function missionState(u) {   // 날짜 바뀌면 자동 리셋 + 오늘의 미�
   if (!u.missions.set) u.missions.set = dailyMissionIds();   // 구버전 데이터 마이그레이션
   return u.missions;
 }
-function missionEvent(u, ev) {   // 진행도 +1, 목표 달성 시 즉시 코인 지급 → 완료 목록 반환
+// 진행도 +1. 목표를 채우면 "완료" 로 표시만 하고 코인은 주지 않는다 —
+// 수령은 미션 창에서 직접 누른다(claimMission). 예전엔 즉시 지급이라
+// 판이 끝나는 순간 코인이 슬쩍 늘어 있어서 뭘로 받았는지 알기 어려웠다.
+// 반환값은 "이번에 새로 완료된 것" 이다(이미 완료된 건 다시 안 알린다).
+function missionEvent(u, ev) {
   const m = missionState(u); const done = [];
   for (const id of m.set) {
     const def = MISSIONS[id]; if (!def) continue;
-    if (def.ev !== ev || m.claimed[id]) continue;
-    m.prog[id] = (m.prog[id] || 0) + 1;
-    if (m.prog[id] >= def.goal) {
-      m.claimed[id] = true;
-      u.coins = (u.coins || 0) + def.reward;
-      done.push({ id, name: def.name, reward: def.reward });
-    }
+    if (def.ev !== ev) continue;
+    const was = (m.prog[id] || 0) >= def.goal;
+    if (was) continue;                                   // 이미 다 찼으면 더 안 센다
+    m.prog[id] = Math.min((m.prog[id] || 0) + 1, def.goal);
+    if (m.prog[id] >= def.goal) done.push({ id, name: def.name, reward: def.reward });
   }
   return done;
 }
@@ -1291,7 +1293,7 @@ function cycleWin(u, setKind) {
   if (!CYCLE_KINDS.includes(k)) return null;
   const m = missionState(u);          // 날짜가 바뀌었으면 여기서 리셋된다
   m.cycle = m.cycle || {};
-  if (m.claimed[CYCLE_ID]) return null;        // 오늘은 이미 받았다
+  if (m.cycleDone) return null;                // 오늘치는 이미 완성했다
   const fresh = !m.cycle[k];
   m.cycle[k] = true;
   const got = cycleCount(u);
@@ -1299,10 +1301,11 @@ function cycleWin(u, setKind) {
     return { kind: k, fresh, done: false, got, total: CYCLE_KINDS.length,
              progress: cycleProgress(u) };
   }
-  m.claimed[CYCLE_ID] = true;
+  // 완성. 코인은 여기서 주지 않는다 — 미션 창에서 수령한다.
+  // 칭호용 누적은 "해냈다" 는 기록이라 수령과 무관하게 여기서 올린다.
+  m.cycleDone = true;
   u.stats = u.stats || {};
   u.stats.cycle = (u.stats.cycle || 0) + 1;    // 칭호용 누적 (초기화 안 됨)
-  u.coins = (u.coins || 0) + CYCLE_REWARD;
   return { kind: k, fresh, done: true, amount: CYCLE_REWARD, total: u.stats.cycle,
            got, progress: cycleProgress(u) };
 }
@@ -1322,20 +1325,60 @@ function missionList(token) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
   const m = missionState(u);
-  const list = m.set.filter(id => MISSIONS[id]).map(id => { const def = MISSIONS[id]; return {
-    id, name: def.name, goal: def.goal, reward: def.reward,
-    prog: Math.min(m.prog[id] || 0, def.goal), claimed: !!m.claimed[id],
-  }; });
+  // done(다 채움) 과 claimed(수령함) 은 다르다. 화면이 "수령" 버튼을 띄울지
+  // 판단하려면 둘 다 필요하다.
+  const list = m.set.filter(id => MISSIONS[id]).map(id => { const def = MISSIONS[id];
+    const prog = Math.min(m.prog[id] || 0, def.goal);
+    return { id, name: def.name, goal: def.goal, reward: def.reward,
+             prog, done: prog >= def.goal, claimed: !!m.claimed[id] };
+  });
   // 싸이클링은 매일 고정으로 붙는다 (무작위 3개와 별개).
   // 진행도를 숫자 하나로 줄이면 "어느 종류가 남았는지" 를 못 보여주므로
   // 종류별 상태를 같이 내려보낸다.
+  const cGot = cycleCount(u);
   list.push({
     id: CYCLE_ID, name: '싸이클링 — 네 종류 모두 우승',
     goal: CYCLE_KINDS.length, reward: CYCLE_REWARD,
-    prog: cycleCount(u), claimed: !!m.claimed[CYCLE_ID],
+    prog: cGot, done: cGot >= CYCLE_KINDS.length, claimed: !!m.claimed[CYCLE_ID],
     cycle: cycleProgress(u),
   });
   return { ok: true, list };
+}
+
+// 미션 보상 수령. 서버에서만 판정한다 — 화면이 보낸 금액은 절대 믿지 않는다.
+const misLocks = new Set();      // 같은 미션 동시 요청으로 두 번 지급되는 것 방지
+function claimMission(token, id) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const key = String(id || '');
+  const isCycle = key === CYCLE_ID;
+  if (!isCycle && !Object.prototype.hasOwnProperty.call(MISSIONS, key)) return { error: '없는 미션이에요.' };
+
+  const lockKey = idl + '|' + key;
+  if (misLocks.has(lockKey)) return { error: '잠시 후 다시 시도해 주세요.' };
+  misLocks.add(lockKey);
+  try {
+    const m = missionState(u);       // 날짜가 바뀌었으면 여기서 리셋된다
+    if (m.claimed[key]) return { error: '이미 받았어요.' };
+
+    let reward;
+    if (isCycle) {
+      if (cycleCount(u) < CYCLE_KINDS.length) return { error: '아직 다 못 채웠어요.' };
+      reward = CYCLE_REWARD;
+    } else {
+      if (!m.set.includes(key)) return { error: '오늘 미션이 아니에요.' };
+      const def = MISSIONS[key];
+      if ((m.prog[key] || 0) < def.goal) return { error: '아직 다 못 채웠어요.' };
+      reward = def.reward;
+    }
+    m.claimed[key] = true;
+    u.coins = (u.coins || 0) + reward;
+    persist(idl);
+    return { ok: true, id: key, amount: reward, profile: profileOf(u) };
+  } finally {
+    misLocks.delete(lockKey);
+  }
 }
 // 칭호 현황 (진행도 포함)
 function titleList(token) {
@@ -2254,7 +2297,7 @@ module.exports = {
   calcRpDelta, refreshRankState, startPromo, promoResult, refreshAce, seasonReset,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   gachaInfo, rollGacha, exchangeShard, GACHA_TIER, TIER_OF, SHARD_ONLY, bonusOf,
-  missionList, titleList, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,
+  missionList, claimMission, titleList, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,
   // 친구
   friendList, sendFriendReq, acceptFriendReq, declineFriendReq, cancelFriendReq, removeFriend,
   friendIdlsOf, nickOfIdl,

@@ -349,6 +349,8 @@ app.get('/reports', rateLimit(20), (req, res) => {
 });
 app.post('/api/daily',  rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.claimDaily(token) || { error: '로그인이 필요해요.' }); });
 app.post('/api/missions', rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.missionList(token)); });
+// 보상 수령 — 금액은 서버가 정한다. 화면은 어느 미션인지만 보낸다.
+app.post('/api/mission-claim', rateLimit(40), (req, res) => { const { token, id } = req.body || {}; res.json(accounts.claimMission(token, id)); });
 app.post('/api/tutorial-done', rateLimit(20), (req, res) => { const { token } = req.body || {}; const out = accounts.claimTutorial(token); if (out.claimed) stats.bump('tutorial'); res.json(out); });
 app.post('/api/refer', rateLimit(10), (req, res) => { const { token, ref } = req.body || {}; res.json(accounts.applyReferral(token, ref)); });
 app.post('/api/titles',   rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.titleList(token)); });
@@ -1850,7 +1852,11 @@ function finishStats(room, winner, forfeit = false, setKind = null) {
     const out = accounts.recordResult(tok, result, {
       vsBot: room.vsBot, difficulty: room.difficulty, oppLabel,
       sameIp, friendly, turns, playtimeSec, oppUid, forfeit, setKind,
-      noRank: !!room.botMatch || !!room.itemMode,   // 위장 봇 매치·아이템전은 코인·XP만, RP는 랭킹 무결성 위해 미반영
+      // 위장 봇 매치(15초 매칭 실패 → 전문가봇 입장)도 RP 를 준다.
+      // 유저 입장에서는 사람과 붙은 것과 구별되지 않는데 보상만 다르면 억울하다.
+      // 대가로 RP 는 더 이상 유저끼리 제로섬이 아니게 된다 — 봇은 잃지 않으니
+      // 이긴 만큼이 새로 생긴다. 아이템전은 그대로 제외(코인·XP만).
+      noRank: !!room.itemMode,
     });
     if (out && room.players[i]) io.to(room.players[i]).emit('profile', { profile: out.profile, result, rewards: out.rewards });
   });
