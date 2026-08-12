@@ -27,15 +27,16 @@ console.log('\n① 고르기와 내기가 분리됐는가');
   ok('누를 때는 고르기만 한다', !/emit\(/.test(onPick), onPick.slice(0, 90));
   ok('다시 누르면 해제된다', /sel4 && sel4\.id === card\.id\) \? null : card/.test(c4));
 
-  // 내보내는 곳은 확정 한 곳뿐이어야 한다 (덱 뽑기는 별개)
-  const emits = [...c4.matchAll(/emit\('g4_act', \{ type: ([^,}]+)/g)].map((m) => m[1].trim());
+  // 내보내는 곳은 확정 한 곳뿐이어야 한다 (덱 뽑기는 별개).
+  // 이제 모든 행동은 sendAct 를 거친다 — 재시도가 붙어 있는 유일한 길이다.
+  const sends = [...c4.matchAll(/sendAct\(\{ type: ([^,}]+)/g)].map((m) => m[1].trim());
   ok('offer·bid 를 내보내는 곳은 확정뿐',
-     emits.filter((e) => /offer|bid/.test(e)).length === 1, emits.join(' | '));
+     sends.filter((e) => /offer|bid/.test(e)).length === 1, sends.join(' | '));
 
   // 연타로 두 번 나가면 안 된다
   const conf = c4.slice(c4.indexOf('window.q4Confirm'), c4.indexOf('window.q4Confirm') + 420);
-  ok('연타 방어 — 보내기 전에 비운다', conf.indexOf('sel4 = null') < conf.indexOf('emit('),
-     '비우기가 emit 뒤에 있다');
+  ok('연타 방어 — 보내기 전에 비운다', conf.indexOf('sel4 = null') < conf.indexOf('sendAct('),
+     '비우기가 보내기 뒤에 있다');
   ok('고른 게 없으면 아무 일도 없다', /if \(!curPick \|\| !sel4\) return/.test(c4));
 }
 
@@ -388,6 +389,40 @@ console.log('\n⑨ 다인전 설명서');
   // 최약 카드는 덤마다 다르다 — 2인전 6-10 을 그대로 베끼면 틀린 설명이 된다
   ok('배신은 6-18', /6-18/.test(box) && !/6-10<\/b>이 가장/.test(box));
   ok('제한 시간 3분', /<b>3분<\/b>/.test(box));
+}
+
+console.log('\n⑩ 카드가 안 내지는 버그');
+{
+  const s4 = fs.readFileSync(src + '/server4.js', 'utf8');
+
+  // ① 내 자리는 0번이 아닐 수 있다. 0 으로 박아 두었더니 1·2·3번 자리
+  //    사람은 진행자가 돼도 경매 방식을 고를 수 없어, 3분을 다 쓰고
+  //    AI 에게 자리를 넘겼다. 4인전이면 4명 중 3명이 걸린다.
+  ok('방식 고르기가 내 자리를 본다', /q4Type[\s\S]{0,300}?auctioneer !== mySeat/.test(c4));
+  ok('0 으로 박아 두지 않았다', !/auctioneer !== 0/.test(c4));
+
+  // ② 서버는 못 받아들인 행동을 조용히 버린다. 폰에서 화면 잠금·앱 전환으로
+  //    소\耐켓이 다시 붙으면 자리 연결이 끊긴 채가 되고, 그 뒤로 뭐를 눌러도
+  //    전부 버려진다. 보낸 걸 기억해 두고 안 먹히면 다시 이어 붙인다.
+  ok('보낸 행동을 기억한다', /function sendAct/.test(c4) && /let pendAct = null/.test(c4));
+  ok('상태가 바뀌면 먹힌 것으로 본다', /function noteState/.test(c4)
+     && /noteState\(\); render\(\)/.test(c4));
+  ok('안 먹히면 자리부터 다시 잉는다', /pendAct\.tries\+\+[\s\S]{0,120}?resume\(\)/.test(c4));
+  ok('무한으로 재시도하지 않는다', /pendAct\.tries >= 2/.test(c4));
+  ok('끝내 안 되면 솔직히 말한다', /서버가 응답하지 않아요/.test(c4));
+
+  // 모든 행동이 같은 길로 나가야 한다 — 하나라도 빠지면 그것만 무성의상이 된다
+  const raw = (c4.match(/socket\.emit\('g4_act'/g) || []).length;
+  ok('직접 보내는 곳은 보내기·재시도 둘뿐', raw === 2, `${raw}곳`);
+  for (const t of ['draw', 'auctionType'])
+    ok(`${t} 도 sendAct 로`, new RegExp(`sendAct\\(\\{ type: '${t}'`).test(c4));
+  ok('내기·출품도 sendAct 로', /sendAct\(\{ type: type === 'offer'/.test(c4));
+
+  // ③ 자가복구가 "내 차례면" 꺼져 있었다 — 정확히 막히는 순간이다
+  ok('내 차례여도 오래 조용하면 잉는다', !/if \(waiting\) return;/.test(c4));
+
+  // 서버는 자리 임자가 다시 붙으면 받아 준다(예전 수정). 그대로인지 확인.
+  ok('서버도 자리를 다시 잉는다', /seat\.sid = socket\.id; seat\.orphanAt = null/.test(s4));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

@@ -107,7 +107,7 @@
     el.style.display = n > 0 ? '' : 'none';
     el.classList.toggle('drawable', !!drawable && n > 0);
     el.onclick = drawable && n > 0
-      ? () => { sfx('place'); socket.emit('g4_act', { type: 'draw' }); }
+      ? () => { sfx('place'); sendAct({ type: 'draw' }); }
       : null;
   }
 
@@ -154,6 +154,36 @@
         : `${sel4.kind}번 (${sel4.grade}등급) 배팅 확정`;
     }
   }
+  // ── 보낸 행동이 먹혔는지 확인하고, 안 먹혔으면 되살린다 ────────────────────
+  //
+  // 서버는 못 받아들인 행동을 조용히 버리고 상태만 다시 보낸다. 그래서 화면에는
+  // 아무 일도 안 일어나고, 왜 안 되는지도 안 나온다. 폰에서는 화면 잠금·앱 전환
+  // 만으로 소켓이 다시 붙는데, 그때 자리 연결이 끊긴 채면 내가 뭘 눌러도 전부
+  // 버려진다 — 3분을 다 쓰고 AI 에게 넘어갈 때까지.
+  //
+  // 그래서 보낸 걸 기억해 두고, 판이 안 움직이면 자리를 다시 잇고 한 번 더 보낸다.
+  let pendAct = null;                        // { payload, at, sig, tries }
+  const stateSig = () => (q4 ? `${q4.turn}|${q4.phase}|${(q4.myHand || []).map((c) => c.id).join(',')}` : '');
+  function sendAct(payload) {
+    pendAct = { payload, at: Date.now(), sig: stateSig(), tries: 0 };
+    socket.emit('g4_act', payload);
+  }
+  // 상태가 실제로 바뀌었으면 먹힌 것이다
+  function noteState() {
+    if (pendAct && stateSig() !== pendAct.sig) pendAct = null;
+  }
+  setInterval(() => {
+    if (!pendAct || !q4Live || !q4Room) return;
+    if (Date.now() - pendAct.at < 1800) return;
+    if (pendAct.tries >= 2) {                // 두 번 더 해 보고도 안 되면 솔직히 말한다
+      $('q-status').textContent = '서버가 응답하지 않아요 — 잠시 후 다시 눌러주세요';
+      pendAct = null; return;
+    }
+    pendAct.tries++; pendAct.at = Date.now();
+    resume();                                // 자리부터 다시 잇고
+    setTimeout(() => { if (pendAct) socket.emit('g4_act', pendAct.payload); }, 300);
+  }, 700);
+
   // 확정 — 여기서만 서버로 나간다
   window.q4Confirm = function () {
     if (!curPick || !sel4) return;
@@ -161,7 +191,7 @@
     sel4 = null; curPick = null;              // 연타로 두 번 나가지 않게 먼저 비운다
     paintSel();
     sfx('place');
-    socket.emit('g4_act', { type: type === 'offer' ? 'offer' : 'bid', cardId: id });
+    sendAct({ type: type === 'offer' ? 'offer' : 'bid', cardId: id });
   };
 
   // 빈 자리. 카드와 똑같은 크기를 차지해야 카드가 놓일 때 화면이 안 밀린다.
@@ -749,8 +779,11 @@
   };
 
   window.q4Type = function (t) {
-    if (!q4 || q4.phase !== 'choose_type' || q4.auctioneer !== 0) return;
-    socket.emit('g4_act', { type: 'auctionType', val: t });
+    // 내 자리는 0번이 아닐 수 있다(멀티). 0 으로 박아 뒀더니 1·2·3번 자리 사람은
+    // 진행자가 돼도 방식을 고를 수 없어, "경매 방식을 고르세요" 에서 3분을 다
+    // 쓰고 AI 에게 자리를 넘겼다 — "카드가 안 내진다" 로 보이던 것의 정체.
+    if (!q4 || q4.phase !== 'choose_type' || q4.auctioneer !== mySeat) return;
+    sendAct({ type: 'auctionType', val: t });
   };
 
   // ── 소켓 ────────────────────────────────────────────────────────────────
@@ -770,7 +803,7 @@
     // 대기방 — 게임 화면에 앉은 채로 자리가 차는 걸 본다
     socket.on('g4_room', (d) => { if (!q4Live) return; q4Pend = d; q4Room = null; lastRecv = Date.now(); renderPending(); });
     socket.on('g4_cancelled', () => {});
-    socket.on('g4_state', (s) => { if (!q4Live) return; q4 = s; lastRecv = Date.now(); render(); });
+    socket.on('g4_state', (s) => { if (!q4Live) return; q4 = s; lastRecv = Date.now(); noteState(); render(); });
     socket.on('g4_over', (s) => {
       if (!q4Live) return;
       q4 = s; lastRecv = Date.now(); render(); setTimeout(() => showOver(s), 600);
@@ -818,9 +851,10 @@
   setInterval(() => {
     if (!q4Live || !q4Room || !q4 || q4Pend) return;
     if (q4.over) return;
-    const waiting = (['draw', 'offer', 'choose_type'].includes(q4.phase) && q4.auctioneer === mySeat)
-      || (q4.phase === 'bidding' && q4.bidders.includes(mySeat) && !q4.seats[mySeat].bidded);
-    if (waiting) return;                       // 내 입력을 기다리는 중이면 정상
+    // 예전엔 "내 차례면 정상" 이라며 여기서 빠져나갔다. 그런데 자리 연결이
+    // 끊긴 채 내 차례가 오면 뭘 눌러도 안 나가는 게 바로 그 상황이라,
+    // 정작 필요한 순간에 자가복구가 꺼져 있었다. 이제는 내 차례여도 오래
+    // 조용하면 한 번 이어 붙인다 — 이어 붙이는 건 판을 건드리지 않는다.
     if (Date.now() - lastRecv < 15000) return;
     resume();
   }, 5000);

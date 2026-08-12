@@ -2092,23 +2092,91 @@ function gcFlash() {
   setTimeout(() => f.remove(), 700);
 }
 
+// 뽑기 연출.
+//
+// 예전 흐름의 문제 둘:
+//   ① 기다리는 구슬이 처음부터 최고 등급 색으로 물들어, 뽑기도 전에 결과를
+//      알려 줬다. 기대할 시간이 없다.
+//   ② 뒤집는 순서가 서버가 준 순서 그대로였다. 첫 장에 전설이 나오면 남은
+//      아홉 장은 소화 경기가 된다.
+//
+// 그래서 구슬은 밑에서부터 한 단계씩 "승급" 하고(올라갈 때마다 소리·크기),
+// 뒤집기는 좋은 것을 뒤로 미룬다. 나오는 물건은 그대로다 — 보여 주는 차례만
+// 바꾼다.
+const TIER_NAME = { common: '노멀', rare: '레어', epic: '에픽', legend: '전설' };
+const TIER_ORDER = ['common', 'rare', 'epic', 'legend'];
+
+function gcQuake(ms) {
+  const box = document.querySelector('#gachaModal .lb-box') || document.body;
+  box.classList.add('gc-quake');
+  setTimeout(() => box.classList.remove('gc-quake'), ms || 500);
+}
+function gcRay() {
+  const r = document.createElement('div');
+  r.className = 'gc-ray';
+  const st = document.getElementById('gcStage');
+  (st || document.body).appendChild(r);
+  setTimeout(() => r.remove(), 900);
+}
+
+// 구슬이 한 단계씩 올라간다. 최고 등급이 높을수록 계단이 길어져 저절로 뜸이 든다.
+async function gcCharge(stage, top) {
+  stage.innerHTML =
+    '<div class="gc-charge"><div class="gc-orb"></div>' +
+    '<div class="gc-charge-t">뽑는 중…</div></div>';
+  const orb = stage.querySelector('.gc-orb');
+  const label = stage.querySelector('.gc-charge-t');
+
+  for (let step = 0; step <= top; step++) {
+    if (_skipReveal || !gachaOpen()) return;
+    const name = TIER_ORDER[step];
+    orb.classList.remove('hint-rare', 'hint-epic', 'hint-legend');
+    if (step >= 1) orb.classList.add('hint-' + name);
+    if (step > 0) {
+      orb.classList.remove('gc-step'); void orb.offsetWidth;   // 애니메이션 다시 태우기
+      orb.classList.add('gc-step');
+      playSound(step >= 3 ? 'setwin' : step >= 2 ? 'reveal' : 'ping');
+      label.textContent = step >= 3 ? '무언가 온다…' : `${TIER_NAME[name]} 확정!`;
+      if (step >= 3) { gcFlash(); gcQuake(600); }
+    }
+    // 마지막 계단은 길게 끈다 — 여기가 제일 두근거리는 구간이다
+    const hold = step === top ? (top >= 3 ? 900 : 520) : 420;
+    for (let t = 0, gap = 200; t < hold && !_skipReveal && gachaOpen(); t += gap, gap = Math.max(80, gap - 40)) {
+      playSound('tick'); await gcWait(Math.min(gap, hold - t));
+    }
+  }
+}
+
+// 좋은 것을 뒤로. 같은 등급끼리는 원래 순서를 지킨다(안 그러면 매번 뒤죽박죽).
+function gcRevealOrder(results) {
+  return results
+    .map((g, i) => ({ g, i, r: TIER_RANK[g.tier] || 0 }))
+    .sort((a, b) => (a.r - b.r) || (a.i - b.i))
+    .map((x) => x.g);
+}
+
+function gcSummary(results) {
+  const cnt = {};
+  for (const g of results) cnt[g.tier] = (cnt[g.tier] || 0) + 1;
+  const parts = TIER_ORDER.slice().reverse()
+    .filter((t) => cnt[t]).map((t) => `<b class="s-${t}">${TIER_NAME[t]} ${cnt[t]}</b>`);
+  const shard = results.reduce((n, g) => n + (g.dup ? (g.shard || 0) : 0), 0);
+  const nw = results.filter((g) => !g.dup).length;
+  return `<div class="gc-sum">${parts.join('<span class="s-dot">·</span>')}` +
+    (nw ? `<span class="s-new">NEW ${nw}</span>` : '') +
+    (shard ? `<span class="s-shard">🔷 +${shard}</span>` : '') + '</div>';
+}
+
 async function revealGacha(stage, results) {
   const top = results.reduce((m, g) => Math.max(m, TIER_RANK[g.tier] || 0), 0);
-  const topName = ['common', 'rare', 'epic', 'legend'][top];
 
-  // ① 기다림 — 최고 등급 색으로 미리 물든다
-  stage.innerHTML =
-    `<div class="gc-charge"><div class="gc-orb hint-${topName}"></div>` +
-    `<div class="gc-charge-t">${top >= 3 ? '무언가 온다…' : '뽑는 중…'}</div></div>`;
-  const charge = top >= 3 ? 1100 : top >= 2 ? 800 : 620;
-  // 뒤로 갈수록 빨라지는 초읽기. 같은 간격으로 계속 울리면 기관총 소리가 난다.
-  for (let t = 0, gap = 260; t < charge && !_skipReveal && gachaOpen(); t += gap, gap = Math.max(90, gap - 45)) {
-    playSound('tick'); await gcWait(Math.min(gap, charge - t));
-  }
+  // ① 기다림 — 밑에서부터 한 단계씩 올라온다
+  await gcCharge(stage, top);
 
-  // ② 뒷면으로 깔린다
+  // ② 뒷면으로 깔린다 (좋은 것이 뒤에 오도록 순서를 바꿔 둔다)
+  const shown = gcRevealOrder(results);
   stage.innerHTML = '';
-  const els = results.map((g, i) => {
+  const els = shown.map((g, i) => {
     const el = document.createElement('div');
     el.className = 'gc-item t-' + g.tier;
     el.style.animationDelay = (_skipReveal ? 0 : i * 55) + 'ms';
@@ -2116,26 +2184,29 @@ async function revealGacha(stage, results) {
     stage.appendChild(el);
     return el;
   });
-  if (results.length > 1 && !_skipReveal) {
+  if (shown.length > 1 && !_skipReveal) {
     stage.insertAdjacentHTML('beforeend', '<div class="gc-skip">아무 데나 누르면 바로 보기</div>');
   }
-  if (!_skipReveal) { playSound('deal'); await gcWait(results.length * 55 + 260); }
+  if (!_skipReveal) { playSound('deal'); await gcWait(shown.length * 55 + 260); }
 
-  // ③ 한 장씩 뒤집힌다
+  // ③ 한 장씩 뒤집힌다 — 등급이 높을수록 오래 머문다
   for (let i = 0; i < els.length; i++) {
-    const g = results[i], el = els[i];
+    const g = shown[i], el = els[i];
     el.classList.add('flipped');
     // 도중에 창을 닫았으면 남은 건 조용히 다 뒤집고 끝낸다.
     // 안 그러면 닫힌 뒤에 화면이 번쩍이고 소리가 난다.
     if (_skipReveal || !gachaOpen()) continue;
     const rank = TIER_RANK[g.tier] || 0;
     if (rank >= 1) { el.classList.add('lit', 'pop-' + g.tier); }
-    if (rank >= 3) gcFlash();
+    if (rank >= 3) { gcFlash(); gcRay(); gcQuake(700); }
     playSound(rank >= 3 ? 'setwin' : rank >= 2 ? 'reveal' : rank >= 1 ? 'ping' : 'flip');
-    await gcWait(rank >= 3 ? 900 : rank >= 2 ? 380 : 165);
+    await gcWait(rank >= 3 ? 1000 : rank >= 2 ? 420 : 165);
   }
   const skip = stage.querySelector('.gc-skip');
   if (skip) skip.remove();
+
+  // ④ 한 줄 정리 — 열 장을 다 훑지 않아도 뭘 얻었는지 보인다
+  if (gachaOpen()) stage.insertAdjacentHTML('beforeend', gcSummary(results));
 }
 
 let _gachaBusy = false;

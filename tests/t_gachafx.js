@@ -30,10 +30,12 @@ console.log('\n② 결과보다 긴장이 먼저 오는가');
 {
   ok('구슬(대기 연출)이 있다', /class="gc-orb/.test(cli) && /\.gc-orb\s*\{/.test(html));
   ok('이번 판 최고 등급을 먼저 계산한다', /const top = results\.reduce/.test(cli));
-  ok('그 색으로 구슬을 물들인다', /hint-\$\{topName\}/.test(cli));
+  // 예전엔 시작부터 최고 등급 색이었다(결과를 미리 알려 줬다). 이제는
+  // 계단을 밟아 올라가며 그 단계의 색을 입는다.
+  ok('올라간 단계의 색을 입는다', /orb\.classList\.add\('hint-' \+ name\)/.test(cli));
   for (const t of ['rare', 'epic', 'legend'])
     ok(`hint-${t} CSS`, new RegExp('\\.gc-orb\\.hint-' + t + '\\s*\\{').test(html));
-  ok('전설이면 더 오래 끈다', /top >= 3 \? 1100/.test(cli));
+  ok('전설이면 더 오래 끈다', /top >= 3 \? 900 : 520/.test(cli));
   ok('전설이면 문구가 다르다', /무언가 온다/.test(cli));
 }
 
@@ -44,7 +46,7 @@ console.log('\n③ 등급이 높을수록 크게 터지는가');
   ok('오라 CSS', /\.gc-item\.lit \.gc-aura\s*\{/.test(html));
   ok('전설은 화면이 번쩍', /function gcFlash/.test(cli) && /\.gc-flash\s*\{/.test(html));
   ok('번쩍임은 스스로 사라진다', /f\.remove\(\)/.test(cli));
-  ok('전설만 번쩍인다', /rank >= 3\) gcFlash\(\)/.test(cli));
+  ok('전설만 번쩍인다', /rank >= 3\) \{ gcFlash\(\)/.test(cli));
   // 등급별로 기다리는 시간이 달라야 "전설이 나왔다" 는 느낌이 산다
   const m = cli.match(/gcWait\(rank >= 3 \? (\d+) : rank >= 2 \? (\d+) : (\d+)\)/);
   ok('등급별 여운이 다르다', !!m && +m[1] > +m[2] && +m[2] > +m[3], m ? m.slice(1).join('/') : '못 찾음');
@@ -60,7 +62,7 @@ console.log('\n④ 지루해지지 않게 넘길 수 있는가');
   ok('넘기면 기다리지 않는다', /if \(_skipReveal.*\) continue;/.test(cli));
   ok('넘기기 안내가 뜬다', /gc-skip/.test(cli) && /\.gc-skip\s*\{/.test(html));
   ok('안내는 다 보면 사라진다', /skip\.remove\(\)/.test(cli));
-  ok('1장일 땐 안내를 안 띄운다', /results\.length > 1 && !_skipReveal/.test(cli));
+  ok('1장일 땐 안내를 안 띄운다', /shown\.length > 1 && !_skipReveal/.test(cli));
 
   // 실제로 밟은 것: 연출 도중에 창을 닫아도 루프가 계속 돌아서,
   // 닫힌 뒤에 화면이 번쩍이고 소리가 났다.
@@ -88,6 +90,47 @@ console.log('\n⑤ 밟기 쉬운 것들');
 
   // 이름은 서버가 준 값이다. 그대로 넣으면 HTML 로 샌다.
   ok('이름을 escape 한다', /esc\(g\.name\)/.test(cli));
+}
+
+console.log('\n⓪ 순서·승급 연출');
+{
+  // 구슬이 처음부터 최고 등급 색이면 뽑기 전에 결과를 알려 준다.
+  // 밑에서부터 한 계단씩 올라가야 기대할 시간이 생긴다.
+  ok('계단식 충전 함수', /async function gcCharge/.test(cli));
+  ok('0부터 최고까지 올라간다', /for \(let step = 0; step <= top; step\+\+\)/.test(cli));
+  ok('올라갈 때마다 튀다', /orb\.classList\.add\('gc-step'\)/.test(cli));
+  ok('튀는 움직임이 있다', /@keyframes gcStep/.test(html));
+  ok('마지막 계단을 길게 끓다', /step === top \? \(top >= 3/.test(cli));
+
+  // 서버 순서 그대로 뒤집으면 첫 장에 전설이 나와 나머지가 소화 경기가 된다
+  ok('좋은 것을 뒤로 미룬다', /function gcRevealOrder/.test(cli));
+  ok('등급 오름차순', /\(a\.r - b\.r\) \|\| \(a\.i - b\.i\)/.test(cli));
+  ok('보여주는 차례만 바꿄다', /const shown = gcRevealOrder\(results\)/.test(cli));
+
+  // 전설 전용 연출은 아껴 써야 멀미가 안 난다
+  ok('흔들림과 광선', /function gcQuake/.test(cli) && /function gcRay/.test(cli));
+  ok('전설에만 쓴다', /rank >= 3\) \{ gcFlash\(\); gcRay\(\); gcQuake/.test(cli));
+  ok('흔들림 CSS', /@keyframes gcQuake/.test(html) && /@keyframes gcRay/.test(html));
+
+  // 열 장을 다 훑지 않아도 뭐를 얻었는지 보여 준다
+  ok('요약 줄', /function gcSummary/.test(cli) && /\.gc-sum \{/.test(html));
+  ok('요약은 원래 결과로 센다', /gcSummary\(results\)/.test(cli));
+
+  // 움직임을 줄인 사람에게는 새 연출도 끄진다
+  ok('움직임 줄이기를 따른다', /\.gc-quake, \.gc-ray, \.gc-sum,/.test(html));
+}
+
+console.log('\n⑩ 카드백 미리보기 크기');
+{
+  // 카드백 미리보기는 .card 를 같이 달고 나온다. 클래스 하나짜리로 써 두면
+  // 뒤에 오는 .card(70×98) 에 밀려 뽑기·교환소에서 이름을 덮었다.
+  ok('.card 를 붙여 이긴다', /\.card\.shop-cbprev \{/.test(html));
+  ok('클래스 하나짜리가 남아있지 않다', !/\n    \.shop-cbprev \{ width:38px/.test(html));
+  ok('아이콘 칸 크기를 따로 준다', /\.gi-ico \.card\.shop-cbprev \{[^}]*width:28px/.test(html));
+  ok('칸 밖으로 못 나가게 막는다', /\.gi-ico > \* \{ max-width:100%/.test(html));
+  // 카드백만이 아니라 같은 길로 들어오는 다른 미리보기도 같이 재둔다
+  for (const c of ['shop-cfprev', 'shop-tblprev', 'shop-npprev', 'shop-avaprev'])
+    ok(`${c} 도 칸에 맞췄다`, new RegExp(`\\.gi-ico \\.${c} \\{`).test(html));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
