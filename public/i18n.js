@@ -89,6 +89,7 @@
     '획득 카드': 'Cards Won',
     '낙찰': 'Won',
     '완성!': 'Complete!',
+    '완성! \u2713': 'Complete! \u2713',
     '오픈': 'Open',
     '클로즈': 'Closed',
     '오픈 경매': 'Open Auction',
@@ -110,6 +111,7 @@
     '내놓을 카드를 고른 뒤 확정을 누르세요': 'Pick a card to offer, then confirm',
     '두구두구… 공개!': 'And the winner is...',
     '내 차례!': 'Your turn!',
+    '\ud83d\udd14 내 차례! — FLIP FLAP': '\ud83d\udd14 Your turn! — FLIP FLAP',
     '시간을 다 썼어요 — 남은 판은 AI 가 대신합니다': 'Out of time — AI will play for you',
     '서버가 응답하지 않아요 — 잠시 후 다시 눌러주세요': 'No response from the server — please try again',
     '다시 연결하는 중…': 'Reconnecting...',
@@ -349,6 +351,402 @@
     '초단': '1 Dan', '2단': '2 Dan', '3단': '3 Dan', '4단': '4 Dan', '5단': '5 Dan',
     '6단': '6 Dan', '7단': '7 Dan', '8단': '8 Dan', '9단': '9 Dan',
 
+    // ── 아이템전 (이름·설명·안내) ──
+    '돋보기': 'Magnifier',
+    '모래시계': 'Hourglass',
+    '연막탄': 'Smoke Bomb',
+    '소매치기': 'Pickpocket',
+    '손바꿈': 'Hand Swap',
+    '복사기': 'Duplicator',
+    '뒤집개': 'Reversal',
+    '재경매': 'Re-auction',
+    '에누리': 'Haggle',
+    '도둑고양이': 'Alley Cat',
+    '폭군': 'Tyrant',
+    '운명의 주사위': 'Dice of Fate',
+    '상대 손패 2장을 훔쳐본다': 'Peek at 2 cards in the opponent\u2019s hand',
+    '상대의 남은 시간을 30초 깎는다': "Cut 30 seconds from the opponent's clock",
+    '이번 경매품을 상대에게만 가린다': 'Hide this lot from the opponent only',
+    '상대 손패 1장을 뺏고 내 카드 1장을 넘긴다': 'Take 1 card from their hand and give them 1 of yours',
+    '내 손패 1장을 덱의 카드와 바꾼다': 'Swap 1 card in your hand with one from the deck',
+    '내가 낙찰받은 카드 1장을 복제한다': 'Duplicate 1 card you have won',
+    '이번 경매만 약한 카드가 이긴다': 'This auction only, the weaker card wins',
+    '진 경매를 무효로 하고 다시 배팅한다': 'Void a lost auction and bid again',
+    '이번 경매를 이겨도 배팅 카드를 뺏기지 않는다': 'Win this auction without giving up your bid card',
+    '상대가 낙찰받은 카드 1장을 훔친다': 'Steal 1 card the opponent has won',
+    '이번 턴 진행자 권한을 뺏는다': 'Seize the auctioneer role for this turn',
+    '경매품 2장을 덱에서 새로 뽑아 바꾼다': 'Replace both lot cards with fresh ones from the deck',
+    '경매를 다시 한다!': 'The auction runs again!',
+    '경매품이 통째로 바뀌었다!': 'The whole lot has been replaced!',
+    '배팅 카드를 지킨다!': 'Your bid card is protected!',
+    '상대 카드를 슬쩍했다!': 'Lifted a card from the opponent!',
+    '상대의 시야를 가렸다!': "Blocked the opponent's view!",
+    '상대의 전리품을 훔쳤다!': "Stole the opponent's prize!",
+    '손패를 덱의 카드와 바꿨다!': 'Swapped a card with the deck!',
+    '진행자 자리를 빼앗았다!': 'Seized the auctioneer seat!',
+    '이번 경매는 약한 카드가 이긴다!': 'This auction, the weaker card wins!',
+    '아이템 사용': 'Use Item',
+    '사용': 'Use',
+    '일반': 'Basic',
+    '가지고 있지 않은 아이템이에요.': 'You do not have that item.',
+    '없는 아이템이에요.': 'No such item.',
+    '지금은 쓸 수 없는 아이템이에요.': 'That item cannot be used right now.',
+    '지금은 쓸 수 없어요.': 'Cannot be used right now.',
+    '이번 턴엔 이미 아이템을 썼어요.': 'You have already used an item this turn.',
+    '배팅을 낸 뒤에는 쓸 수 없어요.': 'Cannot be used after you submit a bid.',
+    '내 손패의 카드가 아니에요.': 'That card is not in your hand.',
+    '상대 손패가 비어 있어요.': "The opponent's hand is empty.",
+    '손패가 부족해요.': 'Not enough cards in hand.',
+    '손패가 2장 이상이어야 진행자를 뺏을 수 있어요.': 'You need at least 2 cards to seize the auctioneer role.',
+    '덱에 카드가 없어요.': 'The deck is empty.',
+    '덱에 카드가 부족해요.': 'Not enough cards left in the deck.',
+    '아직 경매품이 없어요.': 'There is no lot yet.',
+    '아직 가져간 카드가 없어요.': 'You have not won any cards yet.',
+    '상대가 가져간 카드가 없어요.': 'The opponent has not won any cards yet.',
+    '이미 내가 진행자예요.': 'You are already the auctioneer.',
+    '이미 뒤집혀 있어요.': 'It is already reversed.',
+
+    // ── 다인전 안내 ──
+    '대기방에 있어야 초대할 수 있어요.': 'You must be in the waiting room to invite.',
+    '로그인해야 초대할 수 있어요.': 'Log in to send invites.',
+    '이미 끝난 방이에요.': 'That room has already closed.',
+    '서버가 혼잡해요. 잠시 후 다시 시도해주세요.': 'The server is busy. Please try again shortly.',
+    'RP 정산': 'RP',
+    'RP 미반영 — 같은 IP': 'No RP — same IP',
+    'RP 미반영 — 사람': 'No RP — needs more humans',
+    'RP 미반영 — 짧은 판': 'No RP — game too short',
+
+    // ── 화면 라벨 ──
+    'FLIP FLAP — 경매·블러핑 심리전 카드 보드게임': 'FLIP FLAP — an auction & bluffing card game',
+    '로그인하면 랭크·코인·전적이 저장돼요': 'Log in to save your rank, coins and history',
+    'AI 난이도 선택': 'Choose AI Difficulty',
+    'AI 대전': 'vs AI',
+    '고르면 바로 시작 · 승리 시 코인 보상': 'Pick one to start — win to earn coins',
+    '승리 🪙5': 'Win 🪙5',
+    '승리 🪙15': 'Win 🪙15',
+    '승리 🪙40': 'Win 🪙40',
+    '⚡ 빠른 대전': '⚡ Quick Match',
+    '⚡ 빠른 대전 (자동 매칭)': '⚡ Quick Match (auto)',
+    '빠른대전 (온라인)': 'Quick Match (online)',
+    '➕ 방 만들기': '➕ Create Room',
+    '# 코드로 참가': '# Join by Code',
+    '열린 방': 'Open Rooms',
+    '열린 방이 없어요. 방을 만들어보세요!': 'No open rooms — why not make one?',
+    '방 이름 (예: 초보만 환영)': 'Room name (e.g. Beginners welcome)',
+    '비밀번호': 'Password',
+    '만들기': 'Create',
+    '참가': 'Join',
+    '시작': 'Start',
+    '목록': 'List',
+    '요청': 'Requests',
+    '받은 요청': 'Received',
+    '보낸 요청': 'Sent',
+    '친구찾기': 'Find Friends',
+    '친구의': "Friend's",
+    '새로고침': 'Refresh',
+    '코드 복사': 'Copy Code',
+    '링크 복사': 'Copy Link',
+    '💬 카톡 공유': '💬 Share on KakaoTalk',
+    '🌐 공개': '🌐 Public',
+    '🔒 비밀': '🔒 Private',
+    '← 취소': '← Cancel',
+    '종료 ×': 'Close ×',
+    '상대를 기다리는 중': 'Waiting for an opponent',
+    '상대를 찾는 중': 'Looking for an opponent',
+    '· 상대를 기다려요': '· waiting for an opponent',
+    '친구에겐 코드/링크 공유, 또는 로비 목록에서 참가': 'Share the code or link with a friend, or join from the lobby list',
+    '서버 연결 중…': 'Connecting...',
+    '상대 연결 끊김': 'Opponent disconnected',
+    '재접속 안 하면 몰수승!': 'If they do not return, you win by forfeit!',
+    '게임 나가기': 'Leave Game',
+    '게임 설명': 'Game Guide',
+    '게임에서 나갈까요?': 'Leave this game?',
+    '계속하기': 'Keep Playing',
+    '내 손패': 'Your Hand',
+    '턴 -': 'Turn -',
+    '아직 안 나온 카드': 'Cards not yet seen',
+    '이미 나옴': 'Already seen',
+    '상대 이모트 차단': 'Mute opponent emotes',
+    '🔔 상대 이모트': '🔔 Opponent Emotes',
+    '🎵 배경음악': '🎵 Music',
+    '🔊 효과음': '🔊 Sound Effects',
+    '🌐 언어': '🌐 Language',
+    '🌐 언어 / Language': '🌐 Language',
+    '3인전': '3 Players',
+    '4인전': '4 Players',
+    'AI 2명': '2 AI',
+    'AI 3명': '3 AI',
+    '손패 6장': '6 cards each',
+    '손패 7장': '7 cards each',
+    '※ 베타 — 전적·코인에 반영되지 않습니다': '※ Beta — does not affect your record or coins',
+    '진행자도 함께 입찰합니다 (첫 경매만 제외)': 'The auctioneer bids too',
+    '배팅 카드는': 'Bid cards go',
+    '약하게 부른 사람부터': 'to the weakest bidder first',
+    '강한 경매품을 가져갑니다': '— they take the strongest card',
+    '경매품 공개 · 배팅 비밀': 'Lot shown, bids hidden',
+    '경매품 비밀 · 배팅 공개': 'Lot hidden, bids shown',
+    '접속 중인 친구만 부를 수 있어요.': 'Only friends who are online can be invited.',
+    '상대 정보': 'Player Info',
+    '명패 고르기': 'Choose a Name Plate',
+    '이름 옆에 붙는 명패예요. 효과는 대전 보상에 바로 반영됩니다.': 'A plate shown beside your name. Its effect applies to match rewards immediately.',
+    '환영합니다!': 'Welcome!',
+    '게임에서 사용할': 'Choose the',
+    '닉네임': 'nickname',
+    '을 정해주세요.': 'you will use in game.',
+    '다른 플레이어에게 이 이름으로 보여요.': 'This is how other players will see you.',
+    '닉네임 (1~12자)': 'Nickname (1–12 characters)',
+    '이 닉네임으로 시작': 'Start with this name',
+    '나중에 정할게요': "I'll decide later",
+    '지금 안 정하면, 나중엔 상점의 닉네임 변경권이 필요할 수 있어요': 'If you skip now, you may need a Nickname Change Ticket from the shop later',
+    '계정 삭제': 'Delete Account',
+    '탈퇴 시 전적·코인·아이템이 모두 사라지며 되돌릴 수 없어요.': 'Deleting your account erases your record, coins and items permanently.',
+    '을 정확히 입력하세요.': 'exactly to confirm.',
+    '다 채우면': 'When complete, press',
+    '을 눌러 코인을 받으세요 · 매일 자정 리셋': 'to collect your coins · resets daily at midnight',
+    '아래 버튼을 눌러 뽑아보세요': 'Press a button below to roll',
+    '1회': 'x1',
+    '10연': 'x10',
+    '졸개의 배신! 6-10이 2-1을 잡았다': "The Servant's Betrayal! 6-10 takes down 2-1",
+    '▸ 화면을 탭하면 계속': '▸ Tap anywhere to continue',
+
+    // ── 게임 진행 안내 ──
+    '서버 연결됨': 'Connected',
+    '서버 연결 실패': 'Connection failed',
+    '연결 끊김 — 재접속 중…': 'Disconnected — reconnecting...',
+    '상대 재접속됨': 'Opponent reconnected',
+    '상대가 나갔어요.': 'Your opponent left.',
+    '상대가 게임을 떠났어요 — 몰수승!': 'Your opponent left the game — you win by forfeit!',
+    '접속이 끊겨 몰수패 처리됐어요.': 'You were disconnected and lost by forfeit.',
+    '상대 시간 초과!': "Opponent's time is up!",
+    '시간 초과...': 'Out of time...',
+    '진행자(AI) 먼저 배팅 중': 'The AI auctioneer is bidding first',
+    '진행자가 먼저 배팅합니다 — 대기 중': 'The auctioneer bids first — please wait',
+    'AI 배팅 중': 'AI is bidding',
+    'AI 생각 중': 'AI is thinking',
+    'AI가 뽑는 중': 'AI is drawing',
+    '상대가 고르는 중...': 'Opponent is choosing...',
+    '상대가 방식 선택 중...': 'Opponent is choosing the auction type...',
+    '상대가 출품 중...': 'Opponent is offering a card...',
+    '상대가 카드를 뽑는 중...': 'Opponent is drawing a card...',
+    '배팅 완료 — 대기 중...': 'Bid submitted — waiting...',
+    '카드 정산 중…': 'Settling cards...',
+    '중앙 카드 공개 — 출품할 카드를 선택하세요': 'Center card revealed — pick a card to offer',
+    '경매 방식 선택 — 출품카드는 다른 손패 클릭 시 교체돼요': 'Choose the auction type — tap another card to swap your offer',
+    '내 배팅 (선택 중)': 'Your bid (choosing)',
+    '내 선택 ✓': 'Your pick ✓',
+    '상대 선택': "Opponent's pick",
+    '출품카드': 'Offered card',
+    '세트 근접도가 완전히 같아요!': 'You are exactly as close to a set as each other!',
+    '상대가 세트에 더 가까웠어요.': 'Your opponent was closer to a set.',
+    '무승부!': 'Draw!',
+    '승': 'W', '패': 'L', '무': 'D',
+    '총 승리': 'Total wins',
+    '총 RP': 'Total RP',
+    '재대결': 'Rematch',
+    '상대에게 재대결 신청 — 대기 중…': 'Rematch requested — waiting...',
+    '⚔️ 승자에게 도전하기': '⚔️ Challenge the winner',
+    '⚔️ 도전장 전송 — 수락 대기…': '⚔️ Challenge sent — waiting for a reply...',
+    '⚔️ 배팅 완료 — 곧 공개!': '⚔️ Bids are in — revealing soon!',
+    '도전 받기': 'Accept Challenge',
+    '도전장을 보내지 못했어요.': 'Could not send the challenge.',
+    '친구가 대전을 신청했어요. 지금 바로 대결할까요?': 'A friend has challenged you. Play now?',
+    '관전하던 유저가 대전을 신청했어요. 받아들일까요?': 'A spectator has challenged you. Accept?',
+    '받아들인다!': 'Accept!',
+    '나중에': 'Later',
+    '나중에 할게요': 'Maybe later',
+    '수락': 'Accept',
+    '거절': 'Decline',
+    '수락하고 입장': 'Accept & Join',
+    '게임 참가하기': 'Join Game',
+    '게임 하러 가기': 'Go Play',
+    '돌아가기': 'Back',
+    '비밀방은 비밀번호를 입력해야 해요.': 'Private rooms need a password.',
+    '❌ 비밀번호가 틀렸어요. 다시 입력하세요': '❌ Wrong password — try again',
+    '방을 만드는 중…': 'Creating room...',
+    '만드는 중…': 'Creating...',
+    '확인 중…': 'Checking...',
+    '요청 중…': 'Sending...',
+    '⚠️ 서버 연결이 늦어지고 있어요 — 잠시 후 새로고침해 주세요': '⚠️ The server is slow to respond — try refreshing in a moment',
+    '⚠️ 이전 게임이 끝나 로비로 돌아가요': '⚠️ The previous game ended — returning to the lobby',
+    'AI 대전은 언제든 다시 시작할 수 있어요.': 'You can start an AI game again any time.',
+    '컴퓨터와의 대전이에요': 'This is a game against the computer',
+    '다른 기기(또는 창)에서 같은 계정으로 접속했어요.': 'This account was opened on another device or window.',
+    '이 창의 연결을 종료합니다.': 'This session will be closed.',
+    '⏳ 이모트는 3초에 한 번만 보낼 수 있어요': '⏳ You can send an emote once every 3 seconds',
+
+    // ── 보상 안내 ──
+    '보상 지급 제외': 'No reward',
+    '너무 짧은 판 — 보상 없음': 'Game too short — no reward',
+    '같은 상대 반복 대전 — 보상 없음': 'Too many games with the same opponent — no reward',
+    '같은 접속에서의 대전 — 보상 없음': 'Same connection — no reward',
+    '같은 접속·친선 대전 — 보상 없음': 'Same connection or friendly — no reward',
+    '오늘의 싸이클링 완성!': "Today's Cycling complete!",
+    '튜토리얼 완료!': 'Tutorial complete!',
+    '지급!': 'awarded!',
+
+    // ── 상점·뽑기 안내 ──
+    '상점은 로그인하면 이용할 수 있어요!': 'Log in to use the shop!',
+    '미션은 로그인하면 이용할 수 있어요!': 'Log in to use missions!',
+    '상점을 불러오지 못했어요. 잠시 후 다시 열어주세요.': 'Could not load the shop. Please try again shortly.',
+    '뽑기에 실패했어요': 'The roll failed',
+    '교환에 실패했어요': 'The exchange failed',
+    '교환': 'Exchange',
+    '교환할 수 있는 게 없어요': 'Nothing to exchange',
+    '목록을 불러오는 중…': 'Loading list...',
+    '보유 중 ✓': 'Owned ✓',
+    '이미 가진 것': 'Already owned',
+    '장착하기': 'Equip',
+    '장착 해제': 'Unequip',
+    '사용 중': 'In use',
+    '천장': 'Pity',
+    '표시된 확률은 천장까지 반영한 실제 값입니다.': 'The rates shown include the pity system — they are the real odds.',
+    '쿠폰 번호를 입력해주세요.': 'Please enter a coupon code.',
+    '쿠폰을 사용했어요!': 'Coupon redeemed!',
+    '로그인하면 쿠폰을 쓸 수 있어요.': 'Log in to use coupons.',
+    '✅ 구매 완료!': '✅ Purchased!',
+    '✓ 복사됨': '✓ Copied',
+    '복사하세요:': 'Copy this:',
+    '링크를 복사했어요! 친구에게 붙여넣어 보내세요.': 'Link copied! Paste it to a friend.',
+    '링크를 복사했어요! 친구에게 붙여넣어 도전장을 보내세요.': 'Link copied! Paste it to send a challenge.',
+    '공유를 지원하지 않는 브라우저예요. 링크를 복사했으니 카톡에 붙여넣어 보내세요!': 'This browser cannot share directly — the link is copied, just paste it.',
+    'FLIP FLAP 초대': 'FLIP FLAP invite',
+    'FLIP FLAP 도전장': 'FLIP FLAP challenge',
+    'FLIP FLAP에 오신 걸 환영해요!': 'Welcome to FLIP FLAP!',
+
+    // ── 색 이름 (닉네임 염색) ──
+    '빨강': 'Red', '파랑': 'Blue', '초록': 'Green', '주황': 'Orange', '보라': 'Purple',
+    '청록': 'Teal', '핑크': 'Pink', '라임': 'Lime', '왼쪽': 'Left',
+
+    // ── 친구·클랜 화면 ──
+    '친구 신청을 보냈어요.': 'Friend request sent.',
+    '친구가 됐어요!': 'You are now friends!',
+    '친구 목록에서 서로 사라져요.': 'You will disappear from each other\u2019s friend list.',
+    '아직 친구가 없어요.': 'No friends yet.',
+    '받은 요청이 없어요.': 'No requests received.',
+    '보낸 요청이 없어요.': 'No requests sent.',
+    '신청취소': 'Cancel request',
+    '나예요.': 'That is you.',
+    '클랜장': 'Leader',
+    '부클랜장': 'Co-leader',
+    '클랜원': 'Members',
+    '클랜 만들기': 'Create Clan',
+    '클랜 찾기': 'Find Clans',
+    '클랜 이름 (2~12자)': 'Clan name (2–12 characters)',
+    '태그 (영문·숫자 2~4자)': 'Tag (2–4 letters or digits)',
+    '클랜 공지 (최대 60자)': 'Clan notice (up to 60 characters)',
+    '클랜을 만들면 클랜장이 됩니다. 클랜원은 최대 30명이에요.': 'Creating a clan makes you its leader. Up to 30 members.',
+    '아직 만들어진 클랜이 없어요.': 'No clans have been created yet.',
+    '첫 번째 클랜을 만들어보세요!': 'Be the first to make one!',
+    '클랜에서 탈퇴할까요?': 'Leave the clan?',
+    '클랜에서 탈퇴했어요.': 'You left the clan.',
+    '클랜에서 즉시 제외됩니다.': 'They will be removed from the clan immediately.',
+    '클랜이 해체되었어요.': 'The clan was disbanded.',
+    '클랜장 자리는 남은 클랜원 중 RP가 가장 높은 사람에게 넘어가요. 혼자라면 클랜이 해체됩니다.': 'Leadership passes to the remaining member with the highest RP. If you are alone, the clan is disbanded.',
+    '이후에는 클랜을 관리할 수 없게 됩니다.': 'You will no longer be able to manage the clan.',
+    '언제든 다시 가입 신청할 수 있어요.': 'You can apply to join again any time.',
+    '탈퇴': 'Leave',
+    '탈퇴(위임)': 'Leave (hand over)',
+    '위임': 'Hand over',
+    '추방': 'Kick',
+    '아직 대화가 없어요.': 'No messages yet.',
+    '첫 메시지를 남겨보세요!': 'Say something first!',
+    '클랜원에게 메시지…': 'Message your clan...',
+    '클랜원만 볼 수 있어요 · 메시지를 누르면 신고·차단': 'Clan members only · tap a message to report or block',
+    '보내기': 'Send',
+    '신고': 'Report',
+    '차단': 'Block',
+    '부적절한 내용': 'Inappropriate content',
+    '이 메시지를 신고할까요?': 'Report this message?',
+    '이 사람의 메시지가 보이지 않게 돼요. 언제든 해제할 수 있어요.': 'You will stop seeing their messages. You can undo this any time.',
+    '이름만 보여요': 'Name only',
+    '아직 랭킹이 없어요. 첫 플레이어가 되어보세요!': 'No rankings yet — be the first!',
+
+    // ── 계정 ──
+    '닉네임을 입력해주세요.': 'Please enter a nickname.',
+    '닉네임에 바로 적용됐어요!': 'Applied to your nickname!',
+    '닉네임을 지금 안 정할까요?': 'Skip choosing a nickname for now?',
+    '나중에 바꾸려면 상점의 닉네임 변경권이 필요할 수 있어요.': 'Changing it later may need a Nickname Change Ticket from the shop.',
+    '지금 정하기': 'Choose now',
+    '지금 바꿀 수 있어요': 'You can change it now',
+    '정말 계정을 삭제할까요?': 'Really delete your account?',
+    '전적·레벨·코인·아이템·칭호가 모두 영구 삭제되며 복구할 수 없어요.': 'Your record, level, coins, items and titles are permanently deleted and cannot be restored.',
+    '진행 중인 게임은 몰수패로 처리될 수 있어요.': 'Any game in progress may be recorded as a forfeit loss.',
+    '마지막 확인이에요': 'One last check',
+    '본인 확인을 위해 비밀번호를 입력해주세요.': 'Enter your password to confirm.',
+    '로그인 상태에서만 삭제할 수 있어요.': 'You must be logged in to delete your account.',
+    '이 작업은 되돌릴 수 없습니다. 정말 진행할까요?': 'This cannot be undone. Continue?',
+    '영구 삭제': 'Delete permanently',
+    '삭제하기': 'Delete',
+    '삭제': 'Delete',
+    '삭제에 실패했어요.': 'Deletion failed.',
+    '계정이 삭제됐어요. 이용해주셔서 감사합니다.': 'Your account has been deleted. Thank you for playing.',
+    '실패했어요.': 'That failed.',
+    '보내지 못했어요': 'Could not send',
+    '보내지 못했어요.': 'Could not send.',
+
+    // ── 설치 안내 ──
+    '아이폰 설치 방법 📲': 'Install on iPhone 📲',
+    '안드로이드 설치 방법 📲': 'Install on Android 📲',
+    '브라우저 메뉴(⋮)를 누르고': 'Open the browser menu (⋮)',
+    '브라우저 메뉴에서 "앱 설치"를 눌러 설치할 수 있어요!': 'Choose "Install app" from the browser menu.',
+    '홈 화면에 FLIP FLAP 앱이 생겨요.': 'FLIP FLAP will appear on your home screen.',
+    '건너뛰기 (Skip)': 'Skip',
+
+    // ── 튜토리얼 (문장 통째로) ──
+    // <b> 가 섞여 있어 조각 번역이 안 된다. tutShow 가 통째로 t() 를 태운다.
+    '30초면 규칙을 다 배워요. 튜토리얼을 해볼까요? (완료하면 \ud83e\ude99100 보상!)':
+      'You can learn the rules in 30 seconds. Try the tutorial? (\ud83e\ude99100 when you finish!)',
+    '\ud83c\udf93 튜토리얼 하기': '\ud83c\udf93 Start Tutorial',
+    '먼저 <b>선공 뽑기</b>!': 'First, <b>draw for first turn</b>!',
+    '반짝이는 두 장 중 <b>한 장을 탭</b>하세요 — 강한 카드를 뽑으면 선공!':
+      '<b>Tap one</b> of the two glowing cards — the stronger card goes first!',
+    '카드 공개! 강한 카드를 뽑은 쪽이 첫 <b>경매 진행자</b>가 돼요. (진행자는 매 턴 교대)':
+      'Cards revealed! Whoever drew stronger becomes the first <b>auctioneer</b>. (It alternates each turn.)',
+    '이번 턴 진행자는 <b>나</b>! 경매품부터 공개해볼까요?':
+      'You are the <b>auctioneer</b> this turn. Let\u2019s reveal the lot.',
+    '왼쪽 <b>덱을 탭</b>!': '<b>Tap the deck</b> on the left!',
+    '중앙 카드가 공개됐어요! 이제 <b>내 손패 1장</b>을 추가로 출품 — 이 2장이 경매품이 돼요.':
+      'The center card is out! Now add <b>one card from your hand</b> — those two become the lot.',
+    '아래 손패에서 <b>내놓을 카드를 탭</b>하세요': '<b>Tap the card you want to offer</b> from your hand below',
+    '원하는 방식을 <b>탭</b>하세요': '<b>Tap</b> the type you want',
+    '<b>배팅!</b> 강한 카드를 낸 사람이 경매품 2장을 다 가져가요. \u26a0\ufe0f 배팅한 카드는 <b>서로 교환</b>돼요.':
+      '<b>Bid!</b> The stronger card takes both cards of the lot. \u26a0\ufe0f The bid cards are then <b>swapped between you</b>.',
+    '손패에서 카드 탭 → <b>배팅 확정</b>': 'Tap a card, then <b>Confirm bid</b>',
+    '두구두구… 결과 공개! 이긴 쪽이 경매품을 <b>자기 앞에</b> 깔아요.':
+      'And the reveal! The winner lays the lot <b>in front of them</b>.',
+    '\ud83c\udfaf 방금 딴 카드가 <b>테이블 앞에</b> 깔렸죠? <b>이렇게 깔린 카드로만</b> 세트를 만들 수 있어요 — 손에 든 카드는 세트가 안 돼요!':
+      '\ud83c\udfaf See the cards you just won laid <b>in front of you</b>? <b>Only those</b> count toward a set — cards in hand do not!',
+    '이번 턴 진행자는 <b>상대</b>예요. 곧 배팅 차례가 오니 잠깐만 \u2615':
+      'Your <b>opponent</b> is auctioneer this turn. Your bid is coming up \u2615',
+    '\ud83d\udc40 지금 손에 <b>6-10</b>이 있어요 — 상대가 2-1을 낼 것 같으면 <b>배신</b>을 노려보세요!':
+      '\ud83d\udc40 You are holding <b>6-10</b> — if you think they will play 2-1, go for the <b>betrayal</b>!',
+    '\ud83d\udc40 지금 손에 <b>2-1</b>이 있어요 — 최강이지만 <b>6-10</b>한테만 져요. 조심!':
+      '\ud83d\udc40 You are holding <b>2-1</b> — the strongest card, but <b>6-10</b> beats it. Careful!',
+
+    // ── 게임 상태 줄 ──
+    '\ud83c\udccf 카드를 골라 선공을 정하세요!': '\ud83c\udccf Pick a card to decide who goes first!',
+    '\ud83c\udca0 중앙덱을 클릭해 카드를 뽑으세요': '\ud83c\udca0 Tap the deck to draw a card',
+    '게스트 (기록 없음)': 'Guest (no saved record)',
+
+    // ── 다인전 화면 ──
+    '내가 진행자! 덱을 눌러 카드를 뽑으세요': 'You are the auctioneer — tap the deck to draw',
+    '내 차례! 마지막이라 앞사람 카드를 다 보고 정할 수 있어요':
+      'Your turn — you bid last, so you can see every card before you',
+    '출품 선택 중': 'Choosing offer',
+    '배팅 선택 중': 'Choosing bid',
+
+    // ── AI 이름 (다인전 상대) ──
+    '경매왕 덕배': 'Auction King Deokbae',
+    '허세왕 태식': 'Bluff King Taesik',
+    '눈치백단 재훈': 'Sharp-Eyed Jaehoon',
+    '한방 규현': 'One-Shot Gyuhyeon',
+    '구두쇠 만수': 'Miser Mansu',
+    '노림수 은지': 'Schemer Eunji',
+    '침착한 소연': 'Calm Soyeon',
+    '카운팅 지민': 'Counter Jimin',
+    '큰손 미스박': 'Big Spender Park',
+    '도박사 병철': 'Gambler Byeongcheol',
+
     // ── 친구·클랜 ──
     '접속 중': 'Online',
     '게임 중': 'In game',
@@ -383,6 +781,7 @@
     [/^덱 (\d+)장$/, 'Deck $1'],
     [/^덱 (\d+)장 남음$/, '$1 left in deck'],
     [/^턴 (\d+)$/, 'Turn $1'],
+    [/^(\d+)턴$/, 'Turn $1'],
     [/^(\d+)명 입장$/, '$1 joined'],
     [/^(\d+)인전 시작$/, 'Start $1-player game'],
     [/^Lv\.?(\d+)$/i, 'Lv.$1'],
@@ -401,6 +800,18 @@
     [/^(\d+)번 \((\d+)등급\) 배팅 확정$/, 'Confirm bid: $1 (rank $2)'],
     [/^(\d+)번 \((\d+)등급\) 출품 확정$/, 'Confirm offer: $1 (rank $2)'],
     [/^(\d+)짜리 · (\d+)장 \(등급 1–(\d+)\)$/, 'Kind $1 — $2 cards (ranks 1–$3)'],
+    // 조각을 이어 붙여 만드는 문구들 — 원문이 소스에 통째로 없어 사전으로는 못 잡는다
+    [/^\u{1F441} 오픈\(배팅 비밀\) — 손패에서 배팅 카드 선택!$/u, '\u{1F441} Open (bids hidden) — pick your bid card!'],
+    [/^\u{1F648} 클로즈\(배팅 공개\) — 손패에서 배팅 카드 선택!$/u, '\u{1F648} Closed (bids shown) — pick your bid card!'],
+    [/^내 배팅 \u2713$/, 'Your bid \u2713'],
+    [/^상대 배팅 \u2713$/, 'Opponent bid \u2713'],
+    [/^(.+) 배팅 \u2713$/, '$1 bid \u2713'],
+    [/^(.+) 배팅$/, '$1 bid'],
+    [/^게스트(\d+)$/, 'Guest$1'],
+    [/^\u26a1 (.+) 선공!$/, '\u26a1 $1 goes first!'],
+    [/^(.+) 님이 낙찰!\s+\(내 손패로 (\d+)-(\d+) 들어옴\)$/, '$1 wins the lot!  ($2-$3 comes into your hand)'],
+    [/^내가 낙찰!\s+\(내 손패로 (\d+)-(\d+) 들어옴\)$/, 'You win the lot!  ($1-$2 comes into your hand)'],
+    [/^(\d+)\/(\d+) 리치!$/, '$1/$2 — one away!'],
     [/^완성까지 (\d+)장$/, '$1 more to complete'],
   ];
 
@@ -480,7 +891,18 @@
     const hit = Object.prototype.hasOwnProperty.call(EN, key) ? EN[key] : null;
     if (hit != null) return raw.replace(key, hit);        // 앞뒤 공백은 살린다
     for (const [re, out] of PATTERNS) {
-      if (re.test(key)) return raw.replace(key, key.replace(re, out));
+      if (!re.test(key)) continue;
+      // 끼워 넣는 값도 사전을 한 번 거친다. 안 그러면 "큰손 미스박 is bidding..."
+      // 처럼 문장은 영어인데 이름만 한국어로 남는다.
+      const done = key.replace(re, (...args) => {
+        const groups = args.slice(1, -2).map((g) => {
+          if (g == null) return g;
+          const k = String(g).trim();
+          return Object.prototype.hasOwnProperty.call(EN, k) ? EN[k] : g;
+        });
+        return out.replace(/\$(\d)/g, (_, i) => (groups[i - 1] == null ? '' : groups[i - 1]));
+      });
+      return raw.replace(key, done);
     }
     return raw;
   }
@@ -699,10 +1121,12 @@
       }
       if (queued || !pending.length) return;
       queued = true;
-      // requestAnimationFrame 을 쓰면 안 된다. 탭이 화면에 없을 때는 아예 안
-      // 불려서, 그동안 그려진 것들이 한국어로 굳는다(폰에서 앱을 내렸다 올리면
-      // 그대로 재현된다). 타이머는 화면이 꺼져 있어도 돈다.
-      setTimeout(() => {
+      // 마이크로태스크로 미룬다. 지금 돌고 있는 일이 끝나는 즉시, 화면에 그려지기
+      // 전에 실행된다 — 한국어가 잠깐 스쳤다 바뀌는 깜빡임이 없다.
+      //   · requestAnimationFrame 은 안 된다. 탭이 화면에 없으면 아예 안 불려서
+      //     그동안 그려진 것들이 한국어로 굳는다(폰에서 앱을 내렸다 올리면 재현).
+      //   · setTimeout 은 불리긴 하지만 한 번 그린 뒤라 깜빡인다.
+      const run = () => {
         queued = false;
         const batch = pending; pending = [];
         for (const n of batch) {
@@ -710,7 +1134,9 @@
           if (n.nodeType === 3) { const o = t(n.nodeValue); if (o !== n.nodeValue) n.nodeValue = o; }
           else apply(n);
         }
-      }, 16);
+      };
+      if (typeof queueMicrotask === 'function') queueMicrotask(run);
+      else Promise.resolve().then(run);
     });
     obs.observe(document.body, { childList: true, subtree: true, characterData: true });
     // 그래도 새는 게 있으면(화면 밖에서 그려진 것 등) 돌아왔을 때 한 번 훑는다.

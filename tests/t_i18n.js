@@ -63,8 +63,11 @@ console.log('\n③ 번역이 실제로 되는가');
   ok('짧은 말', FF.t('나가기') === 'Leave', FF.t('나가기'));
   ok('앞뒤 공백은 살린다', FF.t('  나가기 ') === '  Leave ', JSON.stringify(FF.t('  나가기 ')));
   ok('값이 섞인 말(패턴)', FF.t('덱 12장') === 'Deck 12', FF.t('덱 12장'));
-  ok('사람 이름이 든 말', FF.t('경매왕 덕배 님이 낙찰!') === '경매왕 덕배 wins the lot!',
+  // 끼워 넣는 값도 사전을 거친다 — 안 그러면 문장만 영어고 이름은 한국어로 남는다
+  ok('이름이 든 말 · 이름도 번역', FF.t('경매왕 덕배 님이 낙찰!') === 'Auction King Deokbae wins the lot!',
      FF.t('경매왕 덕배 님이 낙찰!'));
+  ok('사전에 없는 이름은 그대로', FF.t('철수 님이 낙찰!') === '철수 wins the lot!',
+     FF.t('철수 님이 낙찰!'));
   // 사전에 없으면 한국어가 그대로 나와야 한다 — 깨진 열쇠가 보이면 안 된다
   ok('모르는 말은 한국어 그대로', FF.t('없는말입니다') === '없는말입니다');
   ok('영어는 건드리지 않는다', FF.t('Ranking') === 'Ranking');
@@ -94,7 +97,10 @@ console.log('\n⑤ 화면 밖에서도 따라잡는가');
   // requestAnimationFrame 은 탭이 화면에 없으면 아예 안 불린다. 그동안 그려진
   // 것들이 한국어로 굳는다 — 폰에서 앱을 내렸다 올리면 그대로 재현됐다.
   ok('rAF 로 미루지 않는다', !/requestAnimationFrame\(\(\) => \{\s*queued = false/.test(i18nSrc));
-  ok('타이머로 미룬다', /setTimeout\(\(\) => \{\s*queued = false/.test(i18nSrc));
+  // 타이머로 미루면 불리긴 하나 한 번 그린 뒤라, 한국어가 잠깐 스쳤다 바뀐다.
+  // 마이크로태스크는 지금 일이 끝나는 즉시 = 그리기 전에 돈다.
+  ok('그리기 전에 바꾼다', /queueMicrotask\(run\)/.test(i18nSrc));
+  ok('마이크로태스크가 없어도 돌아간다', /Promise\.resolve\(\)\.then\(run\)/.test(i18nSrc));
   ok('돌아오면 한 번 더 훑는다', /visibilitychange[\s\S]{0,120}?apply\(document\.body\)/.test(i18nSrc));
 }
 

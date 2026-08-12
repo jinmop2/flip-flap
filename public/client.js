@@ -2725,7 +2725,9 @@ const BASE_TITLE = 'FLIP FLAP';
 function startTitleBlink() {
   if (titleBlink) return;
   let on = false;
-  titleBlink = setInterval(() => { document.title = (on = !on) ? '🔔 내 차례! — FLIP FLAP' : BASE_TITLE; }, 800);
+  // 탭 제목은 화면 밖이라 훑기 대상이 아니다 — 여기서 직접 바꾼다
+  const alert = () => (window.FF ? FF.t('🔔 내 차례! — FLIP FLAP') : '🔔 내 차례! — FLIP FLAP');
+  titleBlink = setInterval(() => { document.title = (on = !on) ? alert() : BASE_TITLE; }, 800);
 }
 function stopTitleBlink() { if (titleBlink) { clearInterval(titleBlink); titleBlink = null; } document.title = BASE_TITLE; }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) stopTitleBlink(); });
@@ -2854,10 +2856,13 @@ function tutTick() {
 }
 function tutShow(st) {
   const box = document.getElementById('tutBox');
-  const text = typeof st.text === 'function' ? st.text(state) : st.text;
+  // 튜토리얼은 한 문장 안에 <b> 가 섞여 있어, 글자 조각마다 번역하면 어순이 깨진다.
+  // 문장을 통째로 바꾼 뒤 넣는다(사전에 문장 전체가 들어 있다).
+  const T = (x) => (window.FF ? FF.t(x) : x);
+  const text = T(typeof st.text === 'function' ? st.text(state) : st.text);
   document.getElementById('tutText').innerHTML = text
-    + (st.cards || '')
-    + (st.act ? `<div class="tut-do">👉 ${st.act}</div>` : '');
+    + T(st.cards || '')
+    + (st.act ? `<div class="tut-do">👉 ${T(st.act)}</div>` : '');
   box.classList.remove('pos-top', 'pos-bot', 'pop', 'big');
   if (st.big) box.classList.add('big');
   else box.classList.add('pos-' + (st.pos || 'top'));
