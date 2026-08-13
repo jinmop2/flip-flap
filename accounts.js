@@ -693,6 +693,19 @@ const SHOP = {
   face_obsidian:{ name: '흑요석 카드',     icon: '🌑', price: 1300, type: 'cardface',
                   desc: '숫자가 금빛으로 새겨진 앞면' },
 
+  // ── 화투 에디션 (카드백·명패·테이블·앞면) ──
+  // 우리 카드 종류가 2·3·4·6 인데 화투 월과 그대로 맞아떨어진다.
+  //   2 → 2월 매조(홍매화) · 3 → 3월 벚꽃 · 4 → 4월 흑싸리 · 6 → 6월 모란
+  // 가운데 큰 숫자가 곧 "몇 월" 이라 새로 외울 것이 없다.
+  back_hwatu:   { name: '화투 카드백',     icon: '🎴', price: 1600, type: 'cardback',
+                  desc: '붉은 등 · 화투짝을 엎어 놓은 뒷면' },
+  np_hwatu:     { name: '화투 명패',       icon: '🎴', price: 1600, type: 'plate',
+                  desc: '붉은 판에 검은 테 · 골드 획득 +5%' },
+  tbl_hwatu:    { name: '화투 담요',       icon: '🎴', price: 1500, type: 'table',
+                  desc: '붉은 담요를 깔았다' },
+  face_hwatu:   { name: '화투 카드',       icon: '🎴', price: 2400, type: 'cardface',
+                  desc: '숫자가 곧 월 — 2월 매조·3월 벚꽃·4월 흑싸리·6월 모란' },
+
   // ── 한지 세트 (명패·테이블·앞면) ──
   np_hanji:     { name: '한지 명패',       icon: '📜', price: 900,  type: 'plate',
                   desc: '먹으로 쓴 이름표 · 경험치 +3%' },
@@ -728,6 +741,7 @@ const PLATE_FX = {
   np_obsidian: { coin: 0.06 },                  // 최고가지만 과하지 않게
   np_lv50:     { coin: 0.03, xp: 0.03 },        // 마일스톤 — 양쪽 조금씩
   np_shard:    { shard: 0.10 },                 // 파편으로 산 명패 = 파편이 더 붙는다
+  np_hwatu:    { coin: 0.05 },                  // 화투 = 판돈 — 돈 쪽으로
 };
 
 // 명패 효과를 사람이 읽을 문구로. 화면에 따로 적어 두면 값을 손댈 때 어긋난다 —
@@ -753,6 +767,7 @@ const SETS = {
   obsidian: { back: 'back_obsidian', plate: 'np_obsidian', table: 'tbl_obsidian', face: 'face_obsidian', name: '흑요석' },
   hanji:    { back: 'back_hanji',    plate: 'np_hanji',    table: 'tbl_hanji',    face: 'face_hanji',    name: '한지' },
   shard:    { back: 'back_shard',    plate: 'np_shard',    table: 'tbl_shard',    face: 'face_shard',    name: '파편' },
+  hwatu:    { back: 'back_hwatu',    plate: 'np_hwatu',    table: 'tbl_hwatu',    face: 'face_hwatu',    name: '화투' },
 };
 const SET_BONUS = { coin: 0.03, xp: 0.03 };
 
@@ -828,9 +843,10 @@ const GACHA_TIER = {
            'stamp_seal', 'place_spark', 'ava_gambler', 'ava_fox', 'vfx_confetti'],
   epic:   ['back_obang', 'back_galaxy', 'back_crystal', 'face_gold', 'face_crystal',
            'tbl_gold', 'tbl_crystal', 'np_gold', 'np_ruby', 'np_crystal',
+           'back_hwatu', 'tbl_hwatu', 'np_hwatu',
            'emote_party', 'emote_animal', 'emote_battle', 'emote_taunt',
            'stamp_star', 'place_ember', 'ava_dealer', 'ava_cat', 'vfx_coinrain', 'vfx_thunder'],
-  legend: ['back_obsidian', 'face_obsidian', 'tbl_obsidian', 'np_obsidian',
+  legend: ['back_obsidian', 'face_obsidian', 'tbl_obsidian', 'np_obsidian', 'face_hwatu',
            'stamp_crown', 'ava_king', 'ava_phantom', 'vfx_firework'],
 };
 const TIERS = ['common', 'rare', 'epic', 'legend'];
@@ -1953,7 +1969,9 @@ function myRank(token) {
   const sorted = Object.values(db.users).sort((a, b) => (b.rp - a.rp) || (b.wins - a.wins));
   const pos = sorted.findIndex(x => x.id.toLowerCase() === u.id.toLowerCase());
   const p = profileOf(u);
-  return { no: pos + 1, total: sorted.length, nick: p.nick, nickColor: p.nickColor, rank: p.rank, rankIcon: p.rankIcon, rankColor: p.rankColor, rp: p.rp, wins: p.wins, losses: p.losses };
+  return { no: pos + 1, total: sorted.length, nick: p.nick, nickColor: p.nickColor, plate: p.plate,
+    titleInfo: p.titleInfo, rank: p.rank, rankIcon: p.rankIcon, rankColor: p.rankColor,
+    rp: p.rp, wins: p.wins, losses: p.losses };
 }
 
 // ══════════════════════════════════════════════════════════

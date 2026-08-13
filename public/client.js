@@ -209,7 +209,7 @@ async function claimReferral() {
 // 초대 링크(?ref=아이디)로 접속 시 코드 보관
 try { const rp = new URLSearchParams(location.search).get('ref'); if (rp) localStorage.setItem('ff_ref', rp); } catch (_) {}
 const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
-const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby', np_crystal: 'np-crystal', np_obsidian: 'np-obsidian', np_hanji: 'np-hanji', np_shard: 'np-shard' };
+const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby', np_crystal: 'np-crystal', np_obsidian: 'np-obsidian', np_hanji: 'np-hanji', np_shard: 'np-shard', np_hwatu: 'np-hwatu' };
 const xpPct = p => Math.max(0, Math.min(100, Math.round((p.xpInLevel || 0) / (p.xpNeeded || 100) * 100)));
 const npClass = p => p && NP_CLASS[p] ? ' ' + NP_CLASS[p] : '';   // 명패 클래스
 // 이모지 → 직접 그린 SVG (art.js). 매핑에 없으면 원래 이모지 그대로.
@@ -717,6 +717,7 @@ async function openLeaderboard() {
       row.innerHTML = `<span class="lb-no${p.no <= 3 ? ' top' : ''}">${p.no <= 3 ? rankIco(['🥇','🥈','🥉'][p.no-1]) : p.no}</span>
         <span class="lb-rank" style="color:${p.rankColor}">${faceOf(p)}</span>
         <span class="lb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span>
+        <span class="lb-title">${titleTag(p.titleInfo)}</span>
         <span class="lb-wl">${p.wins}승 ${p.losses}패</span>
         <span class="lb-rp">${p.rp} RP</span>`;
       list.appendChild(row);
@@ -731,6 +732,7 @@ async function openLeaderboard() {
         row.innerHTML = `<span class="lb-no">${me.no}</span>
           <span class="lb-rank" style="color:${me.rankColor}">${faceOf(me)}</span>
           <span class="lb-nick${ncClass(me.nickColor)}">${esc(me.nick)}</span>
+          <span class="lb-title">${titleTag(me.titleInfo)}</span>
           <span class="lb-wl">${me.wins}승 ${me.losses}패</span>
           <span class="lb-rp">${me.rp} RP</span>`;
         const div = document.createElement('div'); div.className = 'lb-mydiv'; div.textContent = `⋯ 내 순위 (${me.no}위 / ${me.total}명) ⋯`;
@@ -1618,9 +1620,9 @@ async function openShop() {
 }
 function closeShop() { document.getElementById('shopModal').classList.remove('show'); }
 const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang', back_ruby: 'cb-ruby', back_galaxy: 'cb-galaxy',
-              back_crystal: 'cb-crystal', back_obsidian: 'cb-obsidian', back_hanji: 'cb-hanji' , back_shard: 'cb-shard' };
-const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest', tbl_crystal: 'tp-crystal', tbl_obsidian: 'tp-obsidian', tbl_hanji: 'tp-hanji', tbl_shard: 'tp-shard' };
-const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold', face_crystal: 'cfp-crystal', face_obsidian: 'cfp-obsidian', face_hanji: 'cfp-hanji', face_shard: 'cfp-shard' };
+              back_crystal: 'cb-crystal', back_obsidian: 'cb-obsidian', back_hanji: 'cb-hanji' , back_shard: 'cb-shard', back_hwatu: 'cb-hwatu' };
+const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest', tbl_crystal: 'tp-crystal', tbl_obsidian: 'tp-obsidian', tbl_hanji: 'tp-hanji', tbl_shard: 'tp-shard', tbl_hwatu: 'tp-hwatu' };
+const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold', face_crystal: 'cfp-crystal', face_obsidian: 'cfp-obsidian', face_hanji: 'cfp-hanji', face_shard: 'cfp-shard', face_hwatu: 'cfp-hwatu' };
 // 상점 아이콘 = 게임 안 실물 미리보기 (카드백/테이블/카드앞면/명패/이모트/염색)
 const shopIcon = it => {
   if (CBP[it.id])  return `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`;
@@ -2715,6 +2717,9 @@ function miniPaint(v) {
     if (st.cards) st.cards.forEach((c) => { const e = makeCard(c); e.classList.add('anim-reveal'); cards.appendChild(e); });
     else for (let k = 0; k < st.count; k++) {
       const e = makeCard(null);
+      // 뒷면은 내가 낀 카드백으로 — 내 테이블이니 내 취향이 보이는 게 맞다
+      const cb = myAccount && CB_CLASS[myAccount.cardBack];
+      if (cb) e.classList.add(cb);
       // 뒤에서부터 fresh 장이 새로 온 카드다. 자리마다 조금씩 늦춰 한 바퀴 돌듯 보이게.
       if (k >= st.count - fresh) {
         e.classList.add('mn-deal');
@@ -2843,17 +2848,15 @@ window.miniAct = function (a) {
   document.getElementById('mnBtns').innerHTML = '';
   socket.emit('mini_act', { action: a });
 };
-window.miniNext = function () {
-  document.getElementById('miniOverModal').classList.remove('show');
-  socket.emit('mini_next');
-};
-window.miniStand = function () {
-  document.getElementById('miniOverModal').classList.remove('show');
-  socket.emit('mini_leave');
-};
+function miniHideOver() {
+  clearInterval(miniNextTick); miniNextTick = null;
+  document.getElementById('miniOver').classList.remove('on');
+}
+window.miniNext = function () { miniHideOver(); socket.emit('mini_next'); };
+window.miniStand = function () { miniHideOver(); socket.emit('mini_leave'); };
 function miniHide() {
   clearInterval(miniClock); miniClock = null; miniPrevPot = 0;
-  document.getElementById('miniOverModal').classList.remove('show');
+  miniHideOver();
   const box = document.getElementById('mini');
   box.classList.remove('on'); box.style.display = 'none';
   miniState = null; miniSitting = false; miniSeen = [];
@@ -2872,13 +2875,15 @@ socket.on('mini_state', (v) => {
     document.body.classList.add('ingame');   // 화면 스크롤 잠금 — 본 게임과 같다
     applyMySkins();                          // 내 테이블·카드 스킨을 미니게임에도
   }
-  document.getElementById('miniOverModal').classList.remove('show');
+  miniHideOver();                            // 다음 판이 오면 결과를 걷는다
   miniPaint(v);
 });
 socket.on('mini_error', (m) => toast('⚠️ ' + esc(m || '')));
 
+let miniNextTick = null;
 socket.on('mini_over', (r) => {
-  // 마지막 수와 동시에 까면 뭘 보고 졌는지 눈이 못 따라온다 — 한 박자 두고 뒤집는다
+  // 마지막 수와 동시에 결과를 띄우면 남의 패를 볼 새가 없다.
+  // 먼저 패만 까 두고, 한 박자 뒤에 결과를 얹는다.
   const showRes = () => {
     miniPaint(r.view);
     const res = document.getElementById('mnRes');
@@ -2886,16 +2891,29 @@ socket.on('mini_over', (r) => {
     res.className = 'mn-res ' + (r.won ? 'win' : 'lose');
     document.getElementById('mnNet').textContent =
       r.net > 0 ? `🪙 +${r.net}` : r.net < 0 ? `🪙 ${r.net}` : '🪙 0';
-    document.getElementById('mnOverWhy').textContent =
-      r.view.reason === 'fold' ? '모두 접어서 끝난 판입니다. 패는 안 깝니다.' : '';
     document.getElementById('mnNextBtn').style.display =
       (r.canGo && r.view.mode === 'solo') ? '' : 'none';
-    document.getElementById('mnOverWhy').textContent =
-      (r.view.mode === 'solo' ? '' : (r.canGo ? '곧 다음 판이 시작됩니다.' : '밑천이 떨어졌어요.'))
-      || (r.view.reason === 'fold' ? '모두 접어서 끝난 판입니다. 패는 안 깝니다.' : '');
-    document.getElementById('miniOverModal').classList.add('show');
+
+    // 멀티는 시계대로 넘어간다 — 몇 초 남았는지 보여준다. 갑자기 바뀌면 놀란다.
+    const why = document.getElementById('mnOverWhy');
+    clearInterval(miniNextTick); miniNextTick = null;
+    if (!r.canGo) why.textContent = '소지금이 떨어졌어요.';
+    else if (r.view.mode !== 'solo' && r.nextIn > 0) {
+      const at = Date.now() + r.nextIn;
+      const tick = () => {
+        const left = Math.max(0, Math.ceil((at - Date.now()) / 1000));
+        why.textContent = `${left}초 뒤 다음 판`;
+        if (left <= 0) { clearInterval(miniNextTick); miniNextTick = null; }
+      };
+      tick(); miniNextTick = setInterval(tick, 500);
+    } else if (r.view.reason === 'fold') {
+      why.textContent = '모두 접어서 끝난 판입니다. 패는 안 깝니다.';
+    } else why.textContent = '';
+
+    document.getElementById('miniOver').classList.add('on');
   };
-  if (r.view.reason === 'showdown') { miniPaint(r.view); setTimeout(showRes, 900); }
+  // 공개로 끝난 판은 패를 먼저 보여 준다. 접어서 끝난 판은 볼 게 없으니 바로.
+  if (r.view.reason === 'showdown') { miniPaint(r.view); setTimeout(showRes, 1600); }
   else showRes();
 });
 
@@ -2908,22 +2926,53 @@ socket.on('mini_stood', (r) => {
   if (myAccount && typeof r.coins === 'number') { myAccount.coins = r.coins; renderAccount(); }
 });
 
-// 족보표 — 지금 쥔 패가 어디쯤인지 표에서 바로 짚어 준다
+// 족보표 — 글자만 늘어놓으면 "합 7" 이 어떤 패인지 머릿속에서 다시 그려야 한다.
+// 실제 카드 두 장을 놓아 눈으로 바로 알아보게 한다.
+// 예시는 그 합이 실제로 나올 수 있는 조합에서 고른다(없는 패를 그려 놓으면 거짓말이다).
+const MINI_EX = {
+  4:  [[2, 1], [2, 2]],
+  5:  [[2, 1], [3, 1]],
+  6:  [[3, 1], [3, 2]],
+  7:  [[3, 1], [4, 1]],
+  8:  [[4, 1], [4, 2]],
+  9:  [[3, 1], [6, 1]],
+  10: [[4, 1], [6, 1]],
+  12: [[6, 1], [6, 2]],
+};
+const miniCardOf = ([kind, grade]) => ({ kind, grade, id: kind * 100 + grade });
+
 window.miniRank = function (show) {
   const box = document.getElementById('miniRankModal');
   if (!show) return box.classList.remove('show');
   const ev = miniState && miniState.myEval;
-  const rows = MINI_TIERS.map((t, i) => {
-    const me = ev && ev.sniper === 0 && ev.tier === i;
-    // "지금 내 패" 를 문장에 이어 붙이면 사전 열쇠가 즉석 문자열이 되어 번역이 끊긴다.
-    // 통째로 열쇠가 될 수 있게 따로 떼어 둔다.
-    return `<div class="mn-tr ${me ? 'me' : ''}"><i>${i + 1}</i><b>${esc(t.name)}</b>`
-         + `<em>앞자리 합 ${t.sum}</em>${me ? '<em class="mn-now">지금 내 패</em>' : ''}</div>`;
+  const tbl = document.getElementById('mnTable');
+  tbl.innerHTML = '';
+
+  const row = (cards, no, name, note, cls) => {
+    const d = document.createElement('div');
+    d.className = 'mn-tr' + (cls ? ' ' + cls : '');
+    const i = document.createElement('i'); i.textContent = no;
+    const cw = document.createElement('div'); cw.className = 'mn-trcards';
+    for (const c of cards) cw.appendChild(makeCard(c));
+    const b = document.createElement('b'); b.textContent = name;
+    const em = document.createElement('em'); em.textContent = note;
+    d.append(i, cw, b, em);
+    return d;
+  };
+
+  MINI_TIERS.forEach((t, idx) => {
+    const mine = ev && ev.sniper === 0 && ev.tier === idx;
+    const d = row((MINI_EX[t.sum] || []).map(miniCardOf), idx + 1, t.name,
+                  `앞자리 합 ${t.sum}`, mine ? 'me' : '');
+    if (mine) { const now = document.createElement('em'); now.className = 'mn-now'; now.textContent = '지금 내 패'; d.appendChild(now); }
+    tbl.appendChild(d);
   });
+  // 스나이퍼 — 거울쌍(4-4 + 6-6)을 그대로 보여준다
   const sn = ev && ev.sniper > 0;
-  rows.push(`<div class="mn-tr sn ${sn ? 'me' : ''}"><i>🎯</i><b>스나이퍼</b>`
-          + `<em>앞·뒤 합이 모두 10</em>${sn ? '<em class="mn-now">지금 내 패</em>' : ''}</div>`);
-  document.getElementById('mnTable').innerHTML = rows.join('');
+  const d = row([miniCardOf([4, 4]), miniCardOf([6, 6])], '🎯', '스나이퍼',
+                '앞·뒤 합이 모두 10', 'sn' + (sn ? ' me' : ''));
+  if (sn) { const now = document.createElement('em'); now.className = 'mn-now'; now.textContent = '지금 내 패'; d.appendChild(now); }
+  tbl.appendChild(d);
   box.classList.add('show');
 };
 
@@ -4060,8 +4109,8 @@ function screenFx(kind) {
 }
 
 // 내 테이블/카드앞면 스킨을 게임 화면에 적용 (내 시야 기준 코스메틱)
-const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal', tbl_obsidian: 'tbl-obsidian', tbl_hanji: 'tbl-hanji', tbl_shard: 'tbl-shard' };
-const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal', face_obsidian: 'cf-obsidian', face_hanji: 'cf-hanji', face_shard: 'cf-shard' };
+const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal', tbl_obsidian: 'tbl-obsidian', tbl_hanji: 'tbl-hanji', tbl_shard: 'tbl-shard', tbl_hwatu: 'tbl-hwatu' };
+const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal', face_obsidian: 'cf-obsidian', face_hanji: 'cf-hanji', face_shard: 'cf-shard', face_hwatu: 'cf-hwatu' };
 function applyMySkins() {
   // 경기장이 여럿이다(2인전·미니게임). 하나만 칠하면 미니게임만 맨 테이블이 된다.
   for (const id of ['game', 'mini']) {

@@ -2189,9 +2189,12 @@ process.on('SIGTERM', () => { console.log('SIGTERM 수신 — 종료 중'); serv
 const miniTables = new Map();               // id → table
 const miniQueue = { 2: [], 3: [], 4: [] };  // 정원별 대기열 (멀티)
 const MINI_TURN_MS = 22000;                 // 사람이 안 두면 대신 넘겨준다
-const MINI_NEXT_MS = 4500;                  // 판이 끝나고 다음 판까지
+// 판이 끝나고 다음 판까지. 짧으면 남의 패를 볼 새도 없이 화면이 갈아엎힌다 —
+// 이 게임은 "왜 졌는지" 를 패를 보고 배우는 게 전부라 넉넉히 준다.
+const MINI_NEXT_MS = 9000;
 const MINI_FILL_MS = 20000;                 // 이만큼 안 차면 AI 로 채워 시작
 const MINI_AI_NAMES = ['타짜 김씨', '홍박사', '미스박', '광팔이'];
+const MINI_MIN_BUY = SUTDA.ANTE * 5;        // 이만큼은 있어야 배팅이랄 게 된다
 let miniSeq = 1;
 
 const miniLive = (t) => t.seats.filter((s) => s && s.stack >= SUTDA.ANTE).length;
@@ -2229,7 +2232,11 @@ function miniSit(socket, seats, mode) {
   const n = Math.min(SUTDA.MAX_SEATS, Math.max(SUTDA.MIN_SEATS, Number(seats) || 2));
   const u = accounts.byToken(socket.token);
   if (!u) return socket.emit('mini_error', '로그인이 필요해요.');
-  if ((u.coins || 0) < SUTDA.BUY_IN) return socket.emit('mini_error', '코인이 부족해요.');
+  // 가진 만큼 들고 앉는다(최대 BUY_IN). 정액으로 받으면 시작한 지 얼마 안 된
+  // 사람은 아예 못 앉는다 — 실제로 가입 코인(200)보다 자리값이 커져서 막혔다.
+  // 적게 들고 온 사람이 손해도 아니다. 사이드팟이 없어 레이즈는 제일 적게
+  // 가진 사람이 받을 수 있는 만큼에서 끊기기 때문이다.
+  if ((u.coins || 0) < MINI_MIN_BUY) return socket.emit('mini_error', `코인이 ${MINI_MIN_BUY} 이상 있어야 앉을 수 있어요.`);
 
   if (mode === 'solo') return miniOpenTable(n, [socket], 'solo');
 
@@ -2266,12 +2273,15 @@ function miniOpenTable(n, humans, mode) {
   for (const sk of humans) {
     if (seat >= n) break;
     if (!sk || !sk.connected || !sk.token) continue;
-    // 밑천을 산다 — 여기서 실패하면 그 사람은 못 앉는다
-    const paid = accounts.miniStake(sk.token, SUTDA.BUY_IN);
+    // 소지금을 산다 — 여기서 실패하면 그 사람은 못 앉는다
+    const have = accounts.byToken(sk.token);
+    const buy = Math.min(SUTDA.BUY_IN, Math.max(0, (have && have.coins) || 0));
+    if (buy < MINI_MIN_BUY) { sk.emit('mini_error', `코인이 ${MINI_MIN_BUY} 이상 있어야 앉을 수 있어요.`); continue; }
+    const paid = accounts.miniStake(sk.token, buy);
     if (paid.error) { sk.emit('mini_error', paid.error); continue; }
     const u = accounts.byToken(sk.token);
     t.seats[seat] = { ai: false, key: sk.id, token: sk.token,
-      nick: (u && u.nick) || '나', stack: SUTDA.BUY_IN };
+      nick: (u && u.nick) || '나', buyIn: buy, stack: buy };
     sk.mini = { tableId: t.id, seat };
     seat++;
   }
@@ -2420,7 +2430,7 @@ function miniSeatOut(t, seat, why) {
   if (sk) {
     sk.mini = null;
     sk.emit('mini_stood', {
-      back, buyIn: SUTDA.BUY_IN, net: back - SUTDA.BUY_IN,
+      back, buyIn: s.buyIn || SUTDA.BUY_IN, net: back - (s.buyIn || SUTDA.BUY_IN),
       coins: res && res.coins, profile: res && res.profile, why: why || null,
     });
   }

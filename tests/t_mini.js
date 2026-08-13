@@ -93,7 +93,9 @@ console.log('\n③ 첫 라운드는 한 장으로 가늠한다');
 
 console.log('\n④ 서버가 돈을 쥔다');
 {
-  ok('앉을 때 밑천을 산다', /accounts\.miniStake\(sk\.token, SUTDA\.BUY_IN\)/.test(srv));
+  ok('앉을 때 소지금을 산다', /accounts\.miniStake\(sk\.token, buy\)/.test(srv));
+  ok('가진 만큼만 산다 (상한 안에서)', /Math\.min\(SUTDA\.BUY_IN, Math\.max\(0, \(have && have\.coins\) \|\| 0\)\)/.test(srv));
+  ok('너무 적으면 못 앉는다', /buy < MINI_MIN_BUY/.test(srv));
   ok('자리 수는 서버가 깎는다', /Math\.min\(SUTDA\.MAX_SEATS,\s*Math\.max\(SUTDA\.MIN_SEATS/.test(srv));
   ok('화면이 보낸 금액은 안 쓴다', !/miniHumanAct[\s\S]{0,400}\bamount\b/.test(srv));
   ok('행동 이름은 문자열로 굳혀 넘긴다', /SUTDA\.act\(t\.st, m\.seat, String\(action \|\| ''\)\)/.test(srv));
@@ -156,6 +158,36 @@ console.log('\n⑥ 경기장');
   for (const a of acts) ok(`${a} 버튼이 있다`, new RegExp(`\\b${a}:`).test(cli.slice(cli.indexOf('MINI_LABEL'), cli.indexOf('MINI_ORDER'))));
   ok('그리는 순서에도 다 들어 있다',
      acts.every((a) => cli.slice(cli.indexOf('MINI_ORDER'), cli.indexOf('MINI_ACT_KO')).includes(`'${a}'`)));
+}
+
+console.log('\n⑥‴′ 화투 에디션');
+{
+  const acc = fs.readFileSync(src + '/accounts.js', 'utf8');
+  for (const id of ['back_hwatu', 'np_hwatu', 'tbl_hwatu', 'face_hwatu'])
+    ok(`상점에 ${id}`, new RegExp(`${id}:\\s*\\{`).test(acc));
+  ok('세트로 묶었다', /hwatu:\s*\{ back: 'back_hwatu'/.test(acc));
+  ok('뽑기에도 들어간다', /'back_hwatu'/.test(acc.slice(acc.indexOf('const GACHA_TIER'), acc.indexOf('const TIERS'))));
+  // 화면 표들 — 한 곳만 빠져도 갈아입어도 안 바뀐다
+  for (const [map, cls] of [['CBP', 'cb-hwatu'], ['TBLP', 'tp-hwatu'], ['CFP', 'cfp-hwatu'],
+                            ['NP_CLASS', 'np-hwatu'], ['TABLE_CLS', 'tbl-hwatu'], ['FACE_CLS', 'cf-hwatu']])
+    ok(`${map} 에 화투`, cli.includes(`'${cls}'`), cls);
+  // 우리 카드 종류가 곧 화투 월이다 — 2·3·4·6 넷 다 그림이 있어야 한다
+  for (const k of [2, 3, 4, 6])
+    ok(`${k}월 그림`, new RegExp(`#mini\\.cf-hwatu \\.card\\[data-kind="${k}"\\]::after`).test(html));
+  ok('숫자가 그림 위로 온다', /#mini\.cf-hwatu \.card > \* \{ position:relative; z-index:1/.test(html));
+  ok('미니게임 경기장에도 앞면 스킨이 먹는다', (html.match(/#mini\.cf-/g) || []).length >= 10);
+  ok('뒷면도 내 카드백으로', /myAccount && CB_CLASS\[myAccount\.cardBack\]/.test(cli));
+}
+
+console.log('\n⑥‴″ 결과를 볼 시간');
+{
+  ok('결과가 판을 덮지 않는다', /#miniOver \{[\s\S]{0,200}position:absolute/.test(html));
+  ok('배경을 어둡게 깔지 않는다', !/#miniOver \{[\s\S]{0,300}inset:0/.test(html));
+  ok('패를 먼저 보여주고 결과를 얹는다', /reason === 'showdown'[\s\S]{0,60}setTimeout\(showRes, 1600\)/.test(cli));
+  ok('다음 판까지 남은 시간을 센다', /초 뒤 다음 판/.test(cli));
+  ok('서버도 넉넉히 기다린다', /MINI_NEXT_MS = 9000/.test(srv));
+  ok('족보표에 실제 카드를 놓는다', /mn-trcards/.test(cli) && /\.mn-trcards \.card/.test(html));
+  ok('예시는 실제로 나올 수 있는 조합', /const MINI_EX = \{/.test(cli));
 }
 
 console.log('\n⑥″ 한 화면에 들어간다');
@@ -228,7 +260,7 @@ console.log('\n⑦ 설명서');
   ok('2~4인이라고 적혀 있다', /2~4인|2～4인/.test(box));
   // 설명서 숫자가 규칙과 같은가 — 어긋나면 사람이 규칙을 잘못 배운다
   ok('기본 단위가 규칙과 같다', box.includes(`🪙${S.ANTE}`), String(S.ANTE));
-  ok('밑천이 규칙과 같다', box.includes(`🪙${S.BUY_IN}`), String(S.BUY_IN));
+  ok('소지금 상한이 규칙과 같다', box.includes(`🪙${S.BUY_IN}`), String(S.BUY_IN));
   const sums = new Set();
   const deck = S.makeDeck();
   for (let i = 0; i < deck.length; i++) for (let j = i + 1; j < deck.length; j++)

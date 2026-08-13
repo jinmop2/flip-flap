@@ -806,7 +806,6 @@
     'AI와 대전': 'Play vs AI',
     '상대를 찾는 중…': 'Looking for players...',
     '20초 안에 안 차면 AI가 빈자리를 채웁니다.': 'Empty seats are filled by AI after 20 seconds.',
-    '곧 다음 판이 시작됩니다.': 'The next hand starts shortly.',
     '테이블이 닫혔어요.': 'The table closed.',
     '연결이 끊겼어요.': 'You were disconnected.',
     '빈자리': 'Empty seat',
@@ -819,12 +818,9 @@
     '모두 접어서 끝난 판입니다. 패는 안 깝니다.': 'Everyone else folded — no cards are shown.',
     '아직 한 장 — 두 번째 장을 받아야 족보가 나옵니다.':
       'Only one card yet — the rank appears once you get the second.',
-    '자리에 앉는 값 · 일어설 때 남은 만큼 돌려받습니다':
-      'Buy-in \u00b7 you cash out whatever is left when you stand',
     '이미 자리에 앉아 있어요.': 'You are already at a table.',
     '자리에 앉아 있지 않아요.': 'You are not at a table.',
     '아직 판이 안 끝났어요.': 'This hand is not over yet.',
-    '밑천이 떨어졌어요.': 'You are out of chips.',
     '2인': '2 players',
     '3인': '3 players',
     '4인': '4 players',
@@ -912,6 +908,7 @@
   // 값이 섞이는 문구는 통째로 짝지을 수 없다. 한국어 쪽 모양을 정규식으로 잡고
   // 영어 자리에 그대로 끼워 넣는다. ($1, $2 … 가 잡힌 값)
   const PATTERNS = [
+    [/^(\d+)초 뒤 다음 판$/, 'Next hand in $1s'],
     [/^내 차례 · (\d+)초 · 내 밑천 \ud83e\ude99(\d+)$/, 'Your turn \u00b7 $1s \u00b7 chips \ud83e\ude99$2'],
     [/^내 차례 · (\d+)초 · 내 밑천 \ud83e\ude99(\d+) · 받을 돈 \ud83e\ude99(\d+)$/,
       'Your turn \u00b7 $1s \u00b7 chips \ud83e\ude99$2 \u00b7 to call \ud83e\ude99$3'],
@@ -1091,7 +1088,7 @@
 
     <h3><span data-ico="\ud83c\udfb4"></span> How a hand goes</h3>
     <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>Everyone puts in the base unit <b>\ud83e\ude9910</b> and takes <b>one card</b>. The first player starts.</span></div>
+      <div class="r4-step"><b>1</b><span>Everyone puts in the base unit <b>\ud83e\ude9940</b> and takes <b>one card</b>. The first player starts.</span></div>
       <div class="r4-step"><b>2</b><span>The round closes once everyone but one has <b>matched</b> or folded.</span></div>
       <div class="r4-step"><b>3</b><span>If two or more remain, each takes <b>one more card</b> and a second betting round runs.</span></div>
       <div class="r4-step"><b>4</b><span>When that closes, hands are shown and ranked. The winner takes the whole pot.</span></div>
@@ -1106,14 +1103,14 @@
        their seat is taken over by AI from the next hand.</p>
 
     <h3><span data-ico="\ud83e\ude99"></span> Chips</h3>
-    <p>Sitting down converts <b>\ud83e\ude99200</b> of coins into chips. Bets come out of those chips, and
+    <p>Sitting down converts coins into chips \u2014 <b>as much as you have, up to \ud83e\ude99800</b> (\ud83e\ude99200 minimum). Bets come out of those chips, and
        <b>you cash out whatever is left when you stand up.</b> Coins are not touched hand by hand \u2014
        going all-in only means something when there is a stack in front of you.</p>
 
     <h3><span data-ico="\ud83d\udcb0"></span> Betting</h3>
     <div class="r4-tbl">
       <div class="r4-row r4-head"><span>Choice</span><span>What it costs</span></div>
-      <div class="r4-row"><span>Open</span><span>the base unit \ud83e\ude9910 (first player, to open)</span></div>
+      <div class="r4-row"><span>Open</span><span>the base unit \ud83e\ude9940 (first player, to open)</span></div>
       <div class="r4-row"><span>Pass</span><span>move on without adding (when nothing is owed)</span></div>
       <div class="r4-row"><span>Raise small</span><span>25% of the pot after matching</span></div>
       <div class="r4-row"><span>Raise big</span><span>50% of the pot after matching</span></div>

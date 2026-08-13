@@ -28,13 +28,15 @@ console.log('① 아무 일 없을 때는 쉬어야 한다');
   ok('먹히면 타이머를 끈다', /pendAct = null; watchPend\(\)/.test(c4));
 
   // 남아 있는 타이머를 세어 둔다. 늘어나면 여기서 걸린다.
-  // 6번째는 미니게임 차례 시계다 — 내 차례에만 돌고, 다시 그릴 때마다 끈다.
+  // 미니게임 것 둘(차례 시계·다음 판 카운트다운)은 판이 도는 동안만 돌고 반드시 꺼진다.
   const always = [...cli.matchAll(/setInterval\(/g)].length + [...c4.matchAll(/setInterval\(/g)].length;
-  ok('상시 타이머가 늘지 않았다', always <= 6, `${always}개`);
+  ok('상시 타이머가 늘지 않았다', always <= 7, `${always}개`);
   // 켜는 곳마다 끄는 곳이 있어야 한다 — 안 끄면 판을 나가도 계속 돈다
-  const on = [...cli.matchAll(/miniClock = setInterval/g)].length;
-  const off = [...cli.matchAll(/clearInterval\(miniClock\)/g)].length;
-  ok('차례 시계는 반드시 꺼진다', on > 0 && off >= on + 1, `${on}켜기 / ${off}끄기`);
+  for (const name of ['miniClock', 'miniNextTick']) {
+    const on = [...cli.matchAll(new RegExp(`${name} = setInterval`, 'g'))].length;
+    const off = [...cli.matchAll(new RegExp(`clearInterval\\(${name}\\)`, 'g'))].length;
+    ok(`${name} 는 반드시 꺼진다`, on > 0 && off >= on + 1, `${on}켜기 / ${off}끄기`);
+  }
 }
 
 console.log('\n② 매 프레임 다시 그리는 애니메이션');
