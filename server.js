@@ -2188,13 +2188,18 @@ process.on('SIGTERM', () => { console.log('SIGTERM 수신 — 종료 중'); serv
 // 건드리지 않는다 — 경쟁 조건이 생기고, 올인이 뜻을 가지려면 밑천이 있어야 한다.
 const miniTables = new Map();               // id → table
 const miniQueue = { 2: [], 3: [], 4: [] };  // 정원별 대기열 (멀티)
-const MINI_TURN_MS = 22000;                 // 사람이 안 두면 대신 넘겨준다
+// 사람이 안 두면 대신 넘겨준다. 짧으면 패를 까 보고 셈할 틈도 없이 넘어간다 —
+// 남을 오래 기다리게 하는 값이라 무한정 늘릴 수는 없어 45초로 잡았다.
+const MINI_TURN_MS = 45000;
 // 판이 끝나고 다음 판까지. 짧으면 남의 패를 볼 새도 없이 화면이 갈아엎힌다 —
 // 이 게임은 "왜 졌는지" 를 패를 보고 배우는 게 전부라 넉넉히 준다.
 const MINI_NEXT_MS = 9000;
 const MINI_FILL_MS = 20000;                 // 이만큼 안 차면 AI 로 채워 시작
 const MINI_AI_NAMES = ['타짜 김씨', '홍박사', '미스박', '광팔이'];
-const MINI_MIN_BUY = SUTDA.ANTE * 5;        // 이만큼은 있어야 배팅이랄 게 된다
+// 자리값은 코인으로 받고 판에서는 칩으로 논다(1코인 = 10칩).
+// 200코인이면 2000칩 — 배팅은 큼직하게 굴러가고 실제로 드는 코인은 적다.
+const MINI_BUY_COIN = SUTDA.BUY_IN / SUTDA.CHIP_PER_COIN;   // 200
+const MINI_MIN_COIN = 20;                                   // 이만큼(=200칩)은 있어야 판이 된다
 let miniSeq = 1;
 
 const miniLive = (t) => t.seats.filter((s) => s && s.stack >= SUTDA.ANTE).length;
@@ -2236,7 +2241,7 @@ function miniSit(socket, seats, mode) {
   // 사람은 아예 못 앉는다 — 실제로 가입 코인(200)보다 자리값이 커져서 막혔다.
   // 적게 들고 온 사람이 손해도 아니다. 사이드팟이 없어 레이즈는 제일 적게
   // 가진 사람이 받을 수 있는 만큼에서 끊기기 때문이다.
-  if ((u.coins || 0) < MINI_MIN_BUY) return socket.emit('mini_error', `코인이 ${MINI_MIN_BUY} 이상 있어야 앉을 수 있어요.`);
+  if ((u.coins || 0) < MINI_MIN_COIN) return socket.emit('mini_error', `코인이 ${MINI_MIN_COIN} 이상 있어야 앉을 수 있어요.`);
 
   if (mode === 'solo') return miniOpenTable(n, [socket], 'solo');
 
@@ -2273,15 +2278,15 @@ function miniOpenTable(n, humans, mode) {
   for (const sk of humans) {
     if (seat >= n) break;
     if (!sk || !sk.connected || !sk.token) continue;
-    // 소지금을 산다 — 여기서 실패하면 그 사람은 못 앉는다
+    // 코인을 내고 칩으로 바꾼다 — 여기서 실패하면 그 사람은 못 앉는다
     const have = accounts.byToken(sk.token);
-    const buy = Math.min(SUTDA.BUY_IN, Math.max(0, (have && have.coins) || 0));
-    if (buy < MINI_MIN_BUY) { sk.emit('mini_error', `코인이 ${MINI_MIN_BUY} 이상 있어야 앉을 수 있어요.`); continue; }
-    const paid = accounts.miniStake(sk.token, buy);
+    const coin = Math.min(MINI_BUY_COIN, Math.max(0, (have && have.coins) || 0));
+    if (coin < MINI_MIN_COIN) { sk.emit('mini_error', `코인이 ${MINI_MIN_COIN} 이상 있어야 앉을 수 있어요.`); continue; }
+    const paid = accounts.miniStake(sk.token, coin);
     if (paid.error) { sk.emit('mini_error', paid.error); continue; }
     const u = accounts.byToken(sk.token);
     t.seats[seat] = { ai: false, key: sk.id, token: sk.token,
-      nick: (u && u.nick) || '나', buyIn: buy, stack: buy };
+      nick: (u && u.nick) || '나', buyCoin: coin, stack: coin * SUTDA.CHIP_PER_COIN };
     sk.mini = { tableId: t.id, seat };
     seat++;
   }
@@ -2320,7 +2325,7 @@ function miniViewFor(t, seat) {
   v.ais = t.seats.map((s) => !!(s && s.ai));
   v.gone = t.seats.map((s) => !s);
   v.mode = t.mode;
-  v.buyIn = SUTDA.BUY_IN;
+  v.rate = SUTDA.CHIP_PER_COIN;
   v.deadline = t.deadline || 0;
   return v;
 }
@@ -2391,6 +2396,7 @@ function miniHandOver(t) {
     accounts.miniPay(sk.token, 0, won);            // 판수·승수만 (코인은 0)
     sk.emit('mini_over', {
       view: miniViewFor(t, i), won,
+      verdict: SUTDA.verdictOf(t.st),           // 왜 그 패가 이겼는지 — 규칙은 한 곳에서만 판정한다
       gain: won ? t.st.pot : 0,
       net: (won ? t.st.pot : 0) - t.st.put[i],
       canGo: t.seats[i].stack >= SUTDA.ANTE,
@@ -2424,13 +2430,16 @@ function miniSeatOut(t, seat, why) {
     SUTDA.act(t.st, seat, 'die');
     s.stack = t.st.stack[seat];
   }
-  const back = Math.max(0, s.stack | 0);
+  // 칩을 코인으로 되돌린다. 내림이라 잔칩은 버려진다 — 한 코인이 안 되는 칩이다.
+  const chips = Math.max(0, s.stack | 0);
+  const back = Math.floor(chips / SUTDA.CHIP_PER_COIN);
   const res = accounts.miniPay(s.token, back, null);       // 정산 — 전적은 안 센다
   const sk = io.sockets.sockets.get(s.key);
   if (sk) {
     sk.mini = null;
     sk.emit('mini_stood', {
-      back, buyIn: s.buyIn || SUTDA.BUY_IN, net: back - (s.buyIn || SUTDA.BUY_IN),
+      back, chips, rate: SUTDA.CHIP_PER_COIN,
+      buyIn: s.buyCoin || MINI_BUY_COIN, net: back - (s.buyCoin || MINI_BUY_COIN),
       coins: res && res.coins, profile: res && res.profile, why: why || null,
     });
   }

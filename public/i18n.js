@@ -794,12 +794,14 @@
     '승리!': 'You win!',
     '패배': 'You lose',
     '무승부': 'Draw',
-    '체크': 'Check',
-    '삥': 'Ping',
-    '하프': 'Half',
-    '쿼터': 'Quarter',
-    '따당': 'Double',
-    '올인': 'All-in',
+    '넘기기': 'Pass',
+    '카드를 눌러 확인하세요.': 'Tap your cards to look.',
+    '이 판 승': 'Winner',
+    '판 열기': 'Open',
+    '크게 올림': 'Raise big',
+    '살짝 올림': 'Raise small',
+    '두 배 올림': 'Double up',
+    '전부 걸기': 'Push all',
     '선': 'First',
     '일어서기': 'Stand up',
     '온라인 대전': 'Play online',
@@ -824,8 +826,9 @@
     '2인': '2 players',
     '3인': '3 players',
     '4인': '4 players',
-    '콜': 'Call',
-    '다이': 'Fold',
+    '맞추기': 'Match',
+    '접기': 'Fold',
+    '접음': 'Folded',
     '지배자': 'Overlord',
     '최고급': 'Premium',
     '중간계': 'Midlands',
@@ -1148,7 +1151,7 @@
 
     <h3><span data-ico="\ud83d\udc40"></span> Tips</h3>
     <ul>
-      <li><b>Nothing is face up.</b> All you can read is <b>how much</b> the others bet, and <b>when</b>.</li>
+      <li><b>Nothing is face up.</b> All you can read is <b>how much</b> the others bet, and <b>when</b>.</li>\n      <li>Even your own cards stay down \u2014 <b>tap to look</b>. Open both and your rank appears.</li>
       <li>The first round has one card only \u2014 there is no rank yet, just the front digit.</li>
       <li>Folding costs only what you already put in. Chasing with a bad hand is the expensive mistake.</li>
     </ul>

@@ -2647,10 +2647,13 @@ const MINI_TIERS = [
 // 서버는 상태를 통째로 보내므로, 자리마다 몇 장이었는지 기억해 두고 늘어난 만큼만
 // 날려 준다. 판이 새로 서면(장수가 줄면) 기억을 지워 전부 다시 날린다.
 let miniSeen = [];
+// 내가 눌러서 깐 카드 (판마다 비운다). miniShown 은 뒤집기 연출을 한 번만 주려고 둔다.
+let miniPeeked = new Set(), miniShown = new Set(), miniJustFlipped = new Set();
 function miniDealtCount(seat, count) {
   const had = miniSeen[seat] || 0;
   if (count < had) {                                    // 새 판 — 전부 새 카드
     miniSeen = [];
+    miniPeeked = new Set(); miniShown = new Set(); miniJustFlipped = new Set();
     miniSeen[seat] = count;                             // 기억을 안 남기면 매번 다시 날린다
     return count;
   }
@@ -2699,14 +2702,19 @@ function miniPaint(v) {
   const box = document.getElementById('mini');
   if (!box.classList.contains('on')) { box.classList.add('on'); box.style.display = 'flex'; }
 
-  // 남들 — 내 자리(0)는 아래에 따로 그린다
+  // 남들 — 내 자리는 아래에 따로 그린다.
+  // 예전엔 "내가 0번" 이라고 못 박아 두었는데, 온라인에서는 1·2·3번에 앉을 수도 있다.
+  // 그러면 내 자리가 위에 상대로 그려지고 진짜 상대는 아예 안 그려졌다
+  // (상대 이름이 내 닉네임으로 보이고 패가 뒤죽박죽이던 원인).
   const top = document.getElementById('mnSeats');
   top.innerHTML = '';
-  for (let i = 1; i < v.n; i++) {
+  for (let i = 0; i < v.n; i++) {
+    if (i === v.me) continue;
     const st = v.seats[i];
     const d = document.createElement('div');
     d.className = 'mn-seat2' + (st.turn && !v.over ? ' turn' : '') + (st.alive ? '' : ' dead')
-                + (v.over && v.winner === i ? ' win' : '');
+                + (v.over && v.winner === i ? ' win' : '')
+                + (v.over && v.winner !== i && st.alive ? ' lost' : '');
     const nm = document.createElement('div');
     nm.className = 'mn-nm';
     nm.innerHTML = `${esc((v.names && v.names[i]) || '상대')}`
@@ -2729,19 +2737,27 @@ function miniPaint(v) {
     }
     const stk = document.createElement('div');
     stk.className = 'mn-stk';
-    stk.textContent = st.alive ? `🪙 ${st.stack}` : '접음';
+    stk.textContent = st.alive ? `${st.stack} 칩` : '접음';
     const chip = document.createElement('div');
     chip.className = 'mn-chip' + (st.roundBet > 0 && st.alive ? ' on' : '');
-    chip.textContent = `🪙 ${st.roundBet}`;
+    chip.textContent = `${st.roundBet} 칩`;
     const stack = chipsEl(st.alive ? st.roundBet : 0, 'mini');
     const tag = document.createElement('div');
     tag.className = 'mn-act-tag';
-    tag.textContent = st.eval ? st.eval.name : '';
+    // 진행 중에는 "방금 뭘 했는지", 끝나면 족보. 남이 뭘 했는지 안 보이면
+    // 읽을 것이 아무것도 없는 게임이 된다.
+    tag.textContent = st.eval ? st.eval.name
+      : (!v.over && st.alive && st.lastAct ? (MINI_ACT_KO[st.lastAct] || '') : '');
+    if (!st.eval && st.lastAct) tag.classList.add('act');
+    if (v.over && v.winner === i) {
+      const w = document.createElement('div'); w.className = 'mn-winbadge'; w.textContent = '이 판 승';
+      d.appendChild(w);
+    }
     d.append(nm, cards, stk, stack, chip, tag);
     top.appendChild(d);
   }
 
-  document.getElementById('mnPotBig').textContent = `🪙 ${v.pot}`;
+  document.getElementById('mnPotBig').textContent = `${v.pot} 칩`;
   // 판돈이 늘었을 때만 떨어지는 연출을 준다 — 매번 튀면 눈이 아프다
   const potBox = document.getElementById('mnPotChips');
   const grew = v.pot > (miniPrevPot || 0);
@@ -2758,28 +2774,53 @@ function miniPaint(v) {
   plate.className = 'mn-meplate' + (v.turn === v.me && !v.over ? ' turn' : '');
   plate.innerHTML = `<b>${esc((v.names && v.names[v.me]) || '나')}</b>`
     + (me.first ? '<span class="mn-first">선</span>' : '')
-    + `<span class="mn-stk">🪙 ${me.stack}</span>`
-    + (me.roundBet > 0 ? `<span class="mn-chip on">🪙 ${me.roundBet}</span>` : '');
+    + `<span class="mn-stk">${me.stack} 칩</span>`
+    + (me.roundBet > 0 ? `<span class="mn-chip on">${me.roundBet} 칩</span>` : '');
   if (me.roundBet > 0) plate.appendChild(chipsEl(me.roundBet, 'mini'));
   const my = document.getElementById('mnMyCards');
   my.innerHTML = '';
-  const myFresh = miniDealtCount(v.me, (me.cards || []).length);
-  (me.cards || []).forEach((c, k) => {
-    const e = makeCard(c);
-    if (k >= (me.cards.length - myFresh)) {
+  const cards = me.cards || [];
+  const myFresh = miniDealtCount(v.me, cards.length);
+  cards.forEach((c, k) => {
+    // 판이 끝나면 다 까 준다. 그전에는 내가 눌러야 열린다 —
+    // 받자마자 다 보이면 "패를 까 보는" 맛이 없다.
+    const open = v.over || miniPeeked.has(c.id);
+    const e = open ? makeCard(c) : makeCard(null);
+    if (!open) {
+      const cb = myAccount && CB_CLASS[myAccount.cardBack];
+      if (cb) e.classList.add(cb);
+      e.classList.add('mn-hidden');
+      onTap(e, () => {
+        miniPeeked.add(c.id);
+        if (miniState) miniPaint(miniState);
+        playSound && playSound('flip');
+      });
+    }
+    if (k >= (cards.length - myFresh)) {
       e.classList.add('mn-deal');
-      e.style.animationDelay = `${(v.me * 90) + (k - (me.cards.length - myFresh)) * 60}ms`;
+      e.style.animationDelay = `${(v.me * 70) + (k - (cards.length - myFresh)) * 70}ms`;
+    } else if (open && miniJustFlipped.has(c.id)) {
+      e.classList.add('anim-reveal');                 // 방금 뒤집은 것만 뒤집기 연출
     }
     my.appendChild(e);
   });
-  // 족보가 아직 없으면 테두리까지 지운다 — 짧은 화면에서 설명이 접히면 빈 상자만 남는다
+  // 다음 그리기부터는 뒤집기 연출을 안 한다 (매번 뒤집히면 눈이 아프다)
+  miniJustFlipped = new Set([...miniPeeked].filter((id) => !miniShown.has(id)));
+  for (const id of miniPeeked) miniShown.add(id);
+  // 족보는 내가 두 장을 다 깠을 때만 알려 준다 — 안 깐 패의 족보를 먼저 알려주면
+  // 눌러서 까는 뜻이 없다.
+  const allOpen = cards.length === 2 && (v.over || cards.every((c) => miniPeeked.has(c.id)));
+  const shownEval = allOpen ? v.myEval : null;
   const evBox = document.getElementById('mnEval');
-  evBox.className = 'mn-eval' + (v.myEval ? '' : ' plain');
-  evBox.innerHTML = miniEvalBox(v.myEval, v.round);
+  evBox.className = 'mn-eval' + (shownEval ? '' : ' plain');
+  evBox.innerHTML = shownEval ? miniEvalBox(shownEval, v.round)
+    : `<div class="mn-ev-hint" style="text-align:center">${cards.length < 2
+        ? '아직 한 장 — 두 번째 장을 받아야 족보가 나옵니다.'
+        : '카드를 눌러 확인하세요.'}</div>`;
 
   const st0 = document.getElementById('mnStatus');
   if (v.over) st0.textContent = v.reason === 'fold' ? '남은 사람이 가져갑니다.' : '공개!';
-  else if (v.turn === v.me) st0.textContent = `내 차례 · 소지금 🪙${me.stack}${v.toCall ? ` · 맞출 돈 🪙${v.toCall}` : ''}`;
+  else if (v.turn === v.me) st0.textContent = `내 차례 · 소지금 ${me.stack}칩${v.toCall ? ` · 맞출 돈 ${v.toCall}칩` : ''}`;
   else st0.textContent = `${esc((v.names && v.names[v.turn]) || '상대')} 님이 고민하고 있어요…`;
 
   // 내 차례 제한 시간 — 서버가 넘겨주는 시각까지 센다
@@ -2789,8 +2830,8 @@ function miniPaint(v) {
       const left = Math.max(0, Math.ceil((v.deadline - Date.now()) / 1000));
       const el = document.getElementById('mnStatus');
       if (!el || !miniState || miniState.turn !== miniState.me) { clearInterval(miniClock); return; }
-      el.textContent = `내 차례 · ${left}초 · 소지금 🪙${me.stack}`
-        + (v.toCall ? ` · 맞출 돈 🪙${v.toCall}` : '');
+      el.textContent = `내 차례 · ${left}초 · 소지금 ${me.stack}칩`
+        + (v.toCall ? ` · 맞출 돈 ${v.toCall}칩` : '');
       if (left <= 0) clearInterval(miniClock);
     };
     tick(); miniClock = setInterval(tick, 500);
@@ -2805,7 +2846,7 @@ function miniPaint(v) {
     const b = document.createElement('button');
     b.className = 'mn-b ' + cls;
     const amt = v.amounts[a];
-    b.innerHTML = `${label}${amt ? `<small>🪙 ${amt}</small>` : ''}`;
+    b.innerHTML = `${label}${amt ? `<small>${amt} 칩</small>` : ''}`;
     b.onclick = () => miniAct(a);
     btns.appendChild(b);
   }
@@ -2860,6 +2901,7 @@ function miniHide() {
   const box = document.getElementById('mini');
   box.classList.remove('on'); box.style.display = 'none';
   miniState = null; miniSitting = false; miniSeen = [];
+  miniPeeked = new Set(); miniShown = new Set(); miniJustFlipped = new Set();
   document.getElementById('lobby').style.display = 'flex';
   document.body.classList.remove('ingame');
 }
@@ -2879,6 +2921,28 @@ socket.on('mini_state', (v) => {
   miniPaint(v);
 });
 socket.on('mini_error', (m) => toast('⚠️ ' + esc(m || '')));
+
+// 왜 그 패가 이겼는지 — 판정은 서버(sutda)가 하고, 여기서는 문장으로만 옮긴다.
+// "졌다" 만 뜨면 다음 판에 배우는 게 없다. 어느 규칙에서 갈렸는지가 이 게임의 핵심이다.
+function miniVerdictText(r) {
+  const v = r.view, verdict = r.verdict;
+  if (!v) return '';
+  if (v.reason === 'fold') return '<b>모두 접었습니다</b> — 남은 사람이 가져갑니다.';
+  if (!verdict || !verdict.vs.length) return '';
+  const nameOf = (i) => esc((v.names && v.names[i]) || '상대');
+  const win = verdict.winner === v.me ? '내 패' : nameOf(verdict.winner);
+  const line = (x) => {
+    const lose = x.seat === v.me ? '내 패' : nameOf(x.seat);
+    switch (x.rule) {
+      case 'snipe':  return `<b>${esc(x.win)}</b>가 ${lose}(${esc(x.lose)})를 <b>저격</b>했습니다`;
+      case 'front':  return `앞자리 합 <b>${x.a}</b> vs ${x.b} — ${lose}보다 작아서 이깁니다`;
+      case 'back':   return `앞자리 합이 같아 <b>뒷자리 합 ${x.a}</b> vs ${x.b} 로 갈렸습니다`;
+      case 'card':   return `합이 모두 같아 <b>더 강한 카드 ${esc(x.a)}</b> vs ${esc(x.b)} 로 갈렸습니다`;
+      default:       return '완전히 같은 패입니다';
+    }
+  };
+  return `<b>${win}</b> 승 — ` + verdict.vs.map(line).join('<br>');
+}
 
 let miniNextTick = null;
 socket.on('mini_over', (r) => {
@@ -2919,8 +2983,8 @@ socket.on('mini_over', (r) => {
 
 socket.on('mini_stood', (r) => {
   miniHide();
-  document.getElementById('mnStoodNet').textContent =
-    `🪙 ${r.back} 회수 (${r.net > 0 ? '+' : ''}${r.net})`;
+  document.getElementById('mnStoodNet').innerHTML =
+    `${r.chips} 칩 → <b>🪙 ${r.back}</b> 회수 (${r.net > 0 ? '+' : ''}${r.net})`;
   document.getElementById('mnStoodWhy').textContent = r.why || '';
   document.getElementById('miniStoodModal').classList.add('show');
   if (myAccount && typeof r.coins === 'number') { myAccount.coins = r.coins; renderAccount(); }

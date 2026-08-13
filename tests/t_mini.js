@@ -93,9 +93,11 @@ console.log('\n③ 첫 라운드는 한 장으로 가늠한다');
 
 console.log('\n④ 서버가 돈을 쥔다');
 {
-  ok('앉을 때 소지금을 산다', /accounts\.miniStake\(sk\.token, buy\)/.test(srv));
-  ok('가진 만큼만 산다 (상한 안에서)', /Math\.min\(SUTDA\.BUY_IN, Math\.max\(0, \(have && have\.coins\) \|\| 0\)\)/.test(srv));
-  ok('너무 적으면 못 앉는다', /buy < MINI_MIN_BUY/.test(srv));
+  ok('앉을 때 코인을 낸다', /accounts\.miniStake\(sk\.token, coin\)/.test(srv));
+  ok('가진 만큼만 낸다 (상한 안에서)', /Math\.min\(MINI_BUY_COIN, Math\.max\(0, \(have && have\.coins\) \|\| 0\)\)/.test(srv));
+  ok('너무 적으면 못 앉는다', /coin < MINI_MIN_COIN/.test(srv));
+  ok('코인을 칩으로 바꿔 앉는다', /stack: coin \* SUTDA\.CHIP_PER_COIN/.test(srv));
+  ok('일어설 때 칩을 코인으로', /Math\.floor\(chips \/ SUTDA\.CHIP_PER_COIN\)/.test(srv));
   ok('자리 수는 서버가 깎는다', /Math\.min\(SUTDA\.MAX_SEATS,\s*Math\.max\(SUTDA\.MIN_SEATS/.test(srv));
   ok('화면이 보낸 금액은 안 쓴다', !/miniHumanAct[\s\S]{0,400}\bamount\b/.test(srv));
   ok('행동 이름은 문자열로 굳혀 넘긴다', /SUTDA\.act\(t\.st, m\.seat, String\(action \|\| ''\)\)/.test(srv));
@@ -135,6 +137,11 @@ console.log('\n⑥ 경기장');
   ok('스킨을 두 경기장에 다 칠한다', /for \(const id of \['game', 'mini'\]\)/.test(cli));
   ok('경기장이 있다', /<div id="mini">/.test(html));
   ok('남의 자리를 그린다', /id="mnSeats"/.test(html) && /mn-seat2/.test(cli));
+  // 온라인에서는 내가 0번이 아닐 수 있다. "내가 0번" 이라고 박아 두면
+  // 내 자리가 상대로 그려지고 진짜 상대는 안 그려진다.
+  ok('내가 몇 번 자리든 상대만 위에 그린다',
+     /for \(let i = 0; i < v\.n; i\+\+\) \{\s*\n\s*if \(i === v\.me\) continue;/.test(cli));
+  ok('내 자리는 아래에 따로', /v\.seats\[v\.me\]/.test(cli));
   ok('판돈이 크게 보인다', /id="mnPotBig"/.test(html));
   ok('라운드를 알려준다', /id="mnRound"/.test(html) && /첫 번째 걸기/.test(cli));
   ok('남의 패는 뒷면으로 깐다', /else for \(let k = 0; k < st\.count; k\+\+\) \{[\s\S]{0,240}makeCard\(null\)/.test(cli));
@@ -158,6 +165,34 @@ console.log('\n⑥ 경기장');
   for (const a of acts) ok(`${a} 버튼이 있다`, new RegExp(`\\b${a}:`).test(cli.slice(cli.indexOf('MINI_LABEL'), cli.indexOf('MINI_ORDER'))));
   ok('그리는 순서에도 다 들어 있다',
      acts.every((a) => cli.slice(cli.indexOf('MINI_ORDER'), cli.indexOf('MINI_ACT_KO')).includes(`'${a}'`)));
+}
+
+console.log('\n⑥⁗ 내 패는 눌러서 깐다');
+{
+  ok('안 깐 패는 뒷면으로 둔다', /const open = v\.over \|\| miniPeeked\.has\(c\.id\)/.test(cli));
+  ok('누르면 열린다', /miniPeeked\.add\(c\.id\)/.test(cli));
+  ok('누르라고 티를 낸다', /\.mn-cards \.card\.mn-hidden::after/.test(html));
+  ok('판이 끝나면 알아서 다 깐다', /v\.over \|\| miniPeeked/.test(cli));
+  ok('두 장 다 까야 족보가 뜬다', /cards\.every\(\(c\) => miniPeeked\.has\(c\.id\)\)/.test(cli));
+  ok('새 판이면 다시 덮인다', /miniPeeked = new Set\(\)/.test(cli));
+  ok('탭은 pointer 로 받는다 (클릭은 폰에서 샌다)', /onTap\(e, \(\) => \{/.test(cli));
+}
+
+console.log('\n⑥⁗′ 누가 이겼는지');
+{
+  ok('규칙은 서버에서만 판정한다', /function explain\(/.test(fs.readFileSync(src + '/sutda.js', 'utf8')));
+  ok('판정 근거를 내려보낸다', /verdict: SUTDA\.verdictOf\(t\.st\)/.test(srv));
+  ok('화면은 문장으로만 옮긴다', /function miniVerdictText/.test(cli));
+  for (const rule of ['snipe', 'front', 'back', 'card'])
+    ok(`${rule} 로 갈린 경우를 설명한다`, new RegExp(`case '${rule}'`).test(cli));
+  ok('이긴 자리에 띠를 붙인다', /mn-winbadge/.test(cli) && /\.mn-winbadge \{/.test(html));
+  ok('진 자리는 흐려진다', /\.mn-seat2\.lost/.test(html));
+  ok('진행 중엔 남이 방금 한 행동이 보인다', /MINI_ACT_KO\[st\.lastAct\]/.test(cli));
+  // 실제로 네 규칙이 다 나오는지 — 설명이 한 갈래만 돌면 반쪽짜리다
+  const mk = (...ids) => ids.map((id) => ({ kind: Math.floor(id / 100), grade: id % 100, id }));
+  ok('앞자리로 갈린다', S.explain(mk(201, 202), mk(301, 302)).rule === 'front');
+  ok('뒷자리로 갈린다', S.explain(mk(301, 302), mk(303, 304)).rule === 'back');
+  ok('저격으로 갈린다', S.explain(mk(404, 606), mk(201, 202)).rule === 'snipe');
 }
 
 console.log('\n⑥‴′ 화투 에디션');
@@ -259,8 +294,9 @@ console.log('\n⑦ 설명서');
   ok('선은 이긴 사람이 잡는다고 적혀 있다', /선은[\s\S]{0,20}이긴/.test(box));
   ok('2~4인이라고 적혀 있다', /2~4인|2～4인/.test(box));
   // 설명서 숫자가 규칙과 같은가 — 어긋나면 사람이 규칙을 잘못 배운다
-  ok('기본 단위가 규칙과 같다', box.includes(`🪙${S.ANTE}`), String(S.ANTE));
-  ok('소지금 상한이 규칙과 같다', box.includes(`🪙${S.BUY_IN}`), String(S.BUY_IN));
+  ok('기본 단위가 규칙과 같다', box.includes(`${S.ANTE}칩`), String(S.ANTE));
+  ok('칩 수가 규칙과 같다', box.includes(`${S.BUY_IN}칩`), String(S.BUY_IN));
+  ok('환율이 규칙과 같다', box.includes(`${S.BUY_IN / S.CHIP_PER_COIN}`), String(S.CHIP_PER_COIN));
   const sums = new Set();
   const deck = S.makeDeck();
   for (let i = 0; i < deck.length; i++) for (let j = i + 1; j < deck.length; j++)
@@ -277,8 +313,12 @@ console.log('\n⑧ 영어판');
   ok('영어판에 한글이 안 남았다', !/[가-힣]/.test(b.replace(/\/\/.*$/gm, '')),
      (b.replace(/\/\/.*$/gm, '').match(/[가-힣]+/g) || []).slice(0, 3).join(','));
   ok('닫기 버튼이 살아 있다', /toggleRulesMini\(false\)/.test(b));
-  for (const k of ['미니게임', '체크', '콜', '다이', '삥', '하프', '쿼터', '따당', '올인', '지배자', '꼴찌'])
+  // 화면에 실제로 쓰는 말이 사전에 있어야 한다 (도박판 말은 이제 안 쓴다)
+  for (const k of ['미니게임', '넘기기', '판 열기', '살짝 올림', '크게 올림', '두 배 올림',
+                   '전부 걸기', '맞추기', '접기', '지배자', '꼴찌'])
     ok(`${k} 번역이 있다`, i18n.includes(`'${k}':`));
+  for (const k of ['삥', '하프', '쿼터', '따당', '올인', '다이'])
+    ok(`도박판 말 ${k} 은 사전에 없다`, !i18n.includes(`'${k}':`), k);
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

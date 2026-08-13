@@ -118,7 +118,10 @@ const ANTE = 40;                 // 기본 단위 = 판에 들어갈 때 각자 
 const BET_UNIT = ANTE;           // 판 여는 값 (예전 이름 — 밖에서 쓰던 것을 살려 둔다)
 // 자리에 앉을 때 들고 오는 돈. 전부 걸기가 뜻을 가지려면 앞에 쌓인 소지금이 있어야 한다.
 // 기본 단위의 스무 배로 잡았다 — 이보다 얇으면 두세 판에 털려 배팅이랄 게 없어진다.
-const BUY_IN = ANTE * 20;
+const BUY_IN = ANTE * 50;        // 2000칩
+// 코인 ↔ 칩 환율. 판에서는 칩으로만 세고, 코인은 앉을 때와 일어설 때만 만진다.
+// 큰 숫자로 굴려야 배팅이 배팅답고, 코인은 그만큼 적게 든다(200코인 = 2000칩).
+const CHIP_PER_COIN = 10;
 const MAX_SEATS = 4;
 const MIN_SEATS = 2;
 
@@ -325,6 +328,51 @@ function act(st, seat, action) {
   return finish(st, resolve(st), 'showdown');
 }
 
+// 왜 이겼는가 — 이긴 패와 진 패를 대 놓고 "어느 규칙에서 갈렸는지" 를 짚어 준다.
+// 화면이 스스로 계산하면 규칙이 두 벌이 되어 언젠가 어긋난다. 여기서 한 번만 판정한다.
+function explain(winHand, loseHand) {
+  const A = evaluate(winHand), B = evaluate(loseHand);
+  if (snipes(A, B)) return { rule: 'snipe', win: A.name, lose: B.name };
+  if (snipes(B, A)) return { rule: 'sniped', win: A.name, lose: B.name };
+  if (A.frontSum !== B.frontSum)
+    return { rule: 'front', a: A.frontSum, b: B.frontSum, win: A.name, lose: B.name };
+  if (A.backSum !== B.backSum)
+    return { rule: 'back', a: A.backSum, b: B.backSum, win: A.name, lose: B.name };
+  if (A.minValue !== B.minValue) {
+    const card = (v) => `${Math.floor(v / 100)}-${v % 100}`;
+    return { rule: 'card', a: card(A.minValue), b: card(B.minValue), win: A.name, lose: B.name };
+  }
+  return { rule: 'same', win: A.name, lose: B.name };
+}
+
+// 판이 끝났을 때, 이긴 자리와 진 자리들을 하나씩 짚어 준다.
+function verdictOf(st) {
+  if (!st.over || st.reason !== 'showdown' || st.winner === null) return null;
+  const out = [];
+  for (let i = 0; i < st.n; i++) {
+    if (i === st.winner || !st.alive[i] || st.hands[i].length < 2) continue;
+    out.push(Object.assign({ seat: i }, explain(st.hands[st.winner], st.hands[i])));
+  }
+  return { winner: st.winner, vs: out };
+}
+
+// 이번 라운드에 그 자리가 마지막으로 한 행동. 화면에 띄우고, AI 가 앞뒤를 맞추는 데 쓴다.
+function lastActOf(st, seat) {
+  for (let i = st.log.length - 1; i >= 0; i--) {
+    const l = st.log[i];
+    if (l.round !== st.round) break;
+    if (l.seat === seat) return l.action;
+  }
+  return null;
+}
+// 이 판에서 한 번이라도 돈을 올렸는가 — 올려 놓고 다음 라운드에 갑자기 죽으면
+// 사람 눈에 "쟤는 세면 계속 건다" 가 안 보인다.
+function openedThisHand(st, seat) {
+  for (const l of st.log)
+    if (l.seat === seat && ['ping', 'quarter', 'half', 'ttadang', 'allin'].includes(l.action)) return true;
+  return false;
+}
+
 // 화면·AI 에 내려보낼 형태. 남의 패는 공개로 끝났을 때만 실린다 —
 // 죽은 사람 패는 끝까지 안 깐다. 다음 판에 읽히고, 실제 섯다에서도 안 깐다.
 function viewFor(st, me) {
@@ -338,6 +386,8 @@ function viewFor(st, me) {
       first: i === st.first, turn: i === st.turn,
       cards: open ? st.hands[i].slice() : null,
       count: st.hands[i].length,
+      lastAct: lastActOf(st, i),               // 이번 라운드에 마지막으로 한 행동
+      opened: openedThisHand(st, i),           // 이 판에서 한 번이라도 걸었는가
       // 첫 라운드는 한 장뿐이라 족보가 없다 — 두 장이 되었을 때만 매긴다
       eval: open && st.hands[i].length === 2 ? evaluate(st.hands[i]) : null,
     });
@@ -528,7 +578,8 @@ function aiAction(view, rand) {
 }
 
 module.exports = {
-  ANTE, BET_UNIT, BUY_IN, MAX_SEATS, MIN_SEATS,
+  ANTE, BET_UNIT, BUY_IN, CHIP_PER_COIN, MAX_SEATS, MIN_SEATS,
+  explain, verdictOf,
   start, act, actionsFor, viewFor, roundClosed, raiseAmounts, capFor, resolve,
   aiAction, aiSimple, AI, handStrength, strengthOf, equityOf, equity2, equity1,
   SPEC, TIER_NAME, TIER_OF_SUM,

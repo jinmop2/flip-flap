@@ -2391,11 +2391,14 @@
     /* 카드를 나눠줄 때 — 위에서 날아와 앉는다. 한 장씩 늦게 떨어져야
        "나눠준다" 로 읽힌다(동시에 나타나면 그냥 바뀐 것처럼 보인다). */
     @keyframes mnDeal {
-      0%   { opacity:0; transform:translateY(-90px) scale(.72) rotate(-10deg); }
-      70%  { opacity:1; transform:translateY(4px) scale(1.03) rotate(1deg); }
+      0%   { opacity:0; transform:translateY(-190px) scale(.6) rotate(-16deg); }
+      55%  { opacity:1; transform:translateY(0) scale(1.02) rotate(2deg); }
+      /* 착지에서 한 번 납작해졌다 돌아온다 — 이게 "탁" 소리처럼 읽힌다 */
+      70%  { transform:translateY(2px) scaleX(1.09) scaleY(.9) rotate(0deg); }
+      85%  { transform:translateY(-3px) scale(1.02); }
       100% { opacity:1; transform:none; }
     }
-    .mn-cards .card.mn-deal { animation:mnDeal .42s cubic-bezier(.3,.9,.4,1.15) both; }
+    .mn-cards .card.mn-deal { animation:mnDeal .38s cubic-bezier(.22,.9,.3,1) both; }
     @media (prefers-reduced-motion: reduce) { .mn-cards .card.mn-deal { animation:none; } }
 
     /* ══ 화투 에디션 ══════════════════════════════════════════════════
@@ -2511,6 +2514,31 @@
     #miniOver .mn-log { margin-top:3px; }
     .mn-obtns { display:flex; gap:6px; margin-top:8px; justify-content:center; }
     .mn-obtns .btn { width:auto; padding:7px 14px; }
+
+    /* 판정 근거 — "졌다" 만 뜨면 다음 판에 배우는 게 없다 */
+    .mn-verdict { font-size:.74rem; line-height:1.5; color:#e0cba0; margin-top:4px; }
+    .mn-verdict b { color:#ffe9a8; }
+    /* 이 판 승 — 자리 위에 붙는 띠 */
+    .mn-seat2 { position:relative; }
+    .mn-winbadge {
+      position:absolute; top:-9px; left:50%; transform:translateX(-50%);
+      font-size:.6rem; font-weight:900; letter-spacing:.5px; white-space:nowrap;
+      padding:2px 8px; border-radius:8px; color:#0f2a18;
+      background:linear-gradient(180deg,#a8f0bc,#5cd69c); border:1px solid #d9ffe8;
+      box-shadow:0 2px 8px rgba(60,200,130,.45);
+    }
+    .mn-seat2.win { border-color:#8fe0a0; box-shadow:0 0 0 2px rgba(143,224,160,.45), 0 8px 22px rgba(0,0,0,.45); }
+    .mn-seat2.lost { opacity:.62; }
+    /* 진행 중 남이 방금 한 행동 */
+    .mn-act-tag.act { color:#ffd97a; font-weight:800; }
+    /* 아직 안 깐 내 패 — 누르라고 티를 낸다 */
+    .mn-cards .card.mn-hidden { cursor:pointer; }
+    .mn-cards .card.mn-hidden::after {
+      content:''; position:absolute; inset:-3px; border-radius:11px; pointer-events:none;
+      border:2px solid rgba(245,207,110,.55); animation:peekPulse 1.4s ease-in-out infinite;
+    }
+    @keyframes peekPulse { 0%,100% { opacity:.35 } 50% { opacity:1 } }
+    @media (prefers-reduced-motion: reduce) { .mn-cards .card.mn-hidden::after { animation:none; opacity:.7 } }
 
     /* ── 배팅 칩 ── */
     /* 숫자만 띄우면 판이 얼마나 큰지 눈에 안 들어온다. 실제로 쌓이는 걸 보여준다.
@@ -3925,6 +3953,7 @@
 <div id="miniOver">
   <div class="mn-res" id="mnRes"></div>
   <div class="mn-net" id="mnNet"></div>
+  <div class="mn-verdict" id="mnVerdict"></div>
   <div class="mn-log" id="mnOverWhy"></div>
   <div class="mn-obtns">
     <button class="btn btn-gold btn-sm" id="mnNextBtn" onclick="miniNext()">다음 판</button>
@@ -3949,7 +3978,7 @@
         <button class="sp-segb" data-seats="4" onclick="miniPickSeats(4)">4인</button>
       </div>
     </div>
-    <div class="mn-pot"><b>🪙 800</b><span>가진 만큼 들고 앉습니다(최대) · 일어설 때 남은 만큼 돌려받습니다</span></div>
+    <div class="mn-pot"><b>🪙 200 → 2000칩</b><span>코인을 칩으로 바꿔 앉습니다 · 일어설 때 남은 칩을 코인으로 돌려받습니다</span></div>
     <button class="btn btn-gold" onclick="miniQuick()">온라인 대전</button>
     <button class="btn btn-outline" onclick="miniSit()">AI와 대전</button>
     <div class="lb-btns">
@@ -4171,7 +4200,7 @@
 
     <h3><span data-ico="🎴"></span> 한 판의 흐름</h3>
     <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>모두 기본 단위 <b>🪙40</b>을 걸고 카드를 <b>한 장씩</b> 받습니다. 선부터 겁니다.</span></div>
+      <div class="r4-step"><b>1</b><span>모두 기본 단위 <b>40칩</b>을 걸고 카드를 <b>한 장씩</b> 받습니다. 선부터 겁니다.</span></div>
       <div class="r4-step"><b>2</b><span>한 명 빼고 모두 <b>맞추거나</b> 접으면 그 판의 걸기가 닫힙니다.</span></div>
       <div class="r4-step"><b>3</b><span>둘 이상 남았으면 <b>한 장 더</b> 받고 두 번째로 겁니다.</span></div>
       <div class="r4-step"><b>4</b><span>두 번째 걸기가 닫히면 패를 열고 족보로 가릅니다. 이긴 사람이 판돈을 전부.</span></div>
@@ -4181,23 +4210,24 @@
 
     <h3><span data-ico="🌐"></span> 온라인 대전</h3>
     <p><b>온라인 대전</b>을 고르면 같은 인원을 기다리는 사람과 붙습니다. 20초 안에 안 차면
-       빈자리는 AI가 채웁니다. 온라인에서는 내 차례에 <b>22초</b>가 주어지고, 시간이 지나면 넘기기(또는 접기)로
+       빈자리는 AI가 채웁니다. 온라인에서는 내 차례에 <b>45초</b>가 주어지고, 시간이 지나면 넘기기(또는 접기)로
        대신 넘어갑니다. 누가 일어서도 판은 이어집니다 — 빈자리는 다음 판부터 AI가 맡습니다.</p>
 
-    <h3><span data-ico="🪙"></span> 소지금</h3>
-    <p>자리에 앉을 때 코인을 소지금으로 바꿔 갑니다 — <b>가진 만큼, 최대 🪙800</b>(최소 🪙200). 거는 돈은 이 소지금에서만 나가고,
-       <b>일어설 때 남은 만큼 코인으로 돌려받습니다.</b> 판마다 코인을 만지지 않는 이유는
-       전부 걸기가 뜻을 가지려면 앞에 쌓인 소지금이 있어야 하기 때문입니다.</p>
+    <h3><span data-ico="🪙"></span> 칩과 코인</h3>
+    <p>자리에 앉을 때 코인을 <b>칩</b>으로 바꿔 갑니다 — <b>🪙200 = 2000칩</b>(1코인에 10칩,
+       가진 만큼 최대 🪙200, 최소 🪙20). 판에서는 칩으로만 세고,
+       <b>일어설 때 남은 칩을 코인으로 되돌려 받습니다.</b>
+       판마다 코인을 만지지 않는 이유는 전부 걸기가 뜻을 가지려면 앞에 쌓인 칩이 있어야 하기 때문입니다.</p>
 
     <h3><span data-ico="💰"></span> 돈 거는 법</h3>
     <div class="r4-tbl">
       <div class="r4-row r4-head"><span>고를 수 있는 것</span><span>내는 돈</span></div>
-      <div class="r4-row"><span>판 열기</span><span>기본 단위 🪙40 (선만, 판을 열 때)</span></div>
+      <div class="r4-row"><span>판 열기</span><span>기본 단위 40칩 (선만, 판을 열 때)</span></div>
       <div class="r4-row"><span>넘기기</span><span>안 걸고 차례를 넘김 (맞출 돈이 없을 때)</span></div>
       <div class="r4-row"><span>살짝 올림</span><span>맞춘 뒤 판돈의 25%</span></div>
       <div class="r4-row"><span>크게 올림</span><span>맞춘 뒤 판돈의 50%</span></div>
       <div class="r4-row"><span>두 배 올림</span><span>앞사람이 건 돈의 2배</span></div>
-      <div class="r4-row"><span>전부 걸기</span><span>남은 소지금 전부</span></div>
+      <div class="r4-row"><span>전부 걸기</span><span>남은 칩 전부</span></div>
       <div class="r4-row"><span>맞추기</span><span>앞사람만큼 맞추고 판을 닫음</span></div>
       <div class="r4-row"><span>접기</span><span>건 돈을 버리고 빠짐</span></div>
     </div>
@@ -4231,6 +4261,7 @@
     <h3><span data-ico="👀"></span> 요령</h3>
     <ul>
       <li><b>보이는 카드가 하나도 없습니다.</b> 읽을 것은 남이 <b>얼마를 언제 거는가</b>뿐입니다.</li>
+      <li>내 패도 <b>눌러야 열립니다.</b> 두 장을 다 열면 족보가 뜹니다.</li>
       <li>첫 라운드는 카드가 한 장뿐이라 족보가 없습니다. 앞자리 하나로만 가늠하세요.</li>
       <li>일찍 접으면 이미 건 돈만 잃습니다. 나쁜 패로 끝까지 따라가는 게 제일 비쌉니다.</li>
     </ul>
