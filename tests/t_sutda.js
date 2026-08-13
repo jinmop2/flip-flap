@@ -253,11 +253,15 @@ console.log('\n⑬ 배팅 — 금액');
   S.act(st, 0, 'ping');
   const A = S.raiseAmounts(st, 1);
   ok('콜은 모자란 만큼', A.call === S.ANTE, String(A.call));
-  // 하프 = 콜 + (콜을 받은 뒤 판돈)/2
+  // 하프 = 콜 + (콜을 받은 뒤 판돈)/2, 기본 단위로 내림
   const potAfterCall = st.pot + A.call;
-  ok('하프는 받은 뒤 판돈의 절반', A.half === A.call + Math.floor(potAfterCall / 2),
-     `${A.half} vs ${A.call + Math.floor(potAfterCall / 2)}`);
-  ok('쿼터는 그 절반', A.quarter === A.call + Math.floor(potAfterCall / 4), String(A.quarter));
+  const unit = (x) => Math.max(S.ANTE, Math.floor(x / S.ANTE) * S.ANTE);
+  ok('하프는 받은 뒤 판돈의 절반', A.half === A.call + unit(potAfterCall / 2),
+     `${A.half} vs ${A.call + unit(potAfterCall / 2)}`);
+  ok('쿼터는 그 절반', A.quarter === A.call + unit(potAfterCall / 4), String(A.quarter));
+  ok('금액이 기본 단위로 떨어진다',
+     [A.ping, A.half, A.quarter, A.ttadang].every((x) => x % S.ANTE === 0),
+     JSON.stringify([A.ping, A.half, A.quarter, A.ttadang]));
   ok('따당은 앞사람의 두 배', A.ttadang === st.roundBet[0] * 2 - st.roundBet[1], String(A.ttadang));
   const before = st.pot, myStack = st.stack[1];
   S.act(st, 1, 'half');

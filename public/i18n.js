@@ -801,8 +801,15 @@
     '따당': 'Double',
     '올인': 'All-in',
     '선': 'First',
-    '앉기': 'Sit down',
     '일어서기': 'Stand up',
+    '온라인 대전': 'Play online',
+    'AI와 대전': 'Play vs AI',
+    '상대를 찾는 중…': 'Looking for players...',
+    '20초 안에 안 차면 AI가 빈자리를 채웁니다.': 'Empty seats are filled by AI after 20 seconds.',
+    '곧 다음 판이 시작됩니다.': 'The next hand starts shortly.',
+    '테이블이 닫혔어요.': 'The table closed.',
+    '연결이 끊겼어요.': 'You were disconnected.',
+    '빈자리': 'Empty seat',
     '다음 판': 'Next hand',
     '정산': 'Cash out',
     '첫 번째 배팅': 'First betting round',
@@ -905,6 +912,10 @@
   // 값이 섞이는 문구는 통째로 짝지을 수 없다. 한국어 쪽 모양을 정규식으로 잡고
   // 영어 자리에 그대로 끼워 넣는다. ($1, $2 … 가 잡힌 값)
   const PATTERNS = [
+    [/^내 차례 · (\d+)초 · 내 밑천 \ud83e\ude99(\d+)$/, 'Your turn \u00b7 $1s \u00b7 chips \ud83e\ude99$2'],
+    [/^내 차례 · (\d+)초 · 내 밑천 \ud83e\ude99(\d+) · 받을 돈 \ud83e\ude99(\d+)$/,
+      'Your turn \u00b7 $1s \u00b7 chips \ud83e\ude99$2 \u00b7 to call \ud83e\ude99$3'],
+    [/^\/ (\d+)$/, '/ $1'],
     [/^내 차례 · 내 밑천 \ud83e\ude99(\d+)$/, 'Your turn \u00b7 chips \ud83e\ude99$1'],
     [/^내 차례 · 내 밑천 \ud83e\ude99(\d+) · 받을 돈 \ud83e\ude99(\d+)$/,
       'Your turn \u00b7 chips \ud83e\ude99$1 \u00b7 to call \ud83e\ude99$2'],
@@ -1087,6 +1098,12 @@
       <div class="r4-step"><b>5</b><span>If only one player is left, they win outright \u2014 and <b>nobody shows</b>.</span></div>
       <div class="r4-step"><b>6</b><span><b>The winner becomes the first player</b> next hand.</span></div>
     </div>
+
+    <h3><span data-ico="\ud83c\udf10"></span> Playing online</h3>
+    <p>Pick <b>Play online</b> and you are matched with others waiting for the same table size.
+       Empty seats are filled by AI after 20 seconds. Online you get <b>22 seconds</b> per turn \u2014
+       run out and it checks (or folds) for you. If someone stands up the game keeps going;
+       their seat is taken over by AI from the next hand.</p>
 
     <h3><span data-ico="\ud83e\ude99"></span> Chips</h3>
     <p>Sitting down converts <b>\ud83e\ude99200</b> of coins into chips. Bets come out of those chips, and

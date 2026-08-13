@@ -1307,131 +1307,13 @@ io.on('connection', (socket) => {
   });
 
   // ── 미니게임 (섯다식 두 장 승부, 2~4인) ──
-  //
-  // 자리에 앉을 때 밑천을 사고, 일어설 때 남은 밑천을 돌려받는다.
-  // 판마다 코인을 만지지 않는 이유는 두 가지다 — 배팅이 오갈 때마다 계좌를
-  // 건드리면 경쟁 조건이 생기고, 올인이 뜻을 가지려면 앞에 쌓인 밑천이 있어야 한다.
-  //
-  // 판 상태는 서버에만 있다. 화면은 자기 패와 판돈만 받고, 얼마가 오가는지는
-  // 규칙에서 계산한다 — 클라이언트가 보낸 금액은 어떤 경우에도 쓰지 않는다.
-  const MINI_AI_NAMES = ['타짜 김씨', '홍박사', '미스박', '광팔이'];
-
-  socket.on('mini_sit', ({ seats } = {}) => {
-    if (!socket.token) return socket.emit('mini_error', '로그인이 필요해요.');
-    if (socket.mini) return socket.emit('mini_error', '이미 자리에 앉아 있어요.');
-    const n = Math.min(SUTDA.MAX_SEATS, Math.max(SUTDA.MIN_SEATS, Number(seats) || 2));
-    const paid = accounts.miniStake(socket.token, SUTDA.BUY_IN);
-    if (paid.error) return socket.emit('mini_error', paid.error);
-    const me = accounts.byToken(socket.token);
-    socket.mini = {
-      n,
-      stacks: new Array(n).fill(SUTDA.BUY_IN),
-      names: [ (me && me.nick) || '나', ...MINI_AI_NAMES.slice(0, n - 1) ],
-      buyIn: SUTDA.BUY_IN,
-      st: null, timer: null, cashed: false,
-    };
-    miniDeal(null);
-  });
-
-  // 한 판 시작. first 를 주면 그 자리가 선(= 지난 판 승자).
-  function miniDeal(first) {
-    const m = socket.mini;
-    if (!m) return;
-    if (m.stacks[0] < SUTDA.ANTE) return miniStand('밑천이 떨어졌어요.');
-    // 밑천이 바닥난 AI 는 다시 채워 준다 — 자리가 비면 판이 안 선다
-    for (let i = 1; i < m.n; i++) if (m.stacks[i] < SUTDA.ANTE) m.stacks[i] = SUTDA.BUY_IN;
-    m.st = SUTDA.start({ seats: m.n, stacks: m.stacks, first });
-    m.settled = false;
-    pushMini();
-    miniAiTurn();
-  }
-
-  socket.on('mini_act', ({ action } = {}) => {
-    const m = socket.mini;
-    if (!m || !m.st || m.st.over) return socket.emit('mini_error', '진행 중인 판이 없어요.');
-    if (m.st.turn !== 0) return socket.emit('mini_error', '아직 차례가 아니에요.');
-    const r = SUTDA.act(m.st, 0, String(action || ''));
-    if (!r.ok) return socket.emit('mini_error', r.error);
-    pushMini();
-    if (m.st.over) miniHandOver(); else miniAiTurn();
-  });
-
-  socket.on('mini_next', () => {
-    const m = socket.mini;
-    if (!m) return socket.emit('mini_error', '자리에 앉아 있지 않아요.');
-    if (m.st && !m.st.over) return socket.emit('mini_error', '아직 판이 안 끝났어요.');
-    miniDeal(m.st ? m.st.first : null);      // 선은 지난 판 승자
-  });
-
-  socket.on('mini_leave', () => miniStand());
-
-  function miniView() {
-    const m = socket.mini;
-    const v = SUTDA.viewFor(m.st, 0);
-    v.names = m.names.slice();
-    v.buyIn = m.buyIn;
-    return v;
-  }
-  function pushMini() { if (socket.mini && socket.mini.st) socket.emit('mini_state', miniView()); }
-
-  // AI 차례를 한 수씩. 사람이 보기에 생각하는 것처럼 살짝 띄운다.
-  function miniAiTurn() {
-    const m = socket.mini;
-    if (!m || !m.st) return;
-    if (m.st.over) return miniHandOver();
-    if (m.st.turn === 0) return;
-    clearTimeout(m.timer);
-    m.timer = setTimeout(() => {
-      const cur = socket.mini;
-      if (!cur || cur !== m || !m.st || m.st.over || m.st.turn === 0) return;
-      const seat = m.st.turn;
-      const a = SUTDA.aiAction(SUTDA.viewFor(m.st, seat)) || 'die';
-      SUTDA.act(m.st, seat, a);
-      pushMini();
-      if (m.st.over) miniHandOver(); else miniAiTurn();
-    }, 650 + Math.floor(Math.random() * 500));
-  }
-
-  // 한 판이 끝났다. 코인은 아직 안 건드린다 — 밑천만 옮겨 두고 일어설 때 정산한다.
-  function miniHandOver() {
-    const m = socket.mini;
-    if (!m || !m.st || m.settled) return;
-    m.settled = true;
-    m.stacks = m.st.stack.slice();
-    const won = m.st.winner === 0;
-    accounts.miniPay(socket.token, 0, won);        // 판수·승수만 기록 (코인은 0)
-    socket.emit('mini_over', {
-      view: miniView(), won,
-      gain: won ? m.st.pot : 0,
-      net: (won ? m.st.pot : 0) - m.st.put[0],     // 이 판에서 는 만큼 (딴 돈 - 낸 돈)
-      canGo: m.stacks[0] >= SUTDA.ANTE,
-    });
-  }
-
-  // 자리에서 일어난다 — 남은 밑천을 코인으로 되돌려 받는다.
-  // 판이 돌아가는 중이면 죽은 것으로 친다. 지는 판에서 창을 닫아도 이득이 없게.
-  function miniStand(why) {
-    const m = socket.mini;
-    if (!m || m.cashed) { socket.mini = null; return; }
-    m.cashed = true;
-    clearTimeout(m.timer);
-    if (m.st && !m.st.over) {
-      SUTDA.act(m.st, 0, 'die');
-      while (!m.st.over && m.st.turn !== null && m.st.turn !== 0) {
-        const seat = m.st.turn;
-        if (!SUTDA.act(m.st, seat, SUTDA.aiAction(SUTDA.viewFor(m.st, seat)) || 'die').ok) break;
-      }
-      m.stacks = m.st.stack.slice();
-    }
-    const back = Math.max(0, m.stacks[0] | 0);
-    const res = accounts.miniPay(socket.token, back, null);     // 정산 — 판수는 안 센다
-    socket.emit('mini_stood', {
-      back, buyIn: m.buyIn, net: back - m.buyIn,
-      coins: res && res.coins, profile: res && res.profile, why: why || null,
-    });
-    socket.mini = null;
-  }
-  socket.on('disconnect', () => { if (socket.mini) miniStand(); });
+  // 소켓 하나에 매인 부분만 여기에 둔다. 판·자리·돈은 아래쪽 miniTables 가 맡는다.
+  socket.on('mini_sit',   ({ seats } = {}) => miniSit(socket, seats, 'solo'));
+  socket.on('mini_quick', ({ seats } = {}) => miniSit(socket, seats, 'multi'));
+  socket.on('mini_cancel', () => miniDequeue(socket, true));
+  socket.on('mini_act',  ({ action } = {}) => miniHumanAct(socket, action));
+  socket.on('mini_next', () => miniWantNext(socket));
+  socket.on('mini_leave', () => miniStand(socket));
 
   socket.on('enter_lobby', () => { socket.join('lobby'); socket.emit('rooms', openRoomList()); });
 
@@ -1775,6 +1657,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    miniDequeue(socket, false);
+    if (socket.mini) miniStand(socket, '연결이 끊겼어요.');
     const c = (connByIp.get(ip) || 1) - 1;   // IP 연결 카운트 감소
     if (c <= 0) connByIp.delete(ip); else connByIp.set(ip, c);
     if (socket.accountId && accountSockets.get(socket.accountId) === socket.id) accountSockets.delete(socket.accountId);
@@ -2293,3 +2177,282 @@ const server = http.listen(PORT, () => console.log(`http://localhost:${PORT}`));
 
 // 배포/재시작(SIGTERM) 시 새 연결 차단 후 정리 — 진행 중 저장은 이미 즉시 persist됨
 process.on('SIGTERM', () => { console.log('SIGTERM 수신 — 종료 중'); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 5000); });
+
+// ══════════════════════════════════════════════════════════
+// 미니게임 테이블 — 솔로(AI)와 멀티(사람)를 한 코드로 굴린다.
+//
+// 두 벌로 나누면 규칙이 갈라진다. 자리에 사람이 앉았는지 AI 가 앉았는지만
+// 다르고 나머지는 같으므로, 자리 배열 하나로 둘 다 다룬다.
+//
+// 돈은 자리에 앉을 때 밑천으로 바꾸고 일어설 때 되돌린다. 판마다 계좌를
+// 건드리지 않는다 — 경쟁 조건이 생기고, 올인이 뜻을 가지려면 밑천이 있어야 한다.
+const miniTables = new Map();               // id → table
+const miniQueue = { 2: [], 3: [], 4: [] };  // 정원별 대기열 (멀티)
+const MINI_TURN_MS = 22000;                 // 사람이 안 두면 대신 넘겨준다
+const MINI_NEXT_MS = 4500;                  // 판이 끝나고 다음 판까지
+const MINI_FILL_MS = 20000;                 // 이만큼 안 차면 AI 로 채워 시작
+const MINI_AI_NAMES = ['타짜 김씨', '홍박사', '미스박', '광팔이'];
+let miniSeq = 1;
+
+const miniLive = (t) => t.seats.filter((s) => s && s.stack >= SUTDA.ANTE).length;
+const miniHumans = (t) => t.seats.filter((s) => s && !s.ai).length;
+
+function miniSockOf(seat) {
+  return seat && !seat.ai ? io.sockets.sockets.get(seat.key) : null;
+}
+
+// 대기열에서 뺀다. tell 이면 취소했다고 알려 준다.
+function miniDequeue(socket, tell) {
+  let found = false;
+  for (const n of [2, 3, 4]) {
+    const q = miniQueue[n];
+    const at = q.findIndex((e) => e.socket.id === socket.id);
+    if (at < 0) continue;
+    const [e] = q.splice(at, 1);
+    clearTimeout(e.timer);
+    found = true;
+    // 참가비는 대기열에 설 때 받지 않았으므로 돌려줄 것이 없다
+    if (q.length) miniQueuePush(n);
+  }
+  if (found && tell) socket.emit('mini_queue', { seats: 0, need: 0, cancelled: true });
+}
+
+function miniQueuePush(n) {
+  const q = miniQueue[n];
+  for (const e of q) e.socket.emit('mini_queue', { seats: q.length, need: n, waiting: true });
+}
+
+// 자리에 앉는다. mode 가 'solo' 면 나머지는 AI, 'multi' 면 사람을 기다린다.
+function miniSit(socket, seats, mode) {
+  if (!socket.token) return socket.emit('mini_error', '로그인이 필요해요.');
+  if (socket.mini) return socket.emit('mini_error', '이미 자리에 앉아 있어요.');
+  const n = Math.min(SUTDA.MAX_SEATS, Math.max(SUTDA.MIN_SEATS, Number(seats) || 2));
+  const u = accounts.byToken(socket.token);
+  if (!u) return socket.emit('mini_error', '로그인이 필요해요.');
+  if ((u.coins || 0) < SUTDA.BUY_IN) return socket.emit('mini_error', '코인이 부족해요.');
+
+  if (mode === 'solo') return miniOpenTable(n, [socket], 'solo');
+
+  // 멀티 — 정원이 찰 때까지 기다린다. 안 차면 AI 로 메운다.
+  miniDequeue(socket, false);
+  const q = miniQueue[n];
+  const entry = { socket, timer: null };
+  q.push(entry);
+  entry.timer = setTimeout(() => {
+    const at = q.indexOf(entry);
+    if (at < 0) return;
+    const mine = q.splice(0, q.length);              // 기다리던 사람 전부 한 테이블로
+    for (const e of mine) clearTimeout(e.timer);
+    miniOpenTable(n, mine.map((e) => e.socket), 'multi');
+  }, MINI_FILL_MS);
+  miniQueuePush(n);
+  if (q.length >= n) {
+    const mine = q.splice(0, n);
+    for (const e of mine) clearTimeout(e.timer);
+    miniOpenTable(n, mine.map((e) => e.socket), 'multi');
+  }
+}
+
+// 테이블을 연다. humans 는 앉을 사람들(정원보다 적으면 나머지는 AI).
+function miniOpenTable(n, humans, mode) {
+  const t = {
+    id: 'M' + (miniSeq++), n, mode,
+    seats: new Array(n).fill(null),
+    st: null, first: null,
+    turnTimer: null, nextTimer: null, aiTimer: null,
+    settled: true,
+  };
+  let seat = 0;
+  for (const sk of humans) {
+    if (seat >= n) break;
+    if (!sk || !sk.connected || !sk.token) continue;
+    // 밑천을 산다 — 여기서 실패하면 그 사람은 못 앉는다
+    const paid = accounts.miniStake(sk.token, SUTDA.BUY_IN);
+    if (paid.error) { sk.emit('mini_error', paid.error); continue; }
+    const u = accounts.byToken(sk.token);
+    t.seats[seat] = { ai: false, key: sk.id, token: sk.token,
+      nick: (u && u.nick) || '나', stack: SUTDA.BUY_IN };
+    sk.mini = { tableId: t.id, seat };
+    seat++;
+  }
+  if (!seat) return;                                  // 아무도 못 앉았다
+  let ai = 0;
+  for (let i = 0; i < n; i++) if (!t.seats[i])
+    t.seats[i] = { ai: true, key: null, nick: MINI_AI_NAMES[ai++ % MINI_AI_NAMES.length], stack: SUTDA.BUY_IN };
+  miniTables.set(t.id, t);
+  miniStartHand(t, null);
+}
+
+function miniStartHand(t, first) {
+  clearTimeout(t.nextTimer); clearTimeout(t.turnTimer); clearTimeout(t.aiTimer);
+  if (miniHumans(t) === 0) return miniCloseTable(t);
+  // 밑천이 바닥난 AI 는 다시 채운다 — 자리가 비면 판이 안 선다
+  for (const s of t.seats) if (s && s.ai && s.stack < SUTDA.ANTE) s.stack = SUTDA.BUY_IN;
+  // 돈이 없는 사람은 자동으로 일어난다
+  for (let i = 0; i < t.n; i++) {
+    const s = t.seats[i];
+    if (s && !s.ai && s.stack < SUTDA.ANTE) miniSeatOut(t, i, '밑천이 떨어졌어요.');
+  }
+  if (miniHumans(t) === 0) return miniCloseTable(t);
+  if (miniLive(t) < 2) miniFillSeats(t);
+  if (miniLive(t) < 2) return miniCloseTable(t);
+
+  t.st = SUTDA.start({ seats: t.n, stacks: t.seats.map((s) => (s ? s.stack : 0)), first });
+  t.settled = false;
+  miniPushAll(t);
+  miniAdvance(t);
+}
+
+// 남에게 보여줄 자리 정보 — 패는 sutda 가 이미 걸러 준다.
+function miniViewFor(t, seat) {
+  const v = SUTDA.viewFor(t.st, seat);
+  v.names = t.seats.map((s) => (s ? s.nick : '빈자리'));
+  v.ais = t.seats.map((s) => !!(s && s.ai));
+  v.gone = t.seats.map((s) => !s);
+  v.mode = t.mode;
+  v.buyIn = SUTDA.BUY_IN;
+  v.deadline = t.deadline || 0;
+  return v;
+}
+
+function miniPushAll(t) {
+  if (!t.st) return;
+  for (let i = 0; i < t.n; i++) {
+    const sk = miniSockOf(t.seats[i]);
+    if (sk) sk.emit('mini_state', miniViewFor(t, i));
+  }
+}
+
+// 차례를 굴린다 — AI 면 잠시 뒤 두고, 사람이면 시계를 건다.
+function miniAdvance(t) {
+  clearTimeout(t.turnTimer); clearTimeout(t.aiTimer);
+  if (!t.st) return;
+  if (t.st.over) return miniHandOver(t);
+  const seat = t.st.turn;
+  const s = t.seats[seat];
+  if (!s) {                                   // 나간 자리는 바로 죽인다
+    SUTDA.act(t.st, seat, 'die'); miniPushAll(t); return miniAdvance(t);
+  }
+  if (s.ai) {
+    t.deadline = 0;
+    t.aiTimer = setTimeout(() => {
+      if (!t.st || t.st.over || t.st.turn !== seat) return;
+      const a = SUTDA.aiAction(SUTDA.viewFor(t.st, seat)) || 'die';
+      SUTDA.act(t.st, seat, a);
+      miniPushAll(t);
+      miniAdvance(t);
+    }, 650 + Math.floor(Math.random() * 500));
+    return;
+  }
+  // 사람 — 안 두고 버티면 판이 멈춘다. 시간이 지나면 대신 넘겨준다.
+  t.deadline = Date.now() + MINI_TURN_MS;
+  miniPushAll(t);
+  t.turnTimer = setTimeout(() => {
+    if (!t.st || t.st.over || t.st.turn !== seat) return;
+    const acts = SUTDA.actionsFor(t.st, seat);
+    SUTDA.act(t.st, seat, acts.includes('check') ? 'check' : 'die');
+    miniPushAll(t);
+    miniAdvance(t);
+  }, MINI_TURN_MS + 500);
+}
+
+function miniHumanAct(socket, action) {
+  const m = socket.mini;
+  const t = m && miniTables.get(m.tableId);
+  if (!t || !t.st || t.st.over) return socket.emit('mini_error', '진행 중인 판이 없어요.');
+  if (t.st.turn !== m.seat) return socket.emit('mini_error', '아직 차례가 아니에요.');
+  const r = SUTDA.act(t.st, m.seat, String(action || ''));
+  if (!r.ok) return socket.emit('mini_error', r.error);
+  miniPushAll(t);
+  miniAdvance(t);
+}
+
+// 한 판이 끝났다. 밑천만 옮겨 두고, 코인은 일어설 때 정산한다.
+function miniHandOver(t) {
+  if (!t.st || t.settled) return;
+  t.settled = true;
+  clearTimeout(t.turnTimer); clearTimeout(t.aiTimer);
+  t.deadline = 0;
+  for (let i = 0; i < t.n; i++) if (t.seats[i]) t.seats[i].stack = t.st.stack[i];
+  for (let i = 0; i < t.n; i++) {
+    const sk = miniSockOf(t.seats[i]);
+    if (!sk) continue;
+    const won = t.st.winner === i;
+    accounts.miniPay(sk.token, 0, won);            // 판수·승수만 (코인은 0)
+    sk.emit('mini_over', {
+      view: miniViewFor(t, i), won,
+      gain: won ? t.st.pot : 0,
+      net: (won ? t.st.pot : 0) - t.st.put[i],
+      canGo: t.seats[i].stack >= SUTDA.ANTE,
+      nextIn: MINI_NEXT_MS,
+    });
+  }
+  // 다음 판은 알아서 시작한다 — 멀티에서 한 사람이 안 누르면 다 같이 멈춘다.
+  const first = t.st.first;
+  t.nextTimer = setTimeout(() => miniStartHand(t, first), MINI_NEXT_MS);
+}
+
+// "다음 판" 을 눌렀을 때 — 기다리는 시간을 줄여 줄 뿐, 규칙은 같다.
+function miniWantNext(socket) {
+  const m = socket.mini;
+  const t = m && miniTables.get(m.tableId);
+  if (!t) return socket.emit('mini_error', '자리에 앉아 있지 않아요.');
+  if (t.st && !t.st.over) return socket.emit('mini_error', '아직 판이 안 끝났어요.');
+  if (t.mode !== 'solo') return;                  // 멀티는 시계대로
+  clearTimeout(t.nextTimer);
+  miniStartHand(t, t.st ? t.st.first : null);
+}
+
+// 한 자리를 비운다(코인 정산 포함). 판이 도는 중이면 죽은 것으로 친다.
+function miniSeatOut(t, seat, why) {
+  const s = t.seats[seat];
+  if (!s) return;
+  t.seats[seat] = null;
+  if (s.ai) return;
+  // 판이 도는 중이면 죽고 나간다 — 이미 건 돈은 판돈에 남는다
+  if (t.st && !t.st.over && t.st.alive[seat]) {
+    SUTDA.act(t.st, seat, 'die');
+    s.stack = t.st.stack[seat];
+  }
+  const back = Math.max(0, s.stack | 0);
+  const res = accounts.miniPay(s.token, back, null);       // 정산 — 전적은 안 센다
+  const sk = io.sockets.sockets.get(s.key);
+  if (sk) {
+    sk.mini = null;
+    sk.emit('mini_stood', {
+      back, buyIn: SUTDA.BUY_IN, net: back - SUTDA.BUY_IN,
+      coins: res && res.coins, profile: res && res.profile, why: why || null,
+    });
+  }
+}
+
+// 빈자리를 AI 로 메운다. 사람이 나갔다고 남은 사람까지 쫓아내면
+// "둘이 붙다 하나 나가면 판이 끝난다" 가 되어, 지는 쪽이 나가는 게 이득이 된다.
+function miniFillSeats(t) {
+  let ai = 0;
+  for (let i = 0; i < t.n; i++) {
+    if (t.seats[i]) continue;
+    t.seats[i] = { ai: true, key: null, stack: SUTDA.BUY_IN,
+      nick: MINI_AI_NAMES[(ai++ + i) % MINI_AI_NAMES.length] };
+  }
+}
+
+function miniStand(socket, why) {
+  const m = socket.mini;
+  const t = m && miniTables.get(m.tableId);
+  if (!t) { socket.mini = null; return; }
+  const wasTurn = t.st && !t.st.over && t.st.turn === m.seat;
+  miniSeatOut(t, m.seat, why || null);
+  if (miniHumans(t) === 0) return miniCloseTable(t);
+  // 남은 사람이 혼자 앉아 있게 두지 않는다 — 빈자리는 다음 판부터 AI 가 맡는다
+  if (miniLive(t) < 2) miniFillSeats(t);
+  miniPushAll(t);
+  if (t.st && t.st.over) miniHandOver(t);
+  else if (wasTurn || (t.st && !t.st.over)) miniAdvance(t);
+}
+
+function miniCloseTable(t) {
+  clearTimeout(t.turnTimer); clearTimeout(t.aiTimer); clearTimeout(t.nextTimer);
+  for (let i = 0; i < t.n; i++) if (t.seats[i] && !t.seats[i].ai) miniSeatOut(t, i, '테이블이 닫혔어요.');
+  miniTables.delete(t.id);
+}

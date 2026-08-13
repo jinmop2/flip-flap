@@ -2599,7 +2599,37 @@ window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); p
 // ── 미니게임 (두 장 승부 · 2~4인) ────────────────────────────
 // 판은 전부 서버에 있다. 여기서는 서버가 준 view 를 그리고, 누른 행동만 올린다.
 // 코인 계산은 하지 않는다 — 화면이 셈한 금액을 서버가 믿게 두면 그게 곧 구멍이다.
-let miniState = null, miniSeats = 2, miniSitting = false;
+let miniState = null, miniSeats = 2, miniSitting = false, miniPrevPot = 0, miniClock = null;
+
+
+// 칩 — 숫자만 띄우면 판이 얼마나 큰지 눈에 안 들어온다.
+// 큰 단위부터 헐어서 무더기로 만든다. 무더기 하나가 요소 하나다(4인 × 여러 단위라
+// 칩마다 요소를 만들면 금세 수백 개가 되고, 매 상태마다 다시 그린다).
+const CHIP_UNITS = [500, 100, 50, 10, 1];
+function chipPiles(amount) {
+  let left = Math.max(0, Math.floor(amount || 0));
+  const out = [];
+  for (const v of CHIP_UNITS) {
+    if (left < v) continue;
+    const n = Math.floor(left / v);
+    left -= n * v;
+    out.push({ v, n });
+  }
+  return out;
+}
+function chipsEl(amount, cls) {
+  const box = document.createElement('div');
+  box.className = 'chips' + (cls ? ' ' + cls : '');
+  for (const { v, n } of chipPiles(amount)) {
+    const c = document.createElement('div');
+    c.className = 'chip' + (n > 1 ? ' s' + Math.min(4, n) : '');
+    c.dataset.v = v;
+    c.textContent = n > 1 ? '×' + n : '';
+    c.title = `${v} × ${n}`;
+    box.appendChild(c);
+  }
+  return box;
+}
 
 // 족보 사다리 — 이름만 띄우면 세다는 건지 약하다는 건지 알 수 없다.
 // 앞자리 합으로 정해지는 8칸 중 몇 번째인지를 칸으로 보여준다.
@@ -2669,14 +2699,23 @@ function miniPaint(v) {
     const chip = document.createElement('div');
     chip.className = 'mn-chip' + (st.roundBet > 0 && st.alive ? ' on' : '');
     chip.textContent = `🪙 ${st.roundBet}`;
+    const stack = chipsEl(st.alive ? st.roundBet : 0, 'mini');
     const tag = document.createElement('div');
     tag.className = 'mn-act-tag';
     tag.textContent = st.eval ? st.eval.name : '';
-    d.append(nm, cards, stk, chip, tag);
+    d.append(nm, cards, stk, stack, chip, tag);
     top.appendChild(d);
   }
 
   document.getElementById('mnPotBig').textContent = `🪙 ${v.pot}`;
+  // 판돈이 늘었을 때만 떨어지는 연출을 준다 — 매번 튀면 눈이 아프다
+  const potBox = document.getElementById('mnPotChips');
+  const grew = v.pot > (miniPrevPot || 0);
+  potBox.innerHTML = '';
+  const pile = chipsEl(v.pot, 'big');
+  if (grew) for (const c of pile.children) c.classList.add('drop');
+  potBox.appendChild(pile);
+  miniPrevPot = v.pot;
   document.getElementById('mnRound').textContent =
     v.round === 1 ? '첫 번째 배팅' : '두 번째 배팅';
 
@@ -2687,6 +2726,7 @@ function miniPaint(v) {
     + (me.first ? '<span class="mn-first">선</span>' : '')
     + `<span class="mn-stk">🪙 ${me.stack}</span>`
     + (me.roundBet > 0 ? `<span class="mn-chip on">🪙 ${me.roundBet}</span>` : '');
+  if (me.roundBet > 0) plate.appendChild(chipsEl(me.roundBet, 'mini'));
   const my = document.getElementById('mnMyCards');
   my.innerHTML = '';
   (me.cards || []).forEach((c) => my.appendChild(makeCard(c)));
@@ -2696,6 +2736,20 @@ function miniPaint(v) {
   if (v.over) st0.textContent = v.reason === 'fold' ? '남은 사람이 가져갑니다.' : '공개!';
   else if (v.turn === v.me) st0.textContent = `내 차례 · 내 밑천 🪙${me.stack}${v.toCall ? ` · 받을 돈 🪙${v.toCall}` : ''}`;
   else st0.textContent = `${esc((v.names && v.names[v.turn]) || '상대')} 님이 고민하고 있어요…`;
+
+  // 내 차례 제한 시간 — 서버가 넘겨주는 시각까지 센다
+  clearInterval(miniClock); miniClock = null;
+  if (!v.over && v.turn === v.me && v.deadline) {
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((v.deadline - Date.now()) / 1000));
+      const el = document.getElementById('mnStatus');
+      if (!el || !miniState || miniState.turn !== miniState.me) { clearInterval(miniClock); return; }
+      el.textContent = `내 차례 · ${left}초 · 내 밑천 🪙${me.stack}`
+        + (v.toCall ? ` · 받을 돈 🪙${v.toCall}` : '');
+      if (left <= 0) clearInterval(miniClock);
+    };
+    tick(); miniClock = setInterval(tick, 500);
+  }
 
   const btns = document.getElementById('mnBtns');
   btns.innerHTML = '';
@@ -2727,6 +2781,22 @@ window.miniSit = function () {
   document.getElementById('miniModal').classList.remove('show');
   socket.emit('mini_sit', { seats: miniSeats });
 };
+window.miniQuick = function () {
+  document.getElementById('miniModal').classList.remove('show');
+  document.getElementById('mnQCount').textContent = '1';
+  document.getElementById('mnQNeed').textContent = `/ ${miniSeats}`;
+  document.getElementById('miniWaitModal').classList.add('show');
+  socket.emit('mini_quick', { seats: miniSeats });
+};
+window.miniCancelQueue = function () {
+  document.getElementById('miniWaitModal').classList.remove('show');
+  socket.emit('mini_cancel');
+};
+socket.on('mini_queue', (q) => {
+  if (q.cancelled) return document.getElementById('miniWaitModal').classList.remove('show');
+  document.getElementById('mnQCount').textContent = String(q.seats || 1);
+  document.getElementById('mnQNeed').textContent = `/ ${q.need || miniSeats}`;
+});
 window.miniAct = function (a) {
   if (!miniState || miniState.over || miniState.turn !== miniState.me) return;
   miniState.turn = null;                     // 두 번 눌러 두 수가 나가는 것 방지
@@ -2742,6 +2812,8 @@ window.miniStand = function () {
   socket.emit('mini_leave');
 };
 function miniHide() {
+  clearInterval(miniClock); miniClock = null; miniPrevPot = 0;
+  document.getElementById('miniOverModal').classList.remove('show');
   const box = document.getElementById('mini');
   box.classList.remove('on'); box.style.display = 'none';
   miniState = null; miniSitting = false;
@@ -2753,12 +2825,14 @@ window.miniStoodClose = function () {
 };
 
 socket.on('mini_state', (v) => {
+  document.getElementById('miniWaitModal').classList.remove('show');
   if (!miniSitting) {                       // 처음 앉을 때 로비를 접는다
     miniSitting = true;
     document.getElementById('lobby').style.display = 'none';
     document.body.classList.add('ingame');   // 화면 스크롤 잠금 — 본 게임과 같다
     applyMySkins();                          // 내 테이블·카드 스킨을 미니게임에도
   }
+  document.getElementById('miniOverModal').classList.remove('show');
   miniPaint(v);
 });
 socket.on('mini_error', (m) => toast('⚠️ ' + esc(m || '')));
@@ -2774,7 +2848,11 @@ socket.on('mini_over', (r) => {
       r.net > 0 ? `🪙 +${r.net}` : r.net < 0 ? `🪙 ${r.net}` : '🪙 0';
     document.getElementById('mnOverWhy').textContent =
       r.view.reason === 'fold' ? '모두 죽어서 끝난 판입니다. 패는 안 깝니다.' : '';
-    document.getElementById('mnNextBtn').style.display = r.canGo ? '' : 'none';
+    document.getElementById('mnNextBtn').style.display =
+      (r.canGo && r.view.mode === 'solo') ? '' : 'none';
+    document.getElementById('mnOverWhy').textContent =
+      (r.view.mode === 'solo' ? '' : (r.canGo ? '곧 다음 판이 시작됩니다.' : '밑천이 떨어졌어요.'))
+      || (r.view.reason === 'fold' ? '모두 죽어서 끝난 판입니다. 패는 안 깝니다.' : '');
     document.getElementById('miniOverModal').classList.add('show');
   };
   if (r.view.reason === 'showdown') { miniPaint(r.view); setTimeout(showRes, 900); }

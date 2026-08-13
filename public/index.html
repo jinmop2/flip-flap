@@ -2344,6 +2344,35 @@
       .mn-b { padding:9px 11px; font-size:.78rem; }
     }
 
+
+    /* ── 배팅 칩 ── */
+    /* 숫자만 띄우면 판이 얼마나 큰지 눈에 안 들어온다. 실제로 쌓이는 걸 보여준다.
+       칩 하나하나를 요소로 두면 4인 × 여러 단위라 금세 수백 개가 된다 —
+       한 칸(.chip)이 곧 한 무더기고, 겹쳐 보이는 두께는 그림자로 낸다. */
+    .chips { display:flex; align-items:flex-end; gap:3px; }
+    .chip {
+      position:relative; width:20px; height:20px; border-radius:50%;
+      border:2px dashed rgba(255,255,255,.55);
+      box-shadow:0 1px 0 rgba(0,0,0,.5), 0 2px 4px rgba(0,0,0,.45);
+      display:flex; align-items:center; justify-content:center;
+      font-size:.5rem; font-weight:900; color:rgba(255,255,255,.9); text-shadow:0 1px 1px rgba(0,0,0,.6);
+    }
+    .chip[data-v="1"]   { background:radial-gradient(circle at 35% 30%, #f4f4f4, #b9b9c2); color:#333; border-color:rgba(0,0,0,.25); text-shadow:none; }
+    .chip[data-v="10"]  { background:radial-gradient(circle at 35% 30%, #e8607a, #a3213c); }
+    .chip[data-v="50"]  { background:radial-gradient(circle at 35% 30%, #5aa9e8, #1c5b96); }
+    .chip[data-v="100"] { background:radial-gradient(circle at 35% 30%, #6ad7a0, #1d7a4d); }
+    .chip[data-v="500"] { background:radial-gradient(circle at 35% 30%, #c9a2f0, #5f2f9e); }
+    /* 쌓인 두께 — 개수만큼 그림자를 위로 올린다 */
+    .chip.s2  { box-shadow:0 -3px 0 -1px rgba(0,0,0,.35), 0 2px 4px rgba(0,0,0,.45); margin-bottom:3px; }
+    .chip.s3  { box-shadow:0 -3px 0 -1px rgba(0,0,0,.35), 0 -6px 0 -2px rgba(0,0,0,.3), 0 2px 4px rgba(0,0,0,.45); margin-bottom:6px; }
+    .chip.s4  { box-shadow:0 -3px 0 -1px rgba(0,0,0,.35), 0 -6px 0 -2px rgba(0,0,0,.3), 0 -9px 0 -3px rgba(0,0,0,.26), 0 2px 4px rgba(0,0,0,.45); margin-bottom:9px; }
+    .chips.big .chip { width:28px; height:28px; font-size:.62rem; }
+    .chips.mini .chip { width:15px; height:15px; font-size:.42rem; border-width:1.5px; }
+    /* 판 가운데로 모이는 칩 */
+    .mn-potchips { display:flex; align-items:flex-end; gap:5px; min-height:30px; margin-bottom:2px; }
+    @keyframes chipDrop { from{ transform:translateY(-26px) scale(.7); opacity:0 } to{ transform:none; opacity:1 } }
+    .chip.drop { animation:chipDrop .32s cubic-bezier(.34,1.4,.64,1) both; }
+
     /* ── 토너먼트 ── */
     .mode-card.tour { border-color:rgba(255,215,120,.5);
       background:linear-gradient(150deg, rgba(90,60,10,.5), rgba(40,25,5,.5)); }
@@ -3701,6 +3730,7 @@
   <div class="mn-top" id="mnSeats"></div>
 
   <div class="mn-mid">
+    <div class="mn-potchips" id="mnPotChips"></div>
     <div class="mn-potbig" id="mnPotBig">🪙 0</div>
     <div class="mn-round" id="mnRound">첫 번째 배팅</div>
     <div class="mn-status" id="mnStatus">-</div>
@@ -3731,12 +3761,23 @@
       </div>
     </div>
     <div class="mn-pot"><b>🪙 200</b><span>자리에 앉는 값 · 일어설 때 남은 만큼 돌려받습니다</span></div>
-    <button class="btn btn-gold" onclick="miniSit()">앉기</button>
+    <button class="btn btn-gold" onclick="miniQuick()">온라인 대전</button>
+    <button class="btn btn-outline" onclick="miniSit()">AI와 대전</button>
     <div class="lb-btns">
       <button class="btn btn-outline btn-sm" onclick="miniRank(true)">족보 보기</button>
       <button class="btn btn-outline btn-sm" onclick="toggleRulesMini(true)">설명서</button>
     </div>
     <button class="btn btn-ink" onclick="miniClose()">닫기</button>
+  </div>
+</div>
+
+<!-- 온라인 대전 매칭 대기 -->
+<div class="lb-modal" id="miniWaitModal">
+  <div class="lb-box" style="width:290px;text-align:center">
+    <div class="lb-title" style="justify-content:center">상대를 찾는 중…</div>
+    <div class="tw-count"><b id="mnQCount">1</b><span id="mnQNeed">/ 2</span></div>
+    <p class="auth-hint" style="margin:0">20초 안에 안 차면 AI가 빈자리를 채웁니다.</p>
+    <button class="btn btn-ink" onclick="miniCancelQueue()">취소</button>
   </div>
 </div>
 
@@ -3958,6 +3999,11 @@
       <div class="r4-step"><b>5</b><span>혼자만 남으면 그대로 <b>기권승</b> — 이때는 아무도 패를 안 깝니다.</span></div>
       <div class="r4-step"><b>6</b><span><b>선은 이긴 사람이</b> 잡습니다.</span></div>
     </div>
+
+    <h3><span data-ico="🌐"></span> 온라인 대전</h3>
+    <p><b>온라인 대전</b>을 고르면 같은 인원을 기다리는 사람과 붙습니다. 20초 안에 안 차면
+       빈자리는 AI가 채웁니다. 온라인에서는 내 차례에 <b>22초</b>가 주어지고, 넘기면 체크(또는 다이)로
+       대신 넘어갑니다. 누가 일어서도 판은 이어집니다 — 빈자리는 다음 판부터 AI가 맡습니다.</p>
 
     <h3><span data-ico="🪙"></span> 밑천</h3>
     <p>자리에 앉을 때 <b>🪙200</b>을 밑천으로 바꿔 갑니다. 배팅은 이 밑천에서만 나가고,

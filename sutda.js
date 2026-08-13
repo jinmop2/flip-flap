@@ -120,9 +120,13 @@ const BUY_IN = 200;              // 자리에 앉을 때 들고 오는 돈. 올�
 const MAX_SEATS = 4;
 const MIN_SEATS = 2;
 
-// 각 행동이 "얼마를 더 내는가". 못 하는 행동이면 null.
+// 각 행동이 "얼마를 더 내는가".
 // 하프·쿼터는 콜을 하고 난 뒤의 판돈을 기준으로 잡는다 — 콜 값을 빼고 계산하면
 // 앞사람이 크게 지를수록 되받아치는 값이 상대적으로 작아져 후행이 유리해진다.
+//
+// 금액은 기본 단위로 떨어뜨린다. 그냥 나누면 7·19·37 같은 값이 나와서
+// 칩으로 쌓을 수도 없고 머리로 셈하기도 나쁘다. 내림이라 판이 덜 커진다.
+const unitDown = (x) => Math.max(ANTE, Math.floor(x / ANTE) * ANTE);
 function raiseAmounts(st, seat) {
   const my = st.roundBet[seat];
   const max = Math.max(...st.alive.map((a, i) => (a ? st.roundBet[i] : 0)));
@@ -131,8 +135,8 @@ function raiseAmounts(st, seat) {
   return {
     call: toCall,
     ping: ANTE,                                   // 삥 — 기본 단위
-    half: toCall + Math.floor(potAfterCall / 2),
-    quarter: toCall + Math.floor(potAfterCall / 4),
+    half: toCall + unitDown(potAfterCall / 2),
+    quarter: toCall + unitDown(potAfterCall / 4),
     ttadang: max * 2 - my,                        // 따당 — 앞사람이 건 돈의 두 배
     allin: st.stack[seat],
   };

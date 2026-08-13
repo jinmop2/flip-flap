@@ -93,16 +93,22 @@ console.log('\n③ 첫 라운드는 한 장으로 가늠한다');
 
 console.log('\n④ 서버가 돈을 쥔다');
 {
-  ok('앉을 때 밑천을 산다', /miniStake\(socket\.token,\s*SUTDA\.BUY_IN\)/.test(srv));
+  ok('앉을 때 밑천을 산다', /accounts\.miniStake\(sk\.token, SUTDA\.BUY_IN\)/.test(srv));
   ok('자리 수는 서버가 깎는다', /Math\.min\(SUTDA\.MAX_SEATS,\s*Math\.max\(SUTDA\.MIN_SEATS/.test(srv));
-  ok('화면이 보낸 금액은 안 쓴다', !/mini_act[\s\S]{0,300}\bamount\b/.test(srv));
-  ok('행동 이름은 문자열로 굳혀 넘긴다', /SUTDA\.act\(m\.st, 0, String\(action \|\| ''\)\)/.test(srv));
-  ok('규칙이 막으면 그대로 되돌린다', /if \(!r\.ok\) return socket\.emit\('mini_error'/.test(srv));
-  ok('일어설 때만 코인으로 바꾼다', /miniPay\(socket\.token, back, null\)/.test(srv));
-  ok('판마다 코인을 만지지 않는다', /miniPay\(socket\.token, 0, won\)/.test(srv));
-  ok('두 번 정산하지 않는다', /if \(!m \|\| m\.cashed\)/.test(srv));
-  ok('창을 닫으면 죽은 것으로 친다', /if \(m\.st && !m\.st\.over\)[\s\S]{0,120}'die'/.test(srv));
-  ok('연결이 끊겨도 정산한다', /socket\.on\('disconnect', \(\) => \{ if \(socket\.mini\) miniStand\(\); \}\)/.test(srv));
+  ok('화면이 보낸 금액은 안 쓴다', !/miniHumanAct[\s\S]{0,400}\bamount\b/.test(srv));
+  ok('행동 이름은 문자열로 굳혀 넘긴다', /SUTDA\.act\(t\.st, m\.seat, String\(action \|\| ''\)\)/.test(srv));
+  ok('규칙이 막으면 그대로 되돌린다', /if \(!r\.ok\) return socket\.emit\('mini_error', r\.error\)/.test(srv));
+  ok('일어설 때만 코인으로 바꾼다', /accounts\.miniPay\(s\.token, back, null\)/.test(srv));
+  ok('판마다 코인을 만지지 않는다', /accounts\.miniPay\(sk\.token, 0, won\)/.test(srv));
+  ok('나간 자리는 다시 정산되지 않는다', /t\.seats\[seat\] = null;/.test(srv));
+  ok('창을 닫으면 죽은 것으로 친다',
+     /if \(t\.st && !t\.st\.over && t\.st\.alive\[seat\]\)[\s\S]{0,120}'die'/.test(srv));
+  ok('연결이 끊겨도 정산한다', /if \(socket\.mini\) miniStand\(socket, '연결이 끊겼어요\.'\)/.test(srv));
+  ok('안 두고 버티면 대신 넘겨준다', /MINI_TURN_MS[\s\S]{0,600}acts\.includes\('check'\) \? 'check' : 'die'/.test(srv));
+  ok('사람이 나가도 남은 사람은 계속한다', /miniLive\(t\) < 2\) miniFillSeats\(t\)/.test(srv));
+  ok('사람이 다 나가면 테이블을 닫는다', /if \(miniHumans\(t\) === 0\) return miniCloseTable\(t\)/.test(srv));
+  ok('멀티는 대기열로 붙인다', /const miniQueue = \{ 2: \[\], 3: \[\], 4: \[\] \}/.test(srv));
+  ok('안 차면 AI 로 메워 시작한다', /MINI_FILL_MS[\s\S]{0,400}miniOpenTable\(n, mine\.map/.test(srv));
   ok('코인 차감에 자물쇠가 있다', /miniLocks\.add\(idl\)/.test(acc));
   ok('없는 계정 키를 만들지 않는다',
      /function miniStake[\s\S]{0,200}hasOwnProperty\.call\(db\.users, idl\)/.test(acc));
@@ -136,7 +142,13 @@ console.log('\n⑥ 경기장');
   ok('버튼 금액은 서버 값을 쓴다', /const amt = v\.amounts\[a\]/.test(cli));
   ok('두 번 눌러도 두 수가 안 나간다', /miniState\.turn = null;/.test(cli));
   ok('앉으면 로비를 접는다', /getElementById\('lobby'\)\.style\.display = 'none'/.test(cli));
-  ok('일어서면 로비로 돌아온다', /miniHide[\s\S]{0,220}display = 'flex'/.test(cli));
+  ok('일어서면 로비로 돌아온다', /function miniHide\(\)[\s\S]{0,400}lobby'\)\.style\.display = 'flex'/.test(cli));
+  ok('온라인 대전으로 앉을 수 있다', /window\.miniQuick/.test(cli) && /mini_quick/.test(cli));
+  ok('매칭 대기 화면이 있다', /id="miniWaitModal"/.test(html) && /mini_queue/.test(cli));
+  ok('기다리다 취소할 수 있다', /window\.miniCancelQueue/.test(cli) && /mini_cancel/.test(srv));
+  ok('판이 열리면 대기창이 닫힌다', /mini_state[\s\S]{0,120}miniWaitModal'\)\.classList\.remove\('show'\)/.test(cli));
+  ok('남은 시간을 센다', /miniClock = setInterval/.test(cli));
+  ok('멀티에서는 다음 판을 기다린다', /r\.view\.mode === 'solo'/.test(cli));
   ok('자리 수를 고를 수 있다', /miniPickSeats/.test(cli) && /id="mnSeatSeg"/.test(html));
   ok('ESC 로 닫힌다', /'miniModal',\s*\(\) => miniClose\(\)/.test(cli));
   // 버튼 이름이 규칙의 행동과 하나씩 맞는가 — 여기가 어긋나면 누를 수 없는 수가 생긴다
@@ -144,6 +156,22 @@ console.log('\n⑥ 경기장');
   for (const a of acts) ok(`${a} 버튼이 있다`, new RegExp(`\\b${a}:`).test(cli.slice(cli.indexOf('MINI_LABEL'), cli.indexOf('MINI_ORDER'))));
   ok('그리는 순서에도 다 들어 있다',
      acts.every((a) => cli.slice(cli.indexOf('MINI_ORDER'), cli.indexOf('MINI_ACT_KO')).includes(`'${a}'`)));
+}
+
+console.log('\n⑥′ 배팅 칩');
+{
+  ok('칩을 그린다', /function chipsEl/.test(cli) && /\.chip \{/.test(html));
+  ok('큰 단위부터 헌다', /const CHIP_UNITS = \[500, 100, 50, 10, 1\]/.test(cli));
+  ok('자리마다 칩이 놓인다', /chipsEl\(st\.alive \? st\.roundBet : 0/.test(cli));
+  ok('판돈도 칩으로 쌓인다', /id="mnPotChips"/.test(html) && /chipsEl\(v\.pot/.test(cli));
+  ok('늘었을 때만 떨어진다', /const grew = v\.pot >/.test(cli));
+  // 칩으로 쌓이려면 금액이 기본 단위로 떨어져야 한다
+  const st = S.start({ seats: 3, first: 0 });
+  S.act(st, 0, 'ping');
+  const A = S.raiseAmounts(st, 1);
+  ok('배팅액이 기본 단위로 떨어진다',
+     [A.ping, A.half, A.quarter, A.ttadang].every((x) => x % S.ANTE === 0),
+     JSON.stringify(A));
 }
 
 console.log('\n⑦ 설명서');
