@@ -783,6 +783,50 @@
     '사용할 수 없는 표현이 있어요.': 'That contains language we do not allow.',
     '클랜에 가입해야 채팅할 수 있어요.': 'Join a clan to use clan chat.',
 
+    // ── 미니게임 (두 장 승부) ──
+    '미니게임': 'Mini Game',
+    '두 장 승부': 'Two-Card Duel',
+    '족보 보기': 'Hand ranks',
+    '설명서': 'How to play',
+    '그만두기': 'Quit',
+    '한 판 더': 'Play again',
+    '기본 참가금 · 배팅 단위 \ud83e\ude9920': 'Ante \u00b7 bet unit \ud83e\ude9920',
+    '족보': 'Hand ranks',
+    '생각 중…': 'Thinking...',
+    '내 차례입니다.': 'Your turn.',
+    '상대가 고민하고 있어요…': 'Your opponent is thinking...',
+    '다이로 끝났습니다.': 'Ended on a fold.',
+    '공개!': 'Showdown!',
+    '승리!': 'You win!',
+    '패배': 'You lose',
+    '무승부': 'Draw',
+    '체크': 'Check',
+    '콜': 'Call',
+    '다이': 'Fold',
+    '배팅 \ud83e\ude9920': 'Bet \ud83e\ude9920',
+    '레이즈 \ud83e\ude9920': 'Raise \ud83e\ude9920',
+    '지배자': 'Overlord',
+    '최고급': 'Premium',
+    '중간계': 'Midlands',
+    '최하위': 'Bottom',
+    '꼴찌': 'Last',
+    '스나이퍼': 'Sniper',
+    '앞·뒤 합이 모두 10': 'Both sums exactly 10',
+    '지금 내 패': 'your hand',
+    '거울쌍 10 — 지배자·최고급을 모두 잡습니다. (칠한 자리를 잡아먹어요)':
+      'Mirror 10 \u2014 beats both Overlord and Premium (the lit rungs).',
+    '10-10 스나이퍼 — 최고급만 잡습니다. 지배자에게는 집니다.':
+      '10-10 sniper \u2014 beats Premium only; loses to Overlord.',
+    '미니게임은 로그인하면 즐길 수 있어요!': 'Log in to play the mini game!',
+    '이미 진행 중인 판이 있어요.': 'A hand is already in progress.',
+    '진행 중인 판이 없어요.': 'No hand in progress.',
+    '금액이 올바르지 않아요.': 'That amount is not valid.',
+    '위로 갈수록 강합니다. 앞자리(큰 숫자) 두 장의 합으로 정합니다.':
+      'Stronger toward the top. Ranked by the sum of the two big numbers.',
+    '카드 두 장을 받아 서로 안 보이게 쥐고 배팅합니다.':
+      'Each player takes two cards, keeps them hidden, and bets.',
+    '앞자리 합이 작을수록 강합니다.': 'The smaller the front sum, the stronger.',
+
     // ── 토너먼트 ──
     '토너먼트': 'Tournament',
     '8강 · \ud83e\ude99200': 'Top 8 · \ud83e\ude99200',
@@ -844,6 +888,14 @@
   // 값이 섞이는 문구는 통째로 짝지을 수 없다. 한국어 쪽 모양을 정규식으로 잡고
   // 영어 자리에 그대로 끼워 넣는다. ($1, $2 … 가 잡힌 값)
   const PATTERNS = [
+    [/^\ud83e\ude99 (-?\d+)$/, '\ud83e\ude99 $1'],
+    [/^\ud83e\ude99 \+(\d+)$/, '\ud83e\ude99 +$1'],
+    [/^콜 \ud83e\ude99(\d+)$/, 'Call \ud83e\ude99$1'],
+    [/^내 배팅 \ud83e\ude99(\d+) · 상대 \ud83e\ude99(\d+)$/, 'You \ud83e\ude99$1 \u00b7 Opponent \ud83e\ude99$2'],
+    [/^앞자리 합 (\d+) · 뒷자리 합 (\d+)$/, 'Front sum $1 \u00b7 back sum $2'],
+    [/^앞자리 합 (\d+)$/, 'Front sum $1'],
+    [/^← 강함 · 여덟 자리 중 (\d+)번째 · 약함 →$/, '\u2190 strong \u00b7 rank $1 of 8 \u00b7 weak \u2192'],
+    [/^(.+) \(합 (\d+)\)$/, '$1 (sum $2)'],
     [/^덱 (\d+)장$/, 'Deck $1'],
     [/^덱 (\d+)장 남음$/, '$1 left in deck'],
     [/^턴 (\d+)$/, 'Turn $1'],
@@ -997,6 +1049,48 @@
   // 승리!" 처럼 <b> 사이사이로 잘려 있어서, 조각마다 짝을 지으면 영어 어순이 깨진다.
   // 그런 덩어리는 통째로 영어판을 따로 두고 갈아 끼운다.
   const BLOCKS = {
+    // 미니게임 설명서 — 영어판. 본 게임과 규칙이 달라 따로 둔다.
+    rulesMini: `
+    <span class="close-x" onclick="toggleRulesMini(false)">\u00d7</span>
+    <h2>Two-Card Duel</h2>
+    <p style="color:#8a7a80">A mini game: take two cards, keep them <b style="color:#ffe9a8">hidden</b>, and bet.</p>
+
+    <h3><span data-ico="\ud83c\udfb4"></span> How a hand goes</h3>
+    <div class="r4-steps">
+      <div class="r4-step"><b>1</b><span>Both ante <b>\ud83e\ude9910</b> and take <b>two cards</b>. You only see your own.</span></div>
+      <div class="r4-step"><b>2</b><span>Starting with the first player: <b>check, bet, call, raise, fold</b>. Bets are \ud83e\ude9920; up to three raises.</span></div>
+      <div class="r4-step"><b>3</b><span>A call (or two checks) ends the round \u2014 <b>showdown</b>. The winner takes the whole pot.</span></div>
+      <div class="r4-step"><b>4</b><span>On a fold, <b>nobody shows</b>. You never learn what the other player held.</span></div>
+    </div>
+
+    <h3><span data-ico="\ud83c\udfc5"></span> Who wins</h3>
+    <p>Add the two <b>big numbers</b> (front digits). <b>The smaller the sum, the stronger.</b></p>
+    <div class="r4-tbl">
+      <div class="r4-row r4-head"><span>Front sum</span><span>Name</span></div>
+      <div class="r4-row"><span>4</span><span>Overlord</span></div>
+      <div class="r4-row"><span>5</span><span>Premium</span></div>
+      <div class="r4-row"><span>6 \u00b7 7 \u00b7 8 \u00b7 9</span><span>Midlands</span></div>
+      <div class="r4-row"><span>10</span><span>Bottom</span></div>
+      <div class="r4-row"><span>12</span><span>Last</span></div>
+    </div>
+    <p>On a tie, the smaller <b>back-digit sum</b> wins; still tied, whoever holds the <b>single strongest card</b> wins.</p>
+
+    <h3><span data-ico="\ud83c\udfaf"></span> Snipers \u2014 the upset</h3>
+    <p>A front sum of 10 is normally near the bottom. But if the <b>back digits also add to exactly 10</b>, it eats the very top.</p>
+    <ul>
+      <li><b>Mirror 10</b> (4-4 + 6-6) \u2014 beats <b>both Overlord and Premium</b>.</li>
+      <li><b>Plain 10-10</b> \u2014 beats <b>Premium</b> only; loses to Overlord.</li>
+      <li>Against anything else (sums 6\u20139) it is just a 10 and loses.</li>
+    </ul>
+    <p style="color:#8a7a80">A sniper is a hand you <b>aim</b>, not a hand that beats everything.</p>
+
+    <h3><span data-ico="\ud83d\udc40"></span> Tips</h3>
+    <ul>
+      <li><b>Nothing is face up.</b> All you can read is <b>how much</b> the other player bets, and <b>when</b>.</li>
+      <li>Who goes first is random each hand \u2014 acting first leaks information first.</li>
+      <li>Folding costs only what you already put in. Chasing with a bad hand is the expensive mistake.</li>
+    </ul>
+    `,
     // 2인전 설명서 — 영어판. 조각으로 번역하면 어순이 깨져 통째로 갈아 끼운다.
     rules2: `
     <span class="close-x" onclick="toggleRules(false)">\u00d7</span>

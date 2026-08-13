@@ -102,14 +102,15 @@ function deal(rand) {
 
 // ── 배팅 ──────────────────────────────────────────────────────────────────
 //
-// 2인 · 두 번의 배팅 라운드. 상태기계라 서버를 안 띄우고 한 판을 통째로 돌릴 수 있다.
+// 2인 · 각자 2장을 받고 서로 완전히 가린다. 배팅 한 라운드 뒤 공개.
+// 상태기계라 서버를 안 띄우고 한 판을 통째로 돌릴 수 있다.
 //
-//   1) 각자 한 장씩 받는다 — 이 장은 서로 보인다. 1차 배팅.
-//   2) 두 번째 장을 받는다 — 이건 자기만 본다. 2차 배팅.
+//   1) 앤티를 걸고 각자 2장 — 둘 다 자기만 본다.
+//   2) 선부터 배팅. 체크·배팅·콜·레이즈·폴드.
 //   3) 콜(또는 양쪽 체크)로 라운드가 닫히면 공개하고 족보로 가른다.
 //
-// 첫 장이 보이는 이유: 아무 정보 없이 배팅하면 그냥 동전 던지기가 된다.
-// 보이는 한 장이 있어야 블러핑과 읽기가 생긴다.
+// 보이는 카드가 하나도 없으므로, 읽을 것은 상대가 얼마를 어떻게 거느냐뿐이다.
+// 선은 판마다 무작위로 정한다 — 고정하면 한쪽이 계속 정보를 먼저 흘린다.
 const ANTE = 10;                 // 판에 들어갈 때 각자 내는 돈
 const BET_UNIT = 20;             // 배팅 한 단위
 const MAX_RAISE = 3;             // 한 라운드에 레이즈는 세 번까지 (판이 무한히 안 커지게)
@@ -124,33 +125,22 @@ function actionsFor(st) {
   return st.raises < MAX_RAISE ? ['check', 'bet', 'fold'] : ['check', 'fold'];
 }
 
-function createGame(rand) {
-  const d = shuffle(makeDeck(), rand);
+// 한 판 시작 — 각자 2장, 둘 다 비공개
+function deal2(rand) {
+  const r = rand || Math.random;
+  const d = shuffle(makeDeck(), r);
   return {
-    deck: d,
-    hands: [[d[0]], [d[1]]],       // 1차에는 한 장씩
-    round: 0,                      // 0 = 1차, 1 = 2차
-    bet: [ANTE, ANTE],             // 이번 라운드까지 각자 낸 돈
+    hands: [[d[0], d[1]], [d[2], d[3]]],
+    bet: [ANTE, ANTE],             // 각자 지금까지 낸 돈
     pot: ANTE * 2,
     raises: 0,
-    acted: [false, false],         // 이번 라운드에 행동했는가
-    turn: 0,                       // 먼저 행동하는 쪽 (아래에서 정한다)
+    acted: [false, false],
+    turn: r() < 0.5 ? 0 : 1,       // 선은 무작위 — 고정하면 한쪽이 늘 먼저 정보를 흘린다
     over: false,
     winner: null,
     reason: null,                  // 'fold' | 'showdown'
     log: [],
   };
-}
-
-// 보이는 카드가 강한 쪽이 먼저 — 섯다에서 선이 도는 것과 같은 결
-function setFirst(st) {
-  st.turn = cardValue(st.hands[0][0]) <= cardValue(st.hands[1][0]) ? 0 : 1;
-  return st;
-}
-
-function deal2(rand) {
-  const st = createGame(rand);
-  return setFirst(st);
 }
 
 // 라운드가 닫혔는가 — 둘 다 행동했고 낸 돈이 같으면
@@ -184,42 +174,71 @@ function act(st, seat, action) {
 
   if (!roundClosed(st)) { st.turn = other; return { ok: true }; }
 
-  // 라운드가 닫혔다
-  if (st.round === 0) {
-    st.round = 1;
-    st.hands[0].push(st.deck[2]);
-    st.hands[1].push(st.deck[3]);
-    st.acted = [false, false];
-    st.raises = 0;
-    setFirst(st);                            // 2차도 보이는 카드 기준으로 선을 정한다
-    return { ok: true, dealt: true };
-  }
-  // 공개
+  // 라운드가 닫혔다 → 공개
   st.over = true; st.reason = 'showdown';
   const c = compare(st.hands[0], st.hands[1]);
   st.winner = c === 0 ? null : (c > 0 ? 0 : 1);
   return { ok: true, showdown: true };
 }
 
-// 화면·AI 에 내려보낼 형태. me 아닌 쪽의 두 번째 장은 가린다.
+// 화면·AI 에 내려보낼 형태.
+// 상대 패는 공개로 끝났을 때만 보인다. 폴드로 끝난 판은 끝까지 안 보여준다 —
+// 죽은 사람 패를 까면 다음 판에 읽히고, 실제 섯다에서도 안 깐다.
 function viewFor(st, me) {
   const opp = 1 - me;
-  const hideOpp = !st.over || st.reason === 'fold';
+  const showOpp = st.over && st.reason === 'showdown';
   return {
-    round: st.round, pot: st.pot, bet: st.bet.slice(),
+    pot: st.pot, bet: st.bet.slice(),
     turn: st.turn, over: st.over, winner: st.winner, reason: st.reason,
     myHand: st.hands[me].slice(),
-    oppHand: hideOpp ? st.hands[opp].slice(0, 1) : st.hands[opp].slice(),
-    oppHidden: hideOpp && st.hands[opp].length > 1,
+    oppCount: st.hands[opp].length,          // 화면은 이 수만큼 뒷면을 깐다
+    oppHand: showOpp ? st.hands[opp].slice() : null,
     actions: st.turn === me ? actionsFor(st) : [],
     toCall: Math.max(0, st.bet[opp] - st.bet[me]),
-    myEval: st.hands[me].length === 2 ? evaluate(st.hands[me]) : null,
-    oppEval: (!hideOpp && st.hands[opp].length === 2) ? evaluate(st.hands[opp]) : null,
+    myEval: evaluate(st.hands[me]),          // 내 족보는 처음부터 보여준다
+    oppEval: showOpp ? evaluate(st.hands[opp]) : null,
   };
+}
+
+// ── AI ────────────────────────────────────────────────────────────────────
+//
+// 보이는 카드가 없으니 AI 가 읽을 정보는 자기 패와 상대가 건 돈뿐이다.
+// 자기 패 세기로 기본 성향을 정하고, 약한 패로도 가끔 지르게 해 둔다 —
+// 늘 정직하면 사람이 "AI 가 걸면 무조건 세다" 를 한 판 만에 알아채고 끝난다.
+//
+// strengthOf: 0 이 가장 셈. 스나이퍼는 잡을 상대가 있을 때만 세므로 중간쯤으로 본다.
+function strengthOf(ev) {
+  if (ev.sniper === SNIPER_MIRROR) return 0.5;   // 0·1티어를 잡는다
+  if (ev.sniper === SNIPER_NORMAL) return 2.5;   // 1티어만 잡는다 — 나머지에겐 최하위
+  return ev.tier;                                 // 0(지배자) ~ 7(꼴찌)
+}
+
+function aiAction(view, rand) {
+  const acts = view.actions || [];
+  if (!acts.length) return null;
+  const r = rand || Math.random;
+  const s = strengthOf(view.myEval);
+  const bluff = r() < 0.18;                       // 패와 무관하게 지르는 비율
+
+  if (view.toCall > 0) {
+    // 받아야 하는 상황 — 셀수록 되받아친다
+    if (s <= 1 && acts.includes('raise') && r() < 0.6) return 'raise';
+    if (s <= 3) return acts.includes('call') ? 'call' : 'check';
+    if (s <= 5) return r() < 0.55 && acts.includes('call') ? 'call' : 'fold';
+    // 꼴찌권 — 판돈이 작으면 한 번은 따라가 본다
+    if (view.toCall <= BET_UNIT && r() < 0.25 && acts.includes('call')) return 'call';
+    return acts.includes('fold') ? 'fold' : 'check';
+  }
+  // 먼저 거는 상황
+  if (s <= 1 && acts.includes('bet')) return 'bet';
+  if (s <= 3 && acts.includes('bet') && r() < 0.45) return 'bet';
+  if (bluff && acts.includes('bet')) return 'bet';
+  return acts.includes('check') ? 'check' : acts[0];
 }
 
 module.exports = {
   ANTE, BET_UNIT, MAX_RAISE, actionsFor, deal2, act, viewFor, roundClosed,
+  aiAction, strengthOf,
   SPEC, TIER_NAME, TIER_OF_SUM,
   SNIPER_NONE, SNIPER_NORMAL, SNIPER_MIRROR,
   makeDeck, cardValue, sniperOf, evaluate, snipes, compare, deal, _shuffle: shuffle,

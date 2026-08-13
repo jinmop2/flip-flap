@@ -2596,6 +2596,152 @@ document.addEventListener('pointerdown', e => {
 window.addEventListener('DOMContentLoaded', applySettings);   // 저장된 상태 반영
 window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); paintIcons(); } catch (_) {} });   // 기본 이모트·라벨 아이콘
 
+// ── 미니게임 (두 장 승부) ────────────────────────────────────
+// 판은 전부 서버에 있다. 여기서는 서버가 준 view 를 그리고, 누른 행동만 올린다.
+// 코인 계산은 하지 않는다 — 화면이 셈한 금액을 서버가 믿게 두면 그게 곧 구멍이다.
+let miniState = null;
+
+// 족보 사다리 — 이름만 띄우면 세다는 건지 약하다는 건지 알 수 없다.
+// 앞자리 합으로 정해지는 8칸 중 몇 번째인지를 칸으로 보여준다.
+const MINI_TIERS = [
+  { sum: 4,  name: '지배자' }, { sum: 5,  name: '최고급' },
+  { sum: 6,  name: '중간계' }, { sum: 7,  name: '중간계' },
+  { sum: 8,  name: '중간계' }, { sum: 9,  name: '중간계' },
+  { sum: 10, name: '최하위' }, { sum: 12, name: '꼴찌' },
+];
+
+function miniEvalBox(ev) {
+  if (!ev) return '';
+  // 왼쪽이 강한 쪽. 스나이퍼는 자기 자리가 아니라 "잡아먹는 자리"를 칠한다 —
+  // 스나이퍼의 세기는 자기 합이 아니라 누구를 잡느냐로 정해지기 때문이다.
+  const beats = ev.sniper === 2 ? [0, 1] : ev.sniper === 1 ? [1] : [];
+  const rungs = MINI_TIERS.map((_, i) => {
+    const cls = ev.sniper > 0 ? (beats.includes(i) ? 'snipe' : '') : (i === ev.tier ? 'on' : '');
+    return `<span class="mn-rung ${cls}"></span>`;
+  }).join('');
+  const hint = ev.sniper === 2
+    ? '거울쌍 10 — 지배자·최고급을 모두 잡습니다. (칠한 자리를 잡아먹어요)'
+    : ev.sniper === 1
+      ? '10-10 스나이퍼 — 최고급만 잡습니다. 지배자에게는 집니다.'
+      : `← 강함 · 여덟 자리 중 ${ev.tier + 1}번째 · 약함 →`;
+  return `<div class="mn-ev-top"><span class="mn-ev-name">${esc(ev.name)}</span>`
+       + `<span class="mn-ev-sum">앞자리 합 ${ev.frontSum} · 뒷자리 합 ${ev.backSum}</span></div>`
+       + `<div class="mn-ladder">${rungs}</div>`
+       + `<div class="mn-ev-hint">${esc(hint)}</div>`;
+}
+
+const MINI_LABEL = { check: '체크', bet: '배팅 🪙20', call: '콜', raise: '레이즈 🪙20', fold: '다이' };
+function miniPaint(v) {
+  miniState = v;
+  document.getElementById('miniIntro').style.display = 'none';
+  document.getElementById('miniPlay').style.display = 'flex';
+
+  const opp = document.getElementById('mnOppHand'); opp.innerHTML = '';
+  if (v.oppHand) v.oppHand.forEach((c) => { const el = makeCard(c); el.classList.add('anim-reveal'); opp.appendChild(el); });
+  else for (let i = 0; i < v.oppCount; i++) opp.appendChild(makeCard(null));
+  // 상대 족보도 같이 — 왜 졌는지 모르면 다음 판에 배우는 게 없다
+  const oe = document.getElementById('mnOppEval');
+  oe.textContent = v.oppEval ? v.oppEval.name : '';
+  oe.style.display = v.oppEval ? '' : 'none';
+
+  const my = document.getElementById('mnMyHand'); my.innerHTML = '';
+  v.myHand.forEach((c) => my.appendChild(makeCard(c)));
+
+  document.getElementById('mnPot').textContent = `🪙 ${v.pot}`;
+  document.getElementById('mnBets').textContent = `내 배팅 🪙${v.bet[0]} · 상대 🪙${v.bet[1]}`;
+  document.getElementById('mnEval').innerHTML = miniEvalBox(v.myEval);
+  document.getElementById('mnOppTurn').style.visibility = (!v.over && v.turn === 1) ? 'visible' : 'hidden';
+
+  const acts = document.getElementById('mnActs');
+  acts.innerHTML = '';
+  if (!v.over) {
+    const list = v.actions || [];
+    for (const a of ['check', 'call', 'bet', 'raise', 'fold']) {
+      if (!list.includes(a)) continue;
+      const b = document.createElement('button');
+      b.textContent = a === 'call' && v.toCall ? `콜 🪙${v.toCall}` : MINI_LABEL[a];
+      b.className = a === 'fold' ? 'cold' : (a === 'bet' || a === 'raise') ? 'hot' : '';
+      b.onclick = () => miniAct(a);
+      acts.appendChild(b);
+    }
+    document.getElementById('mnLog').textContent = v.turn === 0 ? '내 차례입니다.' : '상대가 고민하고 있어요…';
+  } else {
+    document.getElementById('mnLog').textContent = v.reason === 'fold' ? '다이로 끝났습니다.' : '공개!';
+  }
+  document.getElementById('mnActs').style.display = v.over ? 'none' : '';
+  document.getElementById('mnOver').style.display = v.over ? 'flex' : 'none';
+}
+
+window.miniOpen = function () {
+  if (!myAccount) { alert('미니게임은 로그인하면 즐길 수 있어요!'); openAuth('login'); return; }
+  closeModePanels();
+  document.getElementById('miniIntro').style.display = 'flex';
+  document.getElementById('miniPlay').style.display = 'none';
+  document.getElementById('miniModal').classList.add('show');
+};
+window.miniClose = function () {
+  // 판이 남아 있으면 서버가 다이로 처리한다 — 지는 판에서 창을 닫아 도망칠 수 없게
+  if (miniState && !miniState.over) socket.emit('mini_leave');
+  miniState = null;
+  document.getElementById('miniModal').classList.remove('show');
+};
+window.miniStart = function () { socket.emit('mini_start'); };
+window.miniAct = function (a) {
+  if (!miniState || miniState.over || miniState.turn !== 0) return;
+  miniState.turn = null;                     // 두 번 눌러 두 수가 나가는 것 방지
+  socket.emit('mini_act', { action: a });
+};
+
+socket.on('mini_state', miniPaint);
+socket.on('mini_error', (m) => toast('⚠️ ' + esc(m || '')));
+socket.on('mini_over', (r) => {
+  // 마지막 수와 동시에 까면 뭘 보고 졌는지 눈이 못 따라온다 — 뒷면으로 한 박자 두었다가 뒤집는다
+  if (r.view.oppHand) {
+    const hidden = Object.assign({}, r.view, { oppHand: null, oppEval: null });
+    miniPaint(hidden);
+    document.getElementById('mnActs').style.display = 'none';
+    document.getElementById('mnOver').style.display = 'none';   // 결과는 카드를 깐 뒤에
+    document.getElementById('mnLog').textContent = '공개!';
+    setTimeout(() => { if (miniState === hidden) miniShowOver(r); }, 650);
+    miniState = hidden;
+    return;
+  }
+  miniShowOver(r);
+});
+
+function miniShowOver(r) {
+  miniPaint(r.view);
+  const res = document.getElementById('mnRes');
+  res.textContent = r.draw ? '무승부' : r.won ? '승리!' : '패배';
+  res.className = 'mn-res ' + (r.draw ? 'draw' : r.won ? 'win' : 'lose');
+  document.getElementById('mnNet').textContent =
+    r.net > 0 ? `🪙 +${r.net}` : r.net < 0 ? `🪙 ${r.net}` : '🪙 0';
+  if (myAccount && typeof r.coins === 'number') { myAccount.coins = r.coins; renderAccount(); }
+}
+
+// 족보표 — 지금 쥔 패가 어디쯤인지 표에서 바로 짚어 준다
+window.miniRank = function (show) {
+  const box = document.getElementById('miniRankModal');
+  if (!show) return box.classList.remove('show');
+  const ev = miniState && miniState.myEval;
+  const rows = MINI_TIERS.map((t, i) => {
+    const me = ev && ev.sniper === 0 && ev.tier === i;
+    // "지금 내 패" 를 문장에 이어 붙이면 사전 열쇠가 즉석 문자열이 되어 번역이 끊긴다.
+    // 통째로 열쇠가 될 수 있게 따로 떼어 둔다.
+    return `<div class="mn-tr ${me ? 'me' : ''}"><i>${i + 1}</i><b>${esc(t.name)}</b>`
+         + `<em>앞자리 합 ${t.sum}</em>${me ? '<em class="mn-now">지금 내 패</em>' : ''}</div>`;
+  });
+  const sn = ev && ev.sniper > 0;
+  rows.push(`<div class="mn-tr sn ${sn ? 'me' : ''}"><i>🎯</i><b>스나이퍼</b>`
+          + `<em>앞·뒤 합이 모두 10</em>${sn ? '<em class="mn-now">지금 내 패</em>' : ''}</div>`);
+  document.getElementById('mnTable').innerHTML = rows.join('');
+  box.classList.add('show');
+};
+
+window.toggleRulesMini = function (show) {
+  document.getElementById('rulesMiniModal').style.display = show ? 'flex' : 'none';
+};
+
 // ── 토너먼트 (8강 · 2인전) ───────────────────────────────────
 // 화면은 네 모습을 오간다: 참가 안내 → 대기(30초) → 대진표 → 결과.
 // 어느 것을 보여줄지는 서버가 보내는 상태가 정한다 — 화면이 스스로 정하면 어긋난다.
@@ -2907,6 +3053,9 @@ function toggleRules4(show) {
 const ESC_TARGETS = [
   ['rulesModal',   () => toggleRules(false)],
   ['rules4Modal',  () => toggleRules4(false)],
+  ['rulesMiniModal', () => toggleRulesMini(false)],
+  ['miniRankModal', () => miniRank(false)],
+  ['miniModal',    () => miniClose()],
   ['lbModal',      () => closeLb()],
   ['shopModal',    () => closeShop()],
   ['missionModal', () => closeMissions()],

@@ -1450,6 +1450,40 @@ function tourPrize(token, tourId, rank, amount) {
   return { ok: true, amount: amt, rank, coins: u.coins, titles, profile: profileOf(u) };
 }
 
+// ── 미니게임 코인 ─────────────────────────────────────────
+// 판에 거는 돈은 걸 때마다 바로 빠지고, 이긴 사람이 판돈을 받는다.
+// 중간에 창을 닫아도 이미 빠진 돈은 그대로다 — 지는 판에서 도망쳐도 이득이 없다.
+// 금액은 서버(server.js)가 규칙에서 계산한 값만 넘긴다.
+const miniLocks = new Set();
+function miniStake(token, amount) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const cost = Math.floor(Number(amount) || 0);
+  if (cost <= 0) return { error: '금액이 올바르지 않아요.' };
+  if (miniLocks.has(idl)) return { error: '잠시 후 다시 시도해 주세요.' };
+  miniLocks.add(idl);
+  try {
+    if ((u.coins || 0) < cost) return { error: '코인이 부족해요.' };
+    u.coins -= cost;
+    persist(idl);
+    return { ok: true, coins: u.coins };
+  } finally { miniLocks.delete(idl); }
+}
+
+function miniPay(token, amount, won) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const amt = Math.max(0, Math.floor(Number(amount) || 0));
+  u.stats = u.stats || {};
+  u.stats.miniPlays = (u.stats.miniPlays || 0) + 1;
+  if (won) u.stats.miniWins = (u.stats.miniWins || 0) + 1;
+  if (amt > 0) u.coins = (u.coins || 0) + amt;
+  persist(idl);
+  return { ok: true, amount: amt, coins: u.coins, profile: profileOf(u) };
+}
+
 // 미션 보상 수령. 서버에서만 판정한다 — 화면이 보낸 금액은 절대 믿지 않는다.
 const misLocks = new Set();      // 같은 미션 동시 요청으로 두 번 지급되는 것 방지
 function claimMission(token, id) {
@@ -2504,7 +2538,7 @@ module.exports = {
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   gachaInfo, rollGacha, exchangeShard, GACHA_TIER, TIER_OF, SHARD_ONLY, bonusOf,
   missionList, claimMission, titleList, dmList, dmSend, dmUnread,
-  tourEnter, tourRefund, tourPrize, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,
+  tourEnter, tourRefund, tourPrize, miniStake, miniPay, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,
   // 친구
   friendList, sendFriendReq, acceptFriendReq, declineFriendReq, cancelFriendReq, removeFriend,
   friendIdlsOf, nickOfIdl,

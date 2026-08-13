@@ -157,67 +157,88 @@ console.log('\n⑨ 나눠주기');
   ok('같은 시드면 같은 패', JSON.stringify(again.hands) === JSON.stringify(d.hands));
 }
 
-console.log('\n⑩ 배팅 — 판돈 계산');
+// xorshift 는 작은 씨앗으로 시작하면 처음 몇 개가 전부 0에 가깝게 나온다.
+// 그대로 쓰면 "18% 확률" 이 늘 참이 되어 시험이 거짓말을 한다 — 미리 몇 번 돌린다.
+const rngOf = (seed) => {
+  let s = (seed >>> 0) || 1;
+  const next = () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
+  for (let i = 0; i < 12; i++) next();
+  return next;
+};
+
+console.log('\n⑩ 배팅 — 두 장 완전 비공개');
 {
-  const rngOf = (seed) => { let s = seed >>> 0;
-    return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; };
-
   const st = S.deal2(rngOf(5));
-  ok('처음엔 한 장씩', st.hands[0].length === 1 && st.hands[1].length === 1);
+  ok('각자 두 장', st.hands[0].length === 2 && st.hands[1].length === 2);
+  ok('네 장이 서로 다르다',
+     new Set([...st.hands[0], ...st.hands[1]].map((c) => c.id)).size === 4);
   ok('앤티가 들어가 있다', st.pot === S.ANTE * 2, String(st.pot));
-  ok('보이는 카드가 강한 쪽이 먼저',
-     st.turn === (S.cardValue(st.hands[0][0]) <= S.cardValue(st.hands[1][0]) ? 0 : 1));
+  ok('선이 정해져 있다', st.turn === 0 || st.turn === 1);
 
-  // 양쪽 체크 → 2차로 넘어가고 두 번째 장을 받는다
+  const v = S.viewFor(st, 0);
+  ok('내 패는 두 장 다 보인다', v.myHand.length === 2);
+  ok('상대 패는 안 보인다', v.oppHand === null);
+  ok('뒷면 장수만 알려준다', v.oppCount === 2);
+  ok('상대 족보도 안 알려준다', v.oppEval === null);
+  ok('내 족보는 처음부터 보인다', !!v.myEval && typeof v.myEval.name === 'string');
+}
+
+console.log('\n⑪ 배팅 — 한 라운드로 끝난다');
+{
+  const st = S.deal2(rngOf(7));
   const a = st.turn, b = 1 - a;
   S.act(st, a, 'check');
   ok('체크로는 판돈이 안 는다', st.pot === S.ANTE * 2, String(st.pot));
+  ok('아직 안 끝났다', st.over === false);
   const r = S.act(st, b, 'check');
-  ok('양쪽 체크면 2차로', r.dealt === true && st.round === 1);
-  ok('두 번째 장을 받는다', st.hands[0].length === 2 && st.hands[1].length === 2);
+  ok('양쪽 체크면 바로 공개', r.showdown === true && st.over === true);
+  ok('공개로 끝났다고 적힌다', st.reason === 'showdown');
+  ok('승자가 족보와 맞는다',
+     st.winner === (S.compare(st.hands[0], st.hands[1]) > 0 ? 0 : 1), String(st.winner));
+  const v = S.viewFor(st, 0);
+  ok('그때 상대 패가 보인다', !!v.oppHand && v.oppHand.length === 2);
+  ok('상대 족보도 온다', !!v.oppEval);
 }
 
-console.log('\n⑪ 배팅 — 콜·레이즈·폴드');
+console.log('\n⑫ 배팅 — 콜·레이즈·폴드');
 {
-  const rngOf = (seed) => { let s = seed >>> 0;
-    return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; };
-
-  // 배팅 → 콜
   let st = S.deal2(rngOf(9));
   let a = st.turn, b = 1 - a;
   S.act(st, a, 'bet');
   ok('배팅하면 판돈이 는다', st.pot === S.ANTE * 2 + S.BET_UNIT, String(st.pot));
-  ok('상대는 콜해야 한다', S.actionsFor(st).includes('call') && st.turn === b);
-  ok('낼 돈이 얼마인지 알려준다', S.viewFor(st, b).toCall === S.BET_UNIT,
-     String(S.viewFor(st, b).toCall));
+  ok('차례가 넘어간다', st.turn === b);
+  ok('낼 돈을 알려준다', S.viewFor(st, b).toCall === S.BET_UNIT, String(S.viewFor(st, b).toCall));
   S.act(st, b, 'call');
   ok('콜하면 양쪽이 같아진다', st.bet[0] === st.bet[1], JSON.stringify(st.bet));
-  ok('판돈은 둘이 낸 합', st.pot === st.bet[0] + st.bet[1], `${st.pot} vs ${st.bet[0] + st.bet[1]}`);
+  ok('판돈은 둘이 낸 합', st.pot === st.bet[0] + st.bet[1]);
+  ok('콜로 공개까지 간다', st.over === true && st.reason === 'showdown');
 
-  // 폴드하면 상대가 가져간다
+  // 폴드
   st = S.deal2(rngOf(11));
   a = st.turn; b = 1 - a;
   S.act(st, a, 'bet');
   S.act(st, b, 'fold');
   ok('폴드하면 바로 끝난다', st.over === true && st.reason === 'fold');
   ok('안 죽은 쪽이 이긴다', st.winner === a, String(st.winner));
+  // 죽은 판은 패를 안 깐다 — 다음 판에 읽힌다
+  ok('폴드로 끝나면 패를 안 깐다', S.viewFor(st, b).oppHand === null);
 
-  // 레이즈는 상한이 있다
+  // 레이즈 상한
   st = S.deal2(rngOf(13));
-  a = st.turn; b = 1 - a;
-  S.act(st, a, 'bet');
-  for (let i = 0; i < S.MAX_RAISE - 1; i++) {
-    const t = st.turn;
-    if (S.actionsFor(st).includes('raise')) S.act(st, t, 'raise');
+  S.act(st, st.turn, 'bet');
+  for (let i = 0; i < 5; i++) {
+    if (!S.actionsFor(st).includes('raise')) break;
+    S.act(st, st.turn, 'raise');
   }
   ok('레이즈 상한에 걸리면 못 올린다', !S.actionsFor(st).includes('raise'),
      JSON.stringify(S.actionsFor(st)));
-  ok('그래도 콜·폴드는 된다', S.actionsFor(st).includes('call') && S.actionsFor(st).includes('fold'));
+  ok('그래도 콜·폴드는 된다',
+     S.actionsFor(st).includes('call') && S.actionsFor(st).includes('fold'));
 }
 
-console.log('\n⑫ 배팅 — 못 하는 행동은 거절');
+console.log('\n⑬ 배팅 — 못 하는 행동은 거절');
 {
-  const st = S.deal2();
+  const st = S.deal2(rngOf(15));
   const a = st.turn, b = 1 - a;
   ok('내 차례가 아니면 거절', S.act(st, b, 'check').ok === false);
   ok('없는 행동도 거절', S.act(st, a, 'allin').ok === false);
@@ -225,52 +246,26 @@ console.log('\n⑫ 배팅 — 못 하는 행동은 거절');
   const before = st.pot;
   S.act(st, b, 'bet');
   ok('거절된 수는 판돈을 안 건드린다', st.pot === before, `${before} → ${st.pot}`);
+  S.act(st, a, 'check'); S.act(st, b, 'check');
+  ok('끝난 판에는 더 못 둔다', S.act(st, st.winner, 'bet').ok === false);
 }
 
-console.log('\n⑬ 배팅 — 상대 패는 안 보인다');
+console.log('\n⑭ 300판을 돌려도 판돈이 안 샌다');
 {
-  const rngOf = (seed) => { let s = seed >>> 0;
-    return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; };
-  const st = S.deal2(rngOf(17));
-  const a = st.turn, b = 1 - a;
-  S.act(st, a, 'check'); S.act(st, b, 'check');     // 2차로 — 두 번째 장을 받았다
-  const v = S.viewFor(st, 0);
-  ok('내 패는 두 장 다 보인다', v.myHand.length === 2);
-  ok('상대는 한 장만 보인다', v.oppHand.length === 1 && v.oppHidden === true);
-  ok('상대 족보는 안 알려준다', v.oppEval === null);
-
-  // 끝까지 가면 공개된다
-  S.act(st, st.turn, 'check'); S.act(st, st.turn, 'check');
-  ok('공개로 끝났다', st.over === true && st.reason === 'showdown');
-  const v2 = S.viewFor(st, 0);
-  ok('그때는 상대 패가 보인다', v2.oppHand.length === 2 && v2.oppHidden === false);
-  ok('족보도 같이 온다', !!v2.oppEval && !!v2.myEval);
-  // 승자는 족보 비교와 같아야 한다
-  ok('승자가 족보와 맞는다',
-     st.winner === (S.compare(st.hands[0], st.hands[1]) > 0 ? 0 : 1),
-     `winner=${st.winner}`);
-}
-
-console.log('\n⑭ 한 판을 끝까지 (여러 판 돌려도 판돈이 안 샌다)');
-{
-  const rngOf = (seed) => { let s = seed >>> 0;
-    return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; };
   let bad = 0, folds = 0, shows = 0;
   for (let seed = 1; seed <= 300; seed++) {
     const st = S.deal2(rngOf(seed));
     let guard = 0;
     while (!st.over && guard++ < 40) {
       const acts = S.actionsFor(st);
-      // 씨앗으로 골라 매번 같은 판을 재현한다.
-      // 폴드만 고르면 공개까지 가는 판이 한 번도 안 나온다 — 네 판에 한 번만 죽는다.
+      // 폴드만 고르면 공개까지 가는 판이 안 나온다 — 네 판에 한 번만 죽는다
       const pool = (seed + guard) % 4 === 0 ? acts : acts.filter((x) => x !== 'fold');
-      const pick = pool[(seed + guard) % pool.length];
-      S.act(st, st.turn, pick);
+      S.act(st, st.turn, pool[(seed + guard) % pool.length]);
     }
     if (!st.over) { bad++; continue; }
-    if (st.pot !== st.bet[0] + st.bet[1]) bad++;          // 판돈은 늘 둘이 낸 합
+    if (st.pot !== st.bet[0] + st.bet[1]) bad++;
+    if (st.winner === null) bad++;              // 무승부는 나올 수 없다
     if (st.reason === 'fold') folds++; else shows++;
-    if (st.winner === null) bad++;                        // 무승부는 나올 수 없다
   }
   ok('300판 모두 정상으로 끝난다', bad === 0, `${bad}판 이상`);
   ok('폴드로 끝난 판이 있다', folds > 0, String(folds));

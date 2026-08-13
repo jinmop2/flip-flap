@@ -377,15 +377,18 @@ console.log('\n⑨ 다인전 설명서');
   ok('따로 있다', /id="rules4Modal"/.test(html) && /id="rulesBox4"/.test(html));
   // 두 벌을 복사해 두면 같이 낡는다 — 껍데기는 공용 클래스로
   ok('껍데기를 나눠 쓴다', /\.rules-box \{/.test(html) && /\.rules-modal \{/.test(html));
-  ok('둘 다 공용 클래스를 달았다',
-     (html.match(/class="rules-box"/g) || []).length === 2);
+  // 설명서가 늘어날 수 있으니 개수가 아니라 "다 같은 껍데기를 쓰는가" 를 본다
+  ok('설명서마다 공용 클래스를 달았다',
+     (html.match(/class="rules-box"/g) || []).length >= 2
+     && !/class="rules-box[^"]*\brules-box2\b/.test(html));
   ok('여닫는 함수', /function toggleRules4/.test(cli));
   ok('다인전에서는 그쪽이 뜬다', /classList\.contains\('quad4'\)\) return toggleRules4\(true\)/.test(cli));
   ok('ESC 로도 닫힌다', /\['rules4Modal',\s*\(\) => toggleRules4\(false\)\]/.test(cli));
 
   // 내용이 실제 규칙과 맞는가 (game4.js 가 진짜다)
   const g4src = fs.readFileSync(src + '/game4.js', 'utf8');
-  const box = html.slice(html.indexOf('id="rulesBox4"'), html.indexOf('id="rulesModal"'));
+  // 다른 설명서까지 끌어오면 없는 문구도 있는 것처럼 보인다 — 이 상자 안에서만 찾는다
+  const box = html.slice(html.indexOf('id="rulesBox4"'), html.indexOf('id="rulesMiniModal"'));
   ok('덱 38장', /DECK38 = \[\[2, 4\], \[3, 6\], \[4, 10\], \[6, 18\]\]/.test(g4src) && /38장/.test(box));
   ok('4종 10장·6종 18장', /4짜리<\/b> · 10장/.test(box) && /6짜리<\/b> · 18장/.test(box));
   ok('손패 3인 7·4인 6', /HAND = \{ 3: 7, 4: 6 \}/.test(g4src)

@@ -1856,6 +1856,9 @@
     .mode-card.mini .mc-title { font-size:.86rem; letter-spacing:.5px; }
     .mode-card.mini.item { background:radial-gradient(ellipse at 50% 35%, #5a3070 0%, #381c48 70%, #26122f 100%); }
     .mode-card.mini.quad { background:radial-gradient(ellipse at 50% 35%, #1f5f4a 0%, #143c30 70%, #0d2820 100%); }
+    .mode-card.mini.sut  { background:radial-gradient(ellipse at 50% 35%, #6b2434 0%, #45141f 70%, #2c0c14 100%); }
+    /* 곁들이 모드가 셋이 되어 한 줄에 셋 — 둘일 때보다 낮게 잡아 로비가 안 밀린다 */
+    .mode-grid.sub { grid-template-columns:1fr 1fr 1fr; }
     .mc-tag {
       position:relative; font-size:.54rem; font-weight:800; letter-spacing:.04em;
       border-radius:5px; padding:1px 6px; background:rgba(255,212,121,.9); color:#5a2a10;
@@ -2230,6 +2233,49 @@
     .btn-item { background:linear-gradient(180deg,#6b3fa0,#4a2a6e); color:#f0e6ff;
       border:1.5px solid #8f6fc0; }
     .btn-item:hover, .btn-item:active { background:linear-gradient(180deg,#7d4cb8,#56317f); }
+
+    /* ── 미니게임 (두 장 승부) ── */
+    .mn-seat { display:flex; align-items:center; justify-content:space-between; gap:8px;
+      font-size:.8rem; color:#c8bcc4; }
+    .mn-seat b { color:#ffe9a8; font-size:.86rem; }
+    .mn-turn { font-size:.68rem; font-weight:800; padding:2px 8px; border-radius:7px;
+      background:rgba(245,207,110,.16); border:1px solid rgba(245,207,110,.5); color:#ffd97a; }
+    .mn-hand { display:flex; gap:8px; justify-content:center; min-height:100px; align-items:center; }
+    .mn-hand .card { width:64px; height:90px; font-size:.8rem; }
+    .mn-pot { text-align:center; margin:2px 0; }
+    .mn-pot b { font-family:'Bangers',cursive; font-size:1.7rem; letter-spacing:1.5px; color:var(--gold); }
+    .mn-pot span { font-size:.74rem; color:#8a7a80; display:block; }
+    /* 족보 — 이름만 쓰면 세다는 건지 약하다는 건지 모른다. 사다리로 위치까지 보여준다. */
+    .mn-eval { border:1px solid rgba(185,141,52,.35); border-radius:12px; padding:9px 11px;
+      background:rgba(255,215,120,.05); display:flex; flex-direction:column; gap:7px; }
+    .mn-ev-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+    .mn-ev-name { font-size:.94rem; font-weight:800; color:#ffe9a8; }
+    .mn-ev-sum { font-size:.74rem; color:#a99; }
+    .mn-ladder { display:flex; gap:3px; }
+    .mn-rung { flex:1; height:7px; border-radius:3px; background:rgba(255,255,255,.09); }
+    .mn-rung.on { background:linear-gradient(90deg,#f5cf6e,#c8912e); }
+    .mn-rung.snipe { background:linear-gradient(90deg,#ff6b8a,#c3305a); }
+    .mn-ev-hint { font-size:.72rem; color:#8a7a80; line-height:1.45; }
+    .mn-acts { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+    .mn-acts button { padding:11px 0; border-radius:11px; font-size:.84rem; font-weight:800;
+      border:1px solid rgba(185,141,52,.5); background:rgba(255,215,120,.08); color:#ffe9a8; cursor:pointer; }
+    .mn-acts button:disabled { opacity:.32; cursor:default; }
+    .mn-acts button.hot { background:linear-gradient(180deg,#c9973a,#8d5f16); color:#2a1206; border-color:#e0b45c; }
+    .mn-acts button.cold { background:#241a2e; color:#b8a8de; border-color:#6a5a8e; }
+    .mn-log { font-size:.74rem; color:#8a7a80; text-align:center; min-height:1.1em; }
+    .mn-res { text-align:center; font-family:'Bangers',cursive; font-size:1.6rem; letter-spacing:2px; }
+    .mn-res.win { color:#8fe0a0; } .mn-res.lose { color:#ff8fa3; } .mn-res.draw { color:#c8bcc4; }
+    .mn-net { text-align:center; font-size:.86rem; color:#ffe9a8; }
+    /* 족보표 — 위에서 아래로 셀수록 약해진다 */
+    .mn-tbl { display:flex; flex-direction:column; gap:4px; }
+    .mn-tr { display:flex; align-items:center; gap:8px; font-size:.8rem; color:#e0cba0;
+      border:1px solid rgba(185,141,52,.22); border-radius:9px; padding:6px 9px; }
+    .mn-tr.me { border-color:#f5cf6e; background:rgba(245,207,110,.12); }
+    .mn-tr.sn { border-color:rgba(255,107,138,.45); background:rgba(255,107,138,.08); }
+    .mn-tr i { font-style:normal; font-size:.68rem; color:#8a7a80; width:22px; flex-shrink:0; }
+    .mn-tr b { flex:1; color:#ffe9a8; font-size:.84rem; }
+    .mn-tr em { font-style:normal; font-size:.72rem; color:#a99; }
+    .mn-tr .mn-now { color:#f5cf6e; font-weight:800; flex-shrink:0; }
 
     /* ── 토너먼트 ── */
     .mode-card.tour { border-color:rgba(255,215,120,.5);
@@ -3123,6 +3169,7 @@
     <div class="lobby-top learn">
       <button class="top-link" onclick="toggleRules(true)"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>게임방법</button>
       <button class="top-link" onclick="startTutorial()"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/><path d="M22 10v6"/></svg></span>튜토리얼</button>
+      <button class="top-link" onclick="toggleRulesMini(true)"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="16" rx="2"/><rect x="13" y="4" width="8" height="16" rx="2"/></svg></span>미니게임</button>
     </div>
 
     <!-- 무엇을 할까 — 크기가 곧 우선순위 -->
@@ -3151,6 +3198,10 @@
       <button class="mode-card mini tour" onclick="tourOpen()">
         <span class="mc-title">토너먼트</span>
         <span class="mc-tag">8강 · 🪙200</span>
+      </button>
+      <button class="mode-card mini sut" onclick="miniOpen()">
+        <span class="mc-title">미니게임</span>
+        <span class="mc-tag">두 장 승부</span>
       </button>
     </div>
 
@@ -3568,6 +3619,61 @@
 <!-- 다인전(3·4인) 설명 — 2인전과 덧수·분배·클로즈가 다르다.
      한 창에 둘 다 담으면 "내가 보는 판은 어느 쪽인지" 가 헷갈려 따로 둔다. -->
 <!-- 인게임 채팅 — 친구 1:1 과 클랜. 판을 나가지 않고도 얘기할 수 있게. -->
+<!-- 미니게임 — 각자 두 장을 완전히 가리고 배팅, 한 라운드 뒤 공개 -->
+<div class="lb-modal" id="miniModal" onclick="if(event.target===this)miniClose()">
+  <div class="lb-box" style="width:330px">
+    <div class="lb-title">🃏 두 장 승부</div>
+
+    <!-- 들어가기 전 -->
+    <div id="miniIntro" style="display:flex;flex-direction:column;gap:12px">
+      <!-- 한 문장을 <b>로 쪼개면 번역이 조각나서 어순이 깨진다 — 통문장으로 둔다 -->
+      <p class="auth-hint" style="text-align:center;margin:0;line-height:1.7">
+        카드 두 장을 받아 서로 안 보이게 쥐고 배팅합니다.<br>
+        앞자리 합이 작을수록 강합니다.
+      </p>
+      <div class="mn-pot"><b>🪙 10</b><span>기본 참가금 · 배팅 단위 🪙20</span></div>
+      <button class="btn btn-gold" onclick="miniStart()">시작</button>
+      <div class="lb-btns">
+        <button class="btn btn-outline btn-sm" onclick="miniRank(true)">족보 보기</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleRulesMini(true)">설명서</button>
+      </div>
+      <button class="btn btn-ink" onclick="miniClose()">닫기</button>
+    </div>
+
+    <!-- 판 -->
+    <div id="miniPlay" style="display:none;flex-direction:column;gap:10px">
+      <div class="mn-seat"><b id="mnOppName">상대</b><span id="mnOppTurn" class="mn-turn" style="visibility:hidden">생각 중…</span></div>
+      <div class="mn-hand" id="mnOppHand"></div>
+      <div class="mn-ev-name" id="mnOppEval" style="display:none;text-align:center;font-size:.86rem"></div>
+      <div class="mn-pot"><b id="mnPot">🪙 20</b><span id="mnBets">내 배팅 🪙10 · 상대 🪙10</span></div>
+      <div class="mn-hand" id="mnMyHand"></div>
+      <div class="mn-eval" id="mnEval"></div>
+      <div class="mn-log" id="mnLog"></div>
+      <div class="mn-acts" id="mnActs"></div>
+      <div id="mnOver" style="display:none;flex-direction:column;gap:8px">
+        <div class="mn-res" id="mnRes"></div>
+        <div class="mn-net" id="mnNet"></div>
+        <button class="btn btn-gold" onclick="miniStart()">한 판 더</button>
+      </div>
+      <div class="lb-btns">
+        <button class="btn btn-outline btn-sm" onclick="miniRank(true)">족보 보기</button>
+        <button class="btn btn-ink btn-sm" onclick="miniClose()">그만두기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 족보표 — 지금 내 패가 어디쯤인지 표에서 바로 짚어 준다 -->
+<div class="lb-modal" id="miniRankModal" onclick="if(event.target===this)miniRank(false)">
+  <div class="lb-box" style="width:320px">
+    <div class="lb-title"><span data-ico="📜"></span> 족보</div>
+    <p class="auth-hint" style="text-align:center;margin:0">위로 갈수록 강합니다. 앞자리(큰 숫자) 두 장의 합으로 정합니다.</p>
+    <div class="mn-tbl" id="mnTable"></div>
+    <p class="auth-hint" style="margin:0">같은 줄끼리 붙으면 <b style="color:#ffe9a8">뒷자리 합</b>이 작은 쪽, 그것도 같으면 <b style="color:#ffe9a8">더 강한 카드</b>를 쥔 쪽이 이깁니다.</p>
+    <button class="btn btn-outline" onclick="miniRank(false)">닫기</button>
+  </div>
+</div>
+
 <!-- 토너먼트 — 대기(30초 카운트) → 대진표 → 결과 -->
 <div class="lb-modal" id="tourModal" onclick="if(event.target===this)tourClose()">
   <div class="lb-box" style="max-width:420px">
@@ -3735,6 +3841,51 @@
     <h3><span data-ico="⏱"></span> 제한 시간</h3>
     <p>한 사람당 <b>3분</b>. 내 차례일 때만 줄어든다.
     다 쓰면 그 자리는 <b>AI 가 이어서 둔다</b>.</p>
+  </div>
+</div>
+
+<!-- 미니게임 전용 설명서 — 본 게임과 규칙이 완전히 달라서 따로 뗀다 -->
+<div id="rulesMiniModal" class="rules-modal" onclick="if(event.target===this)toggleRulesMini(false)">
+  <div class="rules-box" data-i18n-block="rulesMini">
+    <span class="close-x" onclick="toggleRulesMini(false)">×</span>
+    <h2>두 장 승부</h2>
+    <p style="color:#8a7a80">카드 두 장을 <b style="color:#ffe9a8">서로 안 보이게</b> 쥐고 배팅하는 미니게임입니다.</p>
+
+    <h3><span data-ico="🎴"></span> 한 판의 흐름</h3>
+    <div class="r4-steps">
+      <div class="r4-step"><b>1</b><span>각자 <b>🪙10</b>을 걸고 카드 <b>두 장</b>씩 받습니다. 내 패만 보입니다.</span></div>
+      <div class="r4-step"><b>2</b><span>선부터 한 번씩 — <b>체크·배팅·콜·레이즈·다이</b>. 배팅 단위는 🪙20, 레이즈는 세 번까지.</span></div>
+      <div class="r4-step"><b>3</b><span>콜(또는 양쪽 체크)이면 <b>공개</b>. 이긴 쪽이 판돈을 전부 가져갑니다.</span></div>
+      <div class="r4-step"><b>4</b><span>다이로 끝나면 <b>패는 안 깝니다</b>. 상대가 뭘 쥐고 있었는지는 끝까지 모릅니다.</span></div>
+    </div>
+
+    <h3><span data-ico="🏅"></span> 누가 이기나</h3>
+    <p>카드 가운데 <b>큰 숫자(앞자리)</b> 두 장을 더합니다. <b>합이 작을수록 강합니다.</b></p>
+    <div class="r4-tbl">
+      <div class="r4-row r4-head"><span>앞자리 합</span><span>이름</span></div>
+      <div class="r4-row"><span>4</span><span>지배자</span></div>
+      <div class="r4-row"><span>5</span><span>최고급</span></div>
+      <div class="r4-row"><span>6 · 7 · 8 · 9</span><span>중간계</span></div>
+      <div class="r4-row"><span>10</span><span>최하위</span></div>
+      <div class="r4-row"><span>12</span><span>꼴찌</span></div>
+    </div>
+    <p>합이 같으면 <b>뒷자리(작은 숫자) 합</b>이 작은 쪽, 그것도 같으면 <b>더 강한 카드 한 장</b>을 쥔 쪽이 이깁니다.</p>
+
+    <h3><span data-ico="🎯"></span> 스나이퍼 — 뒤집기 한 방</h3>
+    <p>앞자리 합이 10이면 원래 최하위입니다. 그런데 <b>뒷자리 합까지 정확히 10</b>이면 최상위를 잡아먹습니다.</p>
+    <ul>
+      <li><b>거울쌍 10</b> (4-4 + 6-6) — <b>지배자·최고급</b>을 모두 잡습니다.</li>
+      <li><b>일반 10-10</b> — <b>최고급</b>만 잡습니다. 지배자에게는 집니다.</li>
+      <li>그 밖의 패(합 6~9)를 만나면 그냥 합 10짜리로 취급되어 집니다.</li>
+    </ul>
+    <p style="color:#8a7a80">즉, 스나이퍼는 <b>노려서 쓰는 패</b>지 만능이 아닙니다.</p>
+
+    <h3><span data-ico="👀"></span> 요령</h3>
+    <ul>
+      <li>보이는 카드가 <b>하나도 없습니다.</b> 읽을 것은 상대가 <b>얼마를 언제 거는가</b>뿐입니다.</li>
+      <li>선은 판마다 무작위입니다. 먼저 두는 쪽이 정보를 먼저 흘립니다.</li>
+      <li>다이로 접으면 이미 건 돈만 잃습니다. 나쁜 패로 끝까지 따라가는 게 제일 비쌉니다.</li>
+    </ul>
   </div>
 </div>
 
