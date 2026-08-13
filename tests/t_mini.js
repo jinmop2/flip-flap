@@ -135,7 +135,7 @@ console.log('\n⑥ 경기장');
   ok('남의 자리를 그린다', /id="mnSeats"/.test(html) && /mn-seat2/.test(cli));
   ok('판돈이 크게 보인다', /id="mnPotBig"/.test(html));
   ok('라운드를 알려준다', /id="mnRound"/.test(html) && /첫 번째 걸기/.test(cli));
-  ok('남의 패는 뒷면으로 깐다', /for \(let k = 0; k < st\.count; k\+\+\) cards\.appendChild\(makeCard\(null\)\)/.test(cli));
+  ok('남의 패는 뒷면으로 깐다', /else for \(let k = 0; k < st\.count; k\+\+\) \{[\s\S]{0,240}makeCard\(null\)/.test(cli));
   ok('선 표시가 있다', /mn-first/.test(cli) && /mn-first/.test(html));
   ok('족보를 자리로 보여준다', /mn-ladder/.test(cli) && /mn-rung/.test(html));
   ok('스나이퍼는 잡아먹는 자리를 칠한다', /beats\.includes\(i\) \? 'snipe'/.test(cli));
@@ -156,6 +156,38 @@ console.log('\n⑥ 경기장');
   for (const a of acts) ok(`${a} 버튼이 있다`, new RegExp(`\\b${a}:`).test(cli.slice(cli.indexOf('MINI_LABEL'), cli.indexOf('MINI_ORDER'))));
   ok('그리는 순서에도 다 들어 있다',
      acts.every((a) => cli.slice(cli.indexOf('MINI_ORDER'), cli.indexOf('MINI_ACT_KO')).includes(`'${a}'`)));
+}
+
+console.log('\n⑥″ 한 화면에 들어간다');
+{
+  // 처음 들어가면 버튼이 화면 밖에 있던 두 가지 원인
+  ok('좌측 버튼 묶음을 판 위에 띄운다',
+     /#miniControls \{ position:absolute/.test(html));
+  ok('흐름에 끼우지 않는다', !/id="miniControls" class=/.test(html));
+  ok('자리는 그 아래로 내려온다', /\.mn-top \{ padding-top:50px/.test(html));
+  // 하단 제스처바 — #game 과 같은 줄에 묶여 8px 로 덮어써지고 있었다
+  const mob = html.slice(html.indexOf('@media (max-width: 600px)'), html.indexOf('@media (max-width:520px)') + 1
+    || html.length);
+  ok('미니게임은 아래 여백을 따로 준다',
+     /#mini \{ padding:calc\(8px \+ var\(--safe-t\)\) 8px calc\(10px \+ var\(--safe-b\)\); \}/.test(html));
+  ok('제스처바만큼 띄운다', /calc\(1[04]px \+ var\(--safe-b\)\)/.test(html));
+  // 버튼 자리를 미리 비워 둔다 — 내 차례에 생기면서 판이 아래로 밀리면 안 된다
+  ok('버튼 자리를 미리 잡아 둔다', /\.mn-btns \{ min-height:46px/.test(html));
+  ok('가운데가 먼저 줄어든다', /\.mn-mid \{ flex:1 1 0; min-height:0; \}/.test(html));
+}
+
+console.log('\n⑥‴ 나눠주는 모션');
+{
+  ok('나눠주는 애니메이션이 있다', /@keyframes mnDeal/.test(html) && /\.card\.mn-deal/.test(html));
+  ok('새로 온 카드만 날린다', /function miniDealtCount/.test(cli));
+  ok('판이 새로 서면 전부 다시 날린다', /if \(count < had\)[\s\S]{0,160}miniSeen = \[\]/.test(cli));
+  ok('다시 그려도 또 날리지 않는다', /miniSeen\[seat\] = count;[\s\S]{0,120}return Math\.max\(0, count - had\)/.test(cli));
+  ok('한 장씩 늦게 떨어진다', /animationDelay/.test(cli));
+  ok('내 패도 상대 패도 날아온다',
+     (cli.match(/classList\.add\('mn-deal'\)/g) || []).length >= 2);
+  ok('자리에서 일어나면 기억을 지운다', /miniSitting = false; miniSeen = \[\]/.test(cli));
+  ok('모션을 끈 사람은 건드리지 않는다',
+     /prefers-reduced-motion[\s\S]{0,120}\.mn-deal \{ animation:none/.test(html));
 }
 
 console.log('\n⑥′ 배팅 칩');

@@ -2640,6 +2640,22 @@ const MINI_TIERS = [
   { sum: 10, name: '최하위' }, { sum: 12, name: '꼴찌' },
 ];
 
+
+// 나눠주는 모션 — 어느 카드가 "새로 온" 것인지 화면이 스스로 알아야 한다.
+// 서버는 상태를 통째로 보내므로, 자리마다 몇 장이었는지 기억해 두고 늘어난 만큼만
+// 날려 준다. 판이 새로 서면(장수가 줄면) 기억을 지워 전부 다시 날린다.
+let miniSeen = [];
+function miniDealtCount(seat, count) {
+  const had = miniSeen[seat] || 0;
+  if (count < had) {                                    // 새 판 — 전부 새 카드
+    miniSeen = [];
+    miniSeen[seat] = count;                             // 기억을 안 남기면 매번 다시 날린다
+    return count;
+  }
+  miniSeen[seat] = count;
+  return Math.max(0, count - had);
+}
+
 function miniEvalBox(ev, round) {
   if (!ev) {
     return '<div class="mn-ev-hint" style="text-align:center">'
@@ -2695,8 +2711,17 @@ function miniPaint(v) {
                  + (st.first ? '<span class="mn-first">선</span>' : '');
     const cards = document.createElement('div');
     cards.className = 'mn-cards';
+    const fresh = miniDealtCount(i, st.count);
     if (st.cards) st.cards.forEach((c) => { const e = makeCard(c); e.classList.add('anim-reveal'); cards.appendChild(e); });
-    else for (let k = 0; k < st.count; k++) cards.appendChild(makeCard(null));
+    else for (let k = 0; k < st.count; k++) {
+      const e = makeCard(null);
+      // 뒤에서부터 fresh 장이 새로 온 카드다. 자리마다 조금씩 늦춰 한 바퀴 돌듯 보이게.
+      if (k >= st.count - fresh) {
+        e.classList.add('mn-deal');
+        e.style.animationDelay = `${(i * 90) + (k - (st.count - fresh)) * 60}ms`;
+      }
+      cards.appendChild(e);
+    }
     const stk = document.createElement('div');
     stk.className = 'mn-stk';
     stk.textContent = st.alive ? `🪙 ${st.stack}` : '접음';
@@ -2733,7 +2758,15 @@ function miniPaint(v) {
   if (me.roundBet > 0) plate.appendChild(chipsEl(me.roundBet, 'mini'));
   const my = document.getElementById('mnMyCards');
   my.innerHTML = '';
-  (me.cards || []).forEach((c) => my.appendChild(makeCard(c)));
+  const myFresh = miniDealtCount(v.me, (me.cards || []).length);
+  (me.cards || []).forEach((c, k) => {
+    const e = makeCard(c);
+    if (k >= (me.cards.length - myFresh)) {
+      e.classList.add('mn-deal');
+      e.style.animationDelay = `${(v.me * 90) + (k - (me.cards.length - myFresh)) * 60}ms`;
+    }
+    my.appendChild(e);
+  });
   // 족보가 아직 없으면 테두리까지 지운다 — 짧은 화면에서 설명이 접히면 빈 상자만 남는다
   const evBox = document.getElementById('mnEval');
   evBox.className = 'mn-eval' + (v.myEval ? '' : ' plain');
@@ -2823,7 +2856,7 @@ function miniHide() {
   document.getElementById('miniOverModal').classList.remove('show');
   const box = document.getElementById('mini');
   box.classList.remove('on'); box.style.display = 'none';
-  miniState = null; miniSitting = false;
+  miniState = null; miniSitting = false; miniSeen = [];
   document.getElementById('lobby').style.display = 'flex';
   document.body.classList.remove('ingame');
 }
