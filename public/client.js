@@ -2596,10 +2596,10 @@ document.addEventListener('pointerdown', e => {
 window.addEventListener('DOMContentLoaded', applySettings);   // 저장된 상태 반영
 window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); paintIcons(); } catch (_) {} });   // 기본 이모트·라벨 아이콘
 
-// ── 미니게임 (두 장 승부) ────────────────────────────────────
+// ── 미니게임 (두 장 승부 · 2~4인) ────────────────────────────
 // 판은 전부 서버에 있다. 여기서는 서버가 준 view 를 그리고, 누른 행동만 올린다.
 // 코인 계산은 하지 않는다 — 화면이 셈한 금액을 서버가 믿게 두면 그게 곧 구멍이다.
-let miniState = null;
+let miniState = null, miniSeats = 2, miniSitting = false;
 
 // 족보 사다리 — 이름만 띄우면 세다는 건지 약하다는 건지 알 수 없다.
 // 앞자리 합으로 정해지는 8칸 중 몇 번째인지를 칸으로 보여준다.
@@ -2610,8 +2610,11 @@ const MINI_TIERS = [
   { sum: 10, name: '최하위' }, { sum: 12, name: '꼴찌' },
 ];
 
-function miniEvalBox(ev) {
-  if (!ev) return '';
+function miniEvalBox(ev, round) {
+  if (!ev) {
+    return '<div class="mn-ev-hint" style="text-align:center">'
+         + (round === 1 ? '아직 한 장 — 두 번째 장을 받아야 족보가 나옵니다.' : '') + '</div>';
+  }
   // 왼쪽이 강한 쪽. 스나이퍼는 자기 자리가 아니라 "잡아먹는 자리"를 칠한다 —
   // 스나이퍼의 세기는 자기 합이 아니라 누구를 잡느냐로 정해지기 때문이다.
   const beats = ev.sniper === 2 ? [0, 1] : ev.sniper === 1 ? [1] : [];
@@ -2630,94 +2633,162 @@ function miniEvalBox(ev) {
        + `<div class="mn-ev-hint">${esc(hint)}</div>`;
 }
 
-const MINI_LABEL = { check: '체크', bet: '배팅 🪙20', call: '콜', raise: '레이즈 🪙20', fold: '다이' };
+// 버튼에 붙는 이름과 금액. 금액은 서버가 계산해 보낸 값을 그대로 보여만 준다.
+const MINI_LABEL = {
+  check: ['체크', 'out'], ping: ['삥', ''], quarter: ['쿼터', ''], half: ['하프', ''],
+  ttadang: ['따당', ''], allin: ['올인', 'big'], call: ['콜', 'go'], die: ['다이', 'out'],
+};
+const MINI_ORDER = ['check', 'ping', 'quarter', 'half', 'ttadang', 'call', 'allin', 'die'];
+const MINI_ACT_KO = { check: '체크', ping: '삥', quarter: '쿼터', half: '하프',
+  ttadang: '따당', allin: '올인', call: '콜', die: '다이' };
+
 function miniPaint(v) {
   miniState = v;
-  document.getElementById('miniIntro').style.display = 'none';
-  document.getElementById('miniPlay').style.display = 'flex';
+  const box = document.getElementById('mini');
+  if (!box.classList.contains('on')) { box.classList.add('on'); box.style.display = 'flex'; }
 
-  const opp = document.getElementById('mnOppHand'); opp.innerHTML = '';
-  if (v.oppHand) v.oppHand.forEach((c) => { const el = makeCard(c); el.classList.add('anim-reveal'); opp.appendChild(el); });
-  else for (let i = 0; i < v.oppCount; i++) opp.appendChild(makeCard(null));
-  // 상대 족보도 같이 — 왜 졌는지 모르면 다음 판에 배우는 게 없다
-  const oe = document.getElementById('mnOppEval');
-  oe.textContent = v.oppEval ? v.oppEval.name : '';
-  oe.style.display = v.oppEval ? '' : 'none';
-
-  const my = document.getElementById('mnMyHand'); my.innerHTML = '';
-  v.myHand.forEach((c) => my.appendChild(makeCard(c)));
-
-  document.getElementById('mnPot').textContent = `🪙 ${v.pot}`;
-  document.getElementById('mnBets').textContent = `내 배팅 🪙${v.bet[0]} · 상대 🪙${v.bet[1]}`;
-  document.getElementById('mnEval').innerHTML = miniEvalBox(v.myEval);
-  document.getElementById('mnOppTurn').style.visibility = (!v.over && v.turn === 1) ? 'visible' : 'hidden';
-
-  const acts = document.getElementById('mnActs');
-  acts.innerHTML = '';
-  if (!v.over) {
-    const list = v.actions || [];
-    for (const a of ['check', 'call', 'bet', 'raise', 'fold']) {
-      if (!list.includes(a)) continue;
-      const b = document.createElement('button');
-      b.textContent = a === 'call' && v.toCall ? `콜 🪙${v.toCall}` : MINI_LABEL[a];
-      b.className = a === 'fold' ? 'cold' : (a === 'bet' || a === 'raise') ? 'hot' : '';
-      b.onclick = () => miniAct(a);
-      acts.appendChild(b);
-    }
-    document.getElementById('mnLog').textContent = v.turn === 0 ? '내 차례입니다.' : '상대가 고민하고 있어요…';
-  } else {
-    document.getElementById('mnLog').textContent = v.reason === 'fold' ? '다이로 끝났습니다.' : '공개!';
+  // 남들 — 내 자리(0)는 아래에 따로 그린다
+  const top = document.getElementById('mnSeats');
+  top.innerHTML = '';
+  for (let i = 1; i < v.n; i++) {
+    const st = v.seats[i];
+    const d = document.createElement('div');
+    d.className = 'mn-seat2' + (st.turn && !v.over ? ' turn' : '') + (st.alive ? '' : ' dead')
+                + (v.over && v.winner === i ? ' win' : '');
+    const nm = document.createElement('div');
+    nm.className = 'mn-nm';
+    nm.innerHTML = `${esc((v.names && v.names[i]) || '상대')}`
+                 + (st.first ? '<span class="mn-first">선</span>' : '');
+    const cards = document.createElement('div');
+    cards.className = 'mn-cards';
+    if (st.cards) st.cards.forEach((c) => { const e = makeCard(c); e.classList.add('anim-reveal'); cards.appendChild(e); });
+    else for (let k = 0; k < st.count; k++) cards.appendChild(makeCard(null));
+    const stk = document.createElement('div');
+    stk.className = 'mn-stk';
+    stk.textContent = st.alive ? `🪙 ${st.stack}` : '다이';
+    const chip = document.createElement('div');
+    chip.className = 'mn-chip' + (st.roundBet > 0 && st.alive ? ' on' : '');
+    chip.textContent = `🪙 ${st.roundBet}`;
+    const tag = document.createElement('div');
+    tag.className = 'mn-act-tag';
+    tag.textContent = st.eval ? st.eval.name : '';
+    d.append(nm, cards, stk, chip, tag);
+    top.appendChild(d);
   }
-  document.getElementById('mnActs').style.display = v.over ? 'none' : '';
-  document.getElementById('mnOver').style.display = v.over ? 'flex' : 'none';
+
+  document.getElementById('mnPotBig').textContent = `🪙 ${v.pot}`;
+  document.getElementById('mnRound').textContent =
+    v.round === 1 ? '첫 번째 배팅' : '두 번째 배팅';
+
+  const me = v.seats[v.me];
+  const plate = document.getElementById('mnMePlate');
+  plate.className = 'mn-meplate' + (v.turn === v.me && !v.over ? ' turn' : '');
+  plate.innerHTML = `<b>${esc((v.names && v.names[v.me]) || '나')}</b>`
+    + (me.first ? '<span class="mn-first">선</span>' : '')
+    + `<span class="mn-stk">🪙 ${me.stack}</span>`
+    + (me.roundBet > 0 ? `<span class="mn-chip on">🪙 ${me.roundBet}</span>` : '');
+  const my = document.getElementById('mnMyCards');
+  my.innerHTML = '';
+  (me.cards || []).forEach((c) => my.appendChild(makeCard(c)));
+  document.getElementById('mnEval').innerHTML = miniEvalBox(v.myEval, v.round);
+
+  const st0 = document.getElementById('mnStatus');
+  if (v.over) st0.textContent = v.reason === 'fold' ? '남은 사람이 가져갑니다.' : '공개!';
+  else if (v.turn === v.me) st0.textContent = `내 차례 · 내 밑천 🪙${me.stack}${v.toCall ? ` · 받을 돈 🪙${v.toCall}` : ''}`;
+  else st0.textContent = `${esc((v.names && v.names[v.turn]) || '상대')} 님이 고민하고 있어요…`;
+
+  const btns = document.getElementById('mnBtns');
+  btns.innerHTML = '';
+  if (v.over || v.turn !== v.me) return;
+  for (const a of MINI_ORDER) {
+    if (!(v.actions || []).includes(a)) continue;
+    const [label, cls] = MINI_LABEL[a];
+    const b = document.createElement('button');
+    b.className = 'mn-b ' + cls;
+    const amt = v.amounts[a];
+    b.innerHTML = `${label}${amt ? `<small>🪙 ${amt}</small>` : ''}`;
+    b.onclick = () => miniAct(a);
+    btns.appendChild(b);
+  }
 }
 
+window.miniPickSeats = function (n) {
+  miniSeats = n;
+  for (const b of document.querySelectorAll('#mnSeatSeg .sp-segb'))
+    b.classList.toggle('on', Number(b.dataset.seats) === n);
+};
 window.miniOpen = function () {
   if (!myAccount) { alert('미니게임은 로그인하면 즐길 수 있어요!'); openAuth('login'); return; }
   closeModePanels();
-  document.getElementById('miniIntro').style.display = 'flex';
-  document.getElementById('miniPlay').style.display = 'none';
   document.getElementById('miniModal').classList.add('show');
 };
-window.miniClose = function () {
-  // 판이 남아 있으면 서버가 다이로 처리한다 — 지는 판에서 창을 닫아 도망칠 수 없게
-  if (miniState && !miniState.over) socket.emit('mini_leave');
-  miniState = null;
+window.miniClose = function () { document.getElementById('miniModal').classList.remove('show'); };
+window.miniSit = function () {
   document.getElementById('miniModal').classList.remove('show');
+  socket.emit('mini_sit', { seats: miniSeats });
 };
-window.miniStart = function () { socket.emit('mini_start'); };
 window.miniAct = function (a) {
-  if (!miniState || miniState.over || miniState.turn !== 0) return;
+  if (!miniState || miniState.over || miniState.turn !== miniState.me) return;
   miniState.turn = null;                     // 두 번 눌러 두 수가 나가는 것 방지
+  document.getElementById('mnBtns').innerHTML = '';
   socket.emit('mini_act', { action: a });
 };
+window.miniNext = function () {
+  document.getElementById('miniOverModal').classList.remove('show');
+  socket.emit('mini_next');
+};
+window.miniStand = function () {
+  document.getElementById('miniOverModal').classList.remove('show');
+  socket.emit('mini_leave');
+};
+function miniHide() {
+  const box = document.getElementById('mini');
+  box.classList.remove('on'); box.style.display = 'none';
+  miniState = null; miniSitting = false;
+  document.getElementById('lobby').style.display = 'flex';
+  document.body.classList.remove('ingame');
+}
+window.miniStoodClose = function () {
+  document.getElementById('miniStoodModal').classList.remove('show');
+};
 
-socket.on('mini_state', miniPaint);
-socket.on('mini_error', (m) => toast('⚠️ ' + esc(m || '')));
-socket.on('mini_over', (r) => {
-  // 마지막 수와 동시에 까면 뭘 보고 졌는지 눈이 못 따라온다 — 뒷면으로 한 박자 두었다가 뒤집는다
-  if (r.view.oppHand) {
-    const hidden = Object.assign({}, r.view, { oppHand: null, oppEval: null });
-    miniPaint(hidden);
-    document.getElementById('mnActs').style.display = 'none';
-    document.getElementById('mnOver').style.display = 'none';   // 결과는 카드를 깐 뒤에
-    document.getElementById('mnLog').textContent = '공개!';
-    setTimeout(() => { if (miniState === hidden) miniShowOver(r); }, 650);
-    miniState = hidden;
-    return;
+socket.on('mini_state', (v) => {
+  if (!miniSitting) {                       // 처음 앉을 때 로비를 접는다
+    miniSitting = true;
+    document.getElementById('lobby').style.display = 'none';
+    document.body.classList.add('ingame');   // 화면 스크롤 잠금 — 본 게임과 같다
+    applyMySkins();                          // 내 테이블·카드 스킨을 미니게임에도
   }
-  miniShowOver(r);
+  miniPaint(v);
+});
+socket.on('mini_error', (m) => toast('⚠️ ' + esc(m || '')));
+
+socket.on('mini_over', (r) => {
+  // 마지막 수와 동시에 까면 뭘 보고 졌는지 눈이 못 따라온다 — 한 박자 두고 뒤집는다
+  const showRes = () => {
+    miniPaint(r.view);
+    const res = document.getElementById('mnRes');
+    res.textContent = r.won ? '승리!' : '패배';
+    res.className = 'mn-res ' + (r.won ? 'win' : 'lose');
+    document.getElementById('mnNet').textContent =
+      r.net > 0 ? `🪙 +${r.net}` : r.net < 0 ? `🪙 ${r.net}` : '🪙 0';
+    document.getElementById('mnOverWhy').textContent =
+      r.view.reason === 'fold' ? '모두 죽어서 끝난 판입니다. 패는 안 깝니다.' : '';
+    document.getElementById('mnNextBtn').style.display = r.canGo ? '' : 'none';
+    document.getElementById('miniOverModal').classList.add('show');
+  };
+  if (r.view.reason === 'showdown') { miniPaint(r.view); setTimeout(showRes, 900); }
+  else showRes();
 });
 
-function miniShowOver(r) {
-  miniPaint(r.view);
-  const res = document.getElementById('mnRes');
-  res.textContent = r.draw ? '무승부' : r.won ? '승리!' : '패배';
-  res.className = 'mn-res ' + (r.draw ? 'draw' : r.won ? 'win' : 'lose');
-  document.getElementById('mnNet').textContent =
-    r.net > 0 ? `🪙 +${r.net}` : r.net < 0 ? `🪙 ${r.net}` : '🪙 0';
+socket.on('mini_stood', (r) => {
+  miniHide();
+  document.getElementById('mnStoodNet').textContent =
+    `🪙 ${r.back} 회수 (${r.net > 0 ? '+' : ''}${r.net})`;
+  document.getElementById('mnStoodWhy').textContent = r.why || '';
+  document.getElementById('miniStoodModal').classList.add('show');
   if (myAccount && typeof r.coins === 'number') { myAccount.coins = r.coins; renderAccount(); }
-}
+});
 
 // 족보표 — 지금 쥔 패가 어디쯤인지 표에서 바로 짚어 준다
 window.miniRank = function (show) {
@@ -3056,6 +3127,7 @@ const ESC_TARGETS = [
   ['rulesMiniModal', () => toggleRulesMini(false)],
   ['miniRankModal', () => miniRank(false)],
   ['miniModal',    () => miniClose()],
+  ['miniStoodModal', () => miniStoodClose()],
   ['lbModal',      () => closeLb()],
   ['shopModal',    () => closeShop()],
   ['missionModal', () => closeMissions()],
@@ -3873,14 +3945,17 @@ function screenFx(kind) {
 const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal', tbl_obsidian: 'tbl-obsidian', tbl_hanji: 'tbl-hanji', tbl_shard: 'tbl-shard' };
 const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal', face_obsidian: 'cf-obsidian', face_hanji: 'cf-hanji', face_shard: 'cf-shard' };
 function applyMySkins() {
-  const g = document.getElementById('game'); if (!g) return;
-  // 벗길 목록을 손으로 적으면 새 스킨을 넣을 때마다 빠뜨린다 —
-  // 실제로 파편 테이블·앞면이 여기서 누락돼 갈아입어도 예전 스킨이 남았다.
-  // 표에서 그대로 끌어오면 추가만 해도 자동으로 따라온다.
-  g.classList.remove(...Object.values(TABLE_CLS), ...Object.values(FACE_CLS));
-  const p = myAccount;
-  if (p && TABLE_CLS[p.table]) g.classList.add(TABLE_CLS[p.table]);
-  if (p && FACE_CLS[p.cardFace]) g.classList.add(FACE_CLS[p.cardFace]);
+  // 경기장이 여럿이다(2인전·미니게임). 하나만 칠하면 미니게임만 맨 테이블이 된다.
+  for (const id of ['game', 'mini']) {
+    const g = document.getElementById(id); if (!g) continue;
+    // 벗길 목록을 손으로 적으면 새 스킨을 넣을 때마다 빠뜨린다 —
+    // 실제로 파편 테이블·앞면이 여기서 누락돼 갈아입어도 예전 스킨이 남았다.
+    // 표에서 그대로 끌어오면 추가만 해도 자동으로 따라온다.
+    g.classList.remove(...Object.values(TABLE_CLS), ...Object.values(FACE_CLS));
+    const p = myAccount;
+    if (p && TABLE_CLS[p.table]) g.classList.add(TABLE_CLS[p.table]);
+    if (p && FACE_CLS[p.cardFace]) g.classList.add(FACE_CLS[p.cardFace]);
+  }
 }
 
 // 탭 처리 — click 만 쓰면 폰에서 가끔 먹지 않는다.

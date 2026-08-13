@@ -1471,14 +1471,17 @@ function miniStake(token, amount) {
   } finally { miniLocks.delete(idl); }
 }
 
+// won 이 null 이면 전적은 안 센다 — 자리에서 일어나며 밑천만 되돌려받는 경우.
 function miniPay(token, amount, won) {
   const idl = tokenIndex[token];
   const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
   const amt = Math.max(0, Math.floor(Number(amount) || 0));
   u.stats = u.stats || {};
-  u.stats.miniPlays = (u.stats.miniPlays || 0) + 1;
-  if (won) u.stats.miniWins = (u.stats.miniWins || 0) + 1;
+  if (won !== null && won !== undefined) {
+    u.stats.miniPlays = (u.stats.miniPlays || 0) + 1;
+    if (won) u.stats.miniWins = (u.stats.miniWins || 0) + 1;
+  }
   if (amt > 0) u.coins = (u.coins || 0) + amt;
   persist(idl);
   return { ok: true, amount: amt, coins: u.coins, profile: profileOf(u) };

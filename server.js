@@ -1306,90 +1306,132 @@ io.on('connection', (socket) => {
     socket.emit('tour_lobby', tourLobbyView(joined));
   });
 
-  // ── 미니게임 (섯다식 2장 승부) ──
-  // 판 상태는 서버에만 있다. 화면은 자기 패와 판돈만 받고, 얼마가 빠지고 들어오는지는
-  // 여기서 규칙으로 계산한다 — 클라이언트가 보낸 금액은 어떤 경우에도 쓰지 않는다.
-  socket.on('mini_start', () => {
+  // ── 미니게임 (섯다식 두 장 승부, 2~4인) ──
+  //
+  // 자리에 앉을 때 밑천을 사고, 일어설 때 남은 밑천을 돌려받는다.
+  // 판마다 코인을 만지지 않는 이유는 두 가지다 — 배팅이 오갈 때마다 계좌를
+  // 건드리면 경쟁 조건이 생기고, 올인이 뜻을 가지려면 앞에 쌓인 밑천이 있어야 한다.
+  //
+  // 판 상태는 서버에만 있다. 화면은 자기 패와 판돈만 받고, 얼마가 오가는지는
+  // 규칙에서 계산한다 — 클라이언트가 보낸 금액은 어떤 경우에도 쓰지 않는다.
+  const MINI_AI_NAMES = ['타짜 김씨', '홍박사', '미스박', '광팔이'];
+
+  socket.on('mini_sit', ({ seats } = {}) => {
     if (!socket.token) return socket.emit('mini_error', '로그인이 필요해요.');
-    if (socket.mini && !socket.mini.st.over) return socket.emit('mini_error', '이미 진행 중인 판이 있어요.');
-    const paid = accounts.miniStake(socket.token, SUTDA.ANTE);
+    if (socket.mini) return socket.emit('mini_error', '이미 자리에 앉아 있어요.');
+    const n = Math.min(SUTDA.MAX_SEATS, Math.max(SUTDA.MIN_SEATS, Number(seats) || 2));
+    const paid = accounts.miniStake(socket.token, SUTDA.BUY_IN);
     if (paid.error) return socket.emit('mini_error', paid.error);
-    const st = SUTDA.deal2();
-    socket.mini = { st, staked: SUTDA.ANTE, aiStaked: SUTDA.ANTE };
+    const me = accounts.byToken(socket.token);
+    socket.mini = {
+      n,
+      stacks: new Array(n).fill(SUTDA.BUY_IN),
+      names: [ (me && me.nick) || '나', ...MINI_AI_NAMES.slice(0, n - 1) ],
+      buyIn: SUTDA.BUY_IN,
+      st: null, timer: null, cashed: false,
+    };
+    miniDeal(null);
+  });
+
+  // 한 판 시작. first 를 주면 그 자리가 선(= 지난 판 승자).
+  function miniDeal(first) {
+    const m = socket.mini;
+    if (!m) return;
+    if (m.stacks[0] < SUTDA.ANTE) return miniStand('밑천이 떨어졌어요.');
+    // 밑천이 바닥난 AI 는 다시 채워 준다 — 자리가 비면 판이 안 선다
+    for (let i = 1; i < m.n; i++) if (m.stacks[i] < SUTDA.ANTE) m.stacks[i] = SUTDA.BUY_IN;
+    m.st = SUTDA.start({ seats: m.n, stacks: m.stacks, first });
+    m.settled = false;
     pushMini();
     miniAiTurn();
-  });
+  }
 
   socket.on('mini_act', ({ action } = {}) => {
     const m = socket.mini;
-    if (!m || m.st.over) return socket.emit('mini_error', '진행 중인 판이 없어요.');
+    if (!m || !m.st || m.st.over) return socket.emit('mini_error', '진행 중인 판이 없어요.');
     if (m.st.turn !== 0) return socket.emit('mini_error', '아직 차례가 아니에요.');
-    // 돈이 더 들어가는 수라면 먼저 코인을 빼고, 못 빼면 그 수는 없던 일이 된다
-    const need = (action === 'call') ? Math.max(0, m.st.bet[1] - m.st.bet[0])
-      : (action === 'bet' || action === 'raise') ? Math.max(0, m.st.bet[1] - m.st.bet[0]) + SUTDA.BET_UNIT : 0;
-    if (need > 0) {
-      if (!SUTDA.actionsFor(m.st).includes(action)) return socket.emit('mini_error', '지금 할 수 없는 행동이에요.');
-      const paid = accounts.miniStake(socket.token, need);
-      if (paid.error) return socket.emit('mini_error', paid.error);
-      m.staked += need;
-    }
-    const r = SUTDA.act(m.st, 0, action);
-    if (!r.ok) {
-      // 규칙에 막혔는데 돈만 빠지면 안 된다 — 되돌린다
-      if (need > 0) { accounts.miniPay(socket.token, need, false); m.staked -= need; }
-      return socket.emit('mini_error', r.error);
-    }
+    const r = SUTDA.act(m.st, 0, String(action || ''));
+    if (!r.ok) return socket.emit('mini_error', r.error);
     pushMini();
-    miniAiTurn();
+    if (m.st.over) miniHandOver(); else miniAiTurn();
   });
 
-  socket.on('mini_leave', () => {
+  socket.on('mini_next', () => {
     const m = socket.mini;
-    if (m && !m.st.over) { SUTDA.act(m.st, m.st.turn === 0 ? 0 : 1, 'fold'); miniSettle(); }
-    socket.mini = null;
+    if (!m) return socket.emit('mini_error', '자리에 앉아 있지 않아요.');
+    if (m.st && !m.st.over) return socket.emit('mini_error', '아직 판이 안 끝났어요.');
+    miniDeal(m.st ? m.st.first : null);      // 선은 지난 판 승자
   });
+
+  socket.on('mini_leave', () => miniStand());
 
   function miniView() {
     const m = socket.mini;
     const v = SUTDA.viewFor(m.st, 0);
-    v.staked = m.staked;
+    v.names = m.names.slice();
+    v.buyIn = m.buyIn;
     return v;
   }
-  function pushMini() { if (socket.mini) socket.emit('mini_state', miniView()); }
+  function pushMini() { if (socket.mini && socket.mini.st) socket.emit('mini_state', miniView()); }
 
-  // AI 차례를 한 수씩 두되, 사람이 보기에 생각하는 것처럼 살짝 띄운다
+  // AI 차례를 한 수씩. 사람이 보기에 생각하는 것처럼 살짝 띄운다.
   function miniAiTurn() {
     const m = socket.mini;
-    if (!m) return;
-    if (m.st.over) return miniSettle();
-    if (m.st.turn !== 1) return;
-    setTimeout(() => {
+    if (!m || !m.st) return;
+    if (m.st.over) return miniHandOver();
+    if (m.st.turn === 0) return;
+    clearTimeout(m.timer);
+    m.timer = setTimeout(() => {
       const cur = socket.mini;
-      if (!cur || cur !== m || m.st.over || m.st.turn !== 1) return;
-      const v = SUTDA.viewFor(m.st, 1);
-      const a = SUTDA.aiAction(v) || 'check';
-      const need = (a === 'call') ? v.toCall : (a === 'bet' || a === 'raise') ? v.toCall + SUTDA.BET_UNIT : 0;
-      SUTDA.act(m.st, 1, a);
-      m.aiStaked += need;
+      if (!cur || cur !== m || !m.st || m.st.over || m.st.turn === 0) return;
+      const seat = m.st.turn;
+      const a = SUTDA.aiAction(SUTDA.viewFor(m.st, seat)) || 'die';
+      SUTDA.act(m.st, seat, a);
       pushMini();
-      if (m.st.over) miniSettle(); else miniAiTurn();
-    }, 700 + Math.floor(Math.random() * 500));
+      if (m.st.over) miniHandOver(); else miniAiTurn();
+    }, 650 + Math.floor(Math.random() * 500));
   }
 
-  // 정산 — 이긴 쪽이 판돈을 가져간다. 비기면 각자 낸 만큼 돌려받는다.
-  function miniSettle() {
+  // 한 판이 끝났다. 코인은 아직 안 건드린다 — 밑천만 옮겨 두고 일어설 때 정산한다.
+  function miniHandOver() {
     const m = socket.mini;
-    if (!m || m.paid) return;
-    m.paid = true;
+    if (!m || !m.st || m.settled) return;
+    m.settled = true;
+    m.stacks = m.st.stack.slice();
     const won = m.st.winner === 0;
-    const gain = m.st.winner === null ? m.staked : (won ? m.st.pot : 0);
-    const res = accounts.miniPay(socket.token, gain, won);
+    accounts.miniPay(socket.token, 0, won);        // 판수·승수만 기록 (코인은 0)
     socket.emit('mini_over', {
-      view: miniView(), won, draw: m.st.winner === null,
-      gain, net: gain - m.staked,
-      coins: res.coins, profile: res.profile,
+      view: miniView(), won,
+      gain: won ? m.st.pot : 0,
+      net: (won ? m.st.pot : 0) - m.st.put[0],     // 이 판에서 는 만큼 (딴 돈 - 낸 돈)
+      canGo: m.stacks[0] >= SUTDA.ANTE,
     });
   }
+
+  // 자리에서 일어난다 — 남은 밑천을 코인으로 되돌려 받는다.
+  // 판이 돌아가는 중이면 죽은 것으로 친다. 지는 판에서 창을 닫아도 이득이 없게.
+  function miniStand(why) {
+    const m = socket.mini;
+    if (!m || m.cashed) { socket.mini = null; return; }
+    m.cashed = true;
+    clearTimeout(m.timer);
+    if (m.st && !m.st.over) {
+      SUTDA.act(m.st, 0, 'die');
+      while (!m.st.over && m.st.turn !== null && m.st.turn !== 0) {
+        const seat = m.st.turn;
+        if (!SUTDA.act(m.st, seat, SUTDA.aiAction(SUTDA.viewFor(m.st, seat)) || 'die').ok) break;
+      }
+      m.stacks = m.st.stack.slice();
+    }
+    const back = Math.max(0, m.stacks[0] | 0);
+    const res = accounts.miniPay(socket.token, back, null);     // 정산 — 판수는 안 센다
+    socket.emit('mini_stood', {
+      back, buyIn: m.buyIn, net: back - m.buyIn,
+      coins: res && res.coins, profile: res && res.profile, why: why || null,
+    });
+    socket.mini = null;
+  }
+  socket.on('disconnect', () => { if (socket.mini) miniStand(); });
 
   socket.on('enter_lobby', () => { socket.join('lobby'); socket.emit('rooms', openRoomList()); });
 

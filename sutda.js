@@ -102,143 +102,308 @@ function deal(rand) {
 
 // ── 배팅 ──────────────────────────────────────────────────────────────────
 //
-// 2인 · 각자 2장을 받고 서로 완전히 가린다. 배팅 한 라운드 뒤 공개.
-// 상태기계라 서버를 안 띄우고 한 판을 통째로 돌릴 수 있다.
+// 2~4인. 섯다 방식 그대로다.
 //
-//   1) 앤티를 걸고 각자 2장 — 둘 다 자기만 본다.
-//   2) 선부터 배팅. 체크·배팅·콜·레이즈·폴드.
-//   3) 콜(또는 양쪽 체크)로 라운드가 닫히면 공개하고 족보로 가른다.
+//   1) 모두 기본 단위(삥)만큼 걸고 한 장씩 받는다. 선부터 배팅.
+//   2) 한 명 빼고 모두 콜하거나 죽으면 라운드가 닫힌다.
+//   3) 한 명만 남으면 그대로 승리(기권승), 둘 이상 남으면 한 장 더 받고 두 번째 배팅.
+//   4) 두 번째 배팅이 닫히면 패를 열고 족보로 가른다.
+//   5) 선은 이긴 사람이 잡는다.
 //
-// 보이는 카드가 하나도 없으므로, 읽을 것은 상대가 얼마를 어떻게 거느냐뿐이다.
-// 선은 판마다 무작위로 정한다 — 고정하면 한쪽이 계속 정보를 먼저 흘린다.
-const ANTE = 10;                 // 판에 들어갈 때 각자 내는 돈
-const BET_UNIT = 20;             // 배팅 한 단위
-const MAX_RAISE = 3;             // 한 라운드에 레이즈는 세 번까지 (판이 무한히 안 커지게)
+// 두 장 모두 끝까지 비공개다. 읽을 것은 상대가 얼마를 언제 거느냐뿐이다.
+//
+// 상태기계라 서버를 안 띄우고 한 판을 통째로 돌릴 수 있다. 돈이 오가는 곳이라
+// 화면 없이 수천 판을 돌려 봐야 새는 곳이 보인다.
+const ANTE = 10;                 // 기본 단위 = 판에 들어갈 때 각자 내는 돈(삥 한 번)
+const BET_UNIT = ANTE;           // 삥 배팅액 (예전 이름 — 밖에서 쓰던 것을 살려 둔다)
+const BUY_IN = 200;              // 자리에 앉을 때 들고 오는 돈. 올인이 뜻을 가지려면 밑천이 있어야 한다.
+const MAX_SEATS = 4;
+const MIN_SEATS = 2;
 
-// 사람이 지금 할 수 있는 행동
-function actionsFor(st) {
-  if (st.over || st.turn === null) return [];
-  const toCall = st.bet[1 - st.turn] - st.bet[st.turn];
-  if (toCall > 0) {
-    return st.raises < MAX_RAISE ? ['call', 'raise', 'fold'] : ['call', 'fold'];
-  }
-  return st.raises < MAX_RAISE ? ['check', 'bet', 'fold'] : ['check', 'fold'];
-}
-
-// 한 판 시작 — 각자 2장, 둘 다 비공개
-function deal2(rand) {
-  const r = rand || Math.random;
-  const d = shuffle(makeDeck(), r);
+// 각 행동이 "얼마를 더 내는가". 못 하는 행동이면 null.
+// 하프·쿼터는 콜을 하고 난 뒤의 판돈을 기준으로 잡는다 — 콜 값을 빼고 계산하면
+// 앞사람이 크게 지를수록 되받아치는 값이 상대적으로 작아져 후행이 유리해진다.
+function raiseAmounts(st, seat) {
+  const my = st.roundBet[seat];
+  const max = Math.max(...st.alive.map((a, i) => (a ? st.roundBet[i] : 0)));
+  const toCall = max - my;
+  const potAfterCall = st.pot + toCall;
   return {
-    hands: [[d[0], d[1]], [d[2], d[3]]],
-    bet: [ANTE, ANTE],             // 각자 지금까지 낸 돈
-    pot: ANTE * 2,
-    raises: 0,
-    acted: [false, false],
-    turn: r() < 0.5 ? 0 : 1,       // 선은 무작위 — 고정하면 한쪽이 늘 먼저 정보를 흘린다
-    over: false,
-    winner: null,
-    reason: null,                  // 'fold' | 'showdown'
-    log: [],
+    call: toCall,
+    ping: ANTE,                                   // 삥 — 기본 단위
+    half: toCall + Math.floor(potAfterCall / 2),
+    quarter: toCall + Math.floor(potAfterCall / 4),
+    ttadang: max * 2 - my,                        // 따당 — 앞사람이 건 돈의 두 배
+    allin: st.stack[seat],
   };
 }
 
-// 라운드가 닫혔는가 — 둘 다 행동했고 낸 돈이 같으면
-function roundClosed(st) {
-  return st.acted[0] && st.acted[1] && st.bet[0] === st.bet[1];
+// 올인이 아니어도 밑천보다 많이 걸 수는 없고, 남들이 받을 수 없는 액수도 걸 수 없다.
+// 사이드팟을 만들지 않기로 했으니(3~4인에서 판을 셋으로 쪼개면 화면이 못 따라온다)
+// 레이즈는 "가장 가난한 상대가 받을 수 있는 만큼" 에서 끊는다.
+function capFor(st, seat) {
+  let cap = st.stack[seat];
+  for (let i = 0; i < st.n; i++) {
+    if (i === seat || !st.alive[i]) continue;
+    const can = st.roundBet[i] + st.stack[i] - st.roundBet[seat];
+    if (can < cap) cap = can;
+  }
+  return Math.max(0, cap);
 }
 
-// 한 수. seat 가 action 을 한다. 반환: { ok, error }
+// 지금 이 사람이 할 수 있는 행동. 순서는 화면에 놓는 순서와 같다.
+function actionsFor(st, seat) {
+  const me = seat === undefined ? st.turn : seat;
+  if (st.over || st.turn === null || me !== st.turn || !st.alive[me]) return [];
+  const A = raiseAmounts(st, me);
+  const cap = capFor(st, me);
+  const out = [];
+  const opening = A.call === 0 && !st.opened;      // 이번 라운드에 아직 아무도 안 걸었다
+
+  // 콜/체크한 사람은 그 라운드에서 다시 못 올린다 — 콜·다이만 남는다
+  if (!st.locked[me]) {
+    // 삥은 규칙대로 선만 — 판을 여는 값이다.
+    // 체크는 걸린 돈이 없을 때 누구나. 규칙은 선만이지만, 그러면 선이 체크한 뒤
+    // 뒷사람은 걸거나 죽어야 해서 아무것도 아닌 판이 억지로 커진다.
+    if (A.call === 0) out.push('check');
+    if (opening && me === st.first && cap >= A.ping && st.stack[me] > A.ping) out.push('ping');
+    if (!opening || me !== st.first) {
+      if (A.call > 0 && A.ttadang <= cap && A.ttadang > A.call) out.push('ttadang');
+    }
+    if (A.quarter <= cap && A.quarter > A.call) out.push('quarter');
+    if (A.half <= cap && A.half > A.call) out.push('half');
+    if (st.stack[me] > A.call) out.push('allin');
+  }
+  if (A.call > 0) out.push('call');
+  out.push('die');
+  return out;
+}
+
+// 한 판 시작. seats 는 자리 수(2~4), first 는 선(없으면 무작위).
+function start(opt = {}) {
+  const r = opt.rand || Math.random;
+  const n = Math.min(MAX_SEATS, Math.max(MIN_SEATS, opt.seats || 2));
+  const stacks = opt.stacks ? opt.stacks.slice(0, n) : new Array(n).fill(BUY_IN);
+  const d = shuffle(makeDeck(), r);
+  const st = {
+    n,
+    deck: d,
+    hands: [], stack: [], alive: [], roundBet: [], put: [], locked: [],
+    acted: [],
+    pot: 0, round: 1, opened: false,
+    first: (opt.first === undefined || opt.first === null) ? Math.floor(r() * n) : opt.first % n,
+    turn: null, over: false, winner: null, reason: null, log: [],
+  };
+  for (let i = 0; i < n; i++) {
+    st.hands.push([d[i]]);                         // 1장씩 — 두 번째 장은 라운드가 끝나고
+    st.stack.push(stacks[i] === undefined ? BUY_IN : stacks[i]);
+    st.alive.push(true); st.locked.push(false); st.acted.push(false);
+    st.roundBet.push(0); st.put.push(0);
+  }
+  // 기본 단위를 모두 건다 (판에 들어가는 값)
+  for (let i = 0; i < n; i++) {
+    const a = Math.min(ANTE, st.stack[i]);
+    st.stack[i] -= a; st.roundBet[i] += a; st.put[i] += a; st.pot += a;
+  }
+  st.turn = st.first;
+  return st;
+}
+
+const alivePlayers = (st) => st.alive.reduce((n, a) => n + (a ? 1 : 0), 0);
+
+// 다음 차례 — 죽은 사람과 밑천이 바닥난 사람은 건너뛴다
+function nextSeat(st, from) {
+  for (let k = 1; k <= st.n; k++) {
+    const i = (from + k) % st.n;
+    if (st.alive[i]) return i;
+  }
+  return from;
+}
+
+// 라운드가 닫혔는가 — 살아 있는 모두가 한 번씩 행동했고 낸 돈이 같으면.
+// 올인으로 더 낼 수 없는 사람은 액수가 달라도 닫힌 것으로 본다.
+function roundClosed(st) {
+  const max = Math.max(...st.alive.map((a, i) => (a ? st.roundBet[i] : 0)));
+  for (let i = 0; i < st.n; i++) {
+    if (!st.alive[i]) continue;
+    if (!st.acted[i]) return false;
+    if (st.roundBet[i] < max && st.stack[i] > 0) return false;
+  }
+  return true;
+}
+
+// 두 번째 장을 돌리고 라운드를 연다
+function openRound2(st) {
+  st.round = 2; st.opened = false;
+  for (let i = 0; i < st.n; i++) {
+    st.locked[i] = false; st.acted[i] = false; st.roundBet[i] = 0;
+    if (st.alive[i]) st.hands[i].push(st.deck[st.n + i]);
+  }
+  st.turn = st.alive[st.first] ? st.first : nextSeat(st, st.first);
+}
+
+// 승부 — 저격은 서열을 뒤집는 규칙이라 3~4인에서는 A>B>C>A 가 생길 수 있다.
+// (졸개의 배신과 같은 성질이다.) 그래서 "몇 명을 이겼나" 로 먼저 세고,
+// 같으면 기본 서열(앞자리 합 → 뒷자리 합 → 더 강한 카드)로 가른다.
+// 정렬 함수로 쓰면 안 된다 — 순환이 있으면 정렬 결과가 뒤죽박죽이 된다.
+function resolve(st) {
+  const seats = [];
+  for (let i = 0; i < st.n; i++) if (st.alive[i]) seats.push(i);
+  if (seats.length === 1) return seats[0];
+  let best = seats[0], bestWins = -1;
+  for (const i of seats) {
+    let wins = 0;
+    for (const j of seats) if (i !== j && compare(st.hands[i], st.hands[j]) > 0) wins++;
+    if (wins > bestWins) { best = i; bestWins = wins; continue; }
+    if (wins === bestWins) {
+      const A = evaluate(st.hands[i]), B = evaluate(st.hands[best]);
+      if (A.frontSum !== B.frontSum) { if (A.frontSum < B.frontSum) best = i; }
+      else if (A.backSum !== B.backSum) { if (A.backSum < B.backSum) best = i; }
+      else if (A.minValue < B.minValue) best = i;
+    }
+  }
+  return best;
+}
+
+function finish(st, winner, reason) {
+  st.over = true; st.winner = winner; st.reason = reason; st.turn = null;
+  st.stack[winner] += st.pot;
+  st.first = winner;                 // 선은 이긴 사람이 잡는다
+  return { ok: true, over: true };
+}
+
+// 한 수. 반환: { ok, error }
 function act(st, seat, action) {
   if (st.over) return { ok: false, error: '이미 끝난 판이에요.' };
   if (seat !== st.turn) return { ok: false, error: '아직 차례가 아니에요.' };
-  if (!actionsFor(st).includes(action)) return { ok: false, error: '지금 할 수 없는 행동이에요.' };
+  if (!actionsFor(st, seat).includes(action)) return { ok: false, error: '지금 할 수 없는 행동이에요.' };
 
-  const other = 1 - seat;
-  const toCall = st.bet[other] - st.bet[seat];
+  const A = raiseAmounts(st, seat);
+  const cap = capFor(st, seat);
 
-  if (action === 'fold') {
-    st.over = true; st.winner = other; st.reason = 'fold';
-    st.log.push({ seat, action });
-    return { ok: true };
+  if (action === 'die') {
+    st.alive[seat] = false;
+    st.log.push({ seat, action, round: st.round });
+    if (alivePlayers(st) === 1) {
+      const last = st.alive.indexOf(true);
+      return finish(st, last, 'fold');           // 기권승 — 패는 안 깐다
+    }
+  } else {
+    let add = 0;
+    if (action === 'call') add = Math.min(A.call, st.stack[seat]);
+    else if (action === 'check') add = 0;
+    else if (action === 'ping') add = A.ping;
+    else if (action === 'half') add = A.half;
+    else if (action === 'quarter') add = A.quarter;
+    else if (action === 'ttadang') add = A.ttadang;
+    else if (action === 'allin') add = Math.min(st.stack[seat], Math.max(cap, A.call));
+    add = Math.min(add, st.stack[seat]);
+
+    const raising = add > A.call;
+    st.stack[seat] -= add; st.roundBet[seat] += add; st.put[seat] += add; st.pot += add;
+    if (raising) {
+      st.opened = true;
+      // 누가 올리면 이미 콜한 사람도 다시 답해야 한다 — 다만 올릴 수는 없다
+      for (let i = 0; i < st.n; i++) if (i !== seat && st.alive[i]) st.acted[i] = false;
+    } else {
+      st.locked[seat] = true;                    // 콜·체크한 사람은 이 라운드에 다시 못 올린다
+    }
+    if (action === 'allin') st.locked[seat] = true;
+    st.acted[seat] = true;
+    st.log.push({ seat, action, add, pot: st.pot, round: st.round });
   }
-  if (action === 'check') { /* 돈은 그대로 */ }
-  else if (action === 'call') { st.bet[seat] += toCall; st.pot += toCall; }
-  else if (action === 'bet' || action === 'raise') {
-    const add = toCall + BET_UNIT;
-    st.bet[seat] += add; st.pot += add; st.raises++;
-    st.acted[other] = false;                 // 상대는 다시 답해야 한다
-  }
-  st.acted[seat] = true;
-  st.log.push({ seat, action, pot: st.pot });
 
-  if (!roundClosed(st)) { st.turn = other; return { ok: true }; }
+  if (!roundClosed(st)) { st.turn = nextSeat(st, seat); return { ok: true }; }
 
-  // 라운드가 닫혔다 → 공개
-  st.over = true; st.reason = 'showdown';
-  const c = compare(st.hands[0], st.hands[1]);
-  st.winner = c === 0 ? null : (c > 0 ? 0 : 1);
-  return { ok: true, showdown: true };
+  if (st.round === 1) { openRound2(st); return { ok: true, round: 2 }; }
+  return finish(st, resolve(st), 'showdown');
 }
 
-// 화면·AI 에 내려보낼 형태.
-// 상대 패는 공개로 끝났을 때만 보인다. 폴드로 끝난 판은 끝까지 안 보여준다 —
-// 죽은 사람 패를 까면 다음 판에 읽히고, 실제 섯다에서도 안 깐다.
+// 화면·AI 에 내려보낼 형태. 남의 패는 공개로 끝났을 때만 실린다 —
+// 죽은 사람 패는 끝까지 안 깐다. 다음 판에 읽히고, 실제 섯다에서도 안 깐다.
 function viewFor(st, me) {
-  const opp = 1 - me;
-  const showOpp = st.over && st.reason === 'showdown';
+  const showAll = st.over && st.reason === 'showdown';
+  const seats = [];
+  for (let i = 0; i < st.n; i++) {
+    const open = i === me || (showAll && st.alive[i]);
+    seats.push({
+      seat: i,
+      alive: st.alive[i], stack: st.stack[i], roundBet: st.roundBet[i], put: st.put[i],
+      first: i === st.first, turn: i === st.turn,
+      cards: open ? st.hands[i].slice() : null,
+      count: st.hands[i].length,
+      // 첫 라운드는 한 장뿐이라 족보가 없다 — 두 장이 되었을 때만 매긴다
+      eval: open && st.hands[i].length === 2 ? evaluate(st.hands[i]) : null,
+    });
+  }
+  const A = raiseAmounts(st, me);
   return {
-    pot: st.pot, bet: st.bet.slice(),
-    turn: st.turn, over: st.over, winner: st.winner, reason: st.reason,
-    myHand: st.hands[me].slice(),
-    oppCount: st.hands[opp].length,          // 화면은 이 수만큼 뒷면을 깐다
-    oppHand: showOpp ? st.hands[opp].slice() : null,
-    actions: st.turn === me ? actionsFor(st) : [],
-    toCall: Math.max(0, st.bet[opp] - st.bet[me]),
-    myEval: evaluate(st.hands[me]),          // 내 족보는 처음부터 보여준다
-    oppEval: showOpp ? evaluate(st.hands[opp]) : null,
+    me, n: st.n, pot: st.pot, round: st.round, turn: st.turn,
+    over: st.over, winner: st.winner, reason: st.reason, seats,
+    actions: st.turn === me ? actionsFor(st, me) : [],
+    amounts: { call: A.call, ping: A.ping, half: A.half, quarter: A.quarter,
+               ttadang: A.ttadang, allin: Math.min(st.stack[me], Math.max(capFor(st, me), A.call)) },
+    toCall: A.call,
+    myEval: st.hands[me].length === 2 ? evaluate(st.hands[me]) : null,
   };
 }
 
 // ── AI ────────────────────────────────────────────────────────────────────
 //
-// 보이는 카드가 없으니 AI 가 읽을 정보는 자기 패와 상대가 건 돈뿐이다.
-// 자기 패 세기로 기본 성향을 정하고, 약한 패로도 가끔 지르게 해 둔다 —
-// 늘 정직하면 사람이 "AI 가 걸면 무조건 세다" 를 한 판 만에 알아채고 끝난다.
+// 보이는 카드가 없으니 AI 가 읽을 정보는 자기 패와 남들이 건 돈뿐이다.
+// 자기 패 세기로 성향을 정하되 약한 패로도 가끔 지른다 — 늘 정직하면
+// "AI 가 걸면 세다" 를 한 판 만에 들킨다.
 //
-// strengthOf: 0 이 가장 셈. 스나이퍼는 잡을 상대가 있을 때만 세므로 중간쯤으로 본다.
-function strengthOf(ev) {
-  if (ev.sniper === SNIPER_MIRROR) return 0.5;   // 0·1티어를 잡는다
-  if (ev.sniper === SNIPER_NORMAL) return 2.5;   // 1티어만 잡는다 — 나머지에겐 최하위
-  return ev.tier;                                 // 0(지배자) ~ 7(꼴찌)
+// 첫 라운드는 카드가 한 장뿐이라 족보가 없다. 앞자리 하나로만 가늠한다.
+// 0 이 가장 세고 1 이 가장 약하다.
+function handStrength(cards) {
+  if (!cards || !cards.length) return 1;
+  if (cards.length === 1) return (cards[0].kind - 2) / 4;      // 2 → 0, 6 → 1
+  const ev = evaluate(cards);
+  if (ev.sniper === SNIPER_MIRROR) return 0.06;
+  if (ev.sniper === SNIPER_NORMAL) return 0.34;
+  return ev.tier / 7;
 }
+const strengthOf = (ev) => (ev.sniper === SNIPER_MIRROR ? 0.5
+  : ev.sniper === SNIPER_NORMAL ? 2.5 : ev.tier);            // 예전 이름 — 티어 눈금 그대로
 
 function aiAction(view, rand) {
   const acts = view.actions || [];
   if (!acts.length) return null;
   const r = rand || Math.random;
-  const s = strengthOf(view.myEval);
-  const bluff = r() < 0.18;                       // 패와 무관하게 지르는 비율
+  const my = view.seats[view.me];
+  const s = handStrength(my && my.cards);
+  const pick = (...names) => names.find((n) => acts.includes(n));
+
+  // 밑천에 견줘 너무 큰 값은 애초에 안 지른다 — 한 판에 다 털리면 다음 판이 없다
+  const affordable = (n) => (view.amounts[n] || 0) <= Math.max(view.amounts.call, my.stack * 0.6);
+  const raise = () => {
+    // 아주 센 패는 가끔 다 민다 — 올인이 한 번도 안 나오면 밑천이 장식이 된다
+    if (s <= 0.1 && acts.includes('allin') && r() < 0.12) return 'allin';
+    const cands = ['ttadang', 'half', 'quarter'].filter((n) => acts.includes(n) && affordable(n));
+    if (!cands.length) return null;
+    return s < 0.12 && r() < 0.35 ? cands[0] : cands[cands.length - 1];
+  };
 
   if (view.toCall > 0) {
-    // 받아야 하는 상황 — 셀수록 되받아친다
-    if (s <= 1 && acts.includes('raise') && r() < 0.6) return 'raise';
-    if (s <= 3) return acts.includes('call') ? 'call' : 'check';
-    if (s <= 5) return r() < 0.55 && acts.includes('call') ? 'call' : 'fold';
-    // 꼴찌권 — 판돈이 작으면 한 번은 따라가 본다
-    if (view.toCall <= BET_UNIT && r() < 0.25 && acts.includes('call')) return 'call';
-    return acts.includes('fold') ? 'fold' : 'check';
+    if (s <= 0.2 && r() < 0.55) { const x = raise(); if (x) return x; }
+    if (s <= 0.5) return pick('call', 'check') || 'die';
+    if (s <= 0.7) return r() < 0.5 ? (pick('call') || 'die') : 'die';
+    // 꼴찌권 — 싸게 받을 수 있으면 한 번쯤 따라가 본다
+    if (view.toCall <= ANTE && r() < 0.3) return pick('call') || 'die';
+    return pick('die') || 'check';
   }
-  // 먼저 거는 상황
-  if (s <= 1 && acts.includes('bet')) return 'bet';
-  if (s <= 3 && acts.includes('bet') && r() < 0.45) return 'bet';
-  if (bluff && acts.includes('bet')) return 'bet';
-  return acts.includes('check') ? 'check' : acts[0];
+  // 걸린 돈이 없다
+  if (s <= 0.25) { const x = raise() || pick('ping'); if (x) return x; }
+  if (s <= 0.5 && r() < 0.4) { const x = pick('ping') || raise(); if (x) return x; }
+  if (r() < 0.15) { const x = pick('ping') || raise(); if (x) return x; }   // 허풍
+  return pick('check', 'ping') || 'die';
 }
 
 module.exports = {
-  ANTE, BET_UNIT, MAX_RAISE, actionsFor, deal2, act, viewFor, roundClosed,
-  aiAction, strengthOf,
+  ANTE, BET_UNIT, BUY_IN, MAX_SEATS, MIN_SEATS,
+  start, act, actionsFor, viewFor, roundClosed, raiseAmounts, capFor, resolve,
+  aiAction, handStrength, strengthOf,
   SPEC, TIER_NAME, TIER_OF_SUM,
   SNIPER_NONE, SNIPER_NORMAL, SNIPER_MIRROR,
   makeDeck, cardValue, sniperOf, evaluate, snipes, compare, deal, _shuffle: shuffle,

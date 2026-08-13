@@ -788,23 +788,41 @@
     '두 장 승부': 'Two-Card Duel',
     '족보 보기': 'Hand ranks',
     '설명서': 'How to play',
-    '그만두기': 'Quit',
     '한 판 더': 'Play again',
-    '기본 참가금 · 배팅 단위 \ud83e\ude9920': 'Ante \u00b7 bet unit \ud83e\ude9920',
     '족보': 'Hand ranks',
-    '생각 중…': 'Thinking...',
-    '내 차례입니다.': 'Your turn.',
-    '상대가 고민하고 있어요…': 'Your opponent is thinking...',
-    '다이로 끝났습니다.': 'Ended on a fold.',
     '공개!': 'Showdown!',
     '승리!': 'You win!',
     '패배': 'You lose',
     '무승부': 'Draw',
     '체크': 'Check',
+    '삥': 'Ping',
+    '하프': 'Half',
+    '쿼터': 'Quarter',
+    '따당': 'Double',
+    '올인': 'All-in',
+    '선': 'First',
+    '앉기': 'Sit down',
+    '일어서기': 'Stand up',
+    '다음 판': 'Next hand',
+    '정산': 'Cash out',
+    '첫 번째 배팅': 'First betting round',
+    '두 번째 배팅': 'Second betting round',
+    '공개!': 'Showdown!',
+    '남은 사람이 가져갑니다.': 'The last one standing takes it.',
+    '모두 죽어서 끝난 판입니다. 패는 안 깝니다.': 'Everyone else folded — no cards are shown.',
+    '아직 한 장 — 두 번째 장을 받아야 족보가 나옵니다.':
+      'Only one card yet — the rank appears once you get the second.',
+    '자리에 앉는 값 · 일어설 때 남은 만큼 돌려받습니다':
+      'Buy-in \u00b7 you cash out whatever is left when you stand',
+    '이미 자리에 앉아 있어요.': 'You are already at a table.',
+    '자리에 앉아 있지 않아요.': 'You are not at a table.',
+    '아직 판이 안 끝났어요.': 'This hand is not over yet.',
+    '밑천이 떨어졌어요.': 'You are out of chips.',
+    '2인': '2 players',
+    '3인': '3 players',
+    '4인': '4 players',
     '콜': 'Call',
     '다이': 'Fold',
-    '배팅 \ud83e\ude9920': 'Bet \ud83e\ude9920',
-    '레이즈 \ud83e\ude9920': 'Raise \ud83e\ude9920',
     '지배자': 'Overlord',
     '최고급': 'Premium',
     '중간계': 'Midlands',
@@ -818,7 +836,6 @@
     '10-10 스나이퍼 — 최고급만 잡습니다. 지배자에게는 집니다.':
       '10-10 sniper \u2014 beats Premium only; loses to Overlord.',
     '미니게임은 로그인하면 즐길 수 있어요!': 'Log in to play the mini game!',
-    '이미 진행 중인 판이 있어요.': 'A hand is already in progress.',
     '진행 중인 판이 없어요.': 'No hand in progress.',
     '금액이 올바르지 않아요.': 'That amount is not valid.',
     '위로 갈수록 강합니다. 앞자리(큰 숫자) 두 장의 합으로 정합니다.':
@@ -888,6 +905,11 @@
   // 값이 섞이는 문구는 통째로 짝지을 수 없다. 한국어 쪽 모양을 정규식으로 잡고
   // 영어 자리에 그대로 끼워 넣는다. ($1, $2 … 가 잡힌 값)
   const PATTERNS = [
+    [/^내 차례 · 내 밑천 \ud83e\ude99(\d+)$/, 'Your turn \u00b7 chips \ud83e\ude99$1'],
+    [/^내 차례 · 내 밑천 \ud83e\ude99(\d+) · 받을 돈 \ud83e\ude99(\d+)$/,
+      'Your turn \u00b7 chips \ud83e\ude99$1 \u00b7 to call \ud83e\ude99$2'],
+    [/^(.+) 님이 고민하고 있어요…$/, '$1 is thinking...'],
+    [/^\ud83e\ude99 (\d+) 회수 \((\+?-?\d+)\)$/, '\ud83e\ude99 $1 back ($2)'],
     [/^\ud83e\ude99 (-?\d+)$/, '\ud83e\ude99 $1'],
     [/^\ud83e\ude99 \+(\d+)$/, '\ud83e\ude99 +$1'],
     [/^콜 \ud83e\ude99(\d+)$/, 'Call \ud83e\ude99$1'],
@@ -1050,18 +1072,42 @@
   // 그런 덩어리는 통째로 영어판을 따로 두고 갈아 끼운다.
   const BLOCKS = {
     // 미니게임 설명서 — 영어판. 본 게임과 규칙이 달라 따로 둔다.
+    // 미니게임 설명서 — 영어판. 본 게임과 규칙이 달라 따로 둔다.
     rulesMini: `
     <span class="close-x" onclick="toggleRulesMini(false)">\u00d7</span>
     <h2>Two-Card Duel</h2>
-    <p style="color:#8a7a80">A mini game: take two cards, keep them <b style="color:#ffe9a8">hidden</b>, and bet.</p>
+    <p style="color:#8a7a80">2\u20134 players. A Sutda-style mini game: take two cards, keep them <b style="color:#ffe9a8">hidden</b>, and bet.</p>
 
     <h3><span data-ico="\ud83c\udfb4"></span> How a hand goes</h3>
     <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>Both ante <b>\ud83e\ude9910</b> and take <b>two cards</b>. You only see your own.</span></div>
-      <div class="r4-step"><b>2</b><span>Starting with the first player: <b>check, bet, call, raise, fold</b>. Bets are \ud83e\ude9920; up to three raises.</span></div>
-      <div class="r4-step"><b>3</b><span>A call (or two checks) ends the round \u2014 <b>showdown</b>. The winner takes the whole pot.</span></div>
-      <div class="r4-step"><b>4</b><span>On a fold, <b>nobody shows</b>. You never learn what the other player held.</span></div>
+      <div class="r4-step"><b>1</b><span>Everyone puts in the base unit <b>\ud83e\ude9910</b> and takes <b>one card</b>. The first player starts.</span></div>
+      <div class="r4-step"><b>2</b><span>The round closes once everyone but one has <b>called</b> or folded.</span></div>
+      <div class="r4-step"><b>3</b><span>If two or more remain, each takes <b>one more card</b> and a second betting round runs.</span></div>
+      <div class="r4-step"><b>4</b><span>When that closes, hands are shown and ranked. The winner takes the whole pot.</span></div>
+      <div class="r4-step"><b>5</b><span>If only one player is left, they win outright \u2014 and <b>nobody shows</b>.</span></div>
+      <div class="r4-step"><b>6</b><span><b>The winner becomes the first player</b> next hand.</span></div>
     </div>
+
+    <h3><span data-ico="\ud83e\ude99"></span> Chips</h3>
+    <p>Sitting down converts <b>\ud83e\ude99200</b> of coins into chips. Bets come out of those chips, and
+       <b>you cash out whatever is left when you stand up.</b> Coins are not touched hand by hand \u2014
+       going all-in only means something when there is a stack in front of you.</p>
+
+    <h3><span data-ico="\ud83d\udcb0"></span> Betting</h3>
+    <div class="r4-tbl">
+      <div class="r4-row r4-head"><span>Action</span><span>What it costs</span></div>
+      <div class="r4-row"><span>Ping</span><span>the base unit \ud83e\ude9910 (first player, to open)</span></div>
+      <div class="r4-row"><span>Check</span><span>pass without betting (when nothing is owed)</span></div>
+      <div class="r4-row"><span>Quarter</span><span>25% of the pot after calling</span></div>
+      <div class="r4-row"><span>Half</span><span>50% of the pot after calling</span></div>
+      <div class="r4-row"><span>Double</span><span>twice what the player before you bet</span></div>
+      <div class="r4-row"><span>All-in</span><span>every chip you have left</span></div>
+      <div class="r4-row"><span>Call</span><span>match the bet and close the round</span></div>
+      <div class="r4-row"><span>Fold</span><span>give up what you put in and drop out</span></div>
+    </div>
+    <p><b>Once you call or check you cannot raise again that round.</b> If someone raises, the turn comes
+       back to you \u2014 but only to call or fold. There are no side pots, so a raise is capped at what
+       the shortest stack at the table can cover.</p>
 
     <h3><span data-ico="\ud83c\udfc5"></span> Who wins</h3>
     <p>Add the two <b>big numbers</b> (front digits). <b>The smaller the sum, the stronger.</b></p>
@@ -1082,16 +1128,17 @@
       <li><b>Plain 10-10</b> \u2014 beats <b>Premium</b> only; loses to Overlord.</li>
       <li>Against anything else (sums 6\u20139) it is just a 10 and loses.</li>
     </ul>
-    <p style="color:#8a7a80">A sniper is a hand you <b>aim</b>, not a hand that beats everything.</p>
+    <p>Because snipers invert the order, three or more hands can form a loop \u2014 <b>A beats B, B beats C,
+       C beats A</b>. When that happens the pot goes to whoever <b>beat the most players</b>, and ties fall
+       back to the plain ranking.</p>
 
     <h3><span data-ico="\ud83d\udc40"></span> Tips</h3>
     <ul>
-      <li><b>Nothing is face up.</b> All you can read is <b>how much</b> the other player bets, and <b>when</b>.</li>
-      <li>Who goes first is random each hand \u2014 acting first leaks information first.</li>
+      <li><b>Nothing is face up.</b> All you can read is <b>how much</b> the others bet, and <b>when</b>.</li>
+      <li>The first round has one card only \u2014 there is no rank yet, just the front digit.</li>
       <li>Folding costs only what you already put in. Chasing with a bad hand is the expensive mistake.</li>
     </ul>
     `,
-    // 2인전 설명서 — 영어판. 조각으로 번역하면 어순이 깨져 통째로 갈아 끼운다.
     rules2: `
     <span class="close-x" onclick="toggleRules(false)">\u00d7</span>
     <h2>FLIP FLAP</h2>
