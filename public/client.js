@@ -3734,6 +3734,39 @@ function applyMySkins() {
   if (p && FACE_CLS[p.cardFace]) g.classList.add(FACE_CLS[p.cardFace]);
 }
 
+// 탭 처리 — click 만 쓰면 폰에서 가끔 먹지 않는다.
+//
+// 두 가지가 겹쳐 있었다.
+//   · 손가락이 몇 픽셀만 움직여도 브라우저가 스크롤로 보고 click 을 취소한다.
+//     카드가 부채꼴로 겹쳐 있어 누르면서 살짝 미끄러지기 쉽다.
+//   · 누르는 도중 서버 상태가 와서 손패를 다시 그리면, 누르던 요소가 사라져
+//     click 이 아예 안 생긴다.
+//
+// 그래서 pointerdown 에서 자리를 기억하고 pointerup 에서 판단한다. 조금 움직인
+// 건 탭으로 친다(12px). 그리고 pointerdown 순간의 카드 id 로 처리하므로,
+// 그 사이 DOM 이 바뀌어도 누른 카드가 바뀌지 않는다.
+const TAP_SLOP = 12;
+function onTap(el, fn) {
+  let sx = 0, sy = 0, live = false;
+  el.style.touchAction = 'manipulation';
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== undefined && e.button !== 0) return;   // 오른쪽 버튼 무시
+    live = true; sx = e.clientX; sy = e.clientY;
+    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  el.addEventListener('pointercancel', () => { live = false; });
+  el.addEventListener('pointerup', (e) => {
+    if (!live) return;
+    live = false;
+    if (Math.hypot(e.clientX - sx, e.clientY - sy) > TAP_SLOP) return;   // 끌었으면 탭이 아니다
+    e.preventDefault();
+    fn(e);
+  });
+  // 포인터 이벤트가 없는 옛 브라우저용
+  if (!window.PointerEvent) el.addEventListener('click', fn);
+}
+window.onTap = onTap;   // 다인전(client4)도 같은 처리를 쓴다
+
 function makeCard(card, opts = {}) {
   const el = document.createElement('div');
   el.className = 'card';
@@ -3776,7 +3809,7 @@ function makeCard(card, opts = {}) {
   if (opts.selectable) {
     el.classList.add('selectable');
     // 두 번째 인자로 카드 요소도 넘긴다 — 그 자리에 파티클을 얹으려면 필요하다
-    el.addEventListener('click', () => { playSound('select'); opts.onClick(card, el); });
+    onTap(el, () => { playSound('select'); opts.onClick(card, el); });
   }
   return el;
 }

@@ -18,7 +18,9 @@ const BOT_NICKS = ['경매왕 덕배', '큰손 미스박', '눈치백단 재훈'
 // reveal 은 "배팅 카드가 뒤집히는 시간". 뒤집기(0.85s) + 카드별 지연(최대 0.17s) 이
 // 끝나는 즉시 결과가 오도록 맞춘다. 예전엔 2300ms 라 뒤집기가 끝나고도 1.3초 넘게
 // 아무 일이 없다가 뜬금없이 WIN 이 떴다.
-const T = { draw: 650, offer: 750, type: 650, bid: 480, reveal: 1150, settle: 1750, next: 260 };
+// showdown 은 "다 냈지만 아직 안 뒤집은" 시간. 2인전의 긴장 브레이크와 같은 것으로,
+// 마지막 사람이 내자마자 까 버리면 뒤집히는 게 눈에 안 들어온다.
+const T = { draw: 650, offer: 750, type: 650, bid: 480, showdown: 900, reveal: 1150, settle: 1750, next: 260 };
 const STUCK_MS = 12000;     // 사람을 기다리는 게 아닌데 이만큼 멈춰 있으면 복구한다
 // 사람 차례에도 제한이 필요하다. 예전엔 없어서, 멀티에서 한 명이 가만히 있으면
 // 나머지가 무한정 기다렸다("카드가 안 내진다"의 정체). 2인전은 60초 시계가 있는데
@@ -189,6 +191,16 @@ function attach4(io, hooks = {}) {
     }, ms);
   }
 
+  // 전원이 냈을 때 — 곧바로 까지 않고 뒷면인 채로 한 박자 둔다.
+  // 클로즈는 이미 한 명씩 공개하며 왔으므로 뜸을 짧게 준다.
+  function toShowdown(roomId) {
+    const r = rooms4[roomId]; if (!r) return;
+    const g = r.game;
+    g.phase = 'showdown';
+    push(roomId);
+    return schedule(roomId, g.auction && g.auction.closed ? Math.round(T.showdown / 2) : T.showdown);
+  }
+
   function step(roomId) {
     const r = rooms4[roomId]; if (!r || r.dead) return;
     const g = r.game;
@@ -232,14 +244,17 @@ function attach4(io, hooks = {}) {
           const c = AI.chooseBid(g, s);
           if (c) G.bid(g, s, c.id);
           push(roomId);
-          if (G.allBidsIn(g)) { g.phase = 'reveal'; push(roomId); return schedule(roomId, T.reveal); }
+          if (G.allBidsIn(g)) return toShowdown(roomId);
           return schedule(roomId, T.bid);
         }
-        if (G.allBidsIn(g) || !G.bidderSeats(g).length) {
-          g.phase = 'reveal'; push(roomId); return schedule(roomId, T.reveal);
-        }
+        if (G.allBidsIn(g) || !G.bidderSeats(g).length) return toShowdown(roomId);
         return push(roomId);
       }
+
+      // 다 냈지만 아직 안 뒤집은 상태. 화면에는 뒷면이 그대로 깔려 있다.
+      case 'showdown':
+        g.phase = 'reveal'; push(roomId);
+        return schedule(roomId, T.reveal);
 
       case 'reveal':
         G.settle(g); push(roomId);

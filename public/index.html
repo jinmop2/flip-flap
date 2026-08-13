@@ -87,7 +87,9 @@
         drop-shadow(0 1px 0 #6a4210) drop-shadow(0 2px 0 #4a2c08)
         drop-shadow(0 4px 6px rgba(0,0,0,.55)) drop-shadow(0 0 14px rgba(255,200,90,.3));
     }
-    .logo .flap { transform:rotate(180deg); margin-top:-14px; display:inline-block; opacity:.92; }
+    /* FLAP 을 끌어올려 붙여 놨더니 FLIP 의 아랫부분과 겹쳤다.
+       글자 크기와 뒤집힌 모양은 그대로 두고 간격만 벌린다. */
+    .logo .flap { transform:rotate(180deg); margin-top:-2px; display:inline-block; opacity:.92; }
     /* 로고 아래: 랭킹 버튼 + 접속 인원 */
     .logo-actions { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:2px; }
     .rank-btn {
@@ -1878,7 +1880,7 @@
     /* 세로가 짧은 폰 — 로고를 줄여 모드 카드가 접히지 않게 한다 */
     @media (max-height:720px) {
       .logo h1, .logo .flap { font-size:3.2rem; letter-spacing:3px; }
-      .logo .flap { margin-top:-10px; }
+      .logo .flap { margin-top:0; }
       .rank-btn { padding:6px 15px; font-size:.76rem; }
       #lobby { gap:15px; }
       .lobby-btns > .mode-grid:not(.sub), .lobby-btns > .lobby-misc { margin-top:14px; }

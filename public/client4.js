@@ -243,7 +243,9 @@
     el.appendChild(top); el.appendChild(num);
     if (opts.pick) {
       el.classList.add('pick');
-      el.addEventListener('click', () => opts.onPick(card));
+      // 2인전과 같은 탭 처리 — click 만 쓰면 손가락이 조금 움직였을 때 먹지 않는다
+      if (typeof onTap === 'function') onTap(el, () => opts.onPick(card));
+      else el.addEventListener('click', () => opts.onPick(card));
     }
     return el;
   }
