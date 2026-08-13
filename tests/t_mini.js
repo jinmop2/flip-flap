@@ -134,7 +134,7 @@ console.log('\n⑥ 경기장');
   ok('경기장이 있다', /<div id="mini">/.test(html));
   ok('남의 자리를 그린다', /id="mnSeats"/.test(html) && /mn-seat2/.test(cli));
   ok('판돈이 크게 보인다', /id="mnPotBig"/.test(html));
-  ok('라운드를 알려준다', /id="mnRound"/.test(html) && /첫 번째 배팅/.test(cli));
+  ok('라운드를 알려준다', /id="mnRound"/.test(html) && /첫 번째 걸기/.test(cli));
   ok('남의 패는 뒷면으로 깐다', /for \(let k = 0; k < st\.count; k\+\+\) cards\.appendChild\(makeCard\(null\)\)/.test(cli));
   ok('선 표시가 있다', /mn-first/.test(cli) && /mn-first/.test(html));
   ok('족보를 자리로 보여준다', /mn-ladder/.test(cli) && /mn-rung/.test(html));
@@ -182,8 +182,15 @@ console.log('\n⑦ 설명서');
   ok('여는 함수가 있다', /window\.toggleRulesMini/.test(cli));
   for (const w of ['지배자', '최고급', '중간계', '최하위', '꼴찌', '거울쌍 10'])
     ok(`설명서에 ${w}`, box.includes(w));
-  for (const w of ['삥', '하프', '쿼터', '따당', '올인', '다이'])
-    ok(`배팅 용어 ${w}`, box.includes(w));
+  // 도박판 말(삥·하프·쿼터·따당·올인·다이) 대신 경매장 말을 쓴다
+  for (const w of ['판 열기', '크게 올림', '살짝 올림', '두 배 올림', '전부 걸기', '접기'])
+    ok(`거는 법 ${w}`, box.includes(w));
+  for (const w of ['삥', '하프', '쿼터', '따당', '올인'])
+    ok(`도박판 말 ${w} 는 안 쓴다`, !box.includes(w), w);
+  // 화면 버튼도 같은 말이어야 한다 — 설명서와 버튼이 다르면 규칙을 두 번 배워야 한다
+  const labels = cli.slice(cli.indexOf('const MINI_LABEL'), cli.indexOf('const MINI_ORDER'));
+  for (const w of ['판 열기', '넘기기', '살짝 올림', '크게 올림', '두 배 올림', '전부 걸기', '맞추기', '접기'])
+    ok(`버튼 ${w}`, labels.includes(w));
   ok('두 라운드라고 적혀 있다', /두 번째 배팅|한 장 더/.test(box));
   ok('선은 이긴 사람이 잡는다고 적혀 있다', /선은[\s\S]{0,20}이긴/.test(box));
   ok('2~4인이라고 적혀 있다', /2~4인|2～4인/.test(box));

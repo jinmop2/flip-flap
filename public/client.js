@@ -2664,13 +2664,17 @@ function miniEvalBox(ev, round) {
 }
 
 // 버튼에 붙는 이름과 금액. 금액은 서버가 계산해 보낸 값을 그대로 보여만 준다.
+// 규칙은 섯다지만 말은 경매장 말을 쓴다. 삥·하프·쿼터·따당·올인·콜·다이는
+// 도박판 말이라 이 게임 분위기와 안 맞고, 처음 보는 사람은 뜻도 모른다.
+// 속 이름(ping·half…)은 그대로 두었다 — 규칙 코드까지 갈아엎을 일이 아니다.
 const MINI_LABEL = {
-  check: ['체크', 'out'], ping: ['삥', ''], quarter: ['쿼터', ''], half: ['하프', ''],
-  ttadang: ['따당', ''], allin: ['올인', 'big'], call: ['콜', 'go'], die: ['다이', 'out'],
+  check: ['넘기기', 'out'], ping: ['판 열기', ''], quarter: ['살짝 올림', ''],
+  half: ['크게 올림', ''], ttadang: ['두 배 올림', ''], allin: ['전부 걸기', 'big'],
+  call: ['맞추기', 'go'], die: ['접기', 'out'],
 };
 const MINI_ORDER = ['check', 'ping', 'quarter', 'half', 'ttadang', 'call', 'allin', 'die'];
-const MINI_ACT_KO = { check: '체크', ping: '삥', quarter: '쿼터', half: '하프',
-  ttadang: '따당', allin: '올인', call: '콜', die: '다이' };
+const MINI_ACT_KO = { check: '넘기기', ping: '판 열기', quarter: '살짝 올림',
+  half: '크게 올림', ttadang: '두 배 올림', allin: '전부 걸기', call: '맞추기', die: '접기' };
 
 function miniPaint(v) {
   miniState = v;
@@ -2695,7 +2699,7 @@ function miniPaint(v) {
     else for (let k = 0; k < st.count; k++) cards.appendChild(makeCard(null));
     const stk = document.createElement('div');
     stk.className = 'mn-stk';
-    stk.textContent = st.alive ? `🪙 ${st.stack}` : '다이';
+    stk.textContent = st.alive ? `🪙 ${st.stack}` : '접음';
     const chip = document.createElement('div');
     chip.className = 'mn-chip' + (st.roundBet > 0 && st.alive ? ' on' : '');
     chip.textContent = `🪙 ${st.roundBet}`;
@@ -2717,7 +2721,7 @@ function miniPaint(v) {
   potBox.appendChild(pile);
   miniPrevPot = v.pot;
   document.getElementById('mnRound').textContent =
-    v.round === 1 ? '첫 번째 배팅' : '두 번째 배팅';
+    v.round === 1 ? '첫 번째 걸기' : '두 번째 걸기';
 
   const me = v.seats[v.me];
   const plate = document.getElementById('mnMePlate');
@@ -2730,11 +2734,14 @@ function miniPaint(v) {
   const my = document.getElementById('mnMyCards');
   my.innerHTML = '';
   (me.cards || []).forEach((c) => my.appendChild(makeCard(c)));
-  document.getElementById('mnEval').innerHTML = miniEvalBox(v.myEval, v.round);
+  // 족보가 아직 없으면 테두리까지 지운다 — 짧은 화면에서 설명이 접히면 빈 상자만 남는다
+  const evBox = document.getElementById('mnEval');
+  evBox.className = 'mn-eval' + (v.myEval ? '' : ' plain');
+  evBox.innerHTML = miniEvalBox(v.myEval, v.round);
 
   const st0 = document.getElementById('mnStatus');
   if (v.over) st0.textContent = v.reason === 'fold' ? '남은 사람이 가져갑니다.' : '공개!';
-  else if (v.turn === v.me) st0.textContent = `내 차례 · 내 밑천 🪙${me.stack}${v.toCall ? ` · 받을 돈 🪙${v.toCall}` : ''}`;
+  else if (v.turn === v.me) st0.textContent = `내 차례 · 소지금 🪙${me.stack}${v.toCall ? ` · 맞출 돈 🪙${v.toCall}` : ''}`;
   else st0.textContent = `${esc((v.names && v.names[v.turn]) || '상대')} 님이 고민하고 있어요…`;
 
   // 내 차례 제한 시간 — 서버가 넘겨주는 시각까지 센다
@@ -2744,8 +2751,8 @@ function miniPaint(v) {
       const left = Math.max(0, Math.ceil((v.deadline - Date.now()) / 1000));
       const el = document.getElementById('mnStatus');
       if (!el || !miniState || miniState.turn !== miniState.me) { clearInterval(miniClock); return; }
-      el.textContent = `내 차례 · ${left}초 · 내 밑천 🪙${me.stack}`
-        + (v.toCall ? ` · 받을 돈 🪙${v.toCall}` : '');
+      el.textContent = `내 차례 · ${left}초 · 소지금 🪙${me.stack}`
+        + (v.toCall ? ` · 맞출 돈 🪙${v.toCall}` : '');
       if (left <= 0) clearInterval(miniClock);
     };
     tick(); miniClock = setInterval(tick, 500);
@@ -2847,12 +2854,12 @@ socket.on('mini_over', (r) => {
     document.getElementById('mnNet').textContent =
       r.net > 0 ? `🪙 +${r.net}` : r.net < 0 ? `🪙 ${r.net}` : '🪙 0';
     document.getElementById('mnOverWhy').textContent =
-      r.view.reason === 'fold' ? '모두 죽어서 끝난 판입니다. 패는 안 깝니다.' : '';
+      r.view.reason === 'fold' ? '모두 접어서 끝난 판입니다. 패는 안 깝니다.' : '';
     document.getElementById('mnNextBtn').style.display =
       (r.canGo && r.view.mode === 'solo') ? '' : 'none';
     document.getElementById('mnOverWhy').textContent =
       (r.view.mode === 'solo' ? '' : (r.canGo ? '곧 다음 판이 시작됩니다.' : '밑천이 떨어졌어요.'))
-      || (r.view.reason === 'fold' ? '모두 죽어서 끝난 판입니다. 패는 안 깝니다.' : '');
+      || (r.view.reason === 'fold' ? '모두 접어서 끝난 판입니다. 패는 안 깝니다.' : '');
     document.getElementById('miniOverModal').classList.add('show');
   };
   if (r.view.reason === 'showdown') { miniPaint(r.view); setTimeout(showRes, 900); }

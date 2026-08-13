@@ -813,10 +813,10 @@
     '다음 판': 'Next hand',
     '정산': 'Cash out',
     '첫 번째 배팅': 'First betting round',
-    '두 번째 배팅': 'Second betting round',
+    '두 번째 걸기': 'Second round',
     '공개!': 'Showdown!',
     '남은 사람이 가져갑니다.': 'The last one standing takes it.',
-    '모두 죽어서 끝난 판입니다. 패는 안 깝니다.': 'Everyone else folded — no cards are shown.',
+    '모두 접어서 끝난 판입니다. 패는 안 깝니다.': 'Everyone else folded — no cards are shown.',
     '아직 한 장 — 두 번째 장을 받아야 족보가 나옵니다.':
       'Only one card yet — the rank appears once you get the second.',
     '자리에 앉는 값 · 일어설 때 남은 만큼 돌려받습니다':
@@ -1092,7 +1092,7 @@
     <h3><span data-ico="\ud83c\udfb4"></span> How a hand goes</h3>
     <div class="r4-steps">
       <div class="r4-step"><b>1</b><span>Everyone puts in the base unit <b>\ud83e\ude9910</b> and takes <b>one card</b>. The first player starts.</span></div>
-      <div class="r4-step"><b>2</b><span>The round closes once everyone but one has <b>called</b> or folded.</span></div>
+      <div class="r4-step"><b>2</b><span>The round closes once everyone but one has <b>matched</b> or folded.</span></div>
       <div class="r4-step"><b>3</b><span>If two or more remain, each takes <b>one more card</b> and a second betting round runs.</span></div>
       <div class="r4-step"><b>4</b><span>When that closes, hands are shown and ranked. The winner takes the whole pot.</span></div>
       <div class="r4-step"><b>5</b><span>If only one player is left, they win outright \u2014 and <b>nobody shows</b>.</span></div>
@@ -1102,7 +1102,7 @@
     <h3><span data-ico="\ud83c\udf10"></span> Playing online</h3>
     <p>Pick <b>Play online</b> and you are matched with others waiting for the same table size.
        Empty seats are filled by AI after 20 seconds. Online you get <b>22 seconds</b> per turn \u2014
-       run out and it checks (or folds) for you. If someone stands up the game keeps going;
+       run out and it passes (or folds) for you. If someone stands up the game keeps going;
        their seat is taken over by AI from the next hand.</p>
 
     <h3><span data-ico="\ud83e\ude99"></span> Chips</h3>
@@ -1112,19 +1112,19 @@
 
     <h3><span data-ico="\ud83d\udcb0"></span> Betting</h3>
     <div class="r4-tbl">
-      <div class="r4-row r4-head"><span>Action</span><span>What it costs</span></div>
-      <div class="r4-row"><span>Ping</span><span>the base unit \ud83e\ude9910 (first player, to open)</span></div>
-      <div class="r4-row"><span>Check</span><span>pass without betting (when nothing is owed)</span></div>
-      <div class="r4-row"><span>Quarter</span><span>25% of the pot after calling</span></div>
-      <div class="r4-row"><span>Half</span><span>50% of the pot after calling</span></div>
-      <div class="r4-row"><span>Double</span><span>twice what the player before you bet</span></div>
-      <div class="r4-row"><span>All-in</span><span>every chip you have left</span></div>
-      <div class="r4-row"><span>Call</span><span>match the bet and close the round</span></div>
+      <div class="r4-row r4-head"><span>Choice</span><span>What it costs</span></div>
+      <div class="r4-row"><span>Open</span><span>the base unit \ud83e\ude9910 (first player, to open)</span></div>
+      <div class="r4-row"><span>Pass</span><span>move on without adding (when nothing is owed)</span></div>
+      <div class="r4-row"><span>Raise small</span><span>25% of the pot after matching</span></div>
+      <div class="r4-row"><span>Raise big</span><span>50% of the pot after matching</span></div>
+      <div class="r4-row"><span>Double up</span><span>twice what the player before you put in</span></div>
+      <div class="r4-row"><span>Push all</span><span>every chip you have left</span></div>
+      <div class="r4-row"><span>Match</span><span>match the amount and close the round</span></div>
       <div class="r4-row"><span>Fold</span><span>give up what you put in and drop out</span></div>
     </div>
-    <p><b>Once you call or check you cannot raise again that round.</b> If someone raises, the turn comes
-       back to you \u2014 but only to call or fold. There are no side pots, so a raise is capped at what
-       the shortest stack at the table can cover.</p>
+    <p><b>Once you match or pass you cannot raise again that round.</b> If someone raises, the turn comes
+       back to you \u2014 but only to match or fold. The pot is never split, so a raise is capped at what
+       the smallest stack at the table can cover.</p>
 
     <h3><span data-ico="\ud83c\udfc5"></span> Who wins</h3>
     <p>Add the two <b>big numbers</b> (front digits). <b>The smaller the sum, the stronger.</b></p>

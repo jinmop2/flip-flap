@@ -376,5 +376,68 @@ console.log('\n⑱ 2000판을 돌려도 돈이 안 샌다');
   ok('올인도 나온다', allin > 0, String(allin));
 }
 
+console.log('\n⑲ AI 가 확률로 판단한다');
+{
+  const mk = (...ids) => ids.map((id) => ({ kind: Math.floor(id / 100), grade: id % 100, id }));
+  ok('지배자는 거의 다 이긴다', S.equity2(mk(201, 202)) > 0.99, S.equity2(mk(201, 202)).toFixed(3));
+  ok('꼴찌는 아무도 못 이긴다', S.equity2(mk(609, 610)) === 0, String(S.equity2(mk(609, 610))));
+  // 거울쌍은 최상위만 잡는다 — 이름값과 달리 이길 확률 자체는 낮다
+  const mirror = S.equity2(mk(404, 606));
+  ok('거울쌍은 이름값보다 확률이 낮다', mirror > 0.2 && mirror < 0.5, mirror.toFixed(3));
+  ok('한 장짜리도 잰다', S.equity1(mk(201)[0]) > S.equity1(mk(610)[0]));
+  ok('상대가 늘면 확률이 떨어진다',
+     S.equityOf(mk(301, 302), 3) < S.equityOf(mk(301, 302), 1));
+  // 표에 적어 두므로 두 번째부터는 즉시 나온다 (서버가 매 수마다 부른다)
+  const t0 = Date.now();
+  for (let i = 0; i < 20000; i++) S.equity2(mk(201, 202));
+  ok('두 번째부터는 표에서 꺼낸다', Date.now() - t0 < 200, `${Date.now() - t0}ms`);
+}
+
+console.log('\n⑳ AI 가 옛 AI 보다 세다');
+{
+  // 같은 패를 자리만 바꿔 두 번 돌린다(듀플리케이트). 카드 운이 상쇄돼
+  // 실력 차이만 남는다 — 안 그러면 수만 판을 돌려도 노이즈에 묻힌다.
+  const hand = (seed, brains, n) => {
+    const st = S.start({ seats: n, stacks: new Array(n).fill(S.BUY_IN), first: 0, rand: rngOf(seed) });
+    const rs = [];
+    for (let i = 0; i < n; i++) rs.push(rngOf(seed * 31 + i + 1));
+    let g = 0;
+    while (!st.over && g++ < 80) {
+      const s2 = st.turn;
+      if (!S.act(st, s2, brains[s2](S.viewFor(st, s2), rs[s2]) || 'die').ok) break;
+    }
+    return st.over ? st.stack.map((x) => x - S.BUY_IN) : null;
+  };
+  const duel = (A, B, hands) => {
+    let sum = 0, n = 0;
+    for (let seed = 1; seed <= hands; seed++) {
+      const a = hand(seed, [A, B], 2), b = hand(seed, [B, A], 2);
+      if (!a || !b) continue;
+      sum += (a[0] + b[1]) / 2; n++;
+    }
+    return n ? sum / n : 0;
+  };
+  const now = (v, r) => S.aiAction(v, r);
+  const old = (v, r) => S.aiSimple(v, r);
+  const gain = duel(now, old, 4000);
+  ok('옛 AI 를 확실히 이긴다 (판당 이득)', gain > 0.8, gain.toFixed(2));
+
+  // 무조건 따라오는 사람에게는 더 크게 이겨야 한다 — 못 이기면 딸 돈을 흘리는 것이다
+  const station = (v) => {
+    const a = v.actions || [];
+    if (!a.length) return null;
+    return a.includes('call') ? 'call' : a.includes('check') ? 'check' : 'die';
+  };
+  const vsStation = duel(now, station, 3000);
+  ok('따라오기만 하는 상대는 크게 이긴다', vsStation > 5, vsStation.toFixed(2));
+
+  // 접기만 하는 상대에게 지면 안 된다 (기본 단위는 계속 먹어야 한다)
+  const quitter = (v) => {
+    const a = v.actions || [];
+    return a.includes('die') ? 'die' : a[0] || null;
+  };
+  ok('맨날 접는 상대에게는 당연히 이긴다', duel(now, quitter, 1500) > 0);
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

@@ -2279,8 +2279,13 @@
 
 
     /* ── 미니게임 경기장 — 2인 경기장과 같은 펠트 위에 얹는다 ── */
-    #mini { padding:14px 16px; gap:8px; align-items:stretch; }
+    #mini { padding:14px 16px; gap:8px; align-items:stretch; overflow:hidden; }
     #mini.on { display:flex; }
+    /* 자리·가운데는 줄어들 수 있고, 내 패와 버튼은 끝까지 남는다.
+       flex 자식은 기본이 min-height:auto 라 안 줄어든다 — 0 으로 눌러 줘야 한다. */
+    .mn-top { flex:0 1 auto; min-height:0; }
+    .mn-mid { flex:1 1 0; min-height:0; }
+    .mn-me  { flex:0 0 auto; }
     .mn-top { display:flex; gap:8px; justify-content:center; align-items:flex-start; flex-wrap:wrap; }
     .mn-seat2 {
       display:flex; flex-direction:column; align-items:center; gap:5px; min-width:92px;
@@ -2305,14 +2310,14 @@
     .mn-chip.on { opacity:1; }
     .mn-act-tag { font-size:.68rem; color:#ffd97a; min-height:14px; }
 
-    .mn-mid { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; z-index:2; }
+    .mn-mid { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; z-index:2; overflow:hidden; }
     .mn-potbig { font-family:'Bangers',cursive; font-size:2.6rem; letter-spacing:2px; color:var(--gold);
       text-shadow:0 3px 0 rgba(0,0,0,.45); line-height:1; }
     .mn-round { font-size:.74rem; color:#a8bcae; letter-spacing:.5px; }
     .mn-status { font-size:.82rem; color:#e0cba0; min-height:1.2em; text-align:center; }
 
     .mn-me { display:flex; flex-direction:column; align-items:center; gap:6px; }
-    /* 내 자리 명패 — 남의 자리와 같은 것들을 한 줄로 (이름·선·밑천·건 돈) */
+    /* 내 자리 명패 — 남의 자리와 같은 것들을 한 줄로 (이름·선·소지금·건 돈) */
     .mn-meplate { display:flex; align-items:center; gap:8px; font-size:.8rem; color:#c8bcc4; }
     .mn-meplate b { color:#ffe9a8; font-size:.86rem; }
     .mn-meplate .mn-chip { opacity:1; }
@@ -2333,8 +2338,13 @@
     .mn-b.big small { color:#f3c0cb; }
     .mn-b:disabled { opacity:.35; cursor:default; }
     #mini .mn-eval { width:100%; max-width:340px; }
+    .mn-eval.plain { border:none; background:none; padding:2px 0; }
+    .mn-eval.plain:empty { display:none; }
     @media (max-width:520px) {
       #mini { padding:calc(8px + env(safe-area-inset-top,0px)) 8px 8px; gap:5px; }
+      .mn-seat2 { gap:3px; }
+      .mn-potchips { min-height:22px; }
+      .mn-btns { gap:5px; }
       .mn-cards .card { width:34px; height:48px; }
       .mn-cards .card .c-num { font-size:1.2rem; }
       .mn-me .mn-cards .card { width:54px; height:76px; }
@@ -2344,6 +2354,25 @@
       .mn-b { padding:9px 11px; font-size:.78rem; }
     }
 
+
+    /* 세로가 아주 짧으면(가로로 눕히거나 작은 폰) 덜 중요한 것부터 접는다.
+       버튼이 화면 밖으로 밀리면 판을 아예 못 두므로 마지막까지 남긴다. */
+    @media (max-height:700px) {
+      #mini { gap:4px; }
+      .mn-potchips { display:none; }
+      .mn-cards .card { width:34px; height:48px; }
+      .mn-cards .card .c-num { font-size:1.2rem; }
+      .mn-me .mn-cards .card { width:50px; height:70px; }
+      .mn-me .mn-cards .card .c-num { font-size:1.8rem; }
+      .mn-potbig { font-size:1.7rem; }
+      .mn-b { padding:8px 10px; font-size:.76rem; }
+    }
+    @media (max-height:600px) {
+      .mn-eval .mn-ev-hint { display:none; }
+      .mn-eval.plain { display:none; }   /* 설명이 접히면 남는 게 없다 */
+      .mn-act-tag, .mn-round { display:none; }
+      .mn-seat2 .mn-chip { display:none; }
+    }
 
     /* ── 배팅 칩 ── */
     /* 숫자만 띄우면 판이 얼마나 큰지 눈에 안 들어온다. 실제로 쌓이는 걸 보여준다.
@@ -3074,13 +3103,13 @@
 
     /* ═══ 모바일 반응형 ═══ */
     @media (max-width: 600px) {
-      #game {
+      #game, #mini {
         height:var(--app-h, 100dvh); max-height:none; overflow:hidden;   /* 한 화면 고정 — 스크롤 없음 */
         box-sizing:border-box;
         border-width:5px; outline-width:1px; border-radius:14px;
         padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px; gap:6px;
       }
-      #game::before { inset:8px; border-radius:10px; }
+      #game::before, #mini::before { inset:8px; border-radius:10px; }
 
       /* 카드 축소 */
       .card { width:55px; height:77px; border-radius:9px; padding:4px 4px 3px; }
@@ -3171,7 +3200,7 @@
     .zone { min-height:0; }
 
     @media (max-height: 730px) {
-      #game { gap:4px; }
+      #game, #mini { gap:4px; }
       .card { width:48px; height:67px; border-radius:8px; padding:3px; }
       .fan { min-height:86px; }
       .fan.top { min-height:52px; }
@@ -3992,39 +4021,39 @@
 
     <h3><span data-ico="🎴"></span> 한 판의 흐름</h3>
     <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>모두 기본 단위 <b>🪙10</b>을 걸고 카드를 <b>한 장씩</b> 받습니다. 선부터 배팅.</span></div>
-      <div class="r4-step"><b>2</b><span>한 명 빼고 모두 <b>콜</b>하거나 죽으면 라운드가 닫힙니다.</span></div>
-      <div class="r4-step"><b>3</b><span>둘 이상 남았으면 <b>한 장 더</b> 받고 두 번째 배팅을 합니다.</span></div>
-      <div class="r4-step"><b>4</b><span>두 번째 배팅이 닫히면 패를 열고 족보로 가릅니다. 이긴 사람이 판돈을 전부.</span></div>
-      <div class="r4-step"><b>5</b><span>혼자만 남으면 그대로 <b>기권승</b> — 이때는 아무도 패를 안 깝니다.</span></div>
+      <div class="r4-step"><b>1</b><span>모두 기본 단위 <b>🪙10</b>을 걸고 카드를 <b>한 장씩</b> 받습니다. 선부터 겁니다.</span></div>
+      <div class="r4-step"><b>2</b><span>한 명 빼고 모두 <b>맞추거나</b> 접으면 그 판의 걸기가 닫힙니다.</span></div>
+      <div class="r4-step"><b>3</b><span>둘 이상 남았으면 <b>한 장 더</b> 받고 두 번째로 겁니다.</span></div>
+      <div class="r4-step"><b>4</b><span>두 번째 걸기가 닫히면 패를 열고 족보로 가릅니다. 이긴 사람이 판돈을 전부.</span></div>
+      <div class="r4-step"><b>5</b><span>혼자만 남으면 그대로 <b>부전승</b> — 이때는 아무도 패를 안 깝니다.</span></div>
       <div class="r4-step"><b>6</b><span><b>선은 이긴 사람이</b> 잡습니다.</span></div>
     </div>
 
     <h3><span data-ico="🌐"></span> 온라인 대전</h3>
     <p><b>온라인 대전</b>을 고르면 같은 인원을 기다리는 사람과 붙습니다. 20초 안에 안 차면
-       빈자리는 AI가 채웁니다. 온라인에서는 내 차례에 <b>22초</b>가 주어지고, 넘기면 체크(또는 다이)로
+       빈자리는 AI가 채웁니다. 온라인에서는 내 차례에 <b>22초</b>가 주어지고, 시간이 지나면 넘기기(또는 접기)로
        대신 넘어갑니다. 누가 일어서도 판은 이어집니다 — 빈자리는 다음 판부터 AI가 맡습니다.</p>
 
-    <h3><span data-ico="🪙"></span> 밑천</h3>
-    <p>자리에 앉을 때 <b>🪙200</b>을 밑천으로 바꿔 갑니다. 배팅은 이 밑천에서만 나가고,
+    <h3><span data-ico="🪙"></span> 소지금</h3>
+    <p>자리에 앉을 때 <b>🪙200</b>을 소지금으로 바꿔 갑니다. 거는 돈은 이 소지금에서만 나가고,
        <b>일어설 때 남은 만큼 코인으로 돌려받습니다.</b> 판마다 코인을 만지지 않는 이유는
-       올인이 뜻을 가지려면 앞에 쌓인 밑천이 있어야 하기 때문입니다.</p>
+       전부 걸기가 뜻을 가지려면 앞에 쌓인 소지금이 있어야 하기 때문입니다.</p>
 
-    <h3><span data-ico="💰"></span> 배팅</h3>
+    <h3><span data-ico="💰"></span> 돈 거는 법</h3>
     <div class="r4-tbl">
-      <div class="r4-row r4-head"><span>이름</span><span>내는 돈</span></div>
-      <div class="r4-row"><span>삥</span><span>기본 단위 🪙10 (선만, 판을 열 때)</span></div>
-      <div class="r4-row"><span>체크</span><span>안 걸고 넘기기 (걸린 돈이 없을 때)</span></div>
-      <div class="r4-row"><span>쿼터</span><span>받은 뒤 판돈의 25%</span></div>
-      <div class="r4-row"><span>하프</span><span>받은 뒤 판돈의 50%</span></div>
-      <div class="r4-row"><span>따당</span><span>앞사람이 건 돈의 2배</span></div>
-      <div class="r4-row"><span>올인</span><span>남은 밑천 전부</span></div>
-      <div class="r4-row"><span>콜</span><span>앞사람만큼 맞추고 판을 닫기</span></div>
-      <div class="r4-row"><span>다이</span><span>건 돈을 버리고 빠지기</span></div>
+      <div class="r4-row r4-head"><span>고를 수 있는 것</span><span>내는 돈</span></div>
+      <div class="r4-row"><span>판 열기</span><span>기본 단위 🪙10 (선만, 판을 열 때)</span></div>
+      <div class="r4-row"><span>넘기기</span><span>안 걸고 차례를 넘김 (맞출 돈이 없을 때)</span></div>
+      <div class="r4-row"><span>살짝 올림</span><span>맞춘 뒤 판돈의 25%</span></div>
+      <div class="r4-row"><span>크게 올림</span><span>맞춘 뒤 판돈의 50%</span></div>
+      <div class="r4-row"><span>두 배 올림</span><span>앞사람이 건 돈의 2배</span></div>
+      <div class="r4-row"><span>전부 걸기</span><span>남은 소지금 전부</span></div>
+      <div class="r4-row"><span>맞추기</span><span>앞사람만큼 맞추고 판을 닫음</span></div>
+      <div class="r4-row"><span>접기</span><span>건 돈을 버리고 빠짐</span></div>
     </div>
-    <p><b>콜이나 체크를 한 사람은 그 라운드에서 다시 못 올립니다.</b> 남이 올리면 차례는 다시
-       오지만 콜·다이만 할 수 있어요. 사이드팟은 만들지 않아서, 레이즈는 가장 가난한 상대가
-       받을 수 있는 만큼에서 끊깁니다.</p>
+    <p><b>맞추거나 넘긴 사람은 그 판에서 다시 못 올립니다.</b> 남이 올리면 차례는 다시
+       오지만 맞추기·접기만 할 수 있어요. 판을 쪼개지 않으므로, 올리는 값은 가장 적게 가진
+       상대가 맞출 수 있는 만큼에서 끊깁니다.</p>
 
     <h3><span data-ico="🏅"></span> 누가 이기나</h3>
     <p>카드 가운데 <b>큰 숫자(앞자리)</b> 두 장을 더합니다. <b>합이 작을수록 강합니다.</b></p>
@@ -4053,7 +4082,7 @@
     <ul>
       <li><b>보이는 카드가 하나도 없습니다.</b> 읽을 것은 남이 <b>얼마를 언제 거는가</b>뿐입니다.</li>
       <li>첫 라운드는 카드가 한 장뿐이라 족보가 없습니다. 앞자리 하나로만 가늠하세요.</li>
-      <li>다이로 접으면 이미 건 돈만 잃습니다. 나쁜 패로 끝까지 따라가는 게 제일 비쌉니다.</li>
+      <li>일찍 접으면 이미 건 돈만 잃습니다. 나쁜 패로 끝까지 따라가는 게 제일 비쌉니다.</li>
     </ul>
   </div>
 </div>

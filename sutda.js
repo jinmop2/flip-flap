@@ -354,60 +354,181 @@ function viewFor(st, me) {
 
 // ── AI ────────────────────────────────────────────────────────────────────
 //
-// 보이는 카드가 없으니 AI 가 읽을 정보는 자기 패와 남들이 건 돈뿐이다.
-// 자기 패 세기로 성향을 정하되 약한 패로도 가끔 지른다 — 늘 정직하면
-// "AI 가 걸면 세다" 를 한 판 만에 들킨다.
+// 예전 AI 는 "내 패가 몇 티어냐" 만 보고 성향을 정했다. 그러면 두 가지를 못 한다.
+//   · 3~4인에서 이길 확률이 확 떨어지는 걸 모른다 (혼자 이기면 되는 게 아니다)
+//   · 얼마를 받아야 하는지(팟 오즈)를 안 따진다 — 싼 콜을 접고 비싼 콜을 받는다
 //
-// 첫 라운드는 카드가 한 장뿐이라 족보가 없다. 앞자리 하나로만 가늠한다.
-// 0 이 가장 세고 1 이 가장 약하다.
+// 그래서 이길 확률을 직접 센다. 덱이 24장뿐이라 남은 패를 전부 훑어도 금방이다.
+//   · 두 장 다 받았으면: 상대가 가질 수 있는 두 장 조합 231가지를 다 비교
+//   · 한 장만 받았으면: 내 두 번째 장 23가지 × 위의 231가지를 평균
+// 카드 조합마다 값이 고정이므로 한 번 센 값은 표에 적어 둔다(24 + 276칸).
+const equityCache = new Map();
+
+function deckExcept(cards) {
+  const out = [];
+  const drop = new Set(cards.map((c) => c.id));
+  for (const c of makeDeck()) if (!drop.has(c.id)) out.push(c);
+  return out;
+}
+
+// 두 장을 쥐었을 때, 무작위 상대 하나를 이길 확률
+function equity2(hand) {
+  const key = hand.map((c) => c.id).sort().join(',');
+  const hit = equityCache.get(key);
+  if (hit !== undefined) return hit;
+  const rest = deckExcept(hand);
+  let win = 0, total = 0;
+  for (let i = 0; i < rest.length; i++)
+    for (let j = i + 1; j < rest.length; j++) {
+      const c = compare(hand, [rest[i], rest[j]]);
+      win += c > 0 ? 1 : c === 0 ? 0.5 : 0;
+      total++;
+    }
+  const eq = total ? win / total : 0;
+  equityCache.set(key, eq);
+  return eq;
+}
+
+// 한 장만 쥐었을 때 — 아직 안 온 내 두 번째 장까지 평균낸다
+function equity1(card) {
+  const key = 'one:' + card.id;
+  const hit = equityCache.get(key);
+  if (hit !== undefined) return hit;
+  const rest = deckExcept([card]);
+  let sum = 0;
+  for (const second of rest) sum += equity2([card, second]);
+  const eq = sum / rest.length;
+  equityCache.set(key, eq);
+  return eq;
+}
+
+// 상대가 여럿이면 전부 이겨야 한다. 서로 독립이라 보고 거듭제곱으로 잡는다 —
+// 정확하진 않지만(같은 덱을 나눠 갖는다) 사람 눈에 드러날 만큼 어긋나지 않는다.
+function equityOf(cards, opponents) {
+  if (!cards || !cards.length) return 0;
+  const one = cards.length === 1 ? equity1(cards[0]) : equity2(cards);
+  return Math.pow(one, Math.max(1, opponents || 1));
+}
+
+// 예전 눈금 — 화면·시험에서 아직 쓴다. 0 이 가장 세고 1 이 가장 약하다.
 function handStrength(cards) {
   if (!cards || !cards.length) return 1;
-  if (cards.length === 1) return (cards[0].kind - 2) / 4;      // 2 → 0, 6 → 1
+  if (cards.length === 1) return (cards[0].kind - 2) / 4;
   const ev = evaluate(cards);
   if (ev.sniper === SNIPER_MIRROR) return 0.06;
   if (ev.sniper === SNIPER_NORMAL) return 0.34;
   return ev.tier / 7;
 }
 const strengthOf = (ev) => (ev.sniper === SNIPER_MIRROR ? 0.5
-  : ev.sniper === SNIPER_NORMAL ? 2.5 : ev.tier);            // 예전 이름 — 티어 눈금 그대로
+  : ev.sniper === SNIPER_NORMAL ? 2.5 : ev.tier);
 
-function aiAction(view, rand) {
+// 옛 AI — 지금 AI 가 정말 나아졌는지 재는 기준으로 남겨 둔다(시험에서 붙여 본다).
+function aiSimple(view, rand) {
   const acts = view.actions || [];
   if (!acts.length) return null;
   const r = rand || Math.random;
   const my = view.seats[view.me];
   const s = handStrength(my && my.cards);
   const pick = (...names) => names.find((n) => acts.includes(n));
-
-  // 밑천에 견줘 너무 큰 값은 애초에 안 지른다 — 한 판에 다 털리면 다음 판이 없다
   const affordable = (n) => (view.amounts[n] || 0) <= Math.max(view.amounts.call, my.stack * 0.6);
   const raise = () => {
-    // 아주 센 패는 가끔 다 민다 — 올인이 한 번도 안 나오면 밑천이 장식이 된다
     if (s <= 0.1 && acts.includes('allin') && r() < 0.12) return 'allin';
     const cands = ['ttadang', 'half', 'quarter'].filter((n) => acts.includes(n) && affordable(n));
     if (!cands.length) return null;
     return s < 0.12 && r() < 0.35 ? cands[0] : cands[cands.length - 1];
   };
-
   if (view.toCall > 0) {
     if (s <= 0.2 && r() < 0.55) { const x = raise(); if (x) return x; }
     if (s <= 0.5) return pick('call', 'check') || 'die';
     if (s <= 0.7) return r() < 0.5 ? (pick('call') || 'die') : 'die';
-    // 꼴찌권 — 싸게 받을 수 있으면 한 번쯤 따라가 본다
     if (view.toCall <= ANTE && r() < 0.3) return pick('call') || 'die';
     return pick('die') || 'check';
   }
-  // 걸린 돈이 없다
   if (s <= 0.25) { const x = raise() || pick('ping'); if (x) return x; }
   if (s <= 0.5 && r() < 0.4) { const x = pick('ping') || raise(); if (x) return x; }
-  if (r() < 0.15) { const x = pick('ping') || raise(); if (x) return x; }   // 허풍
+  if (r() < 0.15) { const x = pick('ping') || raise(); if (x) return x; }
+  return pick('check', 'ping') || 'die';
+}
+
+// 지금 AI.
+//
+//   · 받을 때는 팟 오즈로 잰다. 판돈 90에 20을 받는다면 18%만 이겨도 남는 장사다.
+//   · 걸 때는 확률에 맞춰 크기를 고른다. 센 패로 조금만 걸면 딸 돈을 흘린다.
+//   · 약한 패로도 가끔 지른다. 늘 정직하면 "걸면 세다" 를 한 판에 들킨다.
+//   · 밑천을 한 판에 다 밀지 않는다 — 털리면 다음 판이 없다.
+//
+// 아래 숫자는 감으로 적은 게 아니라 자가대전으로 골랐다. 같은 패를 자리만 바꿔
+// 두 번 돌리는 방식(듀플리케이트)으로 카드 운을 상쇄시키고, 상대를 넷 두어
+// (옛 AI · 무조건 따라오는 사람 · 센 패만 치는 사람 · 튜닝 전 자신) 평균이
+// 가장 높은 값을 골랐다. 한 상대만 놓고 맞추면 그 상대만 이기는 값이 나온다.
+const AI = {
+  eqRaise: 0.82,   // 이만큼 앞서면 되받아친다
+  pRaise: 0.9,
+  edgeRaise: 0.28, // 팟 오즈보다 이만큼 앞서면 가끔 올린다
+  pEdgeRaise: 0.25,
+  edgeCall: 0.05,  // 이만큼 앞서면 받는다
+  edgeThin: -0.02, // 살짝 모자라도 값이 싸면 따라간다
+  potThin: 0.25,
+  pThin: 0.3,
+  eqBet: 0.65,     // 먼저 걸 때 — 이만큼이면 크게
+  eqBet2: 0.4,
+  pBet2: 0.9,
+  eqProbe: 0.3,
+  pProbe: 0.25,
+  pBluff: 0.22,    // 아무것도 없을 때 지르는 비율
+  limStrong: 0.85, // 센 패로 밑천의 이만큼까지
+  limWeak: 0.3,    // 어중간할 땐 이만큼까지
+  eqAllin: 0.85,
+  pAllin: 0.25,
+};
+
+function aiAction(view, rand) {
+  const acts = view.actions || [];
+  if (!acts.length) return null;
+  const r = rand || Math.random;
+  const me = view.seats[view.me];
+  const opponents = view.seats.filter((s, i) => i !== view.me && s.alive).length;
+  const eq = equityOf(me && me.cards, opponents);
+  const pick = (...names) => names.find((n) => acts.includes(n));
+
+  const pot = view.pot, toCall = view.toCall;
+  const amt = view.amounts || {};
+  const stack = me.stack;
+  // 이 값을 걸면 밑천의 몇 할을 쓰는가 — 큰 값은 센 패일 때만 쓴다
+  const share = (n) => (stack > 0 ? (amt[n] || 0) / stack : 1);
+  const affordable = (n, lim) => acts.includes(n) && share(n) <= lim;
+
+  const sizeUp = (strong) => {
+    const lim = strong ? AI.limStrong : AI.limWeak;
+    const big = ['allin', 'ttadang', 'half', 'quarter'].filter((n) => affordable(n, lim));
+    if (!big.length) return null;
+    if (strong && eq > AI.eqAllin && acts.includes('allin') && r() < AI.pAllin) return 'allin';
+    if (strong) return big.find((n) => n !== 'allin') || big[0];
+    return ['quarter', 'half'].find((n) => affordable(n, lim)) || null;
+  };
+
+  if (toCall > 0) {
+    const odds = toCall / (pot + toCall);       // 이만큼은 이겨야 본전
+    const edge = eq - odds;
+    if (eq > AI.eqRaise && r() < AI.pRaise) { const x = sizeUp(true); if (x) return x; }
+    if (edge > AI.edgeRaise && r() < AI.pEdgeRaise) { const x = sizeUp(false); if (x) return x; }
+    if (edge > AI.edgeCall) return pick('call', 'check') || 'die';
+    if (edge > AI.edgeThin && toCall <= pot * AI.potThin && r() < AI.pThin) return pick('call') || 'die';
+    return pick('die') || pick('check') || 'die';
+  }
+
+  // 걸린 돈이 없다 — 먼저 거는 자리
+  if (eq > AI.eqBet) { const x = sizeUp(true) || pick('ping'); if (x) return x; }
+  if (eq > AI.eqBet2 && r() < AI.pBet2) { const x = sizeUp(false) || pick('ping'); if (x) return x; }
+  if (eq > AI.eqProbe && r() < AI.pProbe) { const x = pick('ping') || sizeUp(false); if (x) return x; }
+  if (r() < AI.pBluff) { const x = pick('ping') || sizeUp(false); if (x) return x; }   // 허풍
   return pick('check', 'ping') || 'die';
 }
 
 module.exports = {
   ANTE, BET_UNIT, BUY_IN, MAX_SEATS, MIN_SEATS,
   start, act, actionsFor, viewFor, roundClosed, raiseAmounts, capFor, resolve,
-  aiAction, handStrength, strengthOf,
+  aiAction, aiSimple, AI, handStrength, strengthOf, equityOf, equity2, equity1,
   SPEC, TIER_NAME, TIER_OF_SUM,
   SNIPER_NONE, SNIPER_NORMAL, SNIPER_MIRROR,
   makeDeck, cardValue, sniperOf, evaluate, snipes, compare, deal, _shuffle: shuffle,

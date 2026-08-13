@@ -2291,7 +2291,7 @@ function miniStartHand(t, first) {
   // 돈이 없는 사람은 자동으로 일어난다
   for (let i = 0; i < t.n; i++) {
     const s = t.seats[i];
-    if (s && !s.ai && s.stack < SUTDA.ANTE) miniSeatOut(t, i, '밑천이 떨어졌어요.');
+    if (s && !s.ai && s.stack < SUTDA.ANTE) miniSeatOut(t, i, '소지금이 떨어졌어요.');
   }
   if (miniHumans(t) === 0) return miniCloseTable(t);
   if (miniLive(t) < 2) miniFillSeats(t);
