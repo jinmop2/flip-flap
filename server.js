@@ -302,13 +302,19 @@ async function tload(){
   if(!key()) return;
   const out=await post('/api/admin/temp-list',{});
   if(out.error){ $('tList').innerHTML=''; return; }
+  // onclick 안에 따옴표를 다시 넣으면 이스케이프가 한 겹 더 필요해진다.
+  // 여기는 템플릿 리터럴 안이라 그 한 겹이 어긋나기 쉽고, 어긋나면 이 스크립트가
+  // 통째로 죽어서 쿠폰 발행까지 멈춘다 — 실제로 그렇게 됐다.
+  // 그래서 id 는 data 속성으로 넘기고 핸들러는 나중에 붙인다.
   const rows=out.accounts.map(a=>'<tr class="'+(a.active?'':'dead')+'"><td>'+a.id+'</td><td>'+a.nick+
     '</td><td>'+a.coins+'</td><td>'+(a.expiresAt?new Date(a.expiresAt).toLocaleDateString('ko-KR'):'-')+
-    '</td><td><button class="ghost" onclick="trot(\''+a.id+'\')">재발급</button> '+
-    '<button class="ghost" onclick="trev(\''+a.id+'\')">끄기</button></td></tr>').join('');
+    '</td><td><button class="ghost act-rot" data-id="'+a.id+'">재발급</button> '+
+    '<button class="ghost act-rev" data-id="'+a.id+'">끄기</button></td></tr>').join('');
   $('tList').innerHTML=out.accounts.length
     ? '<table><tr><th>아이디</th><th>닉네임</th><th>코인</th><th>만료</th><th></th></tr>'+rows+'</table>'
     : '<div class="msg">아직 만든 임시 계정이 없어요.</div>';
+  for(const b of $('tList').querySelectorAll('.act-rot')) b.onclick=()=>trot(b.dataset.id);
+  for(const b of $('tList').querySelectorAll('.act-rev')) b.onclick=()=>trev(b.dataset.id);
 }
 $('key').addEventListener('change',()=>{load();tload();});
 </script>`);
