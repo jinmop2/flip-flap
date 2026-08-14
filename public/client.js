@@ -323,6 +323,9 @@ function renderAccount() {
   const body = document.getElementById('pbBody');
   const fill = document.getElementById('pbXpFill');
   if (!body) return;
+  // 계정이 바뀔 때마다 스킨도 맞춰 둔다. 판을 시작할 때만 걸어 두면
+  // 로비·설명서에 보이는 카드가 기본 무늬로 남아 서로 달라 보인다.
+  try { applyMySkins(); } catch (_) {}
   if (myAccount) {
     const p = myAccount;
     const total = p.wins + p.losses;
@@ -2638,9 +2641,9 @@ window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); p
 let miniState = null, miniSeats = 2, miniSitting = false, miniPrevPot = 0, miniClock = null;
 
 
-// 칩 — 숫자만 띄우면 판이 얼마나 큰지 눈에 안 들어온다.
+// 루나(판에서 쓰는 돈) — 숫자만 띄우면 판이 얼마나 큰지 눈에 안 들어온다.
 // 큰 단위부터 헐어서 무더기로 만든다. 무더기 하나가 요소 하나다(4인 × 여러 단위라
-// 칩마다 요소를 만들면 금세 수백 개가 되고, 매 상태마다 다시 그린다).
+// 한 닢마다 요소를 만들면 금세 수백 개가 되고, 매 상태마다 다시 그린다).
 const CHIP_UNITS = [500, 100, 50, 10, 1];
 function chipPiles(amount) {
   let left = Math.max(0, Math.floor(amount || 0));
@@ -2771,10 +2774,10 @@ function miniPaint(v) {
     }
     const stk = document.createElement('div');
     stk.className = 'mn-stk';
-    stk.textContent = st.alive ? `${st.stack} 칩` : '접음';
+    stk.textContent = st.alive ? `${st.stack} 루나` : '접음';
     const chip = document.createElement('div');
     chip.className = 'mn-chip' + (st.roundBet > 0 && st.alive ? ' on' : '');
-    chip.textContent = `${st.roundBet} 칩`;
+    chip.textContent = `${st.roundBet} 루나`;
     const stack = chipsEl(st.alive ? st.roundBet : 0, 'mini');
     const tag = document.createElement('div');
     tag.className = 'mn-act-tag';
@@ -2791,7 +2794,7 @@ function miniPaint(v) {
     top.appendChild(d);
   }
 
-  document.getElementById('mnPotBig').textContent = `${v.pot} 칩`;
+  document.getElementById('mnPotBig').textContent = `${v.pot} 루나`;
   // 판돈이 늘었을 때만 떨어지는 연출을 준다 — 매번 튀면 눈이 아프다
   const potBox = document.getElementById('mnPotChips');
   const grew = v.pot > (miniPrevPot || 0);
@@ -2808,8 +2811,8 @@ function miniPaint(v) {
   plate.className = 'mn-meplate' + (v.turn === v.me && !v.over ? ' turn' : '');
   plate.innerHTML = `<b>${esc((v.names && v.names[v.me]) || '나')}</b>`
     + (me.first ? '<span class="mn-first">선</span>' : '')
-    + `<span class="mn-stk">${me.stack} 칩</span>`
-    + (me.roundBet > 0 ? `<span class="mn-chip on">${me.roundBet} 칩</span>` : '');
+    + `<span class="mn-stk">${me.stack} 루나</span>`
+    + (me.roundBet > 0 ? `<span class="mn-chip on">${me.roundBet} 루나</span>` : '');
   if (me.roundBet > 0) plate.appendChild(chipsEl(me.roundBet, 'mini'));
   const my = document.getElementById('mnMyCards');
   my.innerHTML = '';
@@ -2854,7 +2857,7 @@ function miniPaint(v) {
 
   const st0 = document.getElementById('mnStatus');
   if (v.over) st0.textContent = v.reason === 'fold' ? '남은 사람이 가져갑니다.' : '공개!';
-  else if (v.turn === v.me) st0.textContent = `내 차례 · 소지금 ${me.stack}칩${v.toCall ? ` · 맞출 돈 ${v.toCall}칩` : ''}`;
+  else if (v.turn === v.me) st0.textContent = `내 차례 · 소지금 ${me.stack}루나${v.toCall ? ` · 맞출 돈 ${v.toCall}루나` : ''}`;
   else st0.textContent = `${esc((v.names && v.names[v.turn]) || '상대')} 님이 고민하고 있어요…`;
 
   // 내 차례 제한 시간 — 서버가 넘겨주는 시각까지 센다
@@ -2864,8 +2867,8 @@ function miniPaint(v) {
       const left = Math.max(0, Math.ceil((v.deadline - Date.now()) / 1000));
       const el = document.getElementById('mnStatus');
       if (!el || !miniState || miniState.turn !== miniState.me) { clearInterval(miniClock); return; }
-      el.textContent = `내 차례 · ${left}초 · 소지금 ${me.stack}칩`
-        + (v.toCall ? ` · 맞출 돈 ${v.toCall}칩` : '');
+      el.textContent = `내 차례 · ${left}초 · 소지금 ${me.stack}루나`
+        + (v.toCall ? ` · 맞출 돈 ${v.toCall}루나` : '');
       if (left <= 0) clearInterval(miniClock);
     };
     tick(); miniClock = setInterval(tick, 500);
@@ -2880,7 +2883,7 @@ function miniPaint(v) {
     const b = document.createElement('button');
     b.className = 'mn-b ' + cls;
     const amt = v.amounts[a];
-    b.innerHTML = `${label}${amt ? `<small>${amt} 칩</small>` : ''}`;
+    b.innerHTML = `${label}${amt ? `<small>${amt} 루나</small>` : ''}`;
     b.onclick = () => miniAct(a);
     btns.appendChild(b);
   }
@@ -2927,7 +2930,21 @@ function miniHideOver() {
   clearInterval(miniNextTick); miniNextTick = null;
   document.getElementById('miniOver').classList.remove('on');
 }
-window.miniNext = function () { miniHideOver(); socket.emit('mini_next'); };
+window.miniNext = function () {
+  // 여럿이면 남이 누를 때까지 기다린다 — 결과창은 그대로 두고 버튼만 잠근다
+  const multi = miniState && miniState.mode !== 'solo';
+  if (multi) {
+    const nb = document.getElementById('mnNextBtn');
+    nb.disabled = true; nb.textContent = '기다리는 중…';
+  } else miniHideOver();
+  socket.emit('mini_next');
+};
+socket.on('mini_ready', (r) => {
+  const nb = document.getElementById('mnNextBtn');
+  if (!nb) return;
+  nb.disabled = !!r.me;
+  nb.textContent = r.me ? `기다리는 중 ${r.ready}/${r.need}` : `다음 판 (${r.ready}/${r.need})`;
+});
 window.miniStand = function () { miniHideOver(); socket.emit('mini_leave'); };
 function miniHide() {
   clearInterval(miniClock); miniClock = null; miniPrevPot = 0;
@@ -2988,9 +3005,13 @@ socket.on('mini_over', (r) => {
     res.textContent = r.won ? '승리!' : '패배';
     res.className = 'mn-res ' + (r.won ? 'win' : 'lose');
     document.getElementById('mnNet').textContent =
-      r.net > 0 ? `🪙 +${r.net}` : r.net < 0 ? `🪙 ${r.net}` : '🪙 0';
-    document.getElementById('mnNextBtn').style.display =
-      (r.canGo && r.view.mode === 'solo') ? '' : 'none';
+      r.net > 0 ? `+${r.net} 루나` : r.net < 0 ? `${r.net} 루나` : '±0 루나';
+    // 왜 그렇게 됐는지 — 이게 없으면 "졌다" 만 뜨고 배우는 게 없다
+    document.getElementById('mnVerdict').innerHTML = miniVerdictText(r);
+    const nb = document.getElementById('mnNextBtn');
+    nb.style.display = r.canGo ? '' : 'none';       // 혼자든 여럿이든 눌러서 이어 간다
+    nb.disabled = false;
+    nb.textContent = '다음 판';
 
     // 멀티는 시계대로 넘어간다 — 몇 초 남았는지 보여준다. 갑자기 바뀌면 놀란다.
     const why = document.getElementById('mnOverWhy');
@@ -3018,7 +3039,7 @@ socket.on('mini_over', (r) => {
 socket.on('mini_stood', (r) => {
   miniHide();
   document.getElementById('mnStoodNet').innerHTML =
-    `${r.chips} 칩 → <b>🪙 ${r.back}</b> 회수 (${r.net > 0 ? '+' : ''}${r.net})`;
+    `${r.chips} 루나 → <b>🪙 ${r.back}</b> 회수 (${r.net > 0 ? '+' : ''}${r.net})`;
   document.getElementById('mnStoodWhy').textContent = r.why || '';
   document.getElementById('miniStoodModal').classList.add('show');
   if (myAccount && typeof r.coins === 'number') { myAccount.coins = r.coins; renderAccount(); }
@@ -4221,6 +4242,11 @@ function applyMySkins() {
     if (p && TABLE_CLS[p.table]) g.classList.add(TABLE_CLS[p.table]);
     if (p && FACE_CLS[p.cardFace]) g.classList.add(FACE_CLS[p.cardFace]);
   }
+  // 앞면 스킨은 body 에도 건다. 판 밖에서 만드는 카드가 있기 때문이다 —
+  // 정산 때 날아가는 카드는 body 에 붙어서, 판 안에만 걸어 두면 그 순간만
+  // 기본 무늬로 돌아갔다("중간중간 스킨이 풀린다"). 테이블 스킨은 판 것이라 안 건다.
+  document.body.classList.remove(...Object.values(FACE_CLS));
+  if (myAccount && FACE_CLS[myAccount.cardFace]) document.body.classList.add(FACE_CLS[myAccount.cardFace]);
 }
 
 // 탭 처리 — click 만 쓰면 폰에서 가끔 먹지 않는다.

@@ -157,7 +157,7 @@ console.log('\n⑥ 경기장');
   ok('기다리다 취소할 수 있다', /window\.miniCancelQueue/.test(cli) && /mini_cancel/.test(srv));
   ok('판이 열리면 대기창이 닫힌다', /mini_state[\s\S]{0,120}miniWaitModal'\)\.classList\.remove\('show'\)/.test(cli));
   ok('남은 시간을 센다', /miniClock = setInterval/.test(cli));
-  ok('멀티에서는 다음 판을 기다린다', /r\.view\.mode === 'solo'/.test(cli));
+  ok('멀티에서는 남이 누를 때까지 기다린다', /miniState\.mode !== 'solo'/.test(cli));
   ok('자리 수를 고를 수 있다', /miniPickSeats/.test(cli) && /id="mnSeatSeg"/.test(html));
   ok('ESC 로 닫힌다', /'miniModal',\s*\(\) => miniClose\(\)/.test(cli));
   // 버튼 이름이 규칙의 행동과 하나씩 맞는가 — 여기가 어긋나면 누를 수 없는 수가 생긴다
@@ -183,6 +183,9 @@ console.log('\n⑥⁗′ 누가 이겼는지');
   ok('규칙은 서버에서만 판정한다', /function explain\(/.test(fs.readFileSync(src + '/sutda.js', 'utf8')));
   ok('판정 근거를 내려보낸다', /verdict: SUTDA\.verdictOf\(t\.st\)/.test(srv));
   ok('화면은 문장으로만 옮긴다', /function miniVerdictText/.test(cli));
+  // 함수만 있고 안 부르면 아무것도 안 뜬다 — 실제로 한 번 그렇게 됐다
+  ok('결과창에 실제로 붙인다',
+     /getElementById\('mnVerdict'\)\.innerHTML = miniVerdictText\(r\)/.test(cli));
   for (const rule of ['snipe', 'front', 'back', 'card'])
     ok(`${rule} 로 갈린 경우를 설명한다`, new RegExp(`case '${rule}'`).test(cli));
   ok('이긴 자리에 띠를 붙인다', /mn-winbadge/.test(cli) && /\.mn-winbadge \{/.test(html));
@@ -208,10 +211,21 @@ console.log('\n⑥‴′ 화투 에디션');
     ok(`${map} 에 화투`, cli.includes(`'${cls}'`), cls);
   // 우리 카드 종류가 곧 화투 월이다 — 2·3·4·6 넷 다 그림이 있어야 한다
   for (const k of [2, 3, 4, 6])
-    ok(`${k}월 그림`, new RegExp(`#mini\\.cf-hwatu \\.card\\[data-kind="${k}"\\]::after`).test(html));
-  ok('숫자가 그림 위로 온다', /#mini\.cf-hwatu \.card > \* \{ position:relative; z-index:1/.test(html));
-  ok('미니게임 경기장에도 앞면 스킨이 먹는다', (html.match(/#mini\.cf-/g) || []).length >= 10);
+    ok(`${k}월 그림`, new RegExp(`\\.cf-hwatu \\.card(?::not\\(\\.back\\))?\\[data-kind="${k}"\\]::after`).test(html));
+  ok('숫자가 그림 위로 온다', /\.cf-hwatu \.card:not\(\.back\) > \*\{ position:relative; z-index:1/.test(html));
+  // 앞면 스킨은 판 id 에 묶지 않는다 — 판 밖(정산 때 날아가는 카드)에서도 걸려야 한다
+  ok('앞면 스킨을 판 안으로 가두지 않는다', !/#mini\.cf-/.test(html));
   ok('뒷면도 내 카드백으로', /myAccount && CB_CLASS\[myAccount\.cardBack\]/.test(cli));
+}
+
+console.log('\n⑥⁗″ 다음 판으로 이어 가기');
+{
+  ok('버튼은 어느 모드에서나 보인다', /nb\.style\.display = r\.canGo \? '' : 'none'/.test(cli));
+  ok('혼자면 바로 시작', /if \(t\.mode !== 'solo'\) return;/.test(srv) === false);
+  ok('여럿이면 다 누를 때까지 기다린다', /const waiting = humans\.filter\(\(i\) => !t\.ready\.has\(i\)\)/.test(srv));
+  ok('몇 명이 눌렀는지 알려준다', /sk\.emit\('mini_ready'/.test(srv) && /socket\.on\('mini_ready'/.test(cli));
+  ok('아무도 안 눌러도 시계로 시작한다', /t\.nextTimer = setTimeout\(\(\) => miniStartHand/.test(srv));
+  ok('판이 끝나면 준비 표시를 비운다', /t\.ready = new Set\(\);/.test(srv));
 }
 
 console.log('\n⑥‴″ 결과를 볼 시간');
@@ -294,8 +308,8 @@ console.log('\n⑦ 설명서');
   ok('선은 이긴 사람이 잡는다고 적혀 있다', /선은[\s\S]{0,20}이긴/.test(box));
   ok('2~4인이라고 적혀 있다', /2~4인|2～4인/.test(box));
   // 설명서 숫자가 규칙과 같은가 — 어긋나면 사람이 규칙을 잘못 배운다
-  ok('기본 단위가 규칙과 같다', box.includes(`${S.ANTE}칩`), String(S.ANTE));
-  ok('칩 수가 규칙과 같다', box.includes(`${S.BUY_IN}칩`), String(S.BUY_IN));
+  ok('기본 단위가 규칙과 같다', box.includes(`${S.ANTE}루나`), String(S.ANTE));
+  ok('루나 수가 규칙과 같다', box.includes(`${S.BUY_IN}루나`), String(S.BUY_IN));
   ok('환율이 규칙과 같다', box.includes(`${S.BUY_IN / S.CHIP_PER_COIN}`), String(S.CHIP_PER_COIN));
   const sums = new Set();
   const deck = S.makeDeck();

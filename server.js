@@ -2487,6 +2487,7 @@ function miniHandOver(t) {
   t.settled = true;
   clearTimeout(t.turnTimer); clearTimeout(t.aiTimer);
   t.deadline = 0;
+  t.ready = new Set();                      // "다음 판" 을 누른 사람
   for (let i = 0; i < t.n; i++) if (t.seats[i]) t.seats[i].stack = t.st.stack[i];
   for (let i = 0; i < t.n; i++) {
     const sk = miniSockOf(t.seats[i]);
@@ -2507,13 +2508,30 @@ function miniHandOver(t) {
   t.nextTimer = setTimeout(() => miniStartHand(t, first), MINI_NEXT_MS);
 }
 
-// "다음 판" 을 눌렀을 때 — 기다리는 시간을 줄여 줄 뿐, 규칙은 같다.
+// "다음 판" — 기다리지 않고 바로 다음 판으로 간다.
+//
+// 혼자면 누르는 즉시. 여럿이면 앉아 있는 사람이 다 누를 때까지 기다린다 —
+// 한 사람이 먼저 눌렀다고 남이 패를 보던 중에 판이 갈아엎히면 안 된다.
+// 아무도 안 눌러도 시계(MINI_NEXT_MS)가 돌면 어차피 시작하므로 판은 안 멈춘다.
 function miniWantNext(socket) {
   const m = socket.mini;
   const t = m && miniTables.get(m.tableId);
   if (!t) return socket.emit('mini_error', '자리에 앉아 있지 않아요.');
   if (t.st && !t.st.over) return socket.emit('mini_error', '아직 판이 안 끝났어요.');
-  if (t.mode !== 'solo') return;                  // 멀티는 시계대로
+  t.ready = t.ready || new Set();
+  t.ready.add(m.seat);
+
+  const humans = [];
+  for (let i = 0; i < t.n; i++) if (t.seats[i] && !t.seats[i].ai) humans.push(i);
+  const waiting = humans.filter((i) => !t.ready.has(i));
+  if (waiting.length) {
+    // 아직 안 누른 사람이 있다 — 몇 명 남았는지 모두에게 알려 준다
+    for (const i of humans) {
+      const sk = miniSockOf(t.seats[i]);
+      if (sk) sk.emit('mini_ready', { ready: t.ready.size, need: humans.length, me: t.ready.has(i) });
+    }
+    return;
+  }
   clearTimeout(t.nextTimer);
   miniStartHand(t, t.st ? t.st.first : null);
 }

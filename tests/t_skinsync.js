@@ -9,6 +9,7 @@ const root = __dirname + '/..';
 const acc = fs.readFileSync(root + '/accounts.js', 'utf8');
 const cli = fs.readFileSync(root + '/public/client.js', 'utf8');
 const css = fs.readFileSync(root + '/public/index.html', 'utf8');
+const c4 = fs.readFileSync(root + '/public/client4.js', 'utf8');
 
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra ? '  ' + extra : ''))); };
@@ -104,6 +105,35 @@ console.log('\n⑤ 장착 슬롯이 서버와 짝이 맞는가');
     ok('슬롯 종류가 같다', JSON.stringify(s) === JSON.stringify(c),
        `서버 [${s}] / 클라 [${c}]`);
   }
+}
+
+console.log('\n④ 판 밖에서 만든 카드에도 앞면 스킨이 걸린다');
+{
+  // 정산 때 날아가는 카드(ghost)는 body 에 붙는다. 스킨 규칙을 #game 안으로만
+  // 묶어 두면 그 순간만 기본 무늬로 돌아간다 — "중간중간 스킨이 풀린다".
+  ok('앞면 규칙에 판 id 를 안 붙인다',
+     !/#(?:game|game4|mini)\.cf-/.test(css),
+     (css.match(/#(?:game|game4|mini)\.cf-[a-z]+/g) || []).slice(0, 3).join(','));
+  ok('날아가는 카드는 body 에 붙는다', /ghost\.classList\.add\('fly-card'\)[\s\S]{0,200}document\.body\.appendChild\(ghost\)/.test(cli));
+  ok('그래서 body 에도 앞면 스킨을 건다',
+     /document\.body\.classList\.add\(FACE_CLS\[myAccount\.cardFace\]\)/.test(cli));
+  ok('갈아입기 전에 벗긴다', /document\.body\.classList\.remove\(\.\.\.Object\.values\(FACE_CLS\)\)/.test(cli));
+  ok('다인전에서도 body 에 건다', /document\.body\.classList\.add\(FACE_CLS\[p\.cardFace\]\)/.test(c4));
+  ok('테이블 스킨은 body 에 안 건다 (로비까지 물든다)',
+     !/document\.body\.classList\.add\(TABLE_CLS/.test(cli));
+  ok('계정이 그려질 때마다 맞춘다', /function renderAccount\(\)[\s\S]{0,400}applyMySkins\(\)/.test(cli));
+}
+
+console.log('\n⑤ 앞면 스킨이 뒷면을 덮지 않는다');
+{
+  // 화투 앞면은 !important 로 배경을 깐다 — .back 까지 걸리면 카드백이 허옇게 된다
+  ok('화투 앞면은 뒷면을 뺀다', /\.cf-hwatu \.card:not\(\.back\)\{/.test(css));
+  ok('그림도 뒷면엔 안 그린다', /\.cf-hwatu \.card:not\(\.back\)::after\{/.test(css));
+  // !important 를 쓰는 앞면 규칙은 반드시 .back 을 빼야 한다
+  const bad = [...css.matchAll(/\.cf-[a-z]+ \.card(?!:not\(\.back\))[^{]*\{([^}]*)\}/g)]
+    .filter((m) => /!important/.test(m[1]) && !/\.c-num|\.c-rank|> \*/.test(m[0]));
+  ok('!important 를 쓰는 앞면 규칙은 모두 뒷면을 뺀다', bad.length === 0,
+     bad.map((m) => m[0].slice(0, 50)).join(' | '));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

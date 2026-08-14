@@ -812,6 +812,7 @@
     '연결이 끊겼어요.': 'You were disconnected.',
     '빈자리': 'Empty seat',
     '다음 판': 'Next hand',
+    '기다리는 중…': 'Waiting...',
     '정산': 'Cash out',
     '첫 번째 배팅': 'First betting round',
     '두 번째 걸기': 'Second round',
@@ -911,14 +912,19 @@
   // 값이 섞이는 문구는 통째로 짝지을 수 없다. 한국어 쪽 모양을 정규식으로 잡고
   // 영어 자리에 그대로 끼워 넣는다. ($1, $2 … 가 잡힌 값)
   const PATTERNS = [
+    [/^내 차례 · (\d+)초 · 소지금 (\d+)루나$/, 'Your turn \u00b7 $1s \u00b7 $2 Luna'],
+    [/^내 차례 · (\d+)초 · 소지금 (\d+)루나 · 맞출 돈 (\d+)루나$/,
+      'Your turn \u00b7 $1s \u00b7 $2 Luna \u00b7 to match $3'],
+    [/^내 차례 · 소지금 (\d+)루나$/, 'Your turn \u00b7 $1 Luna'],
+    [/^내 차례 · 소지금 (\d+)루나 · 맞출 돈 (\d+)루나$/, 'Your turn \u00b7 $1 Luna \u00b7 to match $2'],
+    [/^(\d+) 루나 → $/, '$1 Luna \u2192 '],
+    [/^(\d+) 루나$/, '$1 Luna'],
+    [/^\+(\d+) 루나$/, '+$1 Luna'],
+    [/^-(\d+) 루나$/, '-$1 Luna'],
+    [/^기다리는 중 (\d+)\/(\d+)$/, 'Waiting $1\/$2'],
+    [/^다음 판 \((\d+)\/(\d+)\)$/, 'Next hand ($1\/$2)'],
     [/^(\d+)초 뒤 다음 판$/, 'Next hand in $1s'],
-    [/^내 차례 · (\d+)초 · 내 밑천 \ud83e\ude99(\d+)$/, 'Your turn \u00b7 $1s \u00b7 chips \ud83e\ude99$2'],
-    [/^내 차례 · (\d+)초 · 내 밑천 \ud83e\ude99(\d+) · 받을 돈 \ud83e\ude99(\d+)$/,
-      'Your turn \u00b7 $1s \u00b7 chips \ud83e\ude99$2 \u00b7 to call \ud83e\ude99$3'],
     [/^\/ (\d+)$/, '/ $1'],
-    [/^내 차례 · 내 밑천 \ud83e\ude99(\d+)$/, 'Your turn \u00b7 chips \ud83e\ude99$1'],
-    [/^내 차례 · 내 밑천 \ud83e\ude99(\d+) · 받을 돈 \ud83e\ude99(\d+)$/,
-      'Your turn \u00b7 chips \ud83e\ude99$1 \u00b7 to call \ud83e\ude99$2'],
     [/^(.+) 님이 고민하고 있어요…$/, '$1 is thinking...'],
     [/^\ud83e\ude99 (\d+) 회수 \((\+?-?\d+)\)$/, '\ud83e\ude99 $1 back ($2)'],
     [/^\ud83e\ude99 (-?\d+)$/, '\ud83e\ude99 $1'],
@@ -1091,7 +1097,7 @@
 
     <h3><span data-ico="\ud83c\udfb4"></span> How a hand goes</h3>
     <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>Everyone puts in the base unit <b>\ud83e\ude9940</b> and takes <b>one card</b>. The first player starts.</span></div>
+      <div class="r4-step"><b>1</b><span>Everyone puts in the base unit <b>40 Luna</b> and takes <b>one card</b>. The first player starts.</span></div>
       <div class="r4-step"><b>2</b><span>The round closes once everyone but one has <b>matched</b> or folded.</span></div>
       <div class="r4-step"><b>3</b><span>If two or more remain, each takes <b>one more card</b> and a second betting round runs.</span></div>
       <div class="r4-step"><b>4</b><span>When that closes, hands are shown and ranked. The winner takes the whole pot.</span></div>
@@ -1101,24 +1107,26 @@
 
     <h3><span data-ico="\ud83c\udf10"></span> Playing online</h3>
     <p>Pick <b>Play online</b> and you are matched with others waiting for the same table size.
-       Empty seats are filled by AI after 20 seconds. Online you get <b>22 seconds</b> per turn \u2014
+       Empty seats are filled by AI after 20 seconds. Online you get <b>45 seconds</b> per turn \u2014
        run out and it passes (or folds) for you. If someone stands up the game keeps going;
        their seat is taken over by AI from the next hand.</p>
 
-    <h3><span data-ico="\ud83e\ude99"></span> Chips</h3>
-    <p>Sitting down converts coins into chips \u2014 <b>as much as you have, up to \ud83e\ude99800</b> (\ud83e\ude99200 minimum). Bets come out of those chips, and
-       <b>you cash out whatever is left when you stand up.</b> Coins are not touched hand by hand \u2014
-       going all-in only means something when there is a stack in front of you.</p>
+    <h3><span data-ico="\ud83e\ude99"></span> Luna and coins</h3>
+    <p>Sitting down converts coins into <b>Luna</b>, the money used at the table \u2014
+       <b>\ud83e\ude99200 = 2,000 Luna</b> (10 Luna per coin; as much as you have, up to \ud83e\ude99200,
+       \ud83e\ude9920 minimum). Bets are paid in Luna, and <b>you cash the rest back into coins when you
+       stand up.</b> Coins are not touched hand by hand \u2014 going all-in only means something when
+       there is a stack in front of you.</p>
 
     <h3><span data-ico="\ud83d\udcb0"></span> Betting</h3>
     <div class="r4-tbl">
       <div class="r4-row r4-head"><span>Choice</span><span>What it costs</span></div>
-      <div class="r4-row"><span>Open</span><span>the base unit \ud83e\ude9940 (first player, to open)</span></div>
+      <div class="r4-row"><span>Open</span><span>the base unit 40 Luna (first player, to open)</span></div>
       <div class="r4-row"><span>Pass</span><span>move on without adding (when nothing is owed)</span></div>
       <div class="r4-row"><span>Raise small</span><span>25% of the pot after matching</span></div>
       <div class="r4-row"><span>Raise big</span><span>50% of the pot after matching</span></div>
       <div class="r4-row"><span>Double up</span><span>twice what the player before you put in</span></div>
-      <div class="r4-row"><span>Push all</span><span>every chip you have left</span></div>
+      <div class="r4-row"><span>Push all</span><span>every Luna you have left</span></div>
       <div class="r4-row"><span>Match</span><span>match the amount and close the round</span></div>
       <div class="r4-row"><span>Fold</span><span>give up what you put in and drop out</span></div>
     </div>

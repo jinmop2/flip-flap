@@ -35,6 +35,11 @@
       const p = (typeof myAccount !== 'undefined') && myAccount; if (!p) return;
       if (typeof TABLE_CLS !== 'undefined' && TABLE_CLS[p.table]) g.classList.add(TABLE_CLS[p.table]);
       if (typeof FACE_CLS !== 'undefined' && FACE_CLS[p.cardFace]) g.classList.add(FACE_CLS[p.cardFace]);
+      // 판 밖에서 만드는 카드(정산 때 날아가는 것 등)까지 덮으려면 body 에도 걸어야 한다
+      if (typeof FACE_CLS !== 'undefined') {
+        document.body.classList.remove(...Object.values(FACE_CLS));
+        if (FACE_CLS[p.cardFace]) document.body.classList.add(FACE_CLS[p.cardFace]);
+      }
     } catch (_) {}
   }
 
