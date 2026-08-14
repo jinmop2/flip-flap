@@ -669,6 +669,40 @@ let kakaoFirstLogin = false;
 // ── 타이틀 화면 (구글/카카오/게스트 선택) ──
 function hideTitle() { const t = document.getElementById('title'); if (t) t.classList.add('hide'); }
 function showTitle() { sessionStorage.removeItem('ff_guest'); const t = document.getElementById('title'); if (t) { t.style.display = ''; t.classList.remove('hide'); } }
+
+// ── 코드로 로그인 ──────────────────────────────────────────
+// 코드는 서버에도 해시로만 남는다. 여기서는 보내고 받은 토큰만 저장한다.
+window.toggleCodeLogin = function () {
+  const box = document.getElementById('codeLogin');
+  const on = box.style.display === 'none';
+  box.style.display = on ? 'flex' : 'none';
+  if (on) document.getElementById('codeInput').focus();
+};
+// 넣는 대로 네 자리마다 하이픈을 넣어 준다 — 받아 적기 쉬우라고
+window.codeFormat = function (el) {
+  const raw = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  el.value = raw.replace(/(.{4})(?=.)/g, '$1-');
+  document.getElementById('codeMsg').textContent = '';
+};
+window.submitCode = async function () {
+  const el = document.getElementById('codeInput');
+  const msg = document.getElementById('codeMsg');
+  const btn = document.getElementById('codeBtn');
+  const code = el.value.replace(/[^A-Za-z0-9]/g, '');
+  if (code.length !== 12) { msg.className = 'code-msg'; msg.textContent = '코드 12자를 넣어주세요.'; return; }
+  btn.disabled = true; msg.className = 'code-msg'; msg.textContent = '확인 중…';
+  try {
+    const r = await apiPost('/api/code-login', { code });
+    if (!r.ok) { msg.textContent = r.error || '코드가 올바르지 않아요.'; return; }
+    msg.className = 'code-msg ok'; msg.textContent = `${r.profile.nick} 님으로 들어갑니다`;
+    localStorage.setItem('ff_auth', r.token);
+    sessionStorage.removeItem('ff_guest');
+    setTimeout(() => location.reload(), 400);
+  } catch (_) {
+    msg.textContent = '연결이 안 돼요. 잠시 후 다시 시도해주세요.';
+  } finally { btn.disabled = false; }
+};
+
 function startAsGuest() { sessionStorage.setItem('ff_guest', '1'); hideTitle(); }   // 게스트 선택 기억
 const cameFromOAuth = kakaoFirstLogin || location.href.includes('ktoken');   // 방금 로그인하고 돌아온 경우
 

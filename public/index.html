@@ -2540,6 +2540,18 @@
     @keyframes peekPulse { 0%,100% { opacity:.35 } 50% { opacity:1 } }
     @media (prefers-reduced-motion: reduce) { .mn-cards .card.mn-hidden::after { animation:none; opacity:.7 } }
 
+    /* 코드 로그인 */
+    .social-btn.code { background:rgba(255,255,255,.06); border:1px solid rgba(245,207,110,.45); color:#ffe9a8; }
+    #codeLogin { display:flex; flex-direction:column; gap:8px; align-items:stretch; margin-top:10px; width:100%; }
+    .code-in {
+      width:100%; padding:12px 14px; border-radius:12px; text-align:center;
+      font-family:'Fredoka',monospace; font-size:1.05rem; font-weight:700; letter-spacing:2px;
+      background:#160f1c; border:1.5px solid #3a2a46; color:#ffe9a8;
+    }
+    .code-in:focus { outline:none; border-color:var(--gold); }
+    .code-msg { font-size:.76rem; color:#ff8fa3; text-align:center; min-height:1em; }
+    .code-msg.ok { color:#8fe0a0; }
+
     /* ── 배팅 칩 ── */
     /* 숫자만 띄우면 판이 얼마나 큰지 눈에 안 들어온다. 실제로 쌓이는 걸 보여준다.
        칩 하나하나를 요소로 두면 4인 × 여러 단위라 금세 수백 개가 된다 —
@@ -3450,6 +3462,17 @@
       <button class="social-btn guest" onclick="startAsGuest()">
         <span>게스트로 시작</span>
       </button>
+      <button class="social-btn code" onclick="toggleCodeLogin()">
+        <span>코드로 시작</span>
+      </button>
+    </div>
+    <!-- 코드 로그인 — 받은 코드 한 줄로 들어온다 -->
+    <div id="codeLogin" style="display:none">
+      <input id="codeInput" class="code-in" maxlength="14" autocomplete="off" autocapitalize="characters"
+             spellcheck="false" placeholder="XXXX-XXXX-XXXX" oninput="codeFormat(this)"
+             onkeydown="if(event.key==='Enter')submitCode()">
+      <button class="btn btn-gold btn-sm" id="codeBtn" onclick="submitCode()">들어가기</button>
+      <div class="code-msg" id="codeMsg"></div>
     </div>
     <p class="title-note">로그인하면 랭크·코인·전적이 저장돼요</p>
   </div>

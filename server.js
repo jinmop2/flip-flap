@@ -119,6 +119,49 @@ app.post('/api/admin/coupon-list', rateLimit(30), (req, res) => {
   res.json({ ok: true, coupons: accounts.couponList() });
 });
 
+// ── 임시 계정 (코드 로그인) ──
+// 만들기·재발급·끄기는 전부 관리자 키가 필요하다. 코드는 만들 때 딱 한 번 나온다 —
+// 저장소에는 해시만 남으므로 나중에 다시 물어봐도 서버가 모른다.
+app.post('/api/admin/temp-new', rateLimit(10), (req, res) => {
+  if (!adminOk(req, res)) return;
+  const { count, coins } = req.body || {};
+  res.json(accounts.createTempAccounts(count, { coins }));
+});
+app.post('/api/admin/temp-list', rateLimit(30), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json(accounts.tempAccountList());
+});
+app.post('/api/admin/temp-rotate', rateLimit(20), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json(accounts.rotateTempCode((req.body || {}).id));
+});
+app.post('/api/admin/temp-revoke', rateLimit(20), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json(accounts.revokeTempCode((req.body || {}).id));
+});
+
+// 코드로 로그인. 여기가 유일하게 열려 있는 문이라 좁게 연다.
+//   · IP 당 분당 8회 (rateLimit)
+//   · 틀릴수록 느려진다 — 자동으로 찍어 보는 쪽만 손해를 본다
+//   · 맞든 틀리든 답이 같은 시간에 나가게 최소 대기를 둔다
+const codeFail = new Map();     // ip → { n, ts }
+app.post('/api/code-login', rateLimit(8), async (req, res) => {
+  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'x').split(',')[0].trim();
+  const now = Date.now();
+  let f = codeFail.get(ip);
+  if (!f || now - f.ts > 10 * 60000) f = { n: 0, ts: now };
+  // 틀린 횟수만큼 기다리게 한다(최대 4초). 사람은 못 느끼고 기계는 못 견딘다.
+  const wait = Math.min(4000, f.n * 400);
+  const started = now;
+  const out = accounts.codeLogin((req.body || {}).code);
+  if (out.error) { f.n++; f.ts = now; codeFail.set(ip, f); }
+  else codeFail.delete(ip);
+  const spent = Date.now() - started;
+  await new Promise((r) => setTimeout(r, Math.max(0, wait + 120 - spent)));
+  res.json(out);
+});
+setInterval(() => { const now = Date.now(); for (const [k, v] of codeFail) if (now - v.ts > 15 * 60000) codeFail.delete(k); }, 5 * 60000);
+
 // 관리자 페이지 — 키는 이 화면에서 입력받아 요청 본문으로만 보낸다 (URL 에 안 남음)
 app.get('/admin', rateLimit(20), (req, res) => {
   res.type('html').send(`<!DOCTYPE html><meta charset="utf-8">

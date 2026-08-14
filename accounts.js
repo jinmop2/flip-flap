@@ -3,7 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const FILE = path.join(__dirname, 'data', 'accounts.json');
+// 저장 위치. 시험은 진짜 계정 파일을 건드리면 안 되므로 환경변수로 갈아끼울 수 있게 둔다.
+// (운영에서는 Postgres 를 쓰므로 이 파일은 로컬 전용이다.)
+const FILE = process.env.FF_DATA_FILE || path.join(__dirname, 'data', 'accounts.json');
 let db = { users: {}, nickTaken: {}, clans: {}, coupons: {} };
 let tokenIndex = {};
 
@@ -530,6 +532,133 @@ function login(id, pw) {
   tokenIndex[u.token] = idl; persist(idl);
   return { ok: true, token: u.token, profile: profileOf(u) };
 }
+// ── 임시 계정 (코드 로그인) ────────────────────────────────────────────────
+//
+// 아이디·비밀번호 없이 코드 한 줄로 들어오는 계정. 시험용·손님용이다.
+//
+// 지켜야 할 것:
+//   · 코드는 절대 그대로 저장하지 않는다. 비밀번호와 같은 방식으로 해시만 남긴다 —
+//     저장소가 새어도 코드는 못 건진다. 그래서 만들 때 딱 한 번만 보여 준다.
+//   · 코드를 잃어버리면 복구가 아니라 재발급이다(rotateTempCode).
+//   · 만료가 있다. 시험용 계정이 영원히 열려 있으면 그게 곧 뒷문이다.
+//   · 헷갈리는 글자(0/O, 1/I/L)를 뺀 32글자로 12자 — 약 60비트.
+//     초당 백만 번을 찍어도 수만 년이 걸린다. 그래도 서버는 시도 횟수를 센다.
+//   · 비교는 timingSafeEqual 로. 문자열 == 은 앞자리부터 달라지는 지점이 시간에
+//     드러나서, 이론상 한 글자씩 맞춰 나갈 수 있다.
+const TEMP_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // 0 O 1 I L 제외
+const TEMP_CODE_LEN = 12;
+const TEMP_TTL = 30 * 24 * 3600 * 1000;                     // 30일
+
+function makeTempCode() {
+  let out = '';
+  // randomBytes 를 알파벳 길이로 나머지 연산하면 앞쪽 글자가 조금 더 자주 나온다.
+  // 치우친 만큼 경우의 수가 줄므로, 남는 값은 버리고 다시 뽑는다.
+  const n = TEMP_ALPHABET.length, limit = 256 - (256 % n);
+  while (out.length < TEMP_CODE_LEN) {
+    for (const b of crypto.randomBytes(TEMP_CODE_LEN)) {
+      if (b >= limit) continue;
+      out += TEMP_ALPHABET[b % n];
+      if (out.length === TEMP_CODE_LEN) break;
+    }
+  }
+  return out.replace(/(.{4})(.{4})(.{4})/, '$1-$2-$3');      // 보기 좋게 네 자리씩
+}
+const normTempCode = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+// 코드를 넣으면 그 계정에 붙는다. 코드 자체는 안 남기고 해시만 남긴다.
+function setTempCode(u, code) {
+  u.tempSalt = crypto.randomBytes(12).toString('hex');
+  u.tempHash = hashPw(normTempCode(code), u.tempSalt);
+  u.tempExp = Date.now() + TEMP_TTL;
+  u.temp = true;
+}
+
+// 임시 계정 n 개를 만든다. 코드는 돌려주는 이 순간이 처음이자 마지막이다.
+function createTempAccounts(count = 5, opts = {}) {
+  const n = Math.max(1, Math.min(20, Math.floor(Number(count) || 1)));
+  const coins = Math.max(0, Math.min(100000, Math.floor(Number(opts.coins) || 3000)));
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    // 아이디·닉네임이 겹치지 않을 때까지 뒤에 숫자를 올린다
+    let k = 1, id, nick;
+    do { id = `guest${String(k).padStart(2, '0')}`; k++; } while (db.users[id.toLowerCase()]);
+    k = 1;
+    do { nick = `손님${k}`; k++; } while (db.nickTaken[nick.toLowerCase()]);
+
+    const code = makeTempCode();
+    const u = {
+      id, nick, nickSet: true,
+      salt: null, hash: null,                 // 비밀번호 로그인은 막는다 — 코드만 통한다
+      token: makeToken(), tokenExp: Date.now() + TOKEN_TTL,
+      wins: 0, losses: 0, xp: 0, rp: 0, coins, createdAt: Date.now(),
+    };
+    setTempCode(u, code);
+    db.users[id.toLowerCase()] = u;
+    db.nickTaken[nick.toLowerCase()] = id.toLowerCase();
+    tokenIndex[u.token] = id.toLowerCase();
+    persist(id.toLowerCase());
+    out.push({ id, nick, code, expiresAt: u.tempExp });      // code 는 여기서만 나온다
+  }
+  return { ok: true, accounts: out };
+}
+
+// 코드를 다시 발급한다(잃어버렸을 때). 옛 코드는 그 즉시 못 쓴다.
+function rotateTempCode(id) {
+  const idl = String(id || '').trim().toLowerCase();
+  const u = Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u || !u.temp) return { error: '임시 계정이 아니에요.' };
+  const code = makeTempCode();
+  setTempCode(u, code);
+  persist(idl);
+  return { ok: true, id: u.id, nick: u.nick, code, expiresAt: u.tempExp };
+}
+
+// 코드를 끈다. 지우는 게 아니라 못 쓰게만 한다(전적은 남긴다).
+function revokeTempCode(id) {
+  const idl = String(id || '').trim().toLowerCase();
+  const u = Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u || !u.temp) return { error: '임시 계정이 아니에요.' };
+  u.tempHash = null; u.tempSalt = null; u.tempExp = 0;
+  persist(idl);
+  return { ok: true, id: u.id };
+}
+
+// 지금 살아 있는 임시 계정 목록. 코드는 없다 — 남아 있지 않으니 보여 줄 수도 없다.
+function tempAccountList() {
+  const out = [];
+  for (const idl of Object.keys(db.users)) {
+    const u = db.users[idl];
+    if (!u || !u.temp) continue;
+    out.push({ id: u.id, nick: u.nick, coins: u.coins || 0,
+      active: !!u.tempHash && Date.now() < (u.tempExp || 0), expiresAt: u.tempExp || 0 });
+  }
+  return { ok: true, accounts: out };
+}
+
+// 코드로 로그인. 맞는 계정을 찾을 때까지 전부 훑되, 비교는 일정 시간으로 한다.
+function codeLogin(code) {
+  const norm = normTempCode(code);
+  if (norm.length !== TEMP_CODE_LEN) return { error: '코드가 올바르지 않아요.' };
+  const now = Date.now();
+  let found = null;
+  for (const idl of Object.keys(db.users)) {
+    const u = db.users[idl];
+    if (!u || !u.temp || !u.tempHash || !u.tempSalt) continue;
+    const got = Buffer.from(hashPw(norm, u.tempSalt), 'hex');
+    const want = Buffer.from(u.tempHash, 'hex');
+    if (got.length === want.length && crypto.timingSafeEqual(got, want)) { found = { idl, u }; break; }
+  }
+  if (!found) return { error: '코드가 올바르지 않아요.' };
+  if (!found.u.tempExp || now > found.u.tempExp) return { error: '기한이 지난 코드예요.' };
+
+  if (found.u.token) delete tokenIndex[found.u.token];
+  found.u.token = makeToken(); found.u.tokenExp = now + TOKEN_TTL;
+  found.u.lastCodeLogin = now;
+  tokenIndex[found.u.token] = found.idl;
+  persist(found.idl);
+  return { ok: true, token: found.u.token, profile: profileOf(found.u) };
+}
+
 function byToken(token) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return null;
@@ -2550,6 +2679,7 @@ function reportList(limit = 50) {
 }
 
 module.exports = {
+  createTempAccounts, rotateTempCode, revokeTempCode, tempAccountList, codeLogin,
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, applyRp4, claimDaily, myRank,
   viceOf, clanCoinBonus,
   createCoupons, couponList, redeemCoupon, TITLES, plateFxText,
