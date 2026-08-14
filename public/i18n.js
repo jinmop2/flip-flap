@@ -912,15 +912,15 @@
   // 값이 섞이는 문구는 통째로 짝지을 수 없다. 한국어 쪽 모양을 정규식으로 잡고
   // 영어 자리에 그대로 끼워 넣는다. ($1, $2 … 가 잡힌 값)
   const PATTERNS = [
-    [/^내 차례 · (\d+)초 · 소지금 (\d+)루나$/, 'Your turn \u00b7 $1s \u00b7 $2 Luna'],
-    [/^내 차례 · (\d+)초 · 소지금 (\d+)루나 · 맞출 돈 (\d+)루나$/,
-      'Your turn \u00b7 $1s \u00b7 $2 Luna \u00b7 to match $3'],
-    [/^내 차례 · 소지금 (\d+)루나$/, 'Your turn \u00b7 $1 Luna'],
-    [/^내 차례 · 소지금 (\d+)루나 · 맞출 돈 (\d+)루나$/, 'Your turn \u00b7 $1 Luna \u00b7 to match $2'],
-    [/^(\d+) 루나 → $/, '$1 Luna \u2192 '],
-    [/^(\d+) 루나$/, '$1 Luna'],
-    [/^\+(\d+) 루나$/, '+$1 Luna'],
-    [/^-(\d+) 루나$/, '-$1 Luna'],
+    [/^내 차례 · (\d+)초 · 소지금 (\d+)달$/, 'Your turn \u00b7 $1s \u00b7 $2 Moons'],
+    [/^내 차례 · (\d+)초 · 소지금 (\d+)달 · 맞출 돈 (\d+)달$/,
+      'Your turn \u00b7 $1s \u00b7 $2 Moons \u00b7 to match $3'],
+    [/^내 차례 · 소지금 (\d+)달$/, 'Your turn \u00b7 $1 Moons'],
+    [/^내 차례 · 소지금 (\d+)달 · 맞출 돈 (\d+)달$/, 'Your turn \u00b7 $1 Moons \u00b7 to match $2'],
+    [/^(\d+) 달 → $/, '$1 Moons \u2192 '],
+    [/^(\d+) 달$/, '$1 Moons'],
+    [/^\+(\d+) 달$/, '+$1 Moons'],
+    [/^-(\d+) 달$/, '-$1 Moons'],
     [/^기다리는 중 (\d+)\/(\d+)$/, 'Waiting $1\/$2'],
     [/^다음 판 \((\d+)\/(\d+)\)$/, 'Next hand ($1\/$2)'],
     [/^(\d+)초 뒤 다음 판$/, 'Next hand in $1s'],
@@ -1088,6 +1088,62 @@
   // 승리!" 처럼 <b> 사이사이로 잘려 있어서, 조각마다 짝을 지으면 영어 어순이 깨진다.
   // 그런 덩어리는 통째로 영어판을 따로 두고 갈아 끼운다.
   const BLOCKS = {
+    // 아이템전 설명서 — 영어판
+    rulesItem: `
+    <span class="close-x" onclick="toggleRulesItem(false)">\u00d7</span>
+    <h2>Item Battle</h2>
+    <p style="color:#8a7a80">The two-player rules, plus <b style="color:#ffe9a8">items</b> \u2014 and only the
+       <b style="color:#ffe9a8">loser</b> of an auction gets them.</p>
+
+    <h3><span data-ico="\ud83c\udf81"></span> How items arrive</h3>
+    <div class="r4-steps">
+      <div class="r4-step"><b>1</b><span>After every auction the <b>loser</b> receives one item. The winner gets nothing.</span></div>
+      <div class="r4-step"><b>2</b><span>You can hold <b>three</b> at most. A full hand receives nothing.</span></div>
+      <div class="r4-step"><b>3</b><span><b>One item per turn</b>, and never after you have played your bid card.</span></div>
+    </div>
+    <p>Items pile up on whoever is behind, so the game pulls itself back together.
+       <b>Legendary items only drop to the player behind on sets</b>, so a lead does not snowball.</p>
+
+    <h3><span data-ico="\ud83c\udfb2"></span> Drop rates</h3>
+    <div class="r4-tbl">
+      <div class="r4-row r4-head"><span>Tier</span><span>Behind</span><span>Ahead</span></div>
+      <div class="r4-row"><span>Common (3)</span><span>60%</span><span>60%</span></div>
+      <div class="r4-row"><span>Rare (6)</span><span>32%</span><span>40%</span></div>
+      <div class="r4-row"><span>Legendary (4)</span><span>8%</span><span>\u2014</span></div>
+    </div>
+    <p style="font-size:.78rem">A legendary roll turns into a rare one if you are ahead.</p>
+
+    <h3><span data-ico="\ud83d\udd0d"></span> Common</h3>
+    <ul>
+      <li><b>Magnifier</b> \u2014 peek at two cards in their hand</li>
+      <li><b>Hourglass</b> \u2014 take 30 seconds off their clock</li>
+      <li><b>Swap</b> \u2014 trade one card in hand for the top of the deck</li>
+    </ul>
+
+    <h3><span data-ico="\ud83d\udca8"></span> Rare</h3>
+    <ul>
+      <li><b>Smoke</b> \u2014 hide this lot from your opponent only</li>
+      <li><b>Reversal</b> \u2014 for this auction, the <b>weaker</b> card wins</li>
+      <li><b>Pickpocket</b> \u2014 take one card from their hand, give one of yours</li>
+      <li><b>Discount</b> \u2014 win without losing your bid card</li>
+      <li><b>Charm</b> \u2014 blocks their next item <b>for this turn</b></li>
+      <li><b>Re-auction</b> \u2014 void a lost auction and bid again</li>
+    </ul>
+
+    <h3><span data-ico="\ud83d\udc51"></span> Legendary <span style="font-size:.78rem;color:#8a7a80">\u2014 only when behind</span></h3>
+    <ul>
+      <li><b>Alley Cat</b> \u2014 steal a card they have won (never from a set that is one card away)</li>
+      <li><b>Copier</b> \u2014 duplicate a card you have won</li>
+      <li><b>Tyrant</b> \u2014 seize the auctioneer's seat this turn (needs 2+ cards in hand)</li>
+      <li><b>Dice of Fate</b> \u2014 redraw both lot cards from the deck</li>
+    </ul>
+
+    <h3><span data-ico="\ud83e\uddff"></span> The Charm \u2014 a reading game</h3>
+    <p>A charm is <b>set in advance</b>. Once placed it swallows the next item your opponent plays, and
+       that item is gone for good. But it <b>only lasts the turn</b>, so a canny opponent throws a cheap
+       item first to burn it. Knowing when to place it is the whole game.</p>
+    <p style="color:#8a7a80;font-size:.78rem">You cannot place one when there is nothing to block \u2014 if they already used an item this turn, or hold none.</p>
+    `,
     // 미니게임 설명서 — 영어판. 본 게임과 규칙이 달라 따로 둔다.
     // 미니게임 설명서 — 영어판. 본 게임과 규칙이 달라 따로 둔다.
     rulesMini: `
@@ -1097,7 +1153,7 @@
 
     <h3><span data-ico="\ud83c\udfb4"></span> How a hand goes</h3>
     <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>Everyone puts in the base unit <b>40 Luna</b> and takes <b>one card</b>. The first player starts.</span></div>
+      <div class="r4-step"><b>1</b><span>Everyone puts in the base unit <b>40 Moons</b> and takes <b>one card</b>. The first player starts.</span></div>
       <div class="r4-step"><b>2</b><span>The round closes once everyone but one has <b>matched</b> or folded.</span></div>
       <div class="r4-step"><b>3</b><span>If two or more remain, each takes <b>one more card</b> and a second betting round runs.</span></div>
       <div class="r4-step"><b>4</b><span>When that closes, hands are shown and ranked. The winner takes the whole pot.</span></div>
@@ -1111,9 +1167,9 @@
        run out and it passes (or folds) for you. If someone stands up the game keeps going;
        their seat is taken over by AI from the next hand.</p>
 
-    <h3><span data-ico="\ud83e\ude99"></span> Luna and coins</h3>
-    <p>Sitting down converts coins into <b>Luna</b>, the money used at the table \u2014
-       <b>\ud83e\ude99200 = 2,000 Luna</b> (10 Luna per coin; as much as you have, up to \ud83e\ude99200,
+    <h3><span data-ico="\ud83e\ude99"></span> Moons and coins</h3>
+    <p>Sitting down converts coins into <b>Moons</b>, the money used at the table \u2014
+       <b>\ud83e\ude99200 = 2,000 Moons</b> (10 Moons per coin; as much as you have, up to \ud83e\ude99200,
        \ud83e\ude9920 minimum). Bets are paid in Luna, and <b>you cash the rest back into coins when you
        stand up.</b> Coins are not touched hand by hand \u2014 going all-in only means something when
        there is a stack in front of you.</p>
@@ -1121,7 +1177,7 @@
     <h3><span data-ico="\ud83d\udcb0"></span> Betting</h3>
     <div class="r4-tbl">
       <div class="r4-row r4-head"><span>Choice</span><span>What it costs</span></div>
-      <div class="r4-row"><span>Open</span><span>the base unit 40 Luna (first player, to open)</span></div>
+      <div class="r4-row"><span>Open</span><span>the base unit 40 Moons (first player, to open)</span></div>
       <div class="r4-row"><span>Pass</span><span>move on without adding (when nothing is owed)</span></div>
       <div class="r4-row"><span>Raise small</span><span>25% of the pot after matching</span></div>
       <div class="r4-row"><span>Raise big</span><span>50% of the pot after matching</span></div>

@@ -867,6 +867,8 @@ function cpuPickItem(g, me, room) {
       case 'steal':      return opAcq.length >= 2 ? (behind ? 10 : 5) : -1;
       case 'copy':       return myAcq.length >= 2 ? 8 : -1;
       case 'dice':       return g.centerDeck.length >= 2 ? (behind ? 6 : 2) : -1;
+      // 부적 — 이번 턴에만 산다. 상대가 전설을 들고 있으면 값어치가 크다.
+      case 'ward':       return (g.items[opp] || []).some(x => ['steal', 'tyrant', 'copy', 'dice'].includes(x)) ? 7 : 3;
       case 'flip':       return 5;                                     // 약한 손패일수록 좋지만 단순화
       case 'discount':   return 5;
       case 'smoke':      return g.phase !== 'draw' ? 4 : -1;
@@ -902,7 +904,7 @@ function cpuMaybeUseItem(roomId) {
   const out = items.use(g, me, id, arg);
   if (out.error) return false;
   const human = room.players[room.cpuIndex === 0 ? 1 : 0];
-  if (human) io.to(human).emit('item_used', { byMe: false, itemId: id, name: out.name, icon: out.icon, msg: out.msg, reveal: null });
+  if (human) io.to(human).emit('item_used', { byMe: false, itemId: id, name: out.name, icon: out.icon, msg: out.msg, blocked: !!out.blocked, reveal: null });
   broadcast(roomId);
   return true;
 }
@@ -1114,6 +1116,8 @@ function stateFor(game, pi) {
       smokedMe: game.fx.smokeAgainst === me,
       smokedOpp: game.fx.smokeAgainst === (me === 1 ? 2 : 1),
       noSwapMe: !!game.fx.noSwap[me],
+      // 내가 건 부적만 알려준다 — 상대 것을 알려주면 값싼 걸 던져 태우면 그만이라 뜻이 없어진다
+      wardMe: !!game.fx.ward[me],
       peek: game.fx.peek[me] || null,   // 돋보기로 훔쳐본 상대 카드 (나에게만)
     };
   }
@@ -1646,7 +1650,8 @@ io.on('connection', (socket) => {
       if (!sid) return;
       io.to(sid).emit('item_used', {
         byMe: i + 1 === me, itemId, name: out.name, icon: out.icon,
-        msg: out.msg, reveal: (i + 1 === me) ? out.reveal || null : null,
+        msg: out.msg, blocked: !!out.blocked,
+        reveal: (i + 1 === me) ? out.reveal || null : null,
       });
     });
     // 재경매로 배팅 단계로 돌아갔다면 이전 경매의 공개·정산 타이머를 즉시 무효화한다
@@ -2295,10 +2300,10 @@ const MINI_TURN_MS = 45000;
 const MINI_NEXT_MS = 9000;
 const MINI_FILL_MS = 20000;                 // 이만큼 안 차면 AI 로 채워 시작
 const MINI_AI_NAMES = ['타짜 김씨', '홍박사', '미스박', '광팔이'];
-// 자리값은 코인으로 받고 판에서는 칩으로 논다(1코인 = 10칩).
-// 200코인이면 2000칩 — 배팅은 큼직하게 굴러가고 실제로 드는 코인은 적다.
-const MINI_BUY_COIN = SUTDA.BUY_IN / SUTDA.CHIP_PER_COIN;   // 200
-const MINI_MIN_COIN = 20;                                   // 이만큼(=200칩)은 있어야 판이 된다
+// 자리값은 코인으로 받고 판에서는 달로 논다(1코인 = 10달).
+// 200코인이면 2000달 — 판은 큼직하게 굴러가고 실제로 드는 코인은 적다.
+const MINI_BUY_COIN = SUTDA.BUY_IN / SUTDA.MOON_PER_COIN;   // 200
+const MINI_MIN_COIN = 20;                                   // 이만큼(=200달)은 있어야 판이 된다
 let miniSeq = 1;
 
 const miniLive = (t) => t.seats.filter((s) => s && s.stack >= SUTDA.ANTE).length;
@@ -2377,7 +2382,7 @@ function miniOpenTable(n, humans, mode) {
   for (const sk of humans) {
     if (seat >= n) break;
     if (!sk || !sk.connected || !sk.token) continue;
-    // 코인을 내고 칩으로 바꾼다 — 여기서 실패하면 그 사람은 못 앉는다
+    // 코인을 내고 달로 바꾼다 — 여기서 실패하면 그 사람은 못 앉는다
     const have = accounts.byToken(sk.token);
     const coin = Math.min(MINI_BUY_COIN, Math.max(0, (have && have.coins) || 0));
     if (coin < MINI_MIN_COIN) { sk.emit('mini_error', `코인이 ${MINI_MIN_COIN} 이상 있어야 앉을 수 있어요.`); continue; }
@@ -2385,7 +2390,7 @@ function miniOpenTable(n, humans, mode) {
     if (paid.error) { sk.emit('mini_error', paid.error); continue; }
     const u = accounts.byToken(sk.token);
     t.seats[seat] = { ai: false, key: sk.id, token: sk.token,
-      nick: (u && u.nick) || '나', buyCoin: coin, stack: coin * SUTDA.CHIP_PER_COIN };
+      nick: (u && u.nick) || '나', buyCoin: coin, stack: coin * SUTDA.MOON_PER_COIN };
     sk.mini = { tableId: t.id, seat };
     seat++;
   }
@@ -2424,7 +2429,7 @@ function miniViewFor(t, seat) {
   v.ais = t.seats.map((s) => !!(s && s.ai));
   v.gone = t.seats.map((s) => !s);
   v.mode = t.mode;
-  v.rate = SUTDA.CHIP_PER_COIN;
+  v.rate = SUTDA.MOON_PER_COIN;
   v.deadline = t.deadline || 0;
   return v;
 }
@@ -2547,15 +2552,15 @@ function miniSeatOut(t, seat, why) {
     SUTDA.act(t.st, seat, 'die');
     s.stack = t.st.stack[seat];
   }
-  // 칩을 코인으로 되돌린다. 내림이라 잔칩은 버려진다 — 한 코인이 안 되는 칩이다.
-  const chips = Math.max(0, s.stack | 0);
-  const back = Math.floor(chips / SUTDA.CHIP_PER_COIN);
+  // 달을 코인으로 되돌린다. 내림이라 잔돈은 버려진다 — 한 코인이 안 되는 달이다.
+  const moons = Math.max(0, s.stack | 0);
+  const back = Math.floor(moons / SUTDA.MOON_PER_COIN);
   const res = accounts.miniPay(s.token, back, null);       // 정산 — 전적은 안 센다
   const sk = io.sockets.sockets.get(s.key);
   if (sk) {
     sk.mini = null;
     sk.emit('mini_stood', {
-      back, chips, rate: SUTDA.CHIP_PER_COIN,
+      back, moons, rate: SUTDA.MOON_PER_COIN,
       buyIn: s.buyCoin || MINI_BUY_COIN, net: back - (s.buyCoin || MINI_BUY_COIN),
       coins: res && res.coins, profile: res && res.profile, why: why || null,
     });

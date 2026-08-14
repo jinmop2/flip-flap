@@ -917,6 +917,11 @@ function itemUsableNow(id, s) {
   if (!phases.includes(s.phase)) return false;
   if (s.phase === 'bidding' && s.auction && s.auction.myBid) return false;   // 배팅 낸 뒤엔 불가
   if (id === 'tyrant' && s.auctioneer === s.myIndex) return false;
+  // 부적은 막을 것이 있어야 건다 — 서버가 최종 판정하지만, 여기서 미리 흐리게 해 준다
+  if (id === 'ward') {
+    if (s.fx && s.fx.wardMe) return false;
+    if (!s.oppItemCount) return false;
+  }
   return true;
 }
 
@@ -926,6 +931,7 @@ function renderFxBanner(s) {
   const f = s.fx || {};
   const msgs = [];
   if (f.reverse) msgs.push('🔄 반전 — 약한 카드가 이긴다');
+  if (f.wardMe) msgs.push('🧿 부적 — 상대의 다음 아이템을 막는다');
   if (f.smokedMe) msgs.push('💨 연막 — 경매품이 안 보인다');
   if (f.smokedOpp) msgs.push('💨 상대 시야를 가림');
   if (f.noSwapMe) msgs.push('💰 에누리 — 배팅 카드를 지킨다');
@@ -2641,14 +2647,14 @@ window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); p
 let miniState = null, miniSeats = 2, miniSitting = false, miniPrevPot = 0, miniClock = null;
 
 
-// 루나(판에서 쓰는 돈) — 숫자만 띄우면 판이 얼마나 큰지 눈에 안 들어온다.
+// 달(판에서 쓰는 돈) — 숫자만 띄우면 판이 얼마나 큰지 눈에 안 들어온다.
 // 큰 단위부터 헐어서 무더기로 만든다. 무더기 하나가 요소 하나다(4인 × 여러 단위라
 // 한 닢마다 요소를 만들면 금세 수백 개가 되고, 매 상태마다 다시 그린다).
-const CHIP_UNITS = [500, 100, 50, 10, 1];
-function chipPiles(amount) {
+const MOON_UNITS = [500, 100, 50, 10, 1];
+function moonPiles(amount) {
   let left = Math.max(0, Math.floor(amount || 0));
   const out = [];
-  for (const v of CHIP_UNITS) {
+  for (const v of MOON_UNITS) {
     if (left < v) continue;
     const n = Math.floor(left / v);
     left -= n * v;
@@ -2656,12 +2662,12 @@ function chipPiles(amount) {
   }
   return out;
 }
-function chipsEl(amount, cls) {
+function moonsEl(amount, cls) {
   const box = document.createElement('div');
-  box.className = 'chips' + (cls ? ' ' + cls : '');
-  for (const { v, n } of chipPiles(amount)) {
+  box.className = 'moons' + (cls ? ' ' + cls : '');
+  for (const { v, n } of moonPiles(amount)) {
     const c = document.createElement('div');
-    c.className = 'chip' + (n > 1 ? ' s' + Math.min(4, n) : '');
+    c.className = 'moon' + (n > 1 ? ' s' + Math.min(4, n) : '');
     c.dataset.v = v;
     c.textContent = n > 1 ? '×' + n : '';
     c.title = `${v} × ${n}`;
@@ -2774,11 +2780,11 @@ function miniPaint(v) {
     }
     const stk = document.createElement('div');
     stk.className = 'mn-stk';
-    stk.textContent = st.alive ? `${st.stack} 루나` : '접음';
+    stk.textContent = st.alive ? `${st.stack} 달` : '접음';
     const chip = document.createElement('div');
     chip.className = 'mn-chip' + (st.roundBet > 0 && st.alive ? ' on' : '');
-    chip.textContent = `${st.roundBet} 루나`;
-    const stack = chipsEl(st.alive ? st.roundBet : 0, 'mini');
+    chip.textContent = `${st.roundBet} 달`;
+    const stack = moonsEl(st.alive ? st.roundBet : 0, 'mini');
     const tag = document.createElement('div');
     tag.className = 'mn-act-tag';
     // 진행 중에는 "방금 뭘 했는지", 끝나면 족보. 남이 뭘 했는지 안 보이면
@@ -2794,12 +2800,12 @@ function miniPaint(v) {
     top.appendChild(d);
   }
 
-  document.getElementById('mnPotBig').textContent = `${v.pot} 루나`;
+  document.getElementById('mnPotBig').textContent = `${v.pot} 달`;
   // 판돈이 늘었을 때만 떨어지는 연출을 준다 — 매번 튀면 눈이 아프다
-  const potBox = document.getElementById('mnPotChips');
+  const potBox = document.getElementById('mnPotMoons');
   const grew = v.pot > (miniPrevPot || 0);
   potBox.innerHTML = '';
-  const pile = chipsEl(v.pot, 'big');
+  const pile = moonsEl(v.pot, 'big');
   if (grew) for (const c of pile.children) c.classList.add('drop');
   potBox.appendChild(pile);
   miniPrevPot = v.pot;
@@ -2811,9 +2817,9 @@ function miniPaint(v) {
   plate.className = 'mn-meplate' + (v.turn === v.me && !v.over ? ' turn' : '');
   plate.innerHTML = `<b>${esc((v.names && v.names[v.me]) || '나')}</b>`
     + (me.first ? '<span class="mn-first">선</span>' : '')
-    + `<span class="mn-stk">${me.stack} 루나</span>`
-    + (me.roundBet > 0 ? `<span class="mn-chip on">${me.roundBet} 루나</span>` : '');
-  if (me.roundBet > 0) plate.appendChild(chipsEl(me.roundBet, 'mini'));
+    + `<span class="mn-stk">${me.stack} 달</span>`
+    + (me.roundBet > 0 ? `<span class="mn-chip on">${me.roundBet} 달</span>` : '');
+  if (me.roundBet > 0) plate.appendChild(moonsEl(me.roundBet, 'mini'));
   const my = document.getElementById('mnMyCards');
   my.innerHTML = '';
   const cards = me.cards || [];
@@ -2857,7 +2863,7 @@ function miniPaint(v) {
 
   const st0 = document.getElementById('mnStatus');
   if (v.over) st0.textContent = v.reason === 'fold' ? '남은 사람이 가져갑니다.' : '공개!';
-  else if (v.turn === v.me) st0.textContent = `내 차례 · 소지금 ${me.stack}루나${v.toCall ? ` · 맞출 돈 ${v.toCall}루나` : ''}`;
+  else if (v.turn === v.me) st0.textContent = `내 차례 · 소지금 ${me.stack}달${v.toCall ? ` · 맞출 돈 ${v.toCall}달` : ''}`;
   else st0.textContent = `${esc((v.names && v.names[v.turn]) || '상대')} 님이 고민하고 있어요…`;
 
   // 내 차례 제한 시간 — 서버가 넘겨주는 시각까지 센다
@@ -2867,8 +2873,8 @@ function miniPaint(v) {
       const left = Math.max(0, Math.ceil((v.deadline - Date.now()) / 1000));
       const el = document.getElementById('mnStatus');
       if (!el || !miniState || miniState.turn !== miniState.me) { clearInterval(miniClock); return; }
-      el.textContent = `내 차례 · ${left}초 · 소지금 ${me.stack}루나`
-        + (v.toCall ? ` · 맞출 돈 ${v.toCall}루나` : '');
+      el.textContent = `내 차례 · ${left}초 · 소지금 ${me.stack}달`
+        + (v.toCall ? ` · 맞출 돈 ${v.toCall}달` : '');
       if (left <= 0) clearInterval(miniClock);
     };
     tick(); miniClock = setInterval(tick, 500);
@@ -2883,7 +2889,7 @@ function miniPaint(v) {
     const b = document.createElement('button');
     b.className = 'mn-b ' + cls;
     const amt = v.amounts[a];
-    b.innerHTML = `${label}${amt ? `<small>${amt} 루나</small>` : ''}`;
+    b.innerHTML = `${label}${amt ? `<small>${amt} 달</small>` : ''}`;
     b.onclick = () => miniAct(a);
     btns.appendChild(b);
   }
@@ -3005,7 +3011,7 @@ socket.on('mini_over', (r) => {
     res.textContent = r.won ? '승리!' : '패배';
     res.className = 'mn-res ' + (r.won ? 'win' : 'lose');
     document.getElementById('mnNet').textContent =
-      r.net > 0 ? `+${r.net} 루나` : r.net < 0 ? `${r.net} 루나` : '±0 루나';
+      r.net > 0 ? `+${r.net} 달` : r.net < 0 ? `${r.net} 달` : '±0 달';
     // 왜 그렇게 됐는지 — 이게 없으면 "졌다" 만 뜨고 배우는 게 없다
     document.getElementById('mnVerdict').innerHTML = miniVerdictText(r);
     const nb = document.getElementById('mnNextBtn');
@@ -3039,7 +3045,7 @@ socket.on('mini_over', (r) => {
 socket.on('mini_stood', (r) => {
   miniHide();
   document.getElementById('mnStoodNet').innerHTML =
-    `${r.chips} 루나 → <b>🪙 ${r.back}</b> 회수 (${r.net > 0 ? '+' : ''}${r.net})`;
+    `${r.chips} 달 → <b>🪙 ${r.back}</b> 회수 (${r.net > 0 ? '+' : ''}${r.net})`;
   document.getElementById('mnStoodWhy').textContent = r.why || '';
   document.getElementById('miniStoodModal').classList.add('show');
   if (myAccount && typeof r.coins === 'number') { myAccount.coins = r.coins; renderAccount(); }
@@ -3095,9 +3101,7 @@ window.miniRank = function (show) {
   box.classList.add('show');
 };
 
-window.toggleRulesMini = function (show) {
-  document.getElementById('rulesMiniModal').style.display = show ? 'flex' : 'none';
-};
+window.toggleRulesMini = function (show) { show ? rulesTab('mini') : rulesClose(); };
 
 // ── 토너먼트 (8강 · 2인전) ───────────────────────────────────
 // 화면은 네 모습을 오간다: 참가 안내 → 대기(30초) → 대진표 → 결과.
@@ -3393,24 +3397,58 @@ socket.on('clan_chat', ({ msg }) => {
 });
 
 // ── 게임 설명서 ─────────────────────────────────────────────
-// 다인전은 덱·분배·클로즈가 달라 설명서를 따로 둔다. 판을 보고 알아서 고른다 —
-// 다인전 화면에서 2인전 설명이 뜨면 "내가 보는 판" 과 안 맞아 더 헷갈린다.
+// 모드마다 규칙이 달라 설명서가 여러 벌인데, 예전엔 들어가는 문이 따로따로여서
+// "다인전 규칙이 어디 있지" 를 찾아다녀야 했다. 이제 한 창에서 탭으로 오간다.
+//
+// 3인용·4인용은 규칙이 같고 손패·덱 장수만 다르다. 그래서 상자는 하나를 같이 쓰고,
+// 다른 숫자만 탭 아래 한 줄로 띄운다 — 같은 글을 두 벌로 두면 한쪽만 고치게 된다.
+const RULES_MODALS = { '2': 'rulesModal', '3': 'rules4Modal', '4': 'rules4Modal',
+  item: 'rulesItemModal', mini: 'rulesMiniModal' };
+const RULES_N = { '3': { hand: 7, deck: 17 }, '4': { hand: 6, deck: 14 } };
+let rulesCur = '2';
+
+window.rulesTab = function (name) {
+  const id = RULES_MODALS[name] || RULES_MODALS['2'];
+  rulesCur = name;
+  for (const mid of new Set(Object.values(RULES_MODALS))) {
+    const el = document.getElementById(mid);
+    if (el) el.style.display = mid === id ? 'flex' : 'none';
+  }
+  // 지금 보이는 창의 탭만 칠한다 (창마다 같은 탭 줄을 갖고 있다)
+  const box = document.getElementById(id);
+  if (box) for (const b of box.querySelectorAll('.rt')) b.classList.toggle('on', b.dataset.rt === name);
+  const note = document.getElementById('rules4Note');
+  if (note) {
+    const n = RULES_N[name];
+    note.style.display = n ? '' : 'none';
+    if (n) note.innerHTML = `${name}인전 — 손패 <b>${n.hand}장</b> · 중앙 덱 <b>${n.deck}장</b> (규칙은 3·4인 공통)`;
+  }
+};
+function rulesClose() {
+  for (const mid of new Set(Object.values(RULES_MODALS))) {
+    const el = document.getElementById(mid); if (el) el.style.display = 'none';
+  }
+}
+// 판을 보고 알맞은 탭으로 연다 — 다인전 화면에서 2인전 설명이 뜨면 더 헷갈린다
 function toggleRules(show) {
-  if (show && document.body.classList.contains('quad4')) return toggleRules4(true);
-  document.getElementById('rulesModal').style.display = show ? 'flex' : 'none';
+  if (!show) return rulesClose();
+  if (document.body.classList.contains('quad4')) {
+    return rulesTab(document.body.classList.contains('q-n3') ? '3' : '4');
+  }
+  rulesTab('2');
 }
-function toggleRules4(show) {
-  document.getElementById('rules4Modal').style.display = show ? 'flex' : 'none';
-}
+function toggleRules4(show) { show ? rulesTab(document.body.classList.contains('q-n3') ? '3' : '4') : rulesClose(); }
+window.toggleRulesItem = function (show) { show ? rulesTab('item') : rulesClose(); };
 
 // ── ESC 로 닫기 ─────────────────────────────────────────────
 // 배경 클릭으로는 닫히는데 ESC 는 어디서도 안 먹어 일관성이 없었다.
 // 각 모달의 전용 닫기 함수를 부른다 — 매칭 취소처럼 뒷정리가 필요한 게 있어서
 // 단순히 show 클래스만 떼면 서버 상태와 어긋난다.
 const ESC_TARGETS = [
-  ['rulesModal',   () => toggleRules(false)],
-  ['rules4Modal',  () => toggleRules4(false)],
-  ['rulesMiniModal', () => toggleRulesMini(false)],
+  ['rulesModal',   () => rulesClose()],
+  ['rules4Modal',  () => rulesClose()],
+  ['rulesItemModal', () => rulesClose()],
+  ['rulesMiniModal', () => rulesClose()],
   ['miniRankModal', () => miniRank(false)],
   ['miniModal',    () => miniClose()],
   ['miniStoodModal', () => miniStoodClose()],

@@ -382,8 +382,10 @@ console.log('\n⑨ 다인전 설명서');
      (html.match(/class="rules-box"/g) || []).length >= 2
      && !/class="rules-box[^"]*\brules-box2\b/.test(html));
   ok('여닫는 함수', /function toggleRules4/.test(cli));
-  ok('다인전에서는 그쪽이 뜬다', /classList\.contains\('quad4'\)\) return toggleRules4\(true\)/.test(cli));
-  ok('ESC 로도 닫힌다', /\['rules4Modal',\s*\(\) => toggleRules4\(false\)\]/.test(cli));
+  // 이제 한 창에서 탭으로 오간다 — 다인전 화면이면 인원에 맞는 탭으로 연다
+  ok('다인전에서는 그쪽 탭이 뜬다',
+     /classList\.contains\('quad4'\)[\s\S]{0,140}rulesTab\(document\.body\.classList\.contains\('q-n3'\) \? '3' : '4'\)/.test(cli));
+  ok('ESC 로도 닫힌다', /\['rules4Modal',\s*\(\) => rulesClose\(\)\]/.test(cli));
 
   // 내용이 실제 규칙과 맞는가 (game4.js 가 진짜다)
   const g4src = fs.readFileSync(src + '/game4.js', 'utf8');

@@ -96,8 +96,8 @@ console.log('\n④ 서버가 돈을 쥔다');
   ok('앉을 때 코인을 낸다', /accounts\.miniStake\(sk\.token, coin\)/.test(srv));
   ok('가진 만큼만 낸다 (상한 안에서)', /Math\.min\(MINI_BUY_COIN, Math\.max\(0, \(have && have\.coins\) \|\| 0\)\)/.test(srv));
   ok('너무 적으면 못 앉는다', /coin < MINI_MIN_COIN/.test(srv));
-  ok('코인을 칩으로 바꿔 앉는다', /stack: coin \* SUTDA\.CHIP_PER_COIN/.test(srv));
-  ok('일어설 때 칩을 코인으로', /Math\.floor\(chips \/ SUTDA\.CHIP_PER_COIN\)/.test(srv));
+  ok('코인을 달로 바꿔 앉는다', /stack: coin \* SUTDA\.MOON_PER_COIN/.test(srv));
+  ok('일어설 때 달을 코인으로', /Math\.floor\(moons \/ SUTDA\.MOON_PER_COIN\)/.test(srv));
   ok('자리 수는 서버가 깎는다', /Math\.min\(SUTDA\.MAX_SEATS,\s*Math\.max\(SUTDA\.MIN_SEATS/.test(srv));
   ok('화면이 보낸 금액은 안 쓴다', !/miniHumanAct[\s\S]{0,400}\bamount\b/.test(srv));
   ok('행동 이름은 문자열로 굳혀 넘긴다', /SUTDA\.act\(t\.st, m\.seat, String\(action \|\| ''\)\)/.test(srv));
@@ -273,10 +273,14 @@ console.log('\n⑥‴ 나눠주는 모션');
 
 console.log('\n⑥′ 배팅 칩');
 {
-  ok('칩을 그린다', /function chipsEl/.test(cli) && /\.chip \{/.test(html));
-  ok('큰 단위부터 헌다', /const CHIP_UNITS = \[500, 100, 50, 10, 1\]/.test(cli));
-  ok('자리마다 칩이 놓인다', /chipsEl\(st\.alive \? st\.roundBet : 0/.test(cli));
-  ok('판돈도 칩으로 쌓인다', /id="mnPotChips"/.test(html) && /chipsEl\(v\.pot/.test(cli));
+  ok('달을 그린다', /function moonsEl/.test(cli) && /\.moon \{/.test(html));
+  // 카지노 칩(톱니 테두리·액면가)은 그림만으로 도박판이 된다 — 안 쓴다
+  const moonCss = html.slice(html.indexOf('/* ── 달 (판에서 쓰는 돈) ── */'), html.indexOf('.moon.drop'));
+  ok('카지노 칩은 안 쓴다', !/\.chip\[data-v/.test(html) && !/dashed/.test(moonCss),
+     (moonCss.match(/dashed[^;]*/) || [''])[0]);
+  ok('큰 단위부터 헌다', /const MOON_UNITS = \[500, 100, 50, 10, 1\]/.test(cli));
+  ok('자리마다 달이 놓인다', /moonsEl\(st\.alive \? st\.roundBet : 0/.test(cli));
+  ok('판돈도 달로 쌓인다', /id="mnPotMoons"/.test(html) && /moonsEl\(v\.pot/.test(cli));
   ok('늘었을 때만 떨어진다', /const grew = v\.pot >/.test(cli));
   // 칩으로 쌓이려면 금액이 기본 단위로 떨어져야 한다
   const st = S.start({ seats: 3, first: 0 });
@@ -308,9 +312,9 @@ console.log('\n⑦ 설명서');
   ok('선은 이긴 사람이 잡는다고 적혀 있다', /선은[\s\S]{0,20}이긴/.test(box));
   ok('2~4인이라고 적혀 있다', /2~4인|2～4인/.test(box));
   // 설명서 숫자가 규칙과 같은가 — 어긋나면 사람이 규칙을 잘못 배운다
-  ok('기본 단위가 규칙과 같다', box.includes(`${S.ANTE}루나`), String(S.ANTE));
-  ok('루나 수가 규칙과 같다', box.includes(`${S.BUY_IN}루나`), String(S.BUY_IN));
-  ok('환율이 규칙과 같다', box.includes(`${S.BUY_IN / S.CHIP_PER_COIN}`), String(S.CHIP_PER_COIN));
+  ok('기본 단위가 규칙과 같다', box.includes(`${S.ANTE}달`), String(S.ANTE));
+  ok('달 수가 규칙과 같다', box.includes(`${S.BUY_IN}달`), String(S.BUY_IN));
+  ok('환율이 규칙과 같다', box.includes(`${S.BUY_IN / S.MOON_PER_COIN}`), String(S.MOON_PER_COIN));
   const sums = new Set();
   const deck = S.makeDeck();
   for (let i = 0; i < deck.length; i++) for (let j = i + 1; j < deck.length; j++)

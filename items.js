@@ -102,6 +102,15 @@ const ITEMS = {
       return { ok: true, msg: '배팅 카드를 지킨다!' };
     },
   },
+  ward: {
+    name: '부적', icon: '🧿', tier: 'rare',
+    desc: '상대의 다음 아이템 1개를 이번 턴 동안 막는다',
+    phases: PRE_BID,
+    apply({ g, me }) {
+      g.fx.ward[me] = true;
+      return { ok: true, msg: '부적을 걸었다 — 상대의 다음 아이템을 막는다!' };
+    },
+  },
   redo: {
     name: '재경매', icon: '📢', tier: 'rare',
     desc: '진 경매를 무효로 하고 다시 배팅한다',
@@ -213,7 +222,9 @@ function rollItem(behind) {
 
 // 이번 경매에만 걸리는 효과들 — 매 턴 초기화
 function freshFx() {
-  return { reverse: false, smokeAgainst: 0, noSwap: { 1: false, 2: false }, peek: { 1: null, 2: null } };
+  // ward 도 여기에 둔다 = 이번 턴에만 살아 있다. 턴이 넘어가면 같이 지워진다.
+  return { reverse: false, smokeAgainst: 0, noSwap: { 1: false, 2: false },
+           peek: { 1: null, 2: null }, ward: { 1: false, 2: false } };
 }
 
 // 사용 가능 여부 검사 (서버에서만 호출)
@@ -229,13 +240,42 @@ function canUse(g, me, itemId) {
     const submitted = me === 1 ? g.auction.p1Submitted : g.auction.p2Submitted;
     if (submitted) return '배팅을 낸 뒤에는 쓸 수 없어요.';
   }
+  // 부적은 이번 턴에만 산다. 막을 것이 없는데 쓰면 그냥 버리는 셈이라 미리 막는다 —
+  // 안 그러면 "썼는데 아무 일도 없었다" 가 되고, 그건 버그처럼 보인다.
+  if (itemId === 'ward') {
+    const opp = me === 1 ? 2 : 1;
+    if (g.fx && g.fx.ward && g.fx.ward[me]) return '이미 부적을 걸어 두었어요.';
+    if (g.itemUsed && g.itemUsed[opp]) return '상대가 이번 턴에 이미 아이템을 썼어요. 다음 턴에 거세요.';
+    if (!(g.items && g.items[opp] && g.items[opp].length)) return '상대가 가진 아이템이 없어요.';
+  }
   return null;
+}
+
+// 조사 고르기 — "돋보기이(가)" 처럼 적으면 읽다가 걸린다.
+// 한글 마지막 글자에 받침이 있으면 앞쪽, 없으면 뒤쪽.
+function josa(word, withJong, without) {
+  const c = String(word || '').trim().slice(-1).charCodeAt(0);
+  if (Number.isNaN(c) || c < 0xac00 || c > 0xd7a3) return without;
+  return (c - 0xac00) % 28 ? withJong : without;
 }
 
 function use(g, me, itemId, arg) {
   const bad = canUse(g, me, itemId);
   if (bad) return { error: bad };
   const opp = me === 1 ? 2 : 1;
+
+  // 상대가 걸어 둔 부적 — 규칙에 맞는 사용이었을 때만 삼킨다(위에서 검사가 끝난 뒤다).
+  // 부적으로 부적을 막지는 않는다. 그러면 먼저 건 쪽이 늘 이기는 선점 싸움이 된다.
+  if (itemId !== 'ward' && g.fx && g.fx.ward && g.fx.ward[opp]) {
+    g.fx.ward[opp] = false;                        // 부적은 한 번 쓰고 사라진다
+    const held = g.items[me];
+    held.splice(held.indexOf(itemId), 1);          // 막힌 아이템도 사라진다
+    g.itemUsed[me] = true;
+    const nm = ITEMS[itemId].name;
+    return { ok: true, blocked: true, itemId, name: nm, icon: ITEMS[itemId].icon,
+             msg: `부적에 막혔다! ${nm}${josa(nm, '이', '가')} 사라졌다` };
+  }
+
   const out = ITEMS[itemId].apply({ g, me, opp, arg });
   if (out.error) return out;
   // 소모 + 턴당 1회 제한

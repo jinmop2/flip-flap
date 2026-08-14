@@ -118,10 +118,10 @@ const ANTE = 40;                 // 기본 단위 = 판에 들어갈 때 각자 
 const BET_UNIT = ANTE;           // 판 여는 값 (예전 이름 — 밖에서 쓰던 것을 살려 둔다)
 // 자리에 앉을 때 들고 오는 돈. 전부 걸기가 뜻을 가지려면 앞에 쌓인 소지금이 있어야 한다.
 // 기본 단위의 스무 배로 잡았다 — 이보다 얇으면 두세 판에 털려 배팅이랄 게 없어진다.
-const BUY_IN = ANTE * 50;        // 2000칩
-// 코인 ↔ 칩 환율. 판에서는 칩으로만 세고, 코인은 앉을 때와 일어설 때만 만진다.
-// 큰 숫자로 굴려야 배팅이 배팅답고, 코인은 그만큼 적게 든다(200코인 = 2000칩).
-const CHIP_PER_COIN = 10;
+const BUY_IN = ANTE * 50;        // 2000달
+// 코인 ↔ 달 환율. 판에서는 달로만 세고, 코인은 앉을 때와 일어설 때만 만진다.
+// 큰 숫자로 굴려야 판이 판답고, 코인은 그만큼 적게 든다(200코인 = 2000달).
+const MOON_PER_COIN = 10;
 const MAX_SEATS = 4;
 const MIN_SEATS = 2;
 
@@ -578,7 +578,7 @@ function aiAction(view, rand) {
 }
 
 module.exports = {
-  ANTE, BET_UNIT, BUY_IN, CHIP_PER_COIN, MAX_SEATS, MIN_SEATS,
+  ANTE, BET_UNIT, BUY_IN, MOON_PER_COIN, MAX_SEATS, MIN_SEATS,
   explain, verdictOf,
   start, act, actionsFor, viewFor, roundClosed, raiseAmounts, capFor, resolve,
   aiAction, aiSimple, AI, handStrength, strengthOf, equityOf, equity2, equity1,

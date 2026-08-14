@@ -2363,7 +2363,7 @@
     @media (max-width:520px) {
       #mini { padding:calc(8px + var(--safe-t)) 8px calc(8px + var(--safe-b)); gap:5px; }
       .mn-seat2 { gap:3px; }
-      .mn-potchips { min-height:22px; }
+      .mn-potmoons { min-height:22px; }
       .mn-btns { gap:5px; }
       .mn-cards .card { width:34px; height:48px; }
       .mn-cards .card .c-num { font-size:1.2rem; }
@@ -2379,7 +2379,7 @@
        버튼이 화면 밖으로 밀리면 판을 아예 못 두므로 마지막까지 남긴다. */
     @media (max-height:700px) {
       #mini { gap:4px; }
-      .mn-potchips { display:none; }
+      .mn-potmoons { display:none; }
       .mn-cards .card { width:34px; height:48px; }
       .mn-cards .card .c-num { font-size:1.2rem; }
       .mn-me .mn-cards .card { width:50px; height:70px; }
@@ -2560,33 +2560,41 @@
     .code-msg { font-size:.76rem; color:#ff8fa3; text-align:center; min-height:1em; }
     .code-msg.ok { color:#8fe0a0; }
 
-    /* ── 루나 (판에서 쓰는 돈) ── */
-    /* 숫자만 띄우면 판이 얼마나 큰지 눈에 안 들어온다. 실제로 쌓이는 걸 보여준다.
-       한 닢마다 요소를 두면 4인 × 여러 단위라 금세 수백 개가 된다 —
-       한 칸(.chip)이 곧 한 무더기고, 겹쳐 보이는 두께는 그림자로 낸다. */
-    .chips { display:flex; align-items:flex-end; gap:3px; }
-    .chip {
+    /* ── 달 (판에서 쓰는 돈) ── */
+    /* 카지노 칩(톱니 테두리에 액면가)을 그리면 그림만으로 도박판이 된다.
+       같은 정보를 달로 준다 — 큰 달일수록 값이 크고, 여러 개면 겹쳐 뜬다. */
+    .moons { display:flex; align-items:flex-end; gap:3px; }
+    .moon {
       position:relative; width:20px; height:20px; border-radius:50%;
-      border:2px dashed rgba(255,255,255,.55);
-      box-shadow:0 1px 0 rgba(0,0,0,.5), 0 2px 4px rgba(0,0,0,.45);
       display:flex; align-items:center; justify-content:center;
-      font-size:.5rem; font-weight:900; color:rgba(255,255,255,.9); text-shadow:0 1px 1px rgba(0,0,0,.6);
+      font-size:.5rem; font-weight:900; color:rgba(20,14,8,.75);
+      box-shadow:0 1px 3px rgba(0,0,0,.45), inset -3px -3px 5px rgba(0,0,0,.18), inset 2px 2px 4px rgba(255,255,255,.35);
     }
-    .chip[data-v="1"]   { background:radial-gradient(circle at 35% 30%, #f4f4f4, #b9b9c2); color:#333; border-color:rgba(0,0,0,.25); text-shadow:none; }
-    .chip[data-v="10"]  { background:radial-gradient(circle at 35% 30%, #e8607a, #a3213c); }
-    .chip[data-v="50"]  { background:radial-gradient(circle at 35% 30%, #5aa9e8, #1c5b96); }
-    .chip[data-v="100"] { background:radial-gradient(circle at 35% 30%, #6ad7a0, #1d7a4d); }
-    .chip[data-v="500"] { background:radial-gradient(circle at 35% 30%, #c9a2f0, #5f2f9e); }
-    /* 쌓인 두께 — 개수만큼 그림자를 위로 올린다 */
-    .chip.s2  { box-shadow:0 -3px 0 -1px rgba(0,0,0,.35), 0 2px 4px rgba(0,0,0,.45); margin-bottom:3px; }
-    .chip.s3  { box-shadow:0 -3px 0 -1px rgba(0,0,0,.35), 0 -6px 0 -2px rgba(0,0,0,.3), 0 2px 4px rgba(0,0,0,.45); margin-bottom:6px; }
-    .chip.s4  { box-shadow:0 -3px 0 -1px rgba(0,0,0,.35), 0 -6px 0 -2px rgba(0,0,0,.3), 0 -9px 0 -3px rgba(0,0,0,.26), 0 2px 4px rgba(0,0,0,.45); margin-bottom:9px; }
-    .chips.big .chip { width:28px; height:28px; font-size:.62rem; }
-    .chips.mini .chip { width:15px; height:15px; font-size:.42rem; border-width:1.5px; }
-    /* 판 가운데로 모이는 루나 */
-    .mn-potchips { display:flex; align-items:flex-end; gap:5px; min-height:30px; margin-bottom:2px; }
-    @keyframes chipDrop { from{ transform:translateY(-26px) scale(.7); opacity:0 } to{ transform:none; opacity:1 } }
-    .chip.drop { animation:chipDrop .32s cubic-bezier(.34,1.4,.64,1) both; }
+    /* 값이 클수록 차오른다 — 그믐(1)에서 보름(500)으로 */
+    .moon[data-v="1"]   { background:radial-gradient(circle at 36% 32%, #efe6d4, #b9ad97); }
+    .moon[data-v="10"]  { background:radial-gradient(circle at 36% 32%, #ffe9b8, #d9b96a); }
+    .moon[data-v="50"]  { background:radial-gradient(circle at 36% 32%, #ffe2a0, #d99f3a); }
+    .moon[data-v="100"] { background:radial-gradient(circle at 36% 32%, #fff0c4, #e0a828); box-shadow:0 1px 4px rgba(0,0,0,.45), inset -3px -3px 5px rgba(0,0,0,.16), inset 2px 2px 5px rgba(255,255,255,.5), 0 0 7px rgba(255,200,90,.35); }
+    .moon[data-v="500"] { background:radial-gradient(circle at 36% 32%, #fffaf0, #f0c65a); box-shadow:0 1px 5px rgba(0,0,0,.45), inset -3px -3px 5px rgba(0,0,0,.14), inset 2px 2px 6px rgba(255,255,255,.6), 0 0 11px rgba(255,215,120,.55); }
+    /* 작은 달은 이지러져 보이게 — 액면가 대신 모양으로 읽힌다 */
+    .moon[data-v="1"]::before, .moon[data-v="10"]::before {
+      content:''; position:absolute; inset:0; border-radius:50%;
+      background:radial-gradient(circle at 118% 50%, rgba(0,0,0,.55) 46%, transparent 47%);
+    }
+    .moon[data-v="50"]::before {
+      content:''; position:absolute; inset:0; border-radius:50%;
+      background:radial-gradient(circle at 135% 50%, rgba(0,0,0,.45) 44%, transparent 45%);
+    }
+    /* 겹쳐 쌓인 두께 */
+    .moon.s2  { box-shadow:0 -3px 0 -1px rgba(0,0,0,.3), 0 2px 4px rgba(0,0,0,.45); margin-bottom:3px; }
+    .moon.s3  { box-shadow:0 -3px 0 -1px rgba(0,0,0,.3), 0 -6px 0 -2px rgba(0,0,0,.26), 0 2px 4px rgba(0,0,0,.45); margin-bottom:6px; }
+    .moon.s4  { box-shadow:0 -3px 0 -1px rgba(0,0,0,.3), 0 -6px 0 -2px rgba(0,0,0,.26), 0 -9px 0 -3px rgba(0,0,0,.22), 0 2px 4px rgba(0,0,0,.45); margin-bottom:9px; }
+    .moons.big .moon { width:28px; height:28px; font-size:.62rem; }
+    .moons.mini .moon { width:15px; height:15px; font-size:.42rem; }
+    /* 판 가운데로 모이는 달 */
+    .mn-potmoons { display:flex; align-items:flex-end; gap:5px; min-height:30px; margin-bottom:2px; }
+    @keyframes moonRise { from{ transform:translateY(-26px) scale(.7); opacity:0 } to{ transform:none; opacity:1 } }
+    .moon.drop { animation:moonRise .32s cubic-bezier(.34,1.4,.64,1) both; }
 
     /* ── 토너먼트 ── */
     .mode-card.tour { border-color:rgba(255,215,120,.5);
@@ -2866,6 +2874,26 @@
       max-width:480px; width:100%; max-height:86vh; overflow-y:auto; animation:slideDown .35s cubic-bezier(.34,1.4,.64,1);
       position:relative;
     }
+
+    /* 룰북 탭 — 상자 밖에 둔다(상자 안은 영어판이 통째로 갈아끼우는 자리다) */
+    .rules-wrap { display:flex; flex-direction:column; gap:8px; max-width:480px; width:100%; max-height:86vh; }
+    .rules-wrap .rules-box { max-width:none; width:100%; margin:0; min-height:0; }
+    .rules-tabs { display:flex; gap:4px; flex-wrap:wrap; justify-content:center; flex-shrink:0; }
+    .rules-tabs .rt {
+      font-family:'Fredoka',system-ui,sans-serif; font-size:.78rem; font-weight:700; cursor:pointer;
+      padding:7px 12px; border-radius:10px; white-space:nowrap;
+      background:rgba(34,9,14,.85); border:1px solid rgba(185,141,52,.45); color:#c8a86a;
+      transition:.14s;
+    }
+    .rules-tabs .rt:hover { color:#ffe9a8; border-color:var(--gold); }
+    .rules-note {
+      flex-shrink:0; text-align:center; font-size:.76rem; color:#c8a86a;
+      background:rgba(34,9,14,.7); border:1px solid rgba(185,141,52,.3);
+      border-radius:9px; padding:5px 10px;
+    }
+    .rules-note b { color:#ffe9a8; }
+    .rules-tabs .rt.on { background:linear-gradient(180deg,#c9973a,#8d5f16); border-color:#e0b45c; color:#2a1206; }
+    @media (max-width:520px) { .rules-tabs .rt { font-size:.72rem; padding:6px 9px; } }
     .rules-box h2 { font-family:'Bangers'; font-size:2rem; letter-spacing:2px; margin-bottom:4px;
       background:linear-gradient(180deg,#fff3c8,#f5cf6e 45%,#c8912e); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
       filter:drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
@@ -3966,8 +3994,8 @@
   <div class="mn-top" id="mnSeats"></div>
 
   <div class="mn-mid">
-    <div class="mn-potchips" id="mnPotChips"></div>
-    <div class="mn-potbig" id="mnPotBig">0 루나</div>
+    <div class="mn-potmoons" id="mnPotMoons"></div>
+    <div class="mn-potbig" id="mnPotBig">0 달</div>
     <div class="mn-round" id="mnRound">첫 번째 배팅</div>
     <div class="mn-status" id="mnStatus">-</div>
   </div>
@@ -4009,7 +4037,7 @@
         <button class="sp-segb" data-seats="4" onclick="miniPickSeats(4)">4인</button>
       </div>
     </div>
-    <div class="mn-pot"><b>🪙 200 → 2000루나</b><span>코인을 루나로 바꿔 앉습니다 · 일어설 때 남은 루나를 코인으로 돌려받습니다</span></div>
+    <div class="mn-pot"><b>🪙 200 → 2000달</b><span>코인을 달로 바꿔 앉습니다 · 일어설 때 남은 달을 코인으로 돌려받습니다</span></div>
     <button class="btn btn-gold" onclick="miniQuick()">온라인 대전</button>
     <button class="btn btn-outline" onclick="miniSit()">AI와 대전</button>
     <div class="lb-btns">
@@ -4127,6 +4155,15 @@
 </div>
 
 <div id="rules4Modal" class="rules-modal" onclick="if(event.target===this)toggleRules4(false)">
+  <div class="rules-wrap">
+    <div class="rules-tabs" role="tablist">
+      <button class="rt" data-rt="2" onclick="rulesTab('2')">2인용</button>
+      <button class="rt" data-rt="3" onclick="rulesTab('3')">3인용</button>
+      <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
+      <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
+      <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+    </div>
+    <div class="rules-note" id="rules4Note"></div>
   <div id="rulesBox4" class="rules-box" data-i18n-block="rules4">
     <span class="close-x" onclick="toggleRules4(false)">×</span>
     <h2>FLIP FLAP <span class="r4-tag">3·4인전</span></h2>
@@ -4220,10 +4257,19 @@
     <p>한 사람당 <b>3분</b>. 내 차례일 때만 줄어든다.
     다 쓰면 그 자리는 <b>AI 가 이어서 둔다</b>.</p>
   </div>
+  </div>
 </div>
 
 <!-- 미니게임 전용 설명서 — 본 게임과 규칙이 완전히 달라서 따로 뗀다 -->
 <div id="rulesMiniModal" class="rules-modal" onclick="if(event.target===this)toggleRulesMini(false)">
+  <div class="rules-wrap">
+    <div class="rules-tabs" role="tablist">
+      <button class="rt" data-rt="2" onclick="rulesTab('2')">2인용</button>
+      <button class="rt" data-rt="3" onclick="rulesTab('3')">3인용</button>
+      <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
+      <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
+      <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+    </div>
   <div class="rules-box" data-i18n-block="rulesMini">
     <span class="close-x" onclick="toggleRulesMini(false)">×</span>
     <h2>두 장 승부</h2>
@@ -4231,7 +4277,7 @@
 
     <h3><span data-ico="🎴"></span> 한 판의 흐름</h3>
     <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>모두 기본 단위 <b>40루나</b>를 걸고 카드를 <b>한 장씩</b> 받습니다. 선부터 겁니다.</span></div>
+      <div class="r4-step"><b>1</b><span>모두 기본 단위 <b>40달</b>을 걸고 카드를 <b>한 장씩</b> 받습니다. 선부터 겁니다.</span></div>
       <div class="r4-step"><b>2</b><span>한 명 빼고 모두 <b>맞추거나</b> 접으면 그 판의 걸기가 닫힙니다.</span></div>
       <div class="r4-step"><b>3</b><span>둘 이상 남았으면 <b>한 장 더</b> 받고 두 번째로 겁니다.</span></div>
       <div class="r4-step"><b>4</b><span>두 번째 걸기가 닫히면 패를 열고 족보로 가릅니다. 이긴 사람이 판돈을 전부.</span></div>
@@ -4244,21 +4290,21 @@
        빈자리는 AI가 채웁니다. 온라인에서는 내 차례에 <b>45초</b>가 주어지고, 시간이 지나면 넘기기(또는 접기)로
        대신 넘어갑니다. 누가 일어서도 판은 이어집니다 — 빈자리는 다음 판부터 AI가 맡습니다.</p>
 
-    <h3><span data-ico="🪙"></span> 루나와 코인</h3>
-    <p>자리에 앉을 때 코인을 <b>루나</b>로 바꿔 갑니다 — <b>🪙200 = 2000루나</b>(1코인에 10루나,
-       가진 만큼 최대 🪙200, 최소 🪙20). 판에서는 루나로만 세고,
-       <b>일어설 때 남은 루나를 코인으로 되돌려 받습니다.</b>
-       판마다 코인을 만지지 않는 이유는 전부 걸기가 뜻을 가지려면 앞에 쌓인 루나가 있어야 하기 때문입니다.</p>
+    <h3><span data-ico="🌕"></span> 달과 코인</h3>
+    <p>자리에 앉을 때 코인을 <b>달</b>로 바꿔 갑니다 — <b>🪙200 = 2000달</b>(1코인에 10달,
+       가진 만큼 최대 🪙200, 최소 🪙20). 판에서는 달로만 세고,
+       <b>일어설 때 남은 달을 코인으로 되돌려 받습니다.</b>
+       판마다 코인을 만지지 않는 이유는 전부 걸기가 뜻을 가지려면 앞에 쌓인 달이 있어야 하기 때문입니다.</p>
 
     <h3><span data-ico="💰"></span> 돈 거는 법</h3>
     <div class="r4-tbl">
       <div class="r4-row r4-head"><span>고를 수 있는 것</span><span>내는 돈</span></div>
-      <div class="r4-row"><span>판 열기</span><span>기본 단위 40루나 (선만, 판을 열 때)</span></div>
+      <div class="r4-row"><span>판 열기</span><span>기본 단위 40달 (선만, 판을 열 때)</span></div>
       <div class="r4-row"><span>넘기기</span><span>안 걸고 차례를 넘김 (맞출 돈이 없을 때)</span></div>
       <div class="r4-row"><span>살짝 올림</span><span>맞춘 뒤 판돈의 25%</span></div>
       <div class="r4-row"><span>크게 올림</span><span>맞춘 뒤 판돈의 50%</span></div>
       <div class="r4-row"><span>두 배 올림</span><span>앞사람이 건 돈의 2배</span></div>
-      <div class="r4-row"><span>전부 걸기</span><span>남은 루나 전부</span></div>
+      <div class="r4-row"><span>전부 걸기</span><span>남은 달 전부</span></div>
       <div class="r4-row"><span>맞추기</span><span>앞사람만큼 맞추고 판을 닫음</span></div>
       <div class="r4-row"><span>접기</span><span>건 돈을 버리고 빠짐</span></div>
     </div>
@@ -4297,9 +4343,84 @@
       <li>일찍 접으면 이미 건 돈만 잃습니다. 나쁜 패로 끝까지 따라가는 게 제일 비쌉니다.</li>
     </ul>
   </div>
+  </div>
+</div>
+
+<!-- 아이템전 설명서 -->
+<div id="rulesItemModal" class="rules-modal" onclick="if(event.target===this)toggleRulesItem(false)">
+  <div class="rules-wrap">
+    <div class="rules-tabs" role="tablist">
+      <button class="rt" data-rt="2" onclick="rulesTab('2')">2인용</button>
+      <button class="rt" data-rt="3" onclick="rulesTab('3')">3인용</button>
+      <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
+      <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
+      <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+    </div>
+    <div class="rules-box" data-i18n-block="rulesItem">
+      <span class="close-x" onclick="toggleRulesItem(false)">×</span>
+      <h2>아이템전</h2>
+      <p style="color:#8a7a80">2인전 규칙 그대로에, <b style="color:#ffe9a8">아이템</b>이 얹힌다. 경매에서 <b style="color:#ffe9a8">진 쪽</b>에게만 들어온다.</p>
+
+      <h3><span data-ico="🎁"></span> 아이템이 들어오는 법</h3>
+      <div class="r4-steps">
+        <div class="r4-step"><b>1</b><span>경매가 끝날 때마다 <b>진 사람</b>이 아이템 1개를 받는다. 이긴 사람은 못 받는다.</span></div>
+        <div class="r4-step"><b>2</b><span>최대 <b>3개</b>까지만 든다. 꽉 차 있으면 안 들어온다.</span></div>
+        <div class="r4-step"><b>3</b><span>한 턴에 <b>1개</b>만 쓸 수 있고, 배팅 카드를 낸 뒤에는 못 쓴다.</span></div>
+      </div>
+      <p>지는 쪽에 쌓이니 판이 저절로 붙는다. <b>전설은 세트 진행이 뒤진 쪽에게만</b> 나와서, 앞선 사람이 더 강해지는 눈덩이를 막는다.</p>
+
+      <h3><span data-ico="🎲"></span> 나올 확률</h3>
+      <div class="r4-tbl">
+        <div class="r4-row r4-head"><span>등급</span><span>뒤진 쪽</span><span>앞선 쪽</span></div>
+        <div class="r4-row"><span>일반 (3종)</span><span>60%</span><span>60%</span></div>
+        <div class="r4-row"><span>희귀 (6종)</span><span>32%</span><span>40%</span></div>
+        <div class="r4-row"><span>전설 (4종)</span><span>8%</span><span>—</span></div>
+      </div>
+      <p style="font-size:.78rem">전설이 뜨더라도 내가 앞서 있으면 희귀로 바뀐다.</p>
+
+      <h3><span data-ico="🔍"></span> 일반</h3>
+      <ul>
+        <li><b>돋보기</b> — 상대 손패 2장을 훔쳐본다</li>
+        <li><b>모래시계</b> — 상대의 남은 시간을 30초 깎는다</li>
+        <li><b>손바꿈</b> — 내 손패 1장을 덱의 카드와 바꾼다</li>
+      </ul>
+
+      <h3><span data-ico="💨"></span> 희귀</h3>
+      <ul>
+        <li><b>연막탄</b> — 이번 경매품을 상대에게만 가린다</li>
+        <li><b>뒤집개</b> — 이번 경매만 <b>약한 카드가 이긴다</b></li>
+        <li><b>소매치기</b> — 상대 손패 1장을 뺏고 내 카드 1장을 넘긴다</li>
+        <li><b>에누리</b> — 이겨도 배팅 카드를 안 뺏긴다</li>
+        <li><b>부적</b> — 상대의 다음 아이템 1개를 <b>이번 턴 동안</b> 막는다</li>
+        <li><b>재경매</b> — 진 경매를 무효로 하고 다시 배팅한다</li>
+      </ul>
+
+      <h3><span data-ico="👑"></span> 전설 <span style="font-size:.78rem;color:#8a7a80">— 뒤진 쪽에만</span></h3>
+      <ul>
+        <li><b>도둑고양이</b> — 상대가 낙찰받은 카드 1장을 훔친다 (세트 완성 직전인 종류는 건드리지 않는다)</li>
+        <li><b>복사기</b> — 내가 낙찰받은 카드 1장을 복제한다</li>
+        <li><b>폭군</b> — 이번 턴 진행자 권한을 뺏는다 (손패 2장 이상일 때)</li>
+        <li><b>운명의 주사위</b> — 경매품 2장을 덱에서 새로 뽑아 바꾼다</li>
+      </ul>
+
+      <h3><span data-ico="🧿"></span> 부적 — 읽는 싸움</h3>
+      <p>부적은 <b>미리 걸어 두는</b> 물건이다. 걸어 두면 상대가 다음에 쓰는 아이템 하나를 삼킨다 —
+         막힌 아이템은 그대로 사라진다. 다만 <b>그 턴에만 산다.</b> 그래서 상대가 값싼 아이템을 먼저 던져
+         부적을 태우는 수도 생긴다. 언제 걸지가 곧 읽기 싸움이다.</p>
+      <p style="color:#8a7a80;font-size:.78rem">막을 것이 없을 때(상대가 이번 턴에 이미 썼거나, 아이템이 하나도 없을 때)는 걸 수 없다.</p>
+    </div>
+  </div>
 </div>
 
 <div id="rulesModal" class="rules-modal" onclick="if(event.target===this)toggleRules(false)">
+  <div class="rules-wrap">
+    <div class="rules-tabs" role="tablist">
+      <button class="rt" data-rt="2" onclick="rulesTab('2')">2인용</button>
+      <button class="rt" data-rt="3" onclick="rulesTab('3')">3인용</button>
+      <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
+      <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
+      <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+    </div>
   <div id="rulesBox" class="rules-box" data-i18n-block="rules2">
     <span class="close-x" onclick="toggleRules(false)">×</span>
     <h2>FLIP FLAP</h2>
@@ -4406,6 +4527,7 @@
       </div>
       <p style="font-size:.76rem;margin-top:6px">가장 약한 <b style="color:var(--gold)">6-10</b>이 가장 강한 <b style="color:var(--gold)">2-1</b>만은 잡아요.</p>
     </div>
+  </div>
   </div>
 </div>
 

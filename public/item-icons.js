@@ -1,4 +1,4 @@
-// 아이템전 아이콘 12종 — 44px 슬롯에서도 실루엣이 읽히도록 면으로 채운 엠블럼 스타일.
+// 아이템전 아이콘 13종 — 44px 슬롯에서도 실루엣이 읽히도록 면으로 채운 엠블럼 스타일.
 // 어두운 윤곽(#2a0a10)으로 테두리를 잡고 밝은 면색으로 채워 보라색 슬롯 위에서 또렷하게 보이게 한다.
 // 그라디언트 id는 아이템 이름을 붙여 유니크하게 — 12개가 한 화면에 동시에 들어가므로 충돌하면 색이 섞인다.
 const ITEM_ICONS = {
@@ -90,6 +90,20 @@ const ITEM_ICONS = {
     <path d="M28.5 23.5 L19.5 33.5" stroke="#e06a5a" stroke-width="2.6" stroke-linecap="round"/>
     <circle cx="20.6" cy="25" r="2.2" fill="none" stroke="#e06a5a" stroke-width="2"/>
     <circle cx="27.4" cy="32" r="2.2" fill="none" stroke="#e06a5a" stroke-width="2"/>
+  </svg>`,
+
+  // 부적 — 붉은 종이에 먹으로 친 부적. 막는 물건이라 가운데를 비우지 않고 꽉 채웠다.
+  ward: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="iiWardPaper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6d9c0"/><stop offset="1" stop-color="#e0b08c"/></linearGradient>
+      <linearGradient id="iiWardSeal" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#e8556a"/><stop offset="1" stop-color="#b8283a"/></linearGradient></defs>
+    <path d="M14 5 h20 a2 2 0 0 1 2 2 v30 l-12 6 -12-6 V7 a2 2 0 0 1 2-2 z"
+          fill="url(#iiWardPaper)" stroke="#2a0a10" stroke-width="1.9" stroke-linejoin="round"/>
+    <path d="M14 5 h20 a2 2 0 0 1 2 2 v4 H12 V7 a2 2 0 0 1 2-2 z" fill="url(#iiWardSeal)" stroke="#2a0a10" stroke-width="1.6"/>
+    <path d="M24 14 v20 M17 20 h14 M19 27 h10" stroke="#2a0a10" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M24 14 v20 M17 20 h14 M19 27 h10" stroke="#8d1f1a" stroke-width="1.4" stroke-linecap="round"/>
+    <circle cx="24" cy="37.5" r="3.2" fill="url(#iiWardSeal)" stroke="#2a0a10" stroke-width="1.5"/>
   </svg>`,
 
   redo: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
