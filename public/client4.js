@@ -250,6 +250,25 @@
     return el;
   }
 
+  // 획득 더미가 칸을 넘으면 잘라내지 말고 줄여서 넣는다.
+  //
+  // 예전엔 칸 높이를 고정하고 overflow:hidden 으로 덮어 뒀는데, 3인전에서 칸이
+  // 30px 인데 카드가 50px 이라 아래가 잘려 나갔다(가로도 열한 장이면 넘쳤다).
+  // 카드 크기를 CSS 로 일일이 맞추면 인원·화면 크기 조합마다 또 어긋난다 —
+  // 그리고 나서 실제로 재 보고, 넘치는 만큼만 축소한다.
+  function fitAcq(box) {
+    const inner = box.querySelector('.q-acqin');
+    if (!inner) return;
+    inner.style.transform = 'none';
+    const w = box.clientWidth - (box.dataset.pad ? Number(box.dataset.pad) : 0);
+    const h = box.clientHeight;
+    const sw = inner.scrollWidth, sh = inner.scrollHeight;
+    if (!sw || !sh || !w || !h) return;
+    const k = Math.min(1, w / sw, h / sh);
+    // 아주 조금 넘치는 건 눈에 안 띄니 그냥 둔다 (매번 미세하게 줄었다 폈다 하면 어지럽다)
+    inner.style.transform = k < 0.985 ? `scale(${k.toFixed(3)})` : '';
+  }
+
   // 획득 더미 — 2인전과 같이 실제 카드 모양 그대로 보여준다.
   // 종류별로 묶어 겹쳐 쌓되, 등급 배지가 드러날 만큼만 노출해서
   // 몇 종의 몇 번을 가져갔는지 그대로 읽힌다. (상대는 CSS 로 더 작게)
@@ -357,6 +376,7 @@
   function render() {
     if (!q4) return;
     const s = q4, a = s.auction;
+    const fitBoxes = [];                 // 다 그린 뒤에 한 번에 재고 줄인다
     mySeat = (s.me === undefined || s.me === null) ? 0 : s.me;
     seatCount = s.n || s.seats.length || 4;
     document.body.classList.toggle('q-n3', seatCount === 3);
@@ -428,10 +448,13 @@
       const hd = document.createElement('span'); hd.textContent = `🂠${p.handLen}`;
       meta.appendChild(hd);
       const acq = document.createElement('div'); acq.className = 'q-oacq';
-      // 카드가 많이 쌓이면 기본 크기로는 두 줄에도 안 들어가 뒤쪽이 잘린다.
-      // 그때만 한 단계 줄인다 (칸 높이는 그대로라 화면은 안 밀린다).
+      // 카드가 많이 쌓이면 기본 크기로는 두 줄에도 안 들어간다 — 한 단계 줄인 뒤,
+      // 그래도 넘치면 fitAcq 가 재서 더 줄인다.
       if (p.acq.length >= 7) acq.classList.add('tight');
-      for (const g of acqPile(p.acq)) { markNewCards(g, i); acq.appendChild(g); }
+      const oin = document.createElement('div'); oin.className = 'q-acqin';
+      for (const g of acqPile(p.acq)) { markNewCards(g, i); oin.appendChild(g); }
+      acq.appendChild(oin);
+      fitBoxes.push(acq);
       d.appendChild(nm); d.appendChild(meta); d.appendChild(acq);
       opps.appendChild(d);
     }
@@ -529,7 +552,12 @@
     if (iAmAuc) meLabel.innerHTML = (typeof rankIco === 'function' ? rankIco('👑') : '👑') + ' 나 (진행자)';
     else meLabel.textContent = '나';
     my.appendChild(meLabel);
-    for (const g of acqPile(me.acq)) { markNewCards(g, 'me'); my.appendChild(g); }
+    const myin = document.createElement('div'); myin.className = 'q-acqin';
+    for (const g of acqPile(me.acq)) { markNewCards(g, 'me'); myin.appendChild(g); }
+    my.appendChild(myin);
+    // 이름표가 먹는 폭은 카드 자리가 아니다 — 빼고 재야 제대로 줄어든다
+    my.dataset.pad = String(Math.ceil(meLabel.getBoundingClientRect().width) + 8);
+    fitBoxes.push(my);
 
     // 상태 문구 + 손패 선택 가능 여부
     let msg = '', pickMode = null;
@@ -626,6 +654,10 @@
 
     // 남은 카드 패널이 열려 있으면 같이 갱신
     if ($('q-leftPanel').classList.contains('show')) renderLeft();
+
+    // 획득 더미 줄이기 — 다 그린 다음에 재야 폭·높이가 확정돼 있다.
+    // (그리는 도중에 재면 아직 붙지 않은 형제 때문에 값이 틀어진다)
+    for (const box of fitBoxes) fitAcq(box);
 
     // 효과음 — 단계가 바뀔 때만 울린다
     if (s.phase !== prevPhase || s.turn !== prevTurn) {

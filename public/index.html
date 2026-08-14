@@ -1169,6 +1169,12 @@
        두 줄로 접되 높이는 고정해서, 카드가 쌓여도 화면이 밀리지 않는다. */
     .q-oacq { display:flex; flex-wrap:wrap; align-content:flex-start; gap:2px 0;
       margin-top:4px; height:64px; overflow:hidden; }
+    /* 안쪽 묶음 — 넘치면 이걸 통째로 줄인다(fitAcq). 칸 크기는 그대로라 화면이 안 밀린다. */
+    /* 트랜지션은 두지 않는다. 그릴 때마다 크기를 다시 재는데, 애니메이션이 걸려 있으면
+       재는 순간과 보이는 순간이 어긋나 더미가 커졌다 작아졌다 펄떡인다. */
+    .q-acqin { display:flex; flex-wrap:wrap; align-content:flex-start; gap:2px 0;
+      transform-origin:center center; min-width:0; }
+    #q-myacq .q-acqin { flex-wrap:nowrap; align-items:center; }
     /* 획득 더미 — 2인전과 같은 실제 카드. 카드 비율(70:98)을 그대로 유지하고
        등급 배지가 드러날 만큼만 노출해 겹쳐 쌓는다. 상대 것은 더 작게. */
     .q-pg { display:inline-flex; align-items:center; margin-right:5px; }

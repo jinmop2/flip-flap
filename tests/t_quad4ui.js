@@ -435,5 +435,22 @@ console.log('\n⑩ 카드가 안 내지는 버그');
   ok('서버도 자리를 다시 잉는다', /seat\.sid = socket\.id; seat\.orphanAt = null/.test(s4));
 }
 
+console.log('\n⑪ 낙찰 카드가 잘리지 않는다');
+{
+  // 3인전에서 내 획득 칸이 30px 인데 카드가 50px 이라 아래가 잘려 나갔다.
+  // 칸 높이를 CSS 로 인원·화면마다 맞추려 들면 조합이 늘 때마다 또 어긋난다 —
+  // 그려 놓고 재서, 넘치는 만큼만 줄인다.
+  ok('재서 줄이는 함수가 있다', /function fitAcq\(box\)/.test(c4));
+  ok('내 더미를 감싸 둔다', /myin\.className = 'q-acqin'/.test(c4));
+  ok('상대 더미도 감싼다', /oin\.className = 'q-acqin'/.test(c4));
+  ok('다 그린 뒤에 한 번에 잰다', /for \(const box of fitBoxes\) fitAcq\(box\)/.test(c4));
+  ok('가로·세로를 모두 본다', /Math\.min\(1, w \/ sw, h \/ sh\)/.test(c4));
+  ok('이름표 폭은 빼고 잰다', /box\.dataset\.pad/.test(c4) && /dataset\.pad = String\(/.test(c4));
+  // 트랜지션이 걸려 있으면 재는 순간과 보이는 순간이 어긋나 더미가 펄떡인다
+  const acqin = html.slice(html.indexOf('.q-acqin {'), html.indexOf('.q-acqin {') + 260);
+  ok('안쪽 묶음에 트랜지션을 안 건다', !/transition/.test(acqin), acqin.slice(0, 80));
+  ok('축소 기준점은 가운데', /transform-origin:center center/.test(acqin));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

@@ -184,7 +184,7 @@ app.get('/admin', rateLimit(20), (req, res) => {
  .msg{margin-top:10px;font-size:.85rem}.err{color:#ff9a9a}.ok{color:#8fe0a0}
  .codes{display:flex;flex-direction:column;gap:5px;margin-top:10px}
 </style>
-<h1>🎟 FLIP FLAP — 쿠폰 관리</h1>
+<h1>🎟 FLIP FLAP — 쿠폰 · 임시 계정</h1>
 
 <div class="card">
   <label>관리자 키 (Render 환경변수 ADMIN_KEY)</label>
@@ -224,6 +224,20 @@ app.get('/admin', rateLimit(20), (req, res) => {
   <div id="list"></div>
 </div>
 
+<div class="card">
+  <b>임시 계정 (코드로 로그인)</b>
+  <div class="msg">코드는 <b>만들 때 딱 한 번</b>만 보입니다. 서버에는 해시만 남아 나중에 다시 볼 수 없어요.</div>
+  <div class="row">
+    <div><label>개수</label><input id="tCount" type="number" value="5" min="1" max="20"></div>
+    <div><label>지급 코인</label><input id="tCoins" type="number" value="3000" min="0"></div>
+  </div>
+  <div style="margin-top:12px"><button onclick="tmk()">계정 만들기</button>
+    <button class="ghost" onclick="tload()">목록 새로고침</button></div>
+  <div class="msg" id="tMsg"></div>
+  <div class="codes" id="tCodes"></div>
+  <div id="tList"></div>
+</div>
+
 <script>
 const $=id=>document.getElementById(id);
 const key=()=>$('key').value.trim();
@@ -260,7 +274,43 @@ async function load(){
     ? '<table><tr><th>코드</th><th>지급</th><th>사용</th><th>만료</th><th>최소Lv</th><th>메모</th></tr>'+rows+'</table>'
     : '<div class="msg">아직 발행한 쿠폰이 없어요.</div>';
 }
-$('key').addEventListener('change',load);
+// ── 임시 계정 ──
+async function tmk(){
+  $('tMsg').textContent=''; $('tCodes').innerHTML='';
+  if(!key()) return $('tMsg').className='msg err', $('tMsg').textContent='키를 입력해주세요.';
+  const out=await post('/api/admin/temp-new',{count:+$('tCount').value, coins:+$('tCoins').value});
+  if(out.error){ $('tMsg').className='msg err'; $('tMsg').textContent='⚠ '+out.error; return; }
+  $('tMsg').className='msg ok';
+  $('tMsg').textContent=out.accounts.length+'개 만들었어요 — 아래 코드를 지금 복사해 두세요 (다시 못 봅니다)';
+  $('tCodes').innerHTML=out.accounts.map(a=>
+    '<div>'+a.nick+' · <code>'+a.code+'</code></div>').join('');
+  tload();
+}
+async function trot(id){
+  if(!confirm(id+' 코드를 다시 발급할까요? 지금 코드는 즉시 못 쓰게 됩니다.')) return;
+  const out=await post('/api/admin/temp-rotate',{id});
+  if(out.error){ $('tMsg').className='msg err'; $('tMsg').textContent='⚠ '+out.error; return; }
+  $('tMsg').className='msg ok'; $('tMsg').textContent=out.nick+' 새 코드';
+  $('tCodes').innerHTML='<div>'+out.nick+' · <code>'+out.code+'</code></div>';
+  tload();
+}
+async function trev(id){
+  if(!confirm(id+' 코드를 끌까요? 다시 켜려면 재발급해야 합니다.')) return;
+  await post('/api/admin/temp-revoke',{id}); tload();
+}
+async function tload(){
+  if(!key()) return;
+  const out=await post('/api/admin/temp-list',{});
+  if(out.error){ $('tList').innerHTML=''; return; }
+  const rows=out.accounts.map(a=>'<tr class="'+(a.active?'':'dead')+'"><td>'+a.id+'</td><td>'+a.nick+
+    '</td><td>'+a.coins+'</td><td>'+(a.expiresAt?new Date(a.expiresAt).toLocaleDateString('ko-KR'):'-')+
+    '</td><td><button class="ghost" onclick="trot(\''+a.id+'\')">재발급</button> '+
+    '<button class="ghost" onclick="trev(\''+a.id+'\')">끄기</button></td></tr>').join('');
+  $('tList').innerHTML=out.accounts.length
+    ? '<table><tr><th>아이디</th><th>닉네임</th><th>코인</th><th>만료</th><th></th></tr>'+rows+'</table>'
+    : '<div class="msg">아직 만든 임시 계정이 없어요.</div>';
+}
+$('key').addEventListener('change',()=>{load();tload();});
 </script>`);
 });
 
