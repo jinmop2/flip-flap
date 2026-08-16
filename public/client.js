@@ -1186,6 +1186,7 @@ function friendRow(f, kind) {
   const clan = f.clan ? `<span class="soc-clan">[${esc(f.clan.tag)}]</span>` : '';
   const acts = {
     friend: `${f.online && !f.ingame ? `<button class="soc-btn good" onclick="challengeFriendInApp('${esc(f.idl)}')">도전장</button>` : ''}
+             ${f.watch ? `<button class="soc-btn" onclick="watchFriend('${esc(f.watch)}')">관전</button>` : ''}
              <button class="soc-btn bad" onclick="confirmRemoveFriend('${esc(f.idl)}','${esc(f.nick)}')">삭제</button>`,
     in:     `<button class="soc-btn good" onclick="respondFriend('${esc(f.idl)}',true)">수락</button>
              <button class="soc-btn bad" onclick="respondFriend('${esc(f.idl)}',false)">거절</button>`,
@@ -1201,6 +1202,14 @@ function friendRow(f, kind) {
     <div class="soc-acts">${acts}</div>
   </div>`;
 }
+
+
+// 친구가 하는 판을 보러 간다. 서버가 관전자로 붙여 준다(패는 안 보인다).
+window.watchFriend = function (roomId) {
+  if (!roomId) return;
+  closeFriends();
+  socket.emit('spectate', { roomId });
+};
 
 function renderFriends() {
   const { friends, reqIn, reqOut } = _friendData;
@@ -2483,6 +2492,7 @@ function loadSample(key, url) {
 }
 loadSample('cardPlace', '/card-place.mp3?v=1');
 function playSample(key, vol = 0.9, rate = 1) {
+  if (keepOtherAudio) return true;   // 다른 앱 음악 유지 중 — 소리를 내지 않는다
   const buf = samples[key]; if (!buf) return false;
   try {
     const s = AC.createBufferSource(); s.buffer = buf;
@@ -2493,6 +2503,7 @@ function playSample(key, vol = 0.9, rate = 1) {
   } catch (_) { return false; }
 }
 function tone(freq, type, vol, dur, delay = 0) {
+  if (keepOtherAudio) return;
   const t = AC.currentTime + delay;
   const o = AC.createOscillator(), g = AC.createGain();
   o.type = type; o.frequency.setValueAtTime(freq, t);
@@ -2564,10 +2575,12 @@ function setBgmVolume(v, ramp = 0.2) {
 }
 function startBGM() {
   if (bgmOn) return;
+  // 다른 앱 음악을 듣는 중이면 우리 음악을 아예 안 켠다.
+  // 웹에서는 "섞어서 재생" 을 지시할 방법이 없어서, 켜는 순간 상대 음악이 끊긴다.
+  if (keepOtherAudio) return;
   bgmOn = true;
-  // AAC(m4a, 절반 용량) 우선 — 미지원 브라우저만 mp3 폴백. ?v 갱신 = 캐시 우회
-  const canM4a = document.createElement('audio').canPlayType('audio/mp4; codecs="mp4a.40.2"');
-  bgmAudio = new Audio(canM4a ? '/bgm.m4a?v=3' : '/bgm.mp3?v=2');   // v3 = 80kbps 재인코딩
+  // AAC(m4a) 한 벌만 쓴다. 지금 쓰는 브라우저는 전부 AAC 를 재생한다.
+  bgmAudio = new Audio('/lobby.m4a?v=1');
   bgmAudio.loop = true;
   bgmAudio.crossOrigin = 'anonymous';
   try {
@@ -2593,6 +2606,23 @@ function stopBGM() {
   bgmAudio = null; bgmGain = null; bgmOn = false;
 }
 
+// ── 다른 앱 음악 유지 ────────────────────────────────────────
+// 웹은 오디오 세션을 "섞어서" 로 지정할 수 없다. 소리를 내는 순간 듣던 음악이 끊긴다.
+// 그래서 끄는 것 말고는 방법이 없다 — 켜 두면 우리 소리를 전부 죽인다.
+// (앱으로 감쌀 때는 네이티브에서 ambient/mixWithOthers 로 지정하면 진짜로 섞인다)
+let keepOtherAudio = localStorage.getItem('ff_keepaudio') === 'on';
+function applyKeepOtherAudio() {
+  if (keepOtherAudio) { stopBGM(); try { AC.suspend(); } catch (_) {} }
+  else { try { AC.resume(); } catch (_) {} }
+}
+window.toggleKeepAudio = function () {
+  keepOtherAudio = !keepOtherAudio;
+  localStorage.setItem('ff_keepaudio', keepOtherAudio ? 'on' : 'off');
+  applyKeepOtherAudio();
+  if (!keepOtherAudio) startBGM();
+  applySettings();
+};
+
 // ── 인게임 설정 패널 (배경음악 / 효과음 / 가이드) ──
 let guideOff = localStorage.getItem('ff_guide') === 'off';
 function applySettings() {   // 저장된 상태를 화면·오디오에 반영
@@ -2600,6 +2630,7 @@ function applySettings() {   // 저장된 상태를 화면·오디오에 반영
   const sb = document.getElementById('statusBar'); if (sb) sb.style.display = guideOff ? 'none' : '';
   const set = (id, on) => { const t = document.getElementById(id); if (t) t.classList.toggle('on', on); };
   set('togBgm', !bgmOff); set('togSfx', !sfxOff); set('togGuide', !guideOff);
+  set('togKeep', keepOtherAudio);
   const cur = (window.FF && FF.lang()) || 'ko';
   document.querySelectorAll('.sp-segb[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === cur));
 }
@@ -2646,6 +2677,7 @@ document.addEventListener('pointerdown', e => {
   document.body.classList.remove('lobby-settings');
 });
 window.addEventListener('DOMContentLoaded', applySettings);   // 저장된 상태 반영
+window.addEventListener('DOMContentLoaded', applyKeepOtherAudio);
 window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); paintIcons(); } catch (_) {} });   // 기본 이모트·라벨 아이콘
 
 // ── 미니게임 (두 장 승부 · 2~4인) ────────────────────────────
@@ -3332,6 +3364,7 @@ async function gcLoadTalk(idl) {
 }
 
 async function gcLoadClan() {
+  gcClanUnread = 0; gcPaintDot();   // 봤으니 점을 끈다
   const box = document.getElementById('gcClanMsgs');
   box.innerHTML = '<div class="gc-empty">불러오는 중…</div>';
   const r = await apiPost('/api/clan-chat', { token: authToken() });
@@ -3373,8 +3406,9 @@ async function gcRefreshUnread() {
   gcUnread = (r && r.ok && r.by) ? r.by : {};
   gcPaintDot();
 }
+let gcClanUnread = 0;
 function gcPaintDot() {
-  const on = Object.keys(gcUnread).length > 0;
+  const on = Object.keys(gcUnread).length > 0 || gcClanUnread > 0;
   for (const id of ['chatDot', 'chatDot4']) {
     const d = document.getElementById(id); if (d) d.style.display = on ? '' : 'none';
   }
@@ -3393,9 +3427,14 @@ socket.on('dm', ({ from, msg }) => {
   gcPaintDot();
   if (gameChatOpen() && gcTab === 'friend' && !gcWith) gcLoadFriends();
 });
-// 클랜 메시지도 열려 있으면 바로 붙인다
+// 클랜 메시지도 열려 있으면 바로 붙인다.
+// 닫혀 있으면 그냥 흘려보냈는데, 그러면 판에서 말을 걸어도 아무도 모른다 — 점을 켠다.
 socket.on('clan_chat', ({ msg }) => {
-  if (!gameChatOpen() || gcTab !== 'clan') return;
+  if (!gameChatOpen() || gcTab !== 'clan') {
+    gcClanUnread++;
+    gcPaintDot();
+    return;
+  }
   const box = document.getElementById('gcClanMsgs');
   const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
   box.insertAdjacentHTML('beforeend',

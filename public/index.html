@@ -2888,6 +2888,34 @@
     .wc-mode:hover { color:#ffe9a8; border-color:var(--gold); }
     .wc-mode.on { background:linear-gradient(180deg,#c9973a,#8d5f16); border-color:#e0b45c; color:#2a1206; }
     #wcStart:disabled { opacity:.45; cursor:default; }
+
+    /* 랭킹 — 한 줄에 등수·아바타·이름·칭호·전적·RP 가 다 들어가서 좁은 상자에서는
+       이름이 잘리고 칭호가 밀렸다. 화면을 통째로 쓴다. */
+    #lbModal { padding:0; align-items:stretch; justify-content:stretch; }
+    .lb-box.rank-box {
+      width:100%; max-width:none; height:100dvh; max-height:none;
+      border-radius:0; border:none; gap:10px; overflow:hidden;
+      padding:calc(14px + var(--safe-t)) 14px calc(14px + var(--safe-b));
+    }
+    .lb-box.rank-box .lb-title { flex-shrink:0; }
+    .lb-box.rank-box .close-x { top:calc(10px + var(--safe-t)); right:12px; }
+    /* 목록만 스크롤한다 — 제목과 닫기는 제자리 */
+    .lb-box.rank-box #lbList {
+      flex:1; min-height:0; overflow-y:auto;
+      display:flex; flex-direction:column; gap:5px;
+    }
+    /* 넓은 화면에서는 가운데로 모은다 — 한 줄이 과하게 늘어지지 않게 */
+    @media (min-width:700px) {
+      .lb-box.rank-box .lb-title, .lb-box.rank-box #lbList { max-width:620px; width:100%; margin-left:auto; margin-right:auto; }
+    }
+
+    /* 손패 위에 떠 있는 칸들이 탭을 삼키던 문제.
+       #mebar(이모트·시계·프로필)는 오른쪽 아래, #itemBar 는 왼쪽 아래에 떠 있는데,
+       칸 자체가 손패의 양 끝을 덮어서 그 자리의 카드가 안 눌렸다(아이템전에서 특히).
+       칸은 탭을 통과시키고, 실제로 누를 것들만 받는다. */
+    #mebar, #itemBar, #oppbar { pointer-events:none; }
+    #mebar > *, #itemBar > *, #oppbar > *,
+    #mebar .emote-wrap, #mebar .game-pcard, #itemBar .ib-slot { pointer-events:auto; }
     /* 룰북 탭 — 상자 밖에 둔다(상자 안은 영어판이 통째로 갈아끼우는 자리다) */
     .rules-wrap { display:flex; flex-direction:column; gap:8px; max-width:480px; width:100%; max-height:86vh; }
     .rules-wrap .rules-box { max-width:none; width:100%; margin:0; min-height:0; }
@@ -3751,6 +3779,8 @@
     </div>
     <button class="btn btn-gold" onclick="q4Quick()"><span data-ico="⚡"></span> 빠른대전 (온라인)</button>
     <p class="auth-hint" style="text-align:center;margin:2px 0 0;font-size:.7rem">AI와 하는 다인전은 솔로플레이에 있어요</p>
+    <button class="btn btn-outline" onclick="q4Close()">닫기</button>
+  </div>
 </div>
 
 <!-- 뽑기 -->
@@ -3804,9 +3834,9 @@
 
 <!-- 랭킹 -->
 <div class="lb-modal" id="lbModal" onclick="if(event.target===this)closeLb()">
-  <div class="lb-box" style="width:340px;">
+  <div class="lb-box rank-box">
     <div class="lb-title"><span data-ico="🏆"></span> 랭킹 <span class="close-x" onclick="closeLb()">×</span></div>
-    <div id="lbList" style="display:flex; flex-direction:column; gap:4px; max-height:60vh; overflow-y:auto;"></div>
+    <div id="lbList"></div>
   </div>
 </div>
 
@@ -3996,6 +4026,8 @@
     <div class="sp-row" onclick="toggleBgm()"><span class="sp-lbl">🎵 배경음악</span><span class="sp-toggle" id="togBgm"><span class="sp-knob"></span></span></div>
     <div class="sp-row" onclick="toggleSfx()"><span class="sp-lbl">🔊 효과음</span><span class="sp-toggle" id="togSfx"><span class="sp-knob"></span></span></div>
     <div class="sp-row" onclick="toggleGuide()"><span class="sp-lbl"><span data-ico="💡"></span> 턴 안내</span><span class="sp-toggle" id="togGuide"><span class="sp-knob"></span></span></div>
+    <div class="sp-row" onclick="toggleKeepAudio()"><span class="sp-lbl">🎧 듣던 음악 유지</span><span class="sp-toggle" id="togKeep"><span class="sp-knob"></span></span></div>
+    <div class="sp-note">켜면 게임 소리를 모두 끄고, 듣고 있던 음악을 그대로 둡니다</div>
     <div class="sp-row sp-lang"><span class="sp-lbl">🌐 언어</span>
       <span class="sp-seg">
         <button class="sp-segb" data-lang="ko" onclick="pickLang('ko')">한국어</button>

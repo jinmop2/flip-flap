@@ -336,7 +336,13 @@ function busyState(idl) {
   if (!sid) return { online: false, ingame: false };
   const sk = io.sockets.sockets.get(sid);
   if (!sk) return { online: false, ingame: false };
-  return { online: true, ingame: !!(sk.roomId || sk.g4room) };
+  // 어느 방인지도 준다 — 친구 목록에서 바로 관전하려면 방 번호가 있어야 한다.
+  // 비밀방은 빼놓는다. 코드를 모르는 사람이 목록만 보고 들어가면 안 된다.
+  const r = sk.roomId && rooms[sk.roomId];
+  // 서버의 spectate 조건과 같아야 한다 — 버튼만 보이고 눌러도 안 되면 더 답답하다
+  const watchable = !!(r && r.game && r.game.phase !== 'game_over' && !r.secret && !r.vsBot && !r.tutorial);
+  return { online: true, ingame: !!(sk.roomId || sk.g4room),
+    watch: watchable ? sk.roomId : null };
 }
 function withOnline(list) {
   return (list || []).map(f => ({ ...f, ...busyState(f.idl) }));
