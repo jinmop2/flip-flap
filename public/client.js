@@ -78,6 +78,10 @@ socket.on('connect', () => {
   // 초대 링크가 옛 세션과 다른 방이면 초대가 우선 (안 그러면 초대 링크가 무시됨)
   if (urlRoom && urlRoom !== sess) {
     localStorage.removeItem('ff_sess');
+    // 초대로 온 사람은 타이틀 화면을 건너뛴다 — 링크를 눌렀는데 "게스트로 시작" 을
+    // 한 번 더 눌러야 하면 초대를 받은 것 같지가 않다.
+    sessionStorage.setItem('ff_guest', '1');
+    hideTitle();
     socket.emit('join_room', { roomId: urlRoom, pid: PID, nick: getNick() });
   }
   else if (sess) socket.emit('rejoin', { roomId: sess, pid: PID });
@@ -713,6 +717,8 @@ function startAsGuest() { sessionStorage.setItem('ff_guest', '1'); hideTitle(); 
 const cameFromOAuth = kakaoFirstLogin || location.href.includes('ktoken');   // 방금 로그인하고 돌아온 경우
 
 renderAccount();   // 게스트 상태로 하단 바 먼저 렌더
+// 앱을 열면 바로 로비 곡. 브라우저가 자동재생을 막으면 첫 터치에서 시작된다.
+try { lobbyBGM(); } catch (_) {}
 restoreSession().then(() => {
   if (kakaoFirstLogin && myAccount) openNickModal();
   // 로그인돼 있거나, 게스트로 시작해 게임을 돌던 중(나가기·새로고침)이면 타이틀 건너뜀
@@ -3858,11 +3864,9 @@ let roomModeCur = 'classic', roomIsHost = false, roomReady = false;
 window.roomMode = function (m) {
   if (!roomIsHost) return toast('방장만 고를 수 있어요.');
   if (m === 'quad') {
-    // 다인전은 다른 엔진(3·4인 방)이다 — 이 방을 접고 그쪽으로 간다
-    askConfirm(
-      { icon: '👥', title: '다인전으로 바꿀까요?', desc: '지금 방은 닫히고 3·4인 대기방으로 옮겨갑니다.',
-        yes: '옮기기', no: '취소' },
-      () => { cancelWait(); if (typeof q4Open === 'function') q4Open(); });
+    // 자리가 둘에서 넷으로 늘어난다. 앉아 있던 사람은 그대로 옮겨가므로
+    // 쓰는 사람 눈에는 "슬롯이 늘어난 것" 으로만 보인다.
+    socket.emit('room_mode', { mode: 'quad' });
     return;
   }
   roomModeCur = m;
@@ -3873,6 +3877,29 @@ window.roomMode = function (m) {
 window.roomStart = function () {
   if (!roomIsHost) return;
   socket.emit('room_start', { mode: roomModeCur });
+};
+
+
+// 빈자리에 친구를 부른다. 접속 중인 친구에게 방 코드가 담긴 도전장이 간다 —
+// 남의 화면을 마음대로 끌어오지 않고, 받은 사람이 눌러야 들어온다.
+window.roomInvite = async function () {
+  if (!myAccount) return toast('로그인하면 친구를 부를 수 있어요.');
+  if (!sharedCode) return;
+  const box = document.getElementById('rInviteList');
+  document.getElementById('roomInviteModal').classList.add('show');
+  box.innerHTML = '<div class="gc-empty">불러오는 중…</div>';
+  const r = await apiPost('/api/friends', { token: authToken() });
+  const on = ((r && r.friends) || []).filter((f) => f.online && !f.ingame);
+  box.innerHTML = on.length
+    ? on.map((f) => `<button class="gc-frow" onclick="roomInviteTo('${esc(f.idl)}')">${esc(f.nick)}<span class="gc-off">부르기</span></button>`).join('')
+    : '<div class="gc-empty">지금 부를 수 있는 친구가 없어요.<br>코드를 공유해 보세요.</div>';
+};
+window.roomInviteTo = function (idl) {
+  socket.emit('challenge_friend', { idl, roomId: sharedCode });
+  document.getElementById('roomInviteModal').classList.remove('show');
+};
+window.closeRoomInvite = function () {
+  document.getElementById('roomInviteModal').classList.remove('show');
 };
 
 // 대기실 상태 — 사람이 들어오고 나갈 때마다 온다.
@@ -3894,8 +3921,9 @@ socket.on('room_lobby', (r) => {
   const box = document.getElementById('wcSeats');
   if (box) {
     box.innerHTML = (r.seats || [null, null]).map((s2) => {
-      if (!s2) return `<div class="wc-seat empty"><div class="ws-face">＋</div>
-        <div class="ws-nick">빈자리</div><div class="ws-tag">기다리는 중</div></div>`;
+      // 빈자리를 누르면 친구를 부른다 — 코드를 따로 알려주지 않아도 되게
+      if (!s2) return `<button class="wc-seat empty" onclick="roomInvite()"><div class="ws-face">＋</div>
+        <div class="ws-nick">친구 초대</div><div class="ws-tag">눌러서 부르기</div></button>`;
       const face = (typeof faceOf === 'function' && s2.profile) ? faceOf(s2.profile) : '🙂';
       const lvl = s2.profile && s2.profile.level ? `Lv.${s2.profile.level}` : '게스트';
       return `<div class="wc-seat"><div class="ws-face">${face}</div>

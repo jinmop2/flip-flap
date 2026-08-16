@@ -1480,7 +1480,8 @@ io.on('connection', (socket) => {
     // 실패도 generic 'error'(클라이언트가 native alert로 띄움) 대신 전용 이벤트 → 토스트로 표시.
     if (!accounts.friendIdlsOf(myIdl).includes(idl)) return socket.emit('friend_challenge_fail', '친구가 아니에요.');
     const room = rooms[roomId];
-    if (!room || room.players[0] !== socket.id) return socket.emit('friend_challenge_fail', '방 정보가 올바르지 않아요.');
+    // 방장뿐 아니라 그 방에 앉아 있는 사람이면 빈자리로 친구를 부를 수 있다
+    if (!room || !room.players.includes(socket.id)) return socket.emit('friend_challenge_fail', '방 정보가 올바르지 않아요.');
     const sid = accountSockets.get(idl);
     if (!sid) return socket.emit('friend_challenge_fail', '상대가 지금 접속 중이 아니에요.');
     io.to(sid).emit('friend_challenge', { from: me.nick, roomId, password: room.password || '' });
@@ -1557,11 +1558,32 @@ io.on('connection', (socket) => {
 
   // 방장이 고른 모드 — 손님 화면에도 같이 비친다
   socket.on('room_mode', ({ mode } = {}) => {
-    const room = rooms[socket.roomId];
+    const roomId = socket.roomId;
+    const room = rooms[roomId];
     if (!room || room.game || socket.playerIndex !== 0) return;
+
+    // 다인전은 엔진이 다르다(3·4인). 그렇다고 방을 닫고 각자 옮겨 가라고 하면
+    // 같이 있던 사람이 흩어진다 — 앉아 있던 사람 그대로 자리 넷짜리 대기방으로 옮긴다.
+    // 쓰는 사람 눈에는 "자리가 늘어난 것" 으로만 보인다.
+    if (mode === 'quad') {
+      const list = room.players
+        .map((sid, i) => (sid ? { sid, nick: room.nicks[i] || '플레이어' } : null))
+        .filter(Boolean);
+      if (!list.length) return;
+      const pid = g4.groupPending(list);
+      if (!pid) return socket.emit('error', '다인전으로 옮기지 못했어요.');
+      for (const { sid } of list) {
+        const sk = io.sockets.sockets.get(sid);
+        if (sk) { sk.leave(roomId); sk.roomId = null; sk.playerIndex = undefined; }
+      }
+      delete rooms[roomId];
+      broadcastRooms();
+      return;
+    }
+
     room.itemMode = mode === 'item';
     room.mode = room.itemMode ? 'item' : 'classic';
-    pushRoomLobby(socket.roomId);
+    pushRoomLobby(roomId);
   });
 
   // 방장이 시작

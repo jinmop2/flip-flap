@@ -1863,8 +1863,8 @@
     .mode-card.mini.item { background:radial-gradient(ellipse at 50% 35%, #5a3070 0%, #381c48 70%, #26122f 100%); }
     .mode-card.mini.quad { background:radial-gradient(ellipse at 50% 35%, #1f5f4a 0%, #143c30 70%, #0d2820 100%); }
     .mode-card.mini.sut  { background:radial-gradient(ellipse at 50% 35%, #6b2434 0%, #45141f 70%, #2c0c14 100%); }
-    /* 곁들이 모드가 셋이 되어 한 줄에 셋 — 둘일 때보다 낮게 잡아 로비가 안 밀린다 */
-    .mode-grid.sub { grid-template-columns:1fr 1fr 1fr; }
+    /* 곁들이 모드는 둘 — 다인전은 방에서 모드로 고른다 */
+    .mode-grid.sub { grid-template-columns:1fr 1fr; }
     .mc-tag {
       position:relative; font-size:.54rem; font-weight:800; letter-spacing:.04em;
       border-radius:5px; padding:1px 6px; background:rgba(255,212,121,.9); color:#5a2a10;
@@ -2888,7 +2888,8 @@
       padding:12px 8px; border-radius:14px;
       background:rgba(0,0,0,.26); border:1px solid rgba(185,141,52,.35);
     }
-    .wc-seat.empty { border-style:dashed; opacity:.6; }
+    .wc-seat.empty { border-style:dashed; opacity:.75; cursor:pointer; font-family:inherit; }
+    .wc-seat.empty:hover { opacity:1; border-color:var(--gold); }
     .wc-seat .ws-face { font-size:1.6rem; line-height:1; }
     .wc-seat .ws-face .ava-art, .wc-seat .ws-face svg { width:34px; height:34px; }
     .wc-seat .ws-nick { font-size:.86rem; font-weight:800; color:#f0ead8; max-width:100%;
@@ -3613,10 +3614,6 @@
 
     <!-- 곁들이 모드 — 같은 격자, 크기만 작게 -->
     <div class="mode-grid sub">
-      <button class="mode-card mini quad" onclick="q4Open()">
-        <span class="mc-title">다인전</span>
-        <span class="mc-tag beta">3·4인</span>
-      </button>
       <button class="mode-card mini tour" onclick="tourOpen()">
         <span class="mc-title">토너먼트</span>
         <span class="mc-tag">8강 · 🪙200</span>
@@ -3722,6 +3719,16 @@
     <button class="btn btn-gold" id="wcStart" onclick="roomStart()" disabled>게임 시작</button>
     <div class="wc-sub" id="wcGuestNote" style="display:none">방장이 시작하길 기다리는 중…</div>
     <button class="lobby-rules-link" onclick="cancelWait()">← 나가기</button>
+  </div>
+</div>
+
+<!-- 대기실에서 빈자리를 눌렀을 때 — 접속 중인 친구를 부른다 -->
+<div class="lb-modal" id="roomInviteModal" onclick="if(event.target===this)closeRoomInvite()">
+  <div class="lb-box" style="width:320px">
+    <div class="lb-title"><span data-ico="👥"></span> 친구 부르기
+      <span class="close-x" onclick="closeRoomInvite()">×</span></div>
+    <div id="rInviteList" class="gc-list"></div>
+    <button class="btn btn-outline" onclick="closeRoomInvite()">닫기</button>
   </div>
 </div>
 

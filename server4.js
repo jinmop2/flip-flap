@@ -654,7 +654,26 @@ function attach4(io, hooks = {}) {
     });
   });
 
-  return { count: () => Object.keys(rooms4).length, waiting: () => Object.keys(pendings).length };
+  // 2인 방에서 "다인전" 으로 바꿀 때, 앉아 있던 사람들을 통째로 한 대기방에 옮긴다.
+  // 하나씩 joinPending 을 부르면 서로 다른 방에 흩어질 수 있어서 방을 먼저 만들어 준다.
+  function groupPending(list) {
+    const p = { id: 'W' + Math.random().toString(36).slice(2, 7).toUpperCase(),
+                seats: [null, null, null, null] };
+    pendings[p.id] = p;
+    let n = 0;
+    for (const e of list || []) {
+      const sk = io.sockets.sockets.get(e.sid);
+      if (!sk) continue;
+      if (sk.g4room) destroy(sk.g4room, '다인전으로 전환');
+      joinPending(sk, String(e.nick || '플레이어').slice(0, 12), p);
+      n++;
+    }
+    if (!n) { delete pendings[p.id]; return null; }
+    return p.id;
+  }
+
+  return { count: () => Object.keys(rooms4).length, waiting: () => Object.keys(pendings).length,
+           groupPending };
 }
 
 module.exports = { attach4 };

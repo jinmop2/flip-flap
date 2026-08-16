@@ -847,7 +847,16 @@
       if (!d.solo) $('q-status').textContent = `${total}인전 · 사람 ${humans}명 · AI ${total - humans}명`;
     });
     // 대기방 — 게임 화면에 앉은 채로 자리가 차는 걸 본다
-    socket.on('g4_room', (d) => { if (!q4Live) return; q4Pend = d; q4Room = null; lastRecv = Date.now(); renderPending(); });
+    socket.on('g4_room', (d) => {
+      // 2인 방에서 다인전으로 바꾸면 서버가 우리를 자리 넷짜리 대기방에 옮겨 놓는다.
+      // 그때는 아직 다인전 화면이 아니므로 여기서 열어 준다 — 안 그러면 아무 일도 안 일어난 것처럼 보인다.
+      if (!q4Live) {
+        const wc = document.getElementById('waitCard'); if (wc) wc.style.display = 'none';
+        const lm = document.getElementById('lobbyMain'); if (lm) lm.style.display = '';
+        enterWaiting();
+      }
+      q4Pend = d; q4Room = null; lastRecv = Date.now(); renderPending();
+    });
     socket.on('g4_cancelled', () => {});
     socket.on('g4_state', (s) => { if (!q4Live) return; q4 = s; lastRecv = Date.now(); noteState(); render(); });
     socket.on('g4_over', (s) => {

@@ -145,8 +145,18 @@ console.log('\n⑦ 방 만들기 · 모드 고르기');
   ok('자리를 그린다', /id="wcSeats"/.test(html) && /wc-seat/.test(cli));
   ok('들어온 사람 모두 대기실 화면으로', /waitCard'\)\.style\.display = 'flex';\s*\n\s*roomIsHost/.test(cli));
   ok('나갈 때 서버에도 알린다', /function cancelWait\(\) \{\s*\n\s*socket\.emit\('leave_room'\)/.test(cli));
-  // 다인전은 엔진이 달라 그쪽 대기방으로 넘긴다
-  ok('다인전은 옮겨간다고 묻는다', /다인전으로 바꿀까요/.test(cli));
+  // 다인전은 엔진이 다르지만, 쓰는 사람 눈엔 자리가 늘어난 것으로만 보여야 한다
+  ok('다인전은 방을 닫지 않고 서버에 맡긴다',
+     /socket\.emit\('room_mode', \{ mode: 'quad' \}\)/.test(cli) && !/다인전으로 바꿀까요/.test(cli));
+  ok('서버가 앉은 사람 그대로 옮긴다', /g4\.groupPending\(list\)/.test(srv));
+  ok('넷짜리 대기방을 만들어 준다', /function groupPending/.test(fs.readFileSync(src + '/server4.js', 'utf8')));
+  ok('옮겨진 사람은 다인전 화면이 열린다', /if \(!q4Live\) \{[\s\S]{0,300}enterWaiting\(\);/.test(fs.readFileSync(src + '/public/client4.js', 'utf8')));
+
+  // 빈자리 → 친구 초대
+  ok('빈자리를 누르면 초대창', /class="wc-seat empty" onclick="roomInvite\(\)"/.test(cli));
+  ok('초대창이 있다', /id="roomInviteModal"/.test(html));
+  ok('접속 중인 친구만 보여준다', /f\.online && !f\.ingame/.test(cli));
+  ok('방에 앉아 있으면 초대할 수 있다', /!room\.players\.includes\(socket\.id\)/.test(srv));
 }
 
 console.log('\n⑧ 모드 자리 정리');
