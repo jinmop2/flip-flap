@@ -2876,6 +2876,28 @@
     }
 
 
+
+    /* 대기실 — 작은 카드가 아니라 "방에 들어와 있는" 화면 */
+    /* 방 이름과 코드를 한 줄에 두면 코드가 넓어서 이름이 "게..." 로 잘린다 — 두 줄로 */
+    .wc-head { display:flex; flex-direction:column; align-items:center; gap:5px; width:100%; }
+    .wc-head > b { font-size:1.02rem; color:#ffe9a8; max-width:100%;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .wc-seats { display:flex; gap:8px; width:100%; }
+    .wc-seat {
+      flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px;
+      padding:12px 8px; border-radius:14px;
+      background:rgba(0,0,0,.26); border:1px solid rgba(185,141,52,.35);
+    }
+    .wc-seat.empty { border-style:dashed; opacity:.6; }
+    .wc-seat .ws-face { font-size:1.6rem; line-height:1; }
+    .wc-seat .ws-face .ava-art, .wc-seat .ws-face svg { width:34px; height:34px; }
+    .wc-seat .ws-nick { font-size:.86rem; font-weight:800; color:#f0ead8; max-width:100%;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .wc-seat .ws-tag { font-size:.62rem; color:#c8a86a; }
+    .wc-seat .ws-host { font-size:.6rem; font-weight:900; color:#2a1206; background:var(--gold);
+      border-radius:6px; padding:1px 6px; }
+    .wc-modelabel { font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:#8a7a80;
+      align-self:flex-start; margin-top:2px; }
     /* 대기 카드의 모드 고르기 */
     .wc-modes { display:flex; gap:6px; width:100%; margin:2px 0 4px; }
     .wc-mode {
@@ -3668,17 +3690,23 @@
     </button>
   </nav>
 
-  <!-- 방 만든 뒤 대기 카드 -->
+  <!-- 대기실 — 방에 들어와 있는 상태. 사람이 들락날락하고, 방장이 시작한다. -->
   <div id="waitCard">
-    <div class="wc-label"><b id="waitRoomName"></b> · 상대를 기다려요</div>
-    <div class="wc-sub">친구에겐 코드/링크 공유, 또는 로비 목록에서 참가</div>
-    <div class="wc-code"><span id="waitCode">-----</span><button class="code-copy" onclick="copyCodeIcon(this)" title="코드 복사"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></div>
+    <div class="wc-head">
+      <b id="waitRoomName">내 방</b>
+      <span class="wc-code"><span id="waitCode">-----</span><button class="code-copy" onclick="copyCodeIcon(this)" title="코드 복사"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></span>
+    </div>
+
+    <!-- 자리 — 누가 들어와 있는지 보인다 -->
+    <div class="wc-seats" id="wcSeats"></div>
+
     <div class="wc-btns">
       <button class="btn btn-kakao btn-sm" onclick="shareKakao(this)">💬 카톡 공유</button>
       <button class="btn btn-outline btn-sm" onclick="copyLink(this)">링크 복사</button>
     </div>
-    <!-- 방장이 모드를 고르고 시작한다. 예전엔 상대가 들어오는 순간 바로 시작해서
-         "무슨 판인지" 고를 새가 없었다. -->
+
+    <!-- 방장이 모드를 고른다 -->
+    <div class="wc-modelabel" id="wcModeLabel">모드</div>
     <div class="wc-modes" id="wcModes">
       <button class="wc-mode on" data-m="classic" onclick="roomMode('classic')">
         <b>클래식</b><small>기본 규칙</small>
@@ -3690,10 +3718,10 @@
         <b>다인전</b><small>3·4인</small>
       </button>
     </div>
-    <div class="wc-wait"><span class="thinking-dots">상대를 기다리는 중<span>.</span><span>.</span><span>.</span></span></div>
+
     <button class="btn btn-gold" id="wcStart" onclick="roomStart()" disabled>게임 시작</button>
     <div class="wc-sub" id="wcGuestNote" style="display:none">방장이 시작하길 기다리는 중…</div>
-    <button class="lobby-rules-link" onclick="cancelWait()">← 취소</button>
+    <button class="lobby-rules-link" onclick="cancelWait()">← 나가기</button>
   </div>
 </div>
 

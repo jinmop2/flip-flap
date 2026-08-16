@@ -3856,28 +3856,51 @@ window.roomStart = function () {
   socket.emit('room_start', { mode: roomModeCur });
 };
 
-// 방 상태 — 사람이 들어오고 나갈 때마다 온다
+// 대기실 상태 — 사람이 들어오고 나갈 때마다 온다.
+// 방장·손님이 서로 다른 것을 봐야 해서 서버가 사람마다 따로 보낸다.
 socket.on('room_lobby', (r) => {
+  // 들어온 사람 모두 대기실 화면으로. 예전엔 방을 만든 사람만 이 화면을 봤다.
+  document.getElementById('lobbyMain').style.display = 'none';
+  document.getElementById('waitCard').style.display = 'flex';
   roomIsHost = !!r.host;
   roomReady = !!r.ready;
   if (r.mode) {
     roomModeCur = r.mode;
     for (const b of document.querySelectorAll('#wcModes .wc-mode')) b.classList.toggle('on', b.dataset.m === r.mode);
   }
+  if (r.name) document.getElementById('waitRoomName').textContent = r.name;
+  if (r.code) { document.getElementById('waitCode').textContent = r.code; sharedCode = r.code; }
+
+  // 자리 — 누가 들어와 있는지 그대로 보여준다
+  const box = document.getElementById('wcSeats');
+  if (box) {
+    box.innerHTML = (r.seats || [null, null]).map((s2) => {
+      if (!s2) return `<div class="wc-seat empty"><div class="ws-face">＋</div>
+        <div class="ws-nick">빈자리</div><div class="ws-tag">기다리는 중</div></div>`;
+      const face = (typeof faceOf === 'function' && s2.profile) ? faceOf(s2.profile) : '🙂';
+      const lvl = s2.profile && s2.profile.level ? `Lv.${s2.profile.level}` : '게스트';
+      return `<div class="wc-seat"><div class="ws-face">${face}</div>
+        <div class="ws-nick">${esc(s2.nick)}</div>
+        ${s2.host ? '<div class="ws-host">방장</div>' : `<div class="ws-tag">${esc(lvl)}</div>`}</div>`;
+    }).join('');
+  }
+
   const btn = document.getElementById('wcStart');
-  const wait = document.querySelector('#waitCard .wc-wait');
   const modes = document.getElementById('wcModes');
+  const label = document.getElementById('wcModeLabel');
+  // 손님에게는 고를 권한이 없다 — 버튼을 숨기고 지금 모드만 알려준다
+  if (modes) modes.classList.toggle('locked', !roomIsHost);
+  if (label) label.textContent = roomIsHost ? '모드' : `모드 — ${MODE_NAME[roomModeCur] || '클래식'}`;
   if (modes) modes.style.display = roomIsHost ? '' : 'none';
   if (btn) {
     btn.style.display = roomIsHost ? '' : 'none';
     btn.disabled = !roomReady;
     btn.textContent = roomReady ? '게임 시작' : '상대를 기다려요';
   }
-  if (wait) wait.style.display = roomReady ? 'none' : '';
-  // 손님에게는 방장이 시작하길 기다린다고 알려준다
   const note = document.getElementById('wcGuestNote');
-  if (note) note.style.display = (!roomIsHost && roomReady) ? '' : 'none';
+  if (note) note.style.display = roomIsHost ? 'none' : '';
 });
+const MODE_NAME = { classic: '클래식', item: '아이템전' };
 
 let sharedCode = '';
 socket.on('room_created', ({ roomId, name }) => {
@@ -3984,7 +4007,10 @@ function shareInvite(btn) {
   }
 }
 function cancelWait() {
-  roomIsHost = false; roomReady = false; roomModeCur = 'classic'; clearSession(); fastReload(); }
+  socket.emit('leave_room');
+  roomIsHost = false; roomReady = false; roomModeCur = 'classic';
+  clearSession(); fastReload();
+}
 
 // ── 관전자 도전 (관전 → 대전 전환) ──
 function specChallenge(btn) {

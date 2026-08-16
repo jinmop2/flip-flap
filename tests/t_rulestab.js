@@ -135,6 +135,16 @@ console.log('\n⑦ 방 만들기 · 모드 고르기');
   ok('상대가 없으면 눌리지 않는다', /btn\.disabled = !roomReady/.test(cli));
   ok('손님에게는 안내만', /id="wcGuestNote"/.test(html));
   ok('손님에게는 모드 버튼을 숨긴다', /modes\.style\.display = roomIsHost \? '' : 'none'/.test(cli));
+
+  // 대기실 — 사람이 들락날락해도 방이 살아 있어야 한다
+  ok('시작 전에 나가면 자리만 비운다', /function leaveWaitingRoom/.test(srv));
+  ok('아무도 없을 때만 방을 지운다', /if \(!room\.players\.some\(Boolean\)\) \{ delete rooms\[roomId\]/.test(srv));
+  ok('방장이 나가면 물려받는다', /if \(!room\.players\[0\] && room\.players\[1\]\)/.test(srv));
+  ok('연결이 끊겨도 자리만 비운다', /r && !r\.game && r\.hostStart && !socket\.isSpec/.test(srv));
+  ok('누가 있는지 내려보낸다', /const seats = room\.players\.map/.test(srv));
+  ok('자리를 그린다', /id="wcSeats"/.test(html) && /wc-seat/.test(cli));
+  ok('들어온 사람 모두 대기실 화면으로', /waitCard'\)\.style\.display = 'flex';\s*\n\s*roomIsHost/.test(cli));
+  ok('나갈 때 서버에도 알린다', /function cancelWait\(\) \{\s*\n\s*socket\.emit\('leave_room'\)/.test(cli));
   // 다인전은 엔진이 달라 그쪽 대기방으로 넘긴다
   ok('다인전은 옮겨간다고 묻는다', /다인전으로 바꿀까요/.test(cli));
 }

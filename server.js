@@ -1247,16 +1247,45 @@ function openRoomList() {
 }
 // 로비 목록 브로드캐스트 — 빈번한 변경을 400ms로 묶어 폭증 방지
 let roomsBcTimer = null;
+// 시작 전 대기실에서 한 사람이 빠진다. 방은 남는다 — 아무도 없을 때만 지운다.
+// 방장이 나가면 남은 사람이 방장을 물려받는다. 안 그러면 아무도 시작을 못 한다.
+function leaveWaitingRoom(socket, roomId, slot) {
+  const room = rooms[roomId];
+  if (!room) { socket.roomId = null; socket.join('lobby'); return; }
+  if (slot >= 0) {
+    room.players[slot] = null; room.pids[slot] = null;
+    room.nicks[slot] = null; room.profiles[slot] = null; room.tokens[slot] = null;
+  }
+  socket.leave(roomId);
+  socket.roomId = null; socket.playerIndex = undefined;
+  socket.join('lobby');
+
+  // 자리를 앞으로 당긴다 — 0번이 방장이라 비워 두면 주인 없는 방이 된다
+  if (!room.players[0] && room.players[1]) {
+    for (const k of ['players', 'pids', 'nicks', 'profiles', 'tokens']) {
+      room[k][0] = room[k][1]; room[k][1] = null;
+    }
+    const sk = io.sockets.sockets.get(room.players[0]);
+    if (sk) sk.playerIndex = 0;
+  }
+  if (!room.players.some(Boolean)) { delete rooms[roomId]; broadcastRooms(); return; }
+  pushRoomLobby(roomId);
+  broadcastRooms();
+}
+
 // 방 대기 화면 상태 — 방장인지, 둘 다 찼는지, 무슨 모드인지.
 // 방장·손님이 서로 다른 것을 봐야 해서 사람마다 따로 보낸다.
 function pushRoomLobby(roomId) {
   const room = rooms[roomId];
   if (!room || room.game) return;
   const ready = room.players.filter(Boolean).length >= 2;
+  const seats = room.players.map((sid, i) => (sid
+    ? { nick: room.nicks[i] || '???', profile: room.profiles[i] || null, host: i === 0 }
+    : null));
   room.players.forEach((sid, i) => {
     if (!sid) return;
     io.to(sid).emit('room_lobby', { host: i === 0, ready, mode: room.mode || 'classic',
-      nicks: room.nicks });
+      name: room.name || '', code: roomId, seats, me: i });
   });
 }
 
@@ -1806,6 +1835,11 @@ io.on('connection', (socket) => {
       g.phase = 'game_over';
       finishStats(room, winner, true);
       room.players.forEach((s, i) => { if (s && i !== slot) io.to(s).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
+    } else if (!g && room.hostStart) {
+      // 아직 시작 안 한 대기실 — 방을 지우지 않고 자리만 비운다.
+      // 예전엔 한 명만 나가도 방이 통째로 사라져서 들락날락을 못 했다.
+      leaveWaitingRoom(socket, roomId, slot);
+      return;
     } else {
       room.players.forEach((s, i) => { if (s && i !== slot) io.to(s).emit('opponent_left'); });
     }
@@ -1815,6 +1849,13 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    // 시작 전 대기실에서 끊긴 것이면 방을 남기고 자리만 비운다
+    {
+      const r = socket.roomId && rooms[socket.roomId];
+      if (r && !r.game && r.hostStart && !socket.isSpec) {
+        leaveWaitingRoom(socket, socket.roomId, r.players.indexOf(socket.id));
+      }
+    }
     miniDequeue(socket, false);
     if (socket.mini) miniStand(socket, '연결이 끊겼어요.');
     const c = (connByIp.get(ip) || 1) - 1;   // IP 연결 카운트 감소
