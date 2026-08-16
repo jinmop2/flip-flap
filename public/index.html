@@ -2875,6 +2875,19 @@
       position:relative;
     }
 
+
+    /* 대기 카드의 모드 고르기 */
+    .wc-modes { display:flex; gap:6px; width:100%; margin:2px 0 4px; }
+    .wc-mode {
+      flex:1; display:flex; flex-direction:column; align-items:center; gap:1px; cursor:pointer;
+      padding:8px 4px; border-radius:11px; font-family:'Fredoka',system-ui,sans-serif;
+      background:rgba(0,0,0,.28); border:1px solid rgba(185,141,52,.4); color:#c8a86a; transition:.14s;
+    }
+    .wc-mode b { font-size:.84rem; }
+    .wc-mode small { font-size:.62rem; opacity:.85; }
+    .wc-mode:hover { color:#ffe9a8; border-color:var(--gold); }
+    .wc-mode.on { background:linear-gradient(180deg,#c9973a,#8d5f16); border-color:#e0b45c; color:#2a1206; }
+    #wcStart:disabled { opacity:.45; cursor:default; }
     /* 룰북 탭 — 상자 밖에 둔다(상자 안은 영어판이 통째로 갈아끼우는 자리다) */
     .rules-wrap { display:flex; flex-direction:column; gap:8px; max-width:480px; width:100%; max-height:86vh; }
     .rules-wrap .rules-box { max-width:none; width:100%; margin:0; min-height:0; }
@@ -3529,7 +3542,6 @@
     <div class="lobby-top learn">
       <button class="top-link" onclick="toggleRules(true)"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>게임방법</button>
       <button class="top-link" onclick="startTutorial()"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/><path d="M22 10v6"/></svg></span>튜토리얼</button>
-      <button class="top-link" onclick="toggleRulesMini(true)"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="16" rx="2"/><rect x="13" y="4" width="8" height="16" rx="2"/></svg></span>미니게임</button>
     </div>
 
     <!-- 무엇을 할까 — 크기가 곧 우선순위 -->
@@ -3637,7 +3649,22 @@
       <button class="btn btn-kakao btn-sm" onclick="shareKakao(this)">💬 카톡 공유</button>
       <button class="btn btn-outline btn-sm" onclick="copyLink(this)">링크 복사</button>
     </div>
+    <!-- 방장이 모드를 고르고 시작한다. 예전엔 상대가 들어오는 순간 바로 시작해서
+         "무슨 판인지" 고를 새가 없었다. -->
+    <div class="wc-modes" id="wcModes">
+      <button class="wc-mode on" data-m="classic" onclick="roomMode('classic')">
+        <b>클래식</b><small>기본 규칙</small>
+      </button>
+      <button class="wc-mode" data-m="item" onclick="roomMode('item')">
+        <b>아이템전</b><small>지면 아이템</small>
+      </button>
+      <button class="wc-mode" data-m="quad" onclick="roomMode('quad')">
+        <b>다인전</b><small>3·4인</small>
+      </button>
+    </div>
     <div class="wc-wait"><span class="thinking-dots">상대를 기다리는 중<span>.</span><span>.</span><span>.</span></span></div>
+    <button class="btn btn-gold" id="wcStart" onclick="roomStart()" disabled>게임 시작</button>
+    <div class="wc-sub" id="wcGuestNote" style="display:none">방장이 시작하길 기다리는 중…</div>
     <button class="lobby-rules-link" onclick="cancelWait()">← 취소</button>
   </div>
 </div>
@@ -3664,6 +3691,21 @@
         <span class="dc-reward">승리 🪙40</span>
       </button>
     </div>
+    <!-- 다인전 AI전도 솔로 안이 제자리다 — 사람 없이 혼자 하는 판이라 -->
+    <div class="sec-title" style="margin-top:10px"><span>다인전 <span class="mc-tag beta">3·4인</span></span></div>
+    <div class="q-nsel">
+      <button class="q-ncard" onclick="q4Start(3)">
+        <span class="q-nbig">3인전</span>
+        <span class="q-nsub">AI 2명</span>
+        <span class="q-nmeta">손패 7장</span>
+      </button>
+      <button class="q-ncard" onclick="q4Start(4)">
+        <span class="q-nbig">4인전</span>
+        <span class="q-nsub">AI 3명</span>
+        <span class="q-nmeta">손패 6장</span>
+      </button>
+    </div>
+
     <!-- 아이템전은 따로 있던 로비 버튼을 여기로 들여왔다. AI전은 솔로 안이 제자리다. -->
     <div class="sec-title" style="margin-top:10px"><span>아이템전 <span class="mc-tag">이벤트</span></span></div>
     <button class="btn btn-item" onclick="startItemGame()">🎪 아이템전 — AI와 대전</button>
@@ -3708,21 +3750,7 @@
       <span style="color:#a88a5a">※ 베타 — 전적·코인에 반영되지 않습니다</span>
     </div>
     <button class="btn btn-gold" onclick="q4Quick()"><span data-ico="⚡"></span> 빠른대전 (온라인)</button>
-    <div class="sec-title"><span>AI 대전</span></div>
-    <div class="q-nsel">
-      <button class="q-ncard" onclick="q4Start(3)">
-        <span class="q-nbig">3인전</span>
-        <span class="q-nsub">AI 2명</span>
-        <span class="q-nmeta">손패 7장</span>
-      </button>
-      <button class="q-ncard" onclick="q4Start(4)">
-        <span class="q-nbig">4인전</span>
-        <span class="q-nsub">AI 3명</span>
-        <span class="q-nmeta">손패 6장</span>
-      </button>
-    </div>
-    <button class="btn btn-outline" onclick="q4Close()">닫기</button>
-  </div>
+    <p class="auth-hint" style="text-align:center;margin:2px 0 0;font-size:.7rem">AI와 하는 다인전은 솔로플레이에 있어요</p>
 </div>
 
 <!-- 뽑기 -->
@@ -3809,7 +3837,7 @@
 <div class="lb-modal" id="createModal" onclick="if(event.target===this)closeCreate()">
   <div class="lb-box">
     <div class="lb-title">➕ 방 만들기</div>
-    <input id="roomNameInput" type="text" placeholder="방 이름 (예: 초보만 환영)" maxlength="20">
+    <input id="roomNameInput" type="text" placeholder="방 이름" maxlength="20">
     <div class="secret-row" id="visRow">
       <button class="vis-btn active" data-vis="open">🌐 공개</button>
       <button class="vis-btn" data-vis="secret">🔒 비밀</button>

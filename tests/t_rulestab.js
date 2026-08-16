@@ -114,5 +114,44 @@ console.log('\n⑥ 부적 (상대 아이템 1회 차단)');
   ok('아이콘이 있다', /ward: `<svg/.test(fs.readFileSync(src + '/public/item-icons.js', 'utf8')));
 }
 
+console.log('\n⑦ 방 만들기 · 모드 고르기');
+{
+  const srv = fs.readFileSync(src + '/server.js', 'utf8');
+  // 방 이름은 미리 채워 둔다 — 빈칸이면 뭘 적어야 하나 망설이게 된다
+  ok('방 이름 기본값을 채운다', /el\.value = `\$\{\(typeof getNick/.test(cli));
+  ok('바로 고칠 수 있게 선택해 둔다', /el\.focus\(\); el\.select\(\)/.test(cli));
+
+  // 손으로 만든 방은 방장이 눌러야 시작한다. 빠른 매칭은 예전처럼 바로.
+  ok('사람 방만 방장이 시작한다', /hostStart: !vsBot/.test(srv));
+  ok('들어오자마자 시작하지 않는다', /if \(room\.hostStart\) \{ pushRoomLobby/.test(srv));
+  ok('시작은 방장만', /socket\.on\('room_start'[\s\S]{0,220}socket\.playerIndex !== 0\) return/.test(srv));
+  ok('혼자서는 못 시작한다', /상대가 아직 없어요/.test(srv));
+  ok('모드 바꾸기도 방장만', /socket\.on\('room_mode'[\s\S]{0,200}socket\.playerIndex !== 0\) return/.test(srv));
+  ok('방 상태를 사람마다 따로 보낸다', /function pushRoomLobby/.test(srv) && /host: i === 0, ready/.test(srv));
+
+  // 화면
+  for (const m of ['classic', 'item', 'quad']) ok(`${m} 버튼`, html.includes(`roomMode('${m}')`));
+  ok('시작 버튼', /id="wcStart"/.test(html) && /onclick="roomStart\(\)"/.test(html));
+  ok('상대가 없으면 눌리지 않는다', /btn\.disabled = !roomReady/.test(cli));
+  ok('손님에게는 안내만', /id="wcGuestNote"/.test(html));
+  ok('손님에게는 모드 버튼을 숨긴다', /modes\.style\.display = roomIsHost \? '' : 'none'/.test(cli));
+  // 다인전은 엔진이 달라 그쪽 대기방으로 넘긴다
+  ok('다인전은 옮겨간다고 묻는다', /다인전으로 바꿀까요/.test(cli));
+}
+
+console.log('\n⑧ 모드 자리 정리');
+{
+  // AI 다인전은 솔로 안이 제자리다 — 두 곳에 두면 갈라진다
+  const solo = html.slice(html.indexOf('id="soloModal"'), html.indexOf('id="multiModal"'));
+  ok('솔로에 다인전 AI전이 있다', /q4Start\(3\)/.test(solo) && /q4Start\(4\)/.test(solo));
+  const quad = html.slice(html.indexOf('id="quadModal"'), html.indexOf('id="gachaModal"'));
+  ok('다인전 팝업에는 AI 버튼이 없다', !/q4Start\(/.test(quad));
+  ok('어디 있는지 알려준다', /솔로플레이에 있어요/.test(quad));
+  // 미니게임 설명서는 게임방법 탭 안으로 들어갔다
+  const learn = html.slice(html.indexOf('class="lobby-top learn"'), html.indexOf('</div>', html.indexOf('class="lobby-top learn"')));
+  ok('로비에 미니게임 버튼이 없다', !/toggleRulesMini/.test(learn), learn.slice(0, 60));
+  ok('게임방법 버튼은 남아 있다', /toggleRules\(true\)/.test(learn));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

@@ -1241,6 +1241,19 @@ function openRoomList() {
 }
 // 로비 목록 브로드캐스트 — 빈번한 변경을 400ms로 묶어 폭증 방지
 let roomsBcTimer = null;
+// 방 대기 화면 상태 — 방장인지, 둘 다 찼는지, 무슨 모드인지.
+// 방장·손님이 서로 다른 것을 봐야 해서 사람마다 따로 보낸다.
+function pushRoomLobby(roomId) {
+  const room = rooms[roomId];
+  if (!room || room.game) return;
+  const ready = room.players.filter(Boolean).length >= 2;
+  room.players.forEach((sid, i) => {
+    if (!sid) return;
+    io.to(sid).emit('room_lobby', { host: i === 0, ready, mode: room.mode || 'classic',
+      nicks: room.nicks });
+  });
+}
+
 function broadcastRooms() {
   if (roomsBcTimer) return;
   roomsBcTimer = setTimeout(() => { roomsBcTimer = null; io.to('lobby').emit('rooms', openRoomList()); }, 400);
@@ -1456,6 +1469,10 @@ io.on('connection', (socket) => {
       secret: !vsBot && !!secret, password: String(password || '').slice(0, 12),
       tutorial: vsBot && !!tutorial,   // 튜토리얼 모드: 확인 누를 때까지 진행 보류 + 시계 없음
       itemMode: !!itemMode && !tutorial,   // 아이템전(이벤트 모드) — 솔로·매칭·친구방 공통
+      // 손으로 만든 사람 방은 방장이 모드를 고르고 눌러서 시작한다.
+      // 빠른 매칭·AI 방은 예전처럼 바로 시작한다 — 거기서 기다리게 하면 뜻이 없다.
+      hostStart: !vsBot,
+      mode: (!!itemMode && !tutorial) ? 'item' : 'classic',
     };
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
     if (vsBot) {
@@ -1474,6 +1491,7 @@ io.on('connection', (socket) => {
       setTimeout(() => maybeCpuAct(roomId), 600);
     } else {
       socket.emit('room_created', { roomId, name: rooms[roomId].name });
+      pushRoomLobby(roomId);          // 버튼 상태(아직 혼자다)를 바로 알려준다
       broadcastRooms();
     }
   });
@@ -1491,9 +1509,39 @@ io.on('connection', (socket) => {
     room.profiles[1] = prof; room.tokens[1] = socket.token || null;
     socket.leave('lobby');
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 1; socket.pid = pid;
+    // 손으로 만든 방은 방장이 모드를 고르고 시작한다. 예전엔 들어오는 순간 시작해서
+    // "무슨 판인지" 고를 새가 없었다. 빠른 매칭으로 만든 방은 예전처럼 바로 시작한다.
+    if (room.hostStart) { pushRoomLobby(roomId); broadcastRooms(); return; }
     room.game = createGame();
     room.startedAt = Date.now();
     io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: room.nicks, profiles: room.profiles });
+    broadcast(roomId);
+    startClock(roomId);
+    broadcastRooms();
+  });
+
+  // 방장이 고른 모드 — 손님 화면에도 같이 비친다
+  socket.on('room_mode', ({ mode } = {}) => {
+    const room = rooms[socket.roomId];
+    if (!room || room.game || socket.playerIndex !== 0) return;
+    room.itemMode = mode === 'item';
+    room.mode = room.itemMode ? 'item' : 'classic';
+    pushRoomLobby(socket.roomId);
+  });
+
+  // 방장이 시작
+  socket.on('room_start', ({ mode } = {}) => {
+    const roomId = socket.roomId;
+    const room = rooms[roomId];
+    if (!room || room.game || socket.playerIndex !== 0) return;
+    if (room.players.filter(Boolean).length < 2) return socket.emit('error', '상대가 아직 없어요.');
+    if (mode === 'item' || mode === 'classic') { room.itemMode = mode === 'item'; room.mode = mode; }
+    room.game = createGame();
+    room.game.itemMode = !!room.itemMode;
+    if (room.itemMode) { room.game.items = { 1: [], 2: [] }; room.game.itemUsed = { 1: false, 2: false }; }
+    room.startedAt = Date.now();
+    io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: room.nicks,
+      profiles: room.profiles, itemMode: !!room.itemMode });
     broadcast(roomId);
     startClock(roomId);
     broadcastRooms();

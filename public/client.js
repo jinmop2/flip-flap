@@ -2329,7 +2329,14 @@ function shopArtFor(id, icon) {
 }
 
 // ── 로비 다이얼로그 ─────────────────────────────────────────
-function openCreate() { closeModePanels(); document.getElementById('createModal').classList.add('show'); document.getElementById('roomNameInput').focus(); }
+function openCreate() {
+  closeModePanels();
+  const el = document.getElementById('roomNameInput');
+  // 기본 이름을 채워 둔다 — 안 고치면 이대로 간다. 빈칸이면 뭘 적어야 하나 망설이게 된다.
+  el.value = `${(typeof getNick === 'function' ? getNick() : '나')}의 방`;
+  document.getElementById('createModal').classList.add('show');
+  el.focus(); el.select();
+}
 function closeCreate() { document.getElementById('createModal').classList.remove('show'); }
 function openCode()   { closeModePanels(); document.getElementById('codeModal').classList.add('show'); document.getElementById('roomInput').focus(); }
 function closeCode()  { document.getElementById('codeModal').classList.remove('show'); }
@@ -3784,9 +3791,59 @@ function joinRoom() {
   const id = document.getElementById('roomInput').value.trim().toUpperCase();
   if (id) socket.emit('join_room', { roomId: id, pid: PID, nick: getNick() });
 }
+
+// ── 방 안에서 모드 고르기 · 시작 ──────────────────────────────
+// 예전엔 상대가 들어오는 순간 바로 시작해서 "무슨 판인지" 고를 새가 없었다.
+// 방장이 고르고 눌러서 시작한다. 다인전은 엔진이 달라서 그쪽 대기방으로 넘긴다.
+let roomModeCur = 'classic', roomIsHost = false, roomReady = false;
+
+window.roomMode = function (m) {
+  if (!roomIsHost) return toast('방장만 고를 수 있어요.');
+  if (m === 'quad') {
+    // 다인전은 다른 엔진(3·4인 방)이다 — 이 방을 접고 그쪽으로 간다
+    askConfirm(
+      { icon: '👥', title: '다인전으로 바꿀까요?', desc: '지금 방은 닫히고 3·4인 대기방으로 옮겨갑니다.',
+        yes: '옮기기', no: '취소' },
+      () => { cancelWait(); if (typeof q4Open === 'function') q4Open(); });
+    return;
+  }
+  roomModeCur = m;
+  for (const b of document.querySelectorAll('#wcModes .wc-mode')) b.classList.toggle('on', b.dataset.m === m);
+  socket.emit('room_mode', { mode: m });
+};
+
+window.roomStart = function () {
+  if (!roomIsHost) return;
+  socket.emit('room_start', { mode: roomModeCur });
+};
+
+// 방 상태 — 사람이 들어오고 나갈 때마다 온다
+socket.on('room_lobby', (r) => {
+  roomIsHost = !!r.host;
+  roomReady = !!r.ready;
+  if (r.mode) {
+    roomModeCur = r.mode;
+    for (const b of document.querySelectorAll('#wcModes .wc-mode')) b.classList.toggle('on', b.dataset.m === r.mode);
+  }
+  const btn = document.getElementById('wcStart');
+  const wait = document.querySelector('#waitCard .wc-wait');
+  const modes = document.getElementById('wcModes');
+  if (modes) modes.style.display = roomIsHost ? '' : 'none';
+  if (btn) {
+    btn.style.display = roomIsHost ? '' : 'none';
+    btn.disabled = !roomReady;
+    btn.textContent = roomReady ? '게임 시작' : '상대를 기다려요';
+  }
+  if (wait) wait.style.display = roomReady ? 'none' : '';
+  // 손님에게는 방장이 시작하길 기다린다고 알려준다
+  const note = document.getElementById('wcGuestNote');
+  if (note) note.style.display = (!roomIsHost && roomReady) ? '' : 'none';
+});
+
 let sharedCode = '';
 socket.on('room_created', ({ roomId, name }) => {
   sharedCode = roomId;
+  roomIsHost = true; roomReady = false; roomModeCur = 'classic';
   closeCreate();
   document.getElementById('lobbyMain').style.display = 'none';
   document.getElementById('waitCard').style.display = 'flex';
@@ -3887,7 +3944,8 @@ function shareInvite(btn) {
     setTimeout(() => alert('공유를 지원하지 않는 브라우저예요. 링크를 복사했으니 카톡에 붙여넣어 보내세요!'), 100);
   }
 }
-function cancelWait() { clearSession(); fastReload(); }
+function cancelWait() {
+  roomIsHost = false; roomReady = false; roomModeCur = 'classic'; clearSession(); fastReload(); }
 
 // ── 관전자 도전 (관전 → 대전 전환) ──
 function specChallenge(btn) {
