@@ -151,7 +151,7 @@ console.log('\n⑥ 경기장');
   ok('버튼 금액은 서버 값을 쓴다', /const amt = v\.amounts\[a\]/.test(cli));
   ok('두 번 눌러도 두 수가 안 나간다', /miniState\.turn = null;/.test(cli));
   ok('앉으면 로비를 접는다', /getElementById\('lobby'\)\.style\.display = 'none'/.test(cli));
-  ok('일어서면 로비로 돌아온다', /function miniHide\(\)[\s\S]{0,400}lobby'\)\.style\.display = 'flex'/.test(cli));
+  ok('일어서면 로비로 돌아온다', /function miniHide\(\)[\s\S]{0,500}lobby'\)\.style\.display = 'flex'/.test(cli));
   ok('온라인 대전으로 앉을 수 있다', /window\.miniQuick/.test(cli) && /mini_quick/.test(cli));
   ok('매칭 대기 화면이 있다', /id="miniWaitModal"/.test(html) && /mini_queue/.test(cli));
   ok('기다리다 취소할 수 있다', /window\.miniCancelQueue/.test(cli) && /mini_cancel/.test(srv));

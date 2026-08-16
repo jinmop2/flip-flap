@@ -202,9 +202,10 @@ console.log('\n⑩ 나가기·설명·설정·프로필');
   ok('2인전과 같은 자리', /#q-controls \{[^}]*position:absolute[^}]*left:8px/.test(html));
   ok('내 프로필이 판에 보인다', /id="q-meProfile"/.test(html) && /renderGameProfile\('q-meProfile'/.test(c4));
 
-  // 나갈 때 배경음악이 멈춰야 한다 — 2인전은 새로고침으로 저절로 꺼졌다
+  // 나갈 때 판 곡이 계속 흐르면 안 된다 — 2인전은 새로고침으로 저절로 로비 곡이 된다.
+  // 다인전은 화면만 숨기므로 직접 로비 곡으로 바꿔 준다.
   ok('배경음악 정지 함수', /function stopBGM/.test(cli));
-  ok('나갈 때 멈춘다', /q4Quit = function[\s\S]{0,300}stopBGM/.test(c4));
+  ok('나갈 때 로비 곡으로', /q4Quit = function[\s\S]{0,320}startBGM\('lobby'\)/.test(c4));
 }
 
 console.log('\n⑪ 상대 정보·친구 신청');

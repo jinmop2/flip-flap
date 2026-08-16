@@ -670,7 +670,10 @@ let kakaoFirstLogin = false;
   }
 })();
 // ── 타이틀 화면 (구글/카카오/게스트 선택) ──
-function hideTitle() { const t = document.getElementById('title'); if (t) t.classList.add('hide'); }
+function hideTitle() {
+  const t = document.getElementById('title'); if (t) t.classList.add('hide');
+  lobbyBGM();   // 로비에 들어왔다 — 라운지 곡
+}
 function showTitle() { sessionStorage.removeItem('ff_guest'); const t = document.getElementById('title'); if (t) { t.style.display = ''; t.classList.remove('hide'); } }
 
 // ── 코드로 로그인 ──────────────────────────────────────────
@@ -2573,14 +2576,20 @@ function setBgmVolume(v, ramp = 0.2) {
   if (bgmGain) bgmGain.gain.linearRampToValueAtTime(v, AC.currentTime + ramp);
   else if (bgmAudio) bgmAudio.volume = v;   // Web Audio 연결 실패 시 폴백
 }
-function startBGM() {
-  if (bgmOn) return;
+// 곡이 둘이다 — 로비는 라운지 곡, 판에 들어가면 원래 곡.
+// 어느 곡이 돌고 있는지 들고 있어야 "같은 곡이면 그대로 두기" 를 할 수 있다.
+// (판을 오갈 때마다 처음부터 다시 틀면 뚝뚝 끊긴다)
+const BGM_SRC = { lobby: '/lobby.m4a?v=1', game: '/bgm.m4a?v=3' };
+let bgmTrack = null;
+function startBGM(track = 'game') {
+  if (bgmOn && bgmTrack === track) return;      // 같은 곡이 이미 돌고 있다
+  if (bgmOn) stopBGM();                          // 다른 곡이면 갈아 끼운다
   // 다른 앱 음악을 듣는 중이면 우리 음악을 아예 안 켠다.
   // 웹에서는 "섞어서 재생" 을 지시할 방법이 없어서, 켜는 순간 상대 음악이 끊긴다.
   if (keepOtherAudio) return;
-  bgmOn = true;
+  bgmOn = true; bgmTrack = track;
   // AAC(m4a) 한 벌만 쓴다. 지금 쓰는 브라우저는 전부 AAC 를 재생한다.
-  bgmAudio = new Audio('/lobby.m4a?v=1');
+  bgmAudio = new Audio(BGM_SRC[track] || BGM_SRC.game);
   bgmAudio.loop = true;
   bgmAudio.crossOrigin = 'anonymous';
   try {
@@ -2603,8 +2612,16 @@ function stopBGM() {
   if (!bgmAudio) { bgmOn = false; return; }
   try { bgmAudio.pause(); bgmAudio.currentTime = 0; } catch (_) {}
   try { if (bgmGain) bgmGain.disconnect(); } catch (_) {}
-  bgmAudio = null; bgmGain = null; bgmOn = false;
+  bgmAudio = null; bgmGain = null; bgmOn = false; bgmTrack = null;
 }
+
+// 지금 판 안인가 — 어느 곡을 틀지 정할 때 쓴다
+function inGameNow() {
+  return document.body.classList.contains('ingame')
+      || document.body.classList.contains('quad4');
+}
+// 로비 음악을 켠다. 자동재생이 막혀 있으면 첫 터치에서 시작된다(startBGM 안에 처리).
+function lobbyBGM() { startBGM('lobby'); }
 
 // ── 다른 앱 음악 유지 ────────────────────────────────────────
 // 웹은 오디오 세션을 "섞어서" 로 지정할 수 없다. 소리를 내는 순간 듣던 음악이 끊긴다.
@@ -2619,7 +2636,7 @@ window.toggleKeepAudio = function () {
   keepOtherAudio = !keepOtherAudio;
   localStorage.setItem('ff_keepaudio', keepOtherAudio ? 'on' : 'off');
   applyKeepOtherAudio();
-  if (!keepOtherAudio) startBGM();
+  if (!keepOtherAudio) startBGM(inGameNow() ? 'game' : 'lobby');
   applySettings();
 };
 
@@ -2993,6 +3010,7 @@ socket.on('mini_ready', (r) => {
 window.miniStand = function () { miniHideOver(); socket.emit('mini_leave'); };
 function miniHide() {
   clearInterval(miniClock); miniClock = null; miniPrevPot = 0;
+  try { startBGM('lobby'); } catch (_) {}      // 자리에서 일어났다 — 로비 곡으로
   miniHideOver();
   const box = document.getElementById('mini');
   box.classList.remove('on'); box.style.display = 'none';
@@ -3012,6 +3030,7 @@ socket.on('mini_state', (v) => {
     document.getElementById('lobby').style.display = 'none';
     document.body.classList.add('ingame');   // 화면 스크롤 잠금 — 본 게임과 같다
     applyMySkins();                          // 내 테이블·카드 스킨을 미니게임에도
+    try { startBGM('game'); } catch (_) {}
   }
   miniHideOver();                            // 다음 판이 오면 결과를 걷는다
   miniPaint(v);
@@ -4060,7 +4079,7 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spe
   if (vsBot) { de.style.display = ''; de.textContent = { easy:'쉬움', normal:'보통', hard:'어려움', expert:'전문가' }[diff] || diff; }
   else de.style.display = 'none';
   playSound('deal');
-  startBGM();
+  startBGM('game');
 });
 let drewNow = false;
 socket.on('state_update', s => {

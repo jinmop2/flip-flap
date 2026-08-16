@@ -775,7 +775,7 @@
     $('q-turn').textContent = '대기 중'; $('q-deck').textContent = '';
     $('q-status').textContent = '자리에 앉는 중…';
     sfx('deal');
-    try { if (typeof startBGM === 'function') startBGM(); } catch (_) {}
+    try { if (typeof startBGM === 'function') startBGM('game'); } catch (_) {}
   }
 
   window.q4Quick = function () {
@@ -797,7 +797,7 @@
     q4Live = true; q4Room = null; lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
     $('q-status').textContent = '자리 배치 중…';
     sfx('deal');
-    try { if (typeof startBGM === 'function') startBGM(); } catch (_) {}   // 2인전과 같은 배경음악
+    try { if (typeof startBGM === 'function') startBGM('game'); } catch (_) {}   // 2인전과 같은 배경음악
     socket.emit('g4_start', { nick: typeof getNick === 'function' ? getNick() : '나', n: lastSoloN });
   };
 
@@ -815,9 +815,9 @@
 
   window.q4Quit = function () {
     socket.emit('g4_leave');
-    // 2인전은 나갈 때 페이지를 새로고침해서 배경음악이 저절로 꺼진다.
-    // 다인전은 화면만 숨기므로 직접 멈춰야 한다.
-    try { if (typeof stopBGM === 'function') stopBGM(); } catch (_) {}
+    // 2인전은 나갈 때 페이지를 새로고침해서 저절로 로비 곡으로 돌아간다.
+    // 다인전은 화면만 숨기므로 직접 로비 곡으로 바꿔 준다.
+    try { if (typeof startBGM === 'function') startBGM('lobby'); } catch (_) {}
     q4Live = false; q4 = null; q4Room = null; q4Pend = null;
     $('q-startPanel').classList.remove('show');
     document.body.classList.remove('quad4', 'q-n3', 'q-waiting');

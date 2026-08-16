@@ -131,5 +131,26 @@ console.log('\n⑤ 아이템전 진입 위치');
   ok('시작하면 팝업을 닫는다', /window\.startItemGame = function \(\) \{\s*\n\s*closeModePanels\(\);/.test(cli));
 }
 
+console.log('\n⑩ 배경음악 — 로비와 판이 다른 곡');
+{
+  const fs2 = require('fs');
+  ok('곡이 둘이다', /const BGM_SRC = \{ lobby: '\/lobby\.m4a[^']*', game: '\/bgm\.m4a[^']*' \}/.test(cli));
+  ok('두 파일이 다 있다',
+     fs2.existsSync(src + '/public/lobby.m4a') && fs2.existsSync(src + '/public/bgm.m4a'));
+  // 로비 곡은 모바일에서 받는 것이라 가벼워야 한다
+  const kb = Math.round(fs2.statSync(src + '/public/lobby.m4a').size / 1024);
+  ok('로비 곡이 1MB 아래', kb < 1024, kb + 'KB');
+  ok('로비에 들어오면 로비 곡', /function hideTitle\(\)[\s\S]{0,160}lobbyBGM\(\)/.test(cli));
+  ok('판에 들어가면 판 곡', /startBGM\('game'\)/.test(cli));
+  ok('다인전도 판 곡', /startBGM\('game'\)/.test(c4));
+  ok('다인전에서 나오면 로비 곡', /startBGM\('lobby'\)/.test(c4));
+  // 같은 곡이면 다시 틀지 않는다 — 판을 오갈 때마다 처음부터 시작하면 뚝뚝 끊긴다
+  ok('같은 곡이면 그대로 둔다', /if \(bgmOn && bgmTrack === track\) return;/.test(cli));
+  ok('다른 곡이면 갈아 끼운다', /if \(bgmOn\) stopBGM\(\);/.test(cli));
+  // 듣던 음악 유지
+  ok('켜면 우리 소리를 안 낸다', /if \(keepOtherAudio\) return;/.test(cli));
+  ok('효과음도 막는다', /playSample[\s\S]{0,90}if \(keepOtherAudio\) return true;/.test(cli));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
