@@ -3906,6 +3906,10 @@ window.closeRoomInvite = function () {
 // 방장·손님이 서로 다른 것을 봐야 해서 서버가 사람마다 따로 보낸다.
 socket.on('room_lobby', (r) => {
   // 들어온 사람 모두 대기실 화면으로. 예전엔 방을 만든 사람만 이 화면을 봤다.
+  // 팝업을 먼저 닫는다 — 예전엔 들어와도 방 목록 창이 위에 그대로 떠 있어서
+  // 소리와 효과만 나고 "안 들어가진 것처럼" 보였다.
+  if (typeof closeModePanels === 'function') closeModePanels();
+  document.querySelectorAll('.lb-modal.show').forEach((m) => m.classList.remove('show'));
   document.getElementById('lobbyMain').style.display = 'none';
   document.getElementById('waitCard').style.display = 'flex';
   roomIsHost = !!r.host;

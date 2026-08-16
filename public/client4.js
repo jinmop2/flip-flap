@@ -839,6 +839,12 @@
     if (typeof socket === 'undefined' || !socket) return setTimeout(bind, 200);
 
     socket.on('g4_begin', (d) => {
+      // 판이 시작됐는데 화면이 안 켜져 있으면 g4_state 를 전부 버려서
+      // 카드도 못 고르고 배팅도 못 한다. 어떤 경로로 들어왔든 여기서 켠다.
+      if (!q4Live) {
+        const wc = document.getElementById('waitCard'); if (wc) wc.style.display = 'none';
+        enterWaiting();
+      }
       q4Room = d.roomId; mySeat = d.me || 0; lastRecv = Date.now(); q4Pend = null;
       resetFx();   // 새 판 — 딜·뒤집기 연출을 처음부터 다시
       $('q-startPanel').classList.remove('show');

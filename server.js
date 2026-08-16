@@ -1593,9 +1593,10 @@ io.on('connection', (socket) => {
     if (!room || room.game || socket.playerIndex !== 0) return;
     if (room.players.filter(Boolean).length < 2) return socket.emit('error', '상대가 아직 없어요.');
     if (mode === 'item' || mode === 'classic') { room.itemMode = mode === 'item'; room.mode = mode; }
-    room.game = createGame();
-    room.game.itemMode = !!room.itemMode;
-    if (room.itemMode) { room.game.items = { 1: [], 2: [] }; room.game.itemUsed = { 1: false, 2: false }; }
+    // createGame 에 모드를 넘겨야 한다. 손으로 items/itemUsed 만 채웠더니
+    // fx(이번 경매 한정 효과)가 없어서 아이템을 쓰는 순간 전부 튕겼다 —
+    // "멀티 아이템전이 작동 안 한다" 의 정체.
+    room.game = createGame(!!room.itemMode);
     room.startedAt = Date.now();
     io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: room.nicks,
       profiles: room.profiles, itemMode: !!room.itemMode });
