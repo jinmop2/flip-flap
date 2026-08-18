@@ -3495,7 +3495,7 @@ socket.on('clan_chat', ({ msg }) => {
 // 3인용·4인용은 규칙이 같고 손패·덱 장수만 다르다. 그래서 상자는 하나를 같이 쓰고,
 // 다른 숫자만 탭 아래 한 줄로 띄운다 — 같은 글을 두 벌로 두면 한쪽만 고치게 된다.
 const RULES_MODALS = { '2': 'rulesModal', '3': 'rules4Modal', '4': 'rules4Modal',
-  item: 'rulesItemModal', mini: 'rulesMiniModal' };
+  item: 'rulesItemModal', mini: 'rulesMiniModal', etc: 'rulesEtcModal' };
 const RULES_N = { '3': { hand: 7, deck: 17 }, '4': { hand: 6, deck: 14 } };
 let rulesCur = '2';
 

@@ -12,14 +12,15 @@ const i18n = fs.readFileSync(src + '/public/i18n.js', 'utf8');
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra !== undefined ? '  ' + extra : ''))); };
 
-console.log('① 다섯 개 탭');
+console.log('① 여섯 개 탭');
 {
-  const TABS = [['2', '2인용'], ['3', '3인용'], ['4', '4인용'], ['item', '아이템전'], ['mini', '미니게임']];
+  const TABS = [['2', '2인용'], ['3', '3인용'], ['4', '4인용'], ['item', '아이템전'],
+                ['mini', '미니게임'], ['etc', '기타']];
   for (const [key, label] of TABS) {
     ok(`${label} 탭`, html.includes(`data-rt="${key}"`) && html.includes(`rulesTab('${key}')`));
   }
   // 창마다 같은 탭 줄을 갖고 있어야 어디서 열어도 오갈 수 있다
-  const modals = ['rulesModal', 'rules4Modal', 'rulesItemModal', 'rulesMiniModal'];
+  const modals = ['rulesModal', 'rules4Modal', 'rulesItemModal', 'rulesMiniModal', 'rulesEtcModal'];
   for (const m of modals) ok(`${m} 에 탭이 있다`, new RegExp(`id="${m}"[\\s\\S]{0,600}rules-tabs`).test(html));
   ok('탭 줄이 창 수만큼 있다', (html.match(/class="rules-tabs"/g) || []).length === modals.length,
      String((html.match(/class="rules-tabs"/g) || []).length));
@@ -32,7 +33,7 @@ console.log('\n② 탭은 상자 밖에 있다');
   ok('탭이 상자보다 먼저 온다',
      /class="rules-wrap">\s*<div class="rules-tabs"/.test(html));
   // 갈아끼우는 블록 안에 탭이 들어가 있으면 영어판에서 사라진다
-  for (const blk of ['rules2', 'rules4', 'rulesMini', 'rulesItem']) {
+  for (const blk of ['rules2', 'rules4', 'rulesMini', 'rulesItem', 'rulesEtc']) {
     const at = i18n.indexOf(`${blk}: \``);
     if (at < 0) { ok(`${blk} 영어판이 있다`, false); continue; }
     const end = i18n.indexOf('`,', at);

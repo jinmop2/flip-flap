@@ -2970,6 +2970,15 @@
     .rules-note b { color:#ffe9a8; }
     .rules-tabs .rt.on { background:linear-gradient(180deg,#c9973a,#8d5f16); border-color:#e0b45c; color:#2a1206; }
     @media (max-width:520px) { .rules-tabs .rt { font-size:.72rem; padding:6px 9px; } }
+    /* 기타 탭의 작은 표 — 수치를 줄글에 섞으면 안 읽힌다 */
+    .etc-table { display:flex; flex-direction:column; gap:2px; margin:8px 0 10px; font-size:.8rem; }
+    .etc-row { display:flex; gap:8px; padding:6px 10px; border-radius:8px; background:rgba(255,255,255,.03); }
+    .etc-row > span { flex:1; min-width:0; }
+    .etc-row > span:first-child { flex:1.5; color:#d8c8a8; }
+    .etc-row > span:not(:first-child) { text-align:right; color:#ffe9a8; font-weight:700; }
+    .etc-row.etc-head { background:rgba(200,160,0,.12); }
+    .etc-row.etc-head > span { color:#c8a86a; font-weight:700; text-align:right; }
+    .etc-row.etc-head > span:first-child { text-align:left; }
     .rules-box h2 { font-family:'Bangers'; font-size:2rem; letter-spacing:2px; margin-bottom:4px;
       background:linear-gradient(180deg,#fff3c8,#f5cf6e 45%,#c8912e); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
       filter:drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
@@ -3767,8 +3776,10 @@
 <!-- 솔로플레이 팝업 (난이도 선택) -->
 <div class="lb-modal" id="soloModal" onclick="if(event.target===this)closeModePanels()">
   <div class="lb-box">
-    <div class="lb-title" style="text-align:center">AI 난이도 선택</div>
-    <div class="sec-title" style="justify-content:center;margin-top:-4px">고르면 바로 시작 · 승리 시 코인 보상</div>
+    <div class="lb-title" style="text-align:center">솔로플레이</div>
+
+    <!-- 클래식 → 아이템전 → 다인전 순. 기본 규칙부터 눈에 들어와야 한다 -->
+    <div class="sec-title" style="justify-content:center"><span>클래식</span></div>
     <div class="diff-cards">
       <button class="diff-card d-easy" onclick="soloPlay('easy')">
         <span class="dc-stars">★<i>★★</i></span>
@@ -3786,7 +3797,10 @@
         <span class="dc-reward">승리 🪙40</span>
       </button>
     </div>
-    <!-- 다인전 AI전도 솔로 안이 제자리다 — 사람 없이 혼자 하는 판이라 -->
+
+    <div class="sec-title" style="margin-top:10px"><span>아이템전 <span class="mc-tag">이벤트</span></span></div>
+    <button class="btn btn-item" onclick="startItemGame()">🎪 아이템전 — AI와 대전</button>
+
     <div class="sec-title" style="margin-top:10px"><span>다인전 <span class="mc-tag beta">3·4인</span></span></div>
     <div class="q-nsel">
       <button class="q-ncard" onclick="q4Start(3)">
@@ -3801,12 +3815,6 @@
       </button>
     </div>
 
-    <!-- 아이템전은 따로 있던 로비 버튼을 여기로 들여왔다. AI전은 솔로 안이 제자리다. -->
-    <div class="sec-title" style="margin-top:10px"><span>아이템전 <span class="mc-tag">이벤트</span></span></div>
-    <button class="btn btn-item" onclick="startItemGame()">🎪 아이템전 — AI와 대전</button>
-    <p class="auth-hint" style="text-align:center;margin:4px 0 0;font-size:.68rem">
-      경매에서 지면 아이템을 받아요 · 랭킹 미반영, 코인·경험치만
-    </p>
     <button class="btn btn-outline" onclick="closeModePanels()">닫기</button>
   </div>
 </div>
@@ -3817,9 +3825,6 @@
     <div class="lb-title"><span data-ico="⚔️"></span> 멀티플레이</div>
     <!-- 랭크게임 — RP 가 오가는 유일한 곳 -->
     <button class="btn btn-gold" onclick="quickMatch()">🏆 랭크게임 (무작위 매칭)</button>
-    <p class="auth-hint" style="text-align:center;margin:2px 0 8px;font-size:.68rem">
-      여기서 붙은 판만 RP 가 오르내려요
-    </p>
     <div class="sec-title"><span>빠른 입장 <span class="mc-tag">RP 없음</span></span></div>
     <div class="qenter-grid">
       <button class="btn btn-outline btn-sm" onclick="quickJoin('classic')">🃏 클래식</button>
@@ -4290,6 +4295,7 @@
       <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
       <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+      <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
     <div class="rules-note" id="rules4Note"></div>
   <div id="rulesBox4" class="rules-box" data-i18n-block="rules4">
@@ -4397,6 +4403,7 @@
       <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
       <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+      <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
   <div class="rules-box" data-i18n-block="rulesMini">
     <span class="close-x" onclick="toggleRulesMini(false)">×</span>
@@ -4483,6 +4490,7 @@
       <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
       <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+      <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
     <div class="rules-box" data-i18n-block="rulesItem">
       <span class="close-x" onclick="toggleRulesItem(false)">×</span>
@@ -4540,6 +4548,105 @@
   </div>
 </div>
 
+<div id="rulesEtcModal" class="rules-modal" onclick="if(event.target===this)rulesClose()">
+  <div class="rules-wrap">
+    <div class="rules-tabs" role="tablist">
+      <button class="rt" data-rt="2" onclick="rulesTab('2')">2인용</button>
+      <button class="rt" data-rt="3" onclick="rulesTab('3')">3인용</button>
+      <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
+      <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
+      <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+      <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
+    </div>
+    <div class="rules-box" data-i18n-block="rulesEtc">
+      <span class="close-x" onclick="rulesClose()">×</span>
+      <h2>기타</h2>
+      <p style="color:#8a7a80">급수·RP·레벨·보상이 어떻게 움직이는지 한자리에 모았습니다.</p>
+
+      <h3><span data-ico="🏅"></span> 급수와 단</h3>
+      <p>바둑식 사다리입니다. <b>10급에서 시작해 1급까지</b>는 RP 만 채우면 자동으로 오르고,
+         <b>한 번 오른 급수는 내려가지 않습니다.</b></p>
+      <div class="etc-table">
+        <div class="etc-row etc-head"><span>등급</span><span>필요 RP</span></div>
+        <div class="etc-row"><span>10급 → 1급</span><span>0 → 2,025</span></div>
+        <div class="etc-row"><span>초단</span><span>2,475</span></div>
+        <div class="etc-row"><span>2단 ~ 9단</span><span>350씩 더</span></div>
+        <div class="etc-row"><span>ACE</span><span>RP 순위 상위 100명</span></div>
+      </div>
+      <p><b>단부터는 승단전</b>입니다. RP 를 채우면 자격이 생기고, <b>5판 중 3승</b>을 해야 실제로 오릅니다.
+         승단전에서 떨어지면 <b>RP 100</b>이 깎입니다.</p>
+      <p style="color:#8a7a80;font-size:.78rem">ACE 는 정원 100명이라 RP 순위로 자리가 오갑니다.
+         단·ACE 는 <b>3일 이상 안 오면 하루 10 RP</b>씩 줄어듭니다(급수는 안 깎입니다).</p>
+
+      <h3><span data-ico="📈"></span> RP — 랭크게임에서만</h3>
+      <p><b>랭크게임(무작위 매칭)에서 붙은 판만</b> RP 가 오르내립니다.
+         방 만들기·빠른 입장·친구방·아이템전·대회는 코인과 경험치만 줍니다.</p>
+      <div class="etc-table">
+        <div class="etc-row etc-head"><span>결과</span><span>RP</span></div>
+        <div class="etc-row"><span>승</span><span>+25</span></div>
+        <div class="etc-row"><span>패</span><span>−18</span></div>
+        <div class="etc-row"><span>3연승부터</span><span>연승당 +5 (최대 +15)</span></div>
+      </div>
+      <p>실력 차가 나면 값이 달라집니다. RP 가 <b>300 이상 높은 상대</b>를 이기면 <b>1.3배</b>,
+         그만큼 낮은 상대를 이기면 <b>0.7배</b>입니다.</p>
+      <p style="color:#8a7a80;font-size:.78rem">다인전은 순위로 갈립니다 — 1위 +25, 2위 +8, 3위 −8, 4위 −22.</p>
+
+      <h3><span data-ico="⭐"></span> 레벨과 경험치</h3>
+      <p>레벨은 판을 할수록 오르기만 합니다. 다음 레벨까지 필요한 경험치는</p>
+      <div class="etc-table">
+        <div class="etc-row etc-head"><span>구간</span><span>필요 XP</span></div>
+        <div class="etc-row"><span>1~9레벨</span><span>레벨×25 + 25</span></div>
+        <div class="etc-row"><span>10~19레벨</span><span>레벨×100</span></div>
+        <div class="etc-row"><span>20레벨 이상</span><span>레벨×150</span></div>
+      </div>
+      <p style="color:#8a7a80;font-size:.78rem">클랜을 만들려면 <b>레벨 5</b>와 <b>🪙1,000</b>이 필요합니다.</p>
+
+      <h3><span data-ico="🪙"></span> 판이 끝나면 받는 것</h3>
+      <div class="etc-table">
+        <div class="etc-row etc-head"><span>상대</span><span>승</span><span>패</span></div>
+        <div class="etc-row"><span>AI 쉬움</span><span>🪙5 · 5XP</span><span>—</span></div>
+        <div class="etc-row"><span>AI 보통</span><span>🪙15 · 10XP</span><span>3XP</span></div>
+        <div class="etc-row"><span>AI 전문가</span><span>🪙40 · 20XP</span><span>🪙5 · 5XP</span></div>
+        <div class="etc-row"><span>사람</span><span>🪙60 · 50XP</span><span>🪙25 · 20XP</span></div>
+      </div>
+      <p style="color:#8a7a80;font-size:.78rem">너무 짧게 끝난 판(5턴 미만 또는 30초 미만)은 보상이 없습니다.
+         같은 상대와는 <b>하루 3판</b>까지만 보상이 인정됩니다.</p>
+
+      <h3><span data-ico="🎁"></span> 매일 받는 것</h3>
+      <ul>
+        <li><b>출석</b> — 하루 🪙30 (연속으로 오면 더 붙습니다)</li>
+        <li><b>하루 첫 승</b> — 🪙100 (사람 상대 또는 전문가 AI 승리)</li>
+        <li><b>싸이클링</b> — 2·3·4·6 세트를 각각 한 번씩 완성하면 🪙400</li>
+        <li><b>🍀 행운의 명패</b>를 차고 있으면 출석에 🪙50 추가</li>
+      </ul>
+
+      <h3><span data-ico="🎪"></span> 모드별로 무엇이 걸리나</h3>
+      <div class="etc-table">
+        <div class="etc-row etc-head"><span>모드</span><span>RP</span><span>코인·XP</span></div>
+        <div class="etc-row"><span>랭크게임</span><span>○</span><span>○</span></div>
+        <div class="etc-row"><span>빠른 입장</span><span>×</span><span>○</span></div>
+        <div class="etc-row"><span>방 만들기·친구방</span><span>×</span><span>○</span></div>
+        <div class="etc-row"><span>아이템전</span><span>×</span><span>○</span></div>
+        <div class="etc-row"><span>솔로플레이 (AI)</span><span>×</span><span>○</span></div>
+        <div class="etc-row"><span>대회</span><span>×</span><span>우승 상금</span></div>
+      </div>
+
+      <h3><span data-ico="🏆"></span> 대회</h3>
+      <p>매시 <b>정각과 30분</b>에 열립니다. 참가비 <b>🪙200</b>, 우승 <b>🪙1,000</b> · 준우승 <b>🪙200</b>.
+         8강·4강은 단판, 결승은 3판 2선승이고 모든 경기는 2인전입니다.
+         시작할 때 자리가 비면 AI 가 채웁니다.</p>
+
+      <h3><span data-ico="🌙"></span> 미니게임의 달</h3>
+      <p>자리에 앉을 때 코인을 <b>달</b>로 바꿔 갑니다 — <b>🪙200 = 2,000달</b>(1코인에 10달).
+         가진 만큼 최대 🪙200, 최소 🪙20까지 앉을 수 있고, 일어설 때 남은 달을 코인으로 되돌려 받습니다.</p>
+
+      <h3><span data-ico="🎰"></span> 뽑기와 파편</h3>
+      <p>겹치는 물건이 나오면 <b>파편</b>으로 바뀝니다. 파편은 상점에서 원하는 물건과 바꿀 수 있어요 —
+         운이 나빠도 결국은 갖고 싶은 것에 닿게 하려는 장치입니다.</p>
+    </div>
+  </div>
+</div>
+
 <div id="rulesModal" class="rules-modal" onclick="if(event.target===this)toggleRules(false)">
   <div class="rules-wrap">
     <div class="rules-tabs" role="tablist">
@@ -4548,6 +4655,7 @@
       <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
       <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+      <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
   <div id="rulesBox" class="rules-box" data-i18n-block="rules2">
     <span class="close-x" onclick="toggleRules(false)">×</span>

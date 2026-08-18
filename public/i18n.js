@@ -18,6 +18,12 @@
   // 한국어 원문 → 영어. 순서는 화면 순서를 따른다.
   const EN = {
 
+    '솔로플레이': 'Solo play',
+    '클래식': 'Classic',
+    '기타': 'More',
+    '급수·RP·레벨·보상이 어떻게 움직이는지 한자리에 모았습니다.':
+      'Ranks, RP, levels and rewards — all in one place.',
+
     // ── 이번에 새로 들어온 문구 ──
     '들어가기': 'Enter',
     '내 방': 'My room',
@@ -68,8 +74,6 @@
     '온라인 대전': 'Online Match',
     '아이템전': 'Item Battle',
     '\ud83c\udfaa 아이템전 — AI와 대전': '\ud83c\udfaa Item Battle — vs AI',
-    '경매에서 지면 아이템을 받아요 · 랭킹 미반영, 코인·경험치만':
-      'Lose an auction, get an item · no rank change, coins and XP only',
 
     '이벤트': 'Event',
     '다인전': 'Multiplayer',
@@ -464,9 +468,7 @@
     // ── 화면 라벨 ──
     'FLIP FLAP — 경매·블러핑 심리전 카드 보드게임': 'FLIP FLAP — an auction & bluffing card game',
     '로그인하면 랭크·코인·전적이 저장돼요': 'Log in to save your rank, coins and history',
-    'AI 난이도 선택': 'Choose AI Difficulty',
     'AI 대전': 'vs AI',
-    '고르면 바로 시작 · 승리 시 코인 보상': 'Pick one to start — win to earn coins',
     '승리 🪙5': 'Win 🪙5',
     '승리 🪙15': 'Win 🪙15',
     '승리 🪙40': 'Win 🪙40',
@@ -1145,6 +1147,94 @@
   // 그런 덩어리는 통째로 영어판을 따로 두고 갈아 끼운다.
   const BLOCKS = {
     // 아이템전 설명서 — 영어판
+    rulesEtc: `
+    <span class="close-x" onclick="rulesClose()">\u00d7</span>
+    <h2>More</h2>
+    <p style="color:#8a7a80">Ranks, RP, levels and rewards \u2014 all in one place.</p>
+
+    <h3><span data-ico="\ud83c\udfc5"></span> Kyu and dan</h3>
+    <p>A Go-style ladder. From <b>10 kyu up to 1 kyu</b> you rise automatically as RP accumulates,
+       and <b>a rank you have reached is never taken away.</b></p>
+    <div class="etc-table">
+      <div class="etc-row etc-head"><span>Rank</span><span>RP needed</span></div>
+      <div class="etc-row"><span>10 kyu \u2192 1 kyu</span><span>0 \u2192 2,025</span></div>
+      <div class="etc-row"><span>1 dan</span><span>2,475</span></div>
+      <div class="etc-row"><span>2 dan \u2013 9 dan</span><span>+350 each</span></div>
+      <div class="etc-row"><span>ACE</span><span>top 100 by RP</span></div>
+    </div>
+    <p><b>From 1 dan you must pass a promotion series.</b> Reaching the RP only earns you the attempt \u2014
+       you then need <b>3 wins out of 5</b>. Failing costs <b>100 RP</b>.</p>
+    <p style="color:#8a7a80;font-size:.78rem">ACE holds only 100 seats, so places change hands by RP ranking.
+       Dan and ACE players lose <b>10 RP per day after 3 days away</b> (kyu ranks never decay).</p>
+
+    <h3><span data-ico="\ud83d\udcc8"></span> RP \u2014 ranked matches only</h3>
+    <p><b>Only games from the ranked match button</b> move your RP.
+       Created rooms, quick join, friend games, item battles and tournaments give coins and XP only.</p>
+    <div class="etc-table">
+      <div class="etc-row etc-head"><span>Result</span><span>RP</span></div>
+      <div class="etc-row"><span>Win</span><span>+25</span></div>
+      <div class="etc-row"><span>Loss</span><span>\u221218</span></div>
+      <div class="etc-row"><span>From 3 wins in a row</span><span>+5 each (max +15)</span></div>
+    </div>
+    <p>A gap in strength changes the figure. Beating someone <b>300 RP above you</b> pays <b>1.3\u00d7</b>;
+       beating someone that far below pays <b>0.7\u00d7</b>.</p>
+    <p style="color:#8a7a80;font-size:.78rem">Multiplayer games settle by placement \u2014 1st +25, 2nd +8, 3rd \u22128, 4th \u221222.</p>
+
+    <h3><span data-ico="\u2b50"></span> Levels and XP</h3>
+    <p>Levels only ever go up. The XP needed for the next one:</p>
+    <div class="etc-table">
+      <div class="etc-row etc-head"><span>Range</span><span>XP needed</span></div>
+      <div class="etc-row"><span>Levels 1\u20139</span><span>level \u00d7 25 + 25</span></div>
+      <div class="etc-row"><span>Levels 10\u201319</span><span>level \u00d7 100</span></div>
+      <div class="etc-row"><span>Level 20+</span><span>level \u00d7 150</span></div>
+    </div>
+    <p style="color:#8a7a80;font-size:.78rem">Founding a clan needs <b>level 5</b> and <b>\ud83e\ude99 1,000</b>.</p>
+
+    <h3><span data-ico="\ud83e\ude99"></span> What a finished game pays</h3>
+    <div class="etc-table">
+      <div class="etc-row etc-head"><span>Opponent</span><span>Win</span><span>Loss</span></div>
+      <div class="etc-row"><span>AI easy</span><span>\ud83e\ude99 5 \u00b7 5 XP</span><span>\u2014</span></div>
+      <div class="etc-row"><span>AI normal</span><span>\ud83e\ude99 15 \u00b7 10 XP</span><span>3 XP</span></div>
+      <div class="etc-row"><span>AI expert</span><span>\ud83e\ude99 40 \u00b7 20 XP</span><span>\ud83e\ude99 5 \u00b7 5 XP</span></div>
+      <div class="etc-row"><span>A person</span><span>\ud83e\ude99 60 \u00b7 50 XP</span><span>\ud83e\ude99 25 \u00b7 20 XP</span></div>
+    </div>
+    <p style="color:#8a7a80;font-size:.78rem">Games that end too quickly (under 5 turns or 30 seconds) pay nothing.
+       Against the same opponent only <b>3 games a day</b> count.</p>
+
+    <h3><span data-ico="\ud83c\udf81"></span> Daily</h3>
+    <ul>
+      <li><b>Check-in</b> \u2014 \ud83e\ude99 30 a day, more on a streak</li>
+      <li><b>First win of the day</b> \u2014 \ud83e\ude99 100 (against a person, or an expert AI)</li>
+      <li><b>Cycling</b> \u2014 complete a 2, 3, 4 and 6 set once each for \ud83e\ude99 400</li>
+      <li>Wearing the <b>\ud83c\udf40 lucky plate</b> adds \ud83e\ude99 50 to check-in</li>
+    </ul>
+
+    <h3><span data-ico="\ud83c\udfaa"></span> What each mode puts at stake</h3>
+    <div class="etc-table">
+      <div class="etc-row etc-head"><span>Mode</span><span>RP</span><span>Coins \u00b7 XP</span></div>
+      <div class="etc-row"><span>Ranked match</span><span>\u25cb</span><span>\u25cb</span></div>
+      <div class="etc-row"><span>Quick join</span><span>\u00d7</span><span>\u25cb</span></div>
+      <div class="etc-row"><span>Created \u00b7 friend rooms</span><span>\u00d7</span><span>\u25cb</span></div>
+      <div class="etc-row"><span>Item battle</span><span>\u00d7</span><span>\u25cb</span></div>
+      <div class="etc-row"><span>Solo (vs AI)</span><span>\u00d7</span><span>\u25cb</span></div>
+      <div class="etc-row"><span>Tournament</span><span>\u00d7</span><span>prize money</span></div>
+    </div>
+
+    <h3><span data-ico="\ud83c\udfc6"></span> Tournaments</h3>
+    <p>They open <b>on the hour and at half past</b>. Entry \ud83e\ude99 200, winner \ud83e\ude99 1,000, runner-up \ud83e\ude99 200.
+       Quarter- and semi-finals are single games, the final is best of three, and every match is 1v1.
+       Empty seats are filled by AI at the start.</p>
+
+    <h3><span data-ico="\ud83c\udf19"></span> Moons in the mini game</h3>
+    <p>Coins become <b>moons</b> when you sit down \u2014 <b>\ud83e\ude99 200 = 2,000 moons</b> (10 moons per coin).
+       You may buy in with up to \ud83e\ude99 200 and at least \ud83e\ude99 20, and whatever moons you have left
+       come back as coins when you stand up.</p>
+
+    <h3><span data-ico="\ud83c\udfb0"></span> Draws and shards</h3>
+    <p>A duplicate turns into <b>shards</b>, and shards buy exactly what you want in the shop \u2014
+       so bad luck still walks you toward the thing you were after.</p>
+`,
+
     rulesItem: `
     <span class="close-x" onclick="toggleRulesItem(false)">\u00d7</span>
     <h2>Item Battle</h2>

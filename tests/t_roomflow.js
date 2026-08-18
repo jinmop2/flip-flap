@@ -64,5 +64,23 @@ ok('빈자리는 자리 수만큼 받는다', /for \(let i = 0; i < cap; i\+\+\)
 ok('방장 승계가 네 자리를 다 훑는다', /for \(let i = 0; i < cap; i\+\+\) if \(room\.players\[i\]\) kept\.push\(i\)/.test(srv));
 ok('대기실이 네 자리로 늘어난다', /wc-seats\.four/.test(htm));
 
+// 기타 탭 · UI 잔소리 정리 · 솔로 순서
+ok('기타 탭이 있다', /data-rt="etc"/.test(htm) && /id="rulesEtcModal"/.test(htm));
+ok('기타 탭에 급수·RP·레벨·보상이 다 있다',
+   ['급수와 단', 'RP — 랭크게임에서만', '레벨과 경험치', '판이 끝나면 받는 것', '매일 받는 것']
+     .every((h) => htm.includes(h)));
+ok('기타 탭 영어판이 있다', /rulesEtc: `/.test(read('public/i18n.js')));
+ok('UI 잔소리는 기타 탭으로 옮겼다',
+   !/고르면 바로 시작 · 승리 시 코인 보상/.test(htm)
+   && !/경매에서 지면 아이템을 받아요 · 랭킹 미반영/.test(htm)
+   && !/여기서 붙은 판만 RP 가 오르내려요/.test(htm));
+{
+  const solo = htm.slice(htm.indexOf('id="soloModal"'), htm.indexOf('멀티플레이 팝업'));
+  // 주석에도 같은 말이 들어 있으므로, 실제로 누르는 버튼의 순서를 본다
+  const order = [...solo.matchAll(/onclick="(soloPlay|startItemGame|q4Start)\(/g)].map((m) => m[1]);
+  ok('솔로는 클래식 → 아이템전 → 다인전 순',
+     order.join(',') === 'soloPlay,soloPlay,soloPlay,startItemGame,q4Start,q4Start', order.join(','));
+}
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
