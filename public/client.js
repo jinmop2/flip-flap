@@ -806,7 +806,29 @@ async function renderLeaderboard(r) {
     if (!r || !r.ok || !r.players.length) { list.innerHTML = '<div class="lb-empty">아직 랭킹이 없어요. 첫 플레이어가 되어보세요!</div>'; return; }
     const myNick = myAccount && myAccount.nick;
     list.innerHTML = '';
-    r.players.forEach(p => {
+
+    // ── 1·2·3등 시상대 ────────────────────────────────────────────
+    // 목록 첫 세 줄로만 보여 주면 1등이 그저 맨 윗줄일 뿐이다.
+    // 2등 왼쪽 · 1등 가운데(높게) · 3등 오른쪽으로 세워 한눈에 보이게 한다.
+    const top = r.players.slice(0, 3);
+    const podBox = document.getElementById('lbPodium');
+    if (podBox) {
+      // 화면 순서는 2 · 1 · 3 이지만 등수는 그대로다
+      const order = [top[1], top[0], top[2]].filter(Boolean);
+      podBox.innerHTML = order.length ? `<div class="lb-podium">${order.map((p) => `
+        <div class="pod pod-${p.no}${myNick && p.nick === myNick ? ' me' : ''}">
+          <div class="pod-ava" style="color:${p.rankColor}">${faceOf(p)}</div>
+          <div class="pod-stand">
+            <div class="pod-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</div>
+            <div class="pod-rp">${p.rp} RP</div>
+            <div class="pod-no">${p.no}</div>
+            <div class="pod-title">${titleTag(p.titleInfo) || ''}</div>
+          </div>
+        </div>`).join('')}</div>` : '';
+    }
+
+    // 시상대에 올린 셋은 목록에서 뺀다 — 같은 사람이 두 번 나올 이유가 없다
+    r.players.slice(3).forEach(p => {
       const row = document.createElement('div');
       row.className = 'lb-row' + (myNick && p.nick === myNick ? ' me' : '');
       row.innerHTML = `<span class="lb-no${p.no <= 3 ? ' top' : ''}">${p.no <= 3 ? rankIco(['🥇','🥈','🥉'][p.no-1]) : p.no}</span>

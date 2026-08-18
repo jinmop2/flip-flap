@@ -3053,6 +3053,61 @@
     }
     .lb-box.rank-box > .lb-title { flex-shrink:0; }
     .lb-box.rank-box .close-x { top:calc(10px + var(--safe-t)); right:12px; }
+    /* ── 1·2·3등 시상대 ──────────────────────────────────────────────
+       2등 왼쪽 · 1등 가운데(높고 크게) · 3등 오른쪽. 아래에서 위로 자란
+       받침 위에 얼굴이 올라앉은 모양이라, 받침을 flex-end 로 바닥에 맞춘다. */
+    #lbPodium { flex-shrink:0; }
+    .lb-podium { display:flex; align-items:flex-end; justify-content:center; gap:6px;
+      padding:2px 2px 8px; }
+    .pod { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; }
+    .pod-ava {
+      width:54px; height:54px; border-radius:50%; margin-bottom:-14px; z-index:2;
+      display:flex; align-items:center; justify-content:center; font-size:1.9rem;
+      background:radial-gradient(circle at 50% 35%, #3a2440, #1c1020);
+      border:2px solid rgba(200,160,0,.5); box-shadow:0 4px 14px rgba(0,0,0,.55);
+    }
+    .pod-ava .ava-art { width:100%; height:100%; vertical-align:0; }
+    .pod-nick {
+      font-size:.76rem; font-weight:800; color:#f5e6c0; z-index:2;
+      max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      text-shadow:0 2px 6px rgba(0,0,0,.8);
+    }
+    .pod-stand {
+      width:100%; border-radius:12px 12px 0 0; padding:18px 4px 10px;
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+      border:1.5px solid rgba(200,160,0,.35); border-bottom:none;
+      background:linear-gradient(180deg,#43213a,#2a1226);
+      box-shadow:inset 0 1px 0 rgba(255,215,120,.18);
+    }
+    .pod-rp { font-size:.78rem; font-weight:900; color:#ffe9a8; white-space:nowrap; }
+    .pod-no {
+      width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-family:'Fredoka'; font-size:.9rem; font-weight:900; color:#2a1206;
+      background:linear-gradient(180deg,#e8e8ee,#9aa0aa); border:1.5px solid rgba(255,255,255,.5);
+    }
+    .pod-title { min-height:14px; display:flex; align-items:center; justify-content:center; }
+    .pod-title .title-tag { font-size:.56rem; white-space:nowrap; }
+    .pod-title .ti-ico { width:.7em; height:.7em; }
+
+    /* 1등 — 가운데에서 더 높고 크게 */
+    .pod-1 .pod-ava { width:66px; height:66px; font-size:2.3rem; border-color:var(--gold);
+      box-shadow:0 0 18px rgba(255,215,120,.45), 0 4px 14px rgba(0,0,0,.55); }
+    .pod-1 .pod-nick { font-size:.86rem; color:#ffe9a8; }
+    .pod-1 .pod-stand { padding-top:22px; padding-bottom:22px; border-color:var(--gold);
+      background:linear-gradient(180deg,#6d2f5e,#3d1436); }
+    .pod-1 .pod-rp { font-size:.88rem; color:#fff2c8; }
+    .pod-1 .pod-no { width:30px; height:30px; font-size:1rem;
+      background:linear-gradient(180deg,#ffe9a8,#c8912e); }
+    /* 3등은 조금 낮게 */
+    .pod-3 .pod-stand { padding-bottom:6px; }
+    .pod-3 .pod-no { background:linear-gradient(180deg,#e0a878,#a06a3c); }
+    .pod.me .pod-stand { box-shadow:inset 0 0 0 1px var(--gold), inset 0 1px 0 rgba(255,215,120,.18); }
+    @media (max-width:360px) {
+      .pod-ava { width:46px; height:46px; font-size:1.6rem; }
+      .pod-1 .pod-ava { width:56px; height:56px; font-size:2rem; }
+      .pod-nick { font-size:.7rem; } .pod-rp { font-size:.72rem; }
+    }
+
     /* 목록만 스크롤한다 — 제목과 닫기는 제자리 */
     .lb-box.rank-box #lbList {
       flex:1; min-height:0; overflow-y:auto;
@@ -4153,6 +4208,7 @@
 <div class="lb-modal" id="lbModal" onclick="if(event.target===this)closeLb()">
   <div class="lb-box rank-box">
     <div class="lb-title"><span data-ico="🏆"></span> 랭킹 <span class="close-x" onclick="closeLb()">×</span></div>
+    <div id="lbPodium"></div>
     <div id="lbList"></div>
   </div>
 </div>

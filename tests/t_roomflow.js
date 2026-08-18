@@ -225,5 +225,14 @@ ok('메뉴바 자리만큼 창 아래를 비운다', /body:not\(\.ingame\):not\(
   }
 }
 
+// 1·2·3등 시상대
+ok('시상대 자리가 목록 밖에 있다', /<div id="lbPodium"><\/div>\s*<div id="lbList">/.test(htm));
+ok('2 · 1 · 3 순서로 세운다', /\[top\[1\], top\[0\], top\[2\]\]\.filter\(Boolean\)/.test(cli));
+ok('얼굴·닉·RP·등수·칭호를 담는다',
+   ['pod-ava', 'pod-nick', 'pod-rp', 'pod-no', 'pod-title'].every((c) => cli.includes(c)));
+ok('칭호는 같은 함수로 그린다', /pod-title">\$\{titleTag\(p\.titleInfo\)/.test(cli));
+ok('1등은 더 높고 크다', /\.pod-1 \.pod-ava \{[^}]*width:66px/.test(htm) && /\.pod-1 \.pod-stand \{[^}]*padding-top:22px/.test(htm));
+ok('시상대에 올린 셋은 목록에서 뺀다', /r\.players\.slice\(3\)\.forEach/.test(cli));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
