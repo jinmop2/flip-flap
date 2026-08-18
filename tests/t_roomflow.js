@@ -27,8 +27,11 @@ ok('자리 넷짜리로 옮겨져도 화면을 켠다', /if \(!q4Live\)[\s\S]{0,
 // 화면 비율·줄바꿈·오디오 — 이번에 손본 것들
 const htm = read('public/index.html');
 ok('한글이 낱말 단위로만 끊긴다', /word-break:\s*keep-all/.test(htm) && !/word-break:break-all/.test(htm));
-ok('가로 화면은 세로 프레임 안에 넣는다', /@media \(orientation:landscape\)[\s\S]{0,400}--frame-w/.test(htm));
-ok('프레임이 너무 좁아지지 않는다', /max\(340px/.test(htm));
+// 화면에 맞춰 판 전체를 키우고 줄인다 (폭만 늘리면 비율이 어긋난다)
+ok('판을 배율로 맞춘다', /body\.board-zoom #game[^}]*zoom:var\(--board-zoom/.test(htm));
+ok('폰 세로는 손대지 않는다', /const phonePortrait = vw <= 700 && vh > vw/.test(cli));
+ok('배율을 화면에서 계산한다', /Math\.min\(\(vw - 16\) \/ BOARD_W, \(vh - 8\) \/ BOARD_H\)/.test(cli));
+ok('가로를 막지 않는다', !/rotateNote/.test(htm) && !/lock\('portrait'\)/.test(cli));
 ok('듣던 음악 유지 토글은 없앴다', !/toggleKeepAudio/.test(htm) && !/togKeep/.test(htm));
 ok('밖의 음악에 자동으로 양보한다', /yieldToOtherAudio/.test(cli));
 // 접힌 상태를 저장하지 않는다 — 새로고침하면 늘 다시 시도한다
@@ -154,8 +157,7 @@ ok('차례가 아니면 손패를 잠근 티를 낸다', /el\.classList\.toggle\
 ok('말 대신 흐리게만 알린다', !/handWait/.test(htm) && !/진행자가 먼저 배팅해요/.test(htm));
 ok('잠기면 흐리게', /#myHand\.locked \.card \{[^}]*opacity:\.5/.test(htm));
 ok('올리면 반응은 있다', /\n {4}\.card\.selectable:hover \{ border-color/.test(htm));
-ok('눕히면 판을 덮는다', /id="rotateNote"/.test(htm) && /orientation:landscape\) and \(hover:none\) and \(pointer:coarse\)/.test(htm));
-ok('앱에서는 진짜로 잠근다', /so\.lock\('portrait'\)/.test(cli));
+ok('가로로도 할 수 있다', !/id="rotateNote"/.test(htm));
 
 // 결과창이 남아 판을 덮는 것 · 두 자리 등급
 ok('판이 도는 중이면 결과창을 내린다',

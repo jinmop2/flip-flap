@@ -3649,30 +3649,14 @@
       #myZone { padding-bottom:calc(16px + var(--safe-b)); }
       #myProfile { transform:scale(.9); transform-origin:bottom right; }
     }
-    /* ── 가로 화면 · PC: 가운데 세로 프레임 ─────────────────────────────
-       세로가 본판이다. 폰 세로 비율에 맞춰 짠 화면이라, 가로로 넓어지면
-       카드와 글씨 비율이 통째로 어긋난다(PC 에서 "비율이 안 맞는다").
-       그래서 가로에서는 늘리지 않고, 화면 높이에 맞춘 세로 틀 안에 넣고
-       양옆은 배경으로 남긴다. 폰을 눕혀도 같은 틀이 쓰인다. */
-    @media (orientation:landscape) {
-      /* 높이에 맞춘 폭. 다만 340px 아래로는 줄이지 않는다 —
-         판이 그보다 좁아지면 손패와 경매대가 서로 밀려 깨진다. */
-      :root { --frame-w: min(100vw, max(340px, calc(var(--app-h, 100vh) * 0.66))); }
-      #game, #mini { max-width:var(--frame-w); max-height:var(--app-h, 100vh); }
-      #game4 {
-        left:50%; right:auto; transform:translateX(-50%);
-        width:var(--frame-w);
-        border-left:1.5px solid rgba(185,141,52,.5);
-        border-right:1.5px solid rgba(185,141,52,.5);
-      }
-      #navBar, #profileBar { width:min(480px, var(--frame-w)); }
-      /* 로비 본문도 같은 폭 안에 — 버튼이 가로로 길게 늘어지지 않게 */
-      #lobby { width:min(480px, var(--frame-w)); margin:0 auto; }
-      /* 틀 바깥은 판을 비추는 조명만 */
-      body::after {
-        content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
-        background:radial-gradient(ellipse 60% 80% at 50% 45%, rgba(0,0,0,0) 40%, rgba(0,0,0,.45) 100%);
-      }
+    /* ── 화면에 맞춰 판을 통째로 키우고 줄인다 ─────────────────────────
+       폰 세로는 원래 이 비율로 만든 것이라 손대지 않는다. 그 밖(컴퓨터·가로)
+       에서는 설계 크기(780×920)를 화면에 꽉 차게 배율만 준다. 폭을 억지로
+       좁히면 카드와 글씨 비율이 어긋나므로, 늘리지 않고 통째로 키운다.
+       zoom 은 transform 과 달리 레이아웃·클릭 위치가 그대로 따라온다. */
+    body.board-zoom #game, body.board-zoom #mini {
+      width:780px; max-width:none; height:920px; max-height:none;
+      zoom:var(--board-zoom, 1);
     }
     /* 눕힌 폰처럼 높이가 아주 낮을 때 — 위아래 여백을 더 줄인다 */
     @media (orientation:landscape) and (max-height:480px) {
@@ -3680,24 +3664,6 @@
       #game4 { padding:calc(3px + var(--safe-t)) 6px calc(3px + var(--safe-b)); gap:3px; }
       #navBar { padding:calc(3px + var(--safe-t)) 4px 3px; }
     }
-    /* ── 세로 고정 ────────────────────────────────────────────────
-       판은 세로로만 한다. 앱(홈 화면에 추가·플레이스토어)에서는 manifest 의
-       orientation 이 막아 주지만, 그냥 브라우저 탭에서는 브라우저가 회전을
-       막는 방법을 주지 않는다. 그래서 눕히면 판을 덮고 돌려 달라고 한다.
-       손가락으로 쓰는 기기에서만 — 데스크톱 창은 가로가 정상이다. */
-    #rotateNote { display:none; }
-    @media (orientation:landscape) and (hover:none) and (pointer:coarse) {
-      #rotateNote {
-        display:flex; position:fixed; inset:0; z-index:9998;
-        flex-direction:column; align-items:center; justify-content:center; gap:14px;
-        background:#180509; color:#f0e2c8; text-align:center; padding:24px;
-      }
-      #rotateNote .rn-ico { font-size:3rem; animation:rnTurn 2s ease-in-out infinite; }
-      #rotateNote .rn-t { font-size:1.05rem; font-weight:800; color:#ffe9a8; }
-      #rotateNote .rn-s { font-size:.82rem; color:#c8a86a; line-height:1.6; }
-      @keyframes rnTurn { 0%,45% { transform:rotate(90deg) } 55%,100% { transform:rotate(0deg) } }
-    }
-    @media (prefers-reduced-motion:reduce) { #rotateNote .rn-ico { animation:none; } }
   </style>
 </head>
 <body>
@@ -3748,13 +3714,6 @@
 </div>
 
 <div id="connStatus">서버 연결 중…</div>
-
-<!-- 눕히면 판을 덮는다 — 세로로만 한다 -->
-<div id="rotateNote">
-  <div class="rn-ico">📱</div>
-  <div class="rn-t">세로로 돌려주세요</div>
-  <div class="rn-s">FLIP FLAP 은 세로 화면으로만 즐길 수 있어요.</div>
-</div>
 
 <div id="lobby">
   <div class="logo">

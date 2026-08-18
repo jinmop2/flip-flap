@@ -36,12 +36,31 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', pinViewport);
 }
 
-// 세로 고정. 앱으로 설치했거나 전체화면이면 진짜로 잠글 수 있다 —
-// 그냥 브라우저 탭에서는 브라우저가 잠글 방법을 안 준다(그때는 화면을 덮는다).
-try {
-  const so = screen.orientation;
-  if (so && so.lock) so.lock('portrait').catch(() => {});
-} catch (_) {}
+
+// ── 판 크기 맞추기 ────────────────────────────────────────
+// 폰 세로는 원래 이 비율로 만든 화면이라 손대지 않는다(각 기기 폭에 맞춰
+// 반응형 규칙이 이미 잡아 준다). 컴퓨터나 가로 화면에서는 설계 크기를
+// 화면에 꽉 차게 배율만 준다 — 폭만 늘리면 카드·글씨 비율이 어긋난다.
+const BOARD_W = 780, BOARD_H = 920;
+function fitBoard() {
+  const vw = window.innerWidth;
+  const vh = Math.round((window.visualViewport && window.visualViewport.height) || window.innerHeight);
+  // 손에 쥔 세로 화면 = 원래 판. 그 밖은 배율로 맞춘다.
+  const phonePortrait = vw <= 700 && vh > vw;
+  const root = document.documentElement;
+  if (phonePortrait) {
+    document.body.classList.remove('board-zoom');
+    root.style.removeProperty('--board-zoom');
+    return;
+  }
+  const z = Math.min((vw - 16) / BOARD_W, (vh - 8) / BOARD_H);
+  root.style.setProperty('--board-zoom', String(Math.max(0.42, Math.min(1.9, z))));
+  document.body.classList.add('board-zoom');
+}
+fitBoard();
+addEventListener('resize', fitBoard);
+addEventListener('orientationchange', () => setTimeout(fitBoard, 250));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fitBoard);
 
 syncAppHeight();
 addEventListener('resize', syncAppHeight);
