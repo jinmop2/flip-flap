@@ -126,5 +126,13 @@ ok('카드가 직접 hover 로 들리지 않는다',
 ok('손패는 칸이 누름을 받는다', /if \(cardEl\._tap\) onTap\(slot, cardEl\._tap\)/.test(cli));
 ok('그때 카드에는 안 묶는다', /if \(opts\.tapOnSlot\) el\._tap =/.test(cli));
 
+// 판 안의 버튼은 click 이 아니라 pointerup 으로 받는다
+ok('오픈·클로즈 버튼이 onTap 을 쓴다',
+   /onTap\(bo, \(\) => \{[\s\S]{0,80}choose_auction/.test(cli)
+   && /onTap\(bc, \(\) => \{[\s\S]{0,80}choose_auction/.test(cli));
+ok('그 버튼에 onclick 을 안 쓴다', !/b[oc]\.onclick =/.test(cli));
+ok('배팅 확정도 onTap', /onTap\(btn, \(\) => \{ if \(btn\._fire\)/.test(cli));
+ok('확정 버튼은 한 번만 묶는다', /if \(!btn\) \{[\s\S]{0,300}onTap\(btn,/.test(cli));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

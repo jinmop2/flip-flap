@@ -4903,10 +4903,15 @@ function renderAuction(changed) {
 
   if (s.phase === 'choose_type' && mine && !isSpec) {
     const row = document.createElement('div'); row.className = 'btn-row';
+    // 손패 카드와 같은 길(onTap = pointerup)로 받는다. click 은 마우스에서
+    // 가장 쉽게 사라지는 이벤트다 — 누르는 사이에 포인터가 잡혀 있거나 눌린
+    // 요소가 다시 그려지면 click 만 조용히 없어진다. pointerup 은 늘 온다.
     const bo = document.createElement('button'); bo.className = 'btn btn-gold btn-sm'; bo.textContent = '오픈 경매';
-    bo.title = '경매품 공개 · 배팅 비공개'; bo.onclick = () => { playSound('card'); socket.emit('choose_auction', { type: 'open' }); };
+    bo.title = '경매품 공개 · 배팅 비공개';
+    onTap(bo, () => { playSound('card'); socket.emit('choose_auction', { type: 'open' }); });
     const bc = document.createElement('button'); bc.className = 'btn btn-ink btn-sm'; bc.textContent = '클로즈 경매';
-    bc.title = '경매품 비공개 · 배팅 공개'; bc.onclick = () => { playSound('card'); socket.emit('choose_auction', { type: 'closed' }); };
+    bc.title = '경매품 비공개 · 배팅 공개';
+    onTap(bc, () => { playSound('card'); socket.emit('choose_auction', { type: 'closed' }); });
     row.appendChild(bo); row.appendChild(bc); action.appendChild(row);
   }
 
@@ -4942,9 +4947,12 @@ function paintBidSel() {
     btn = document.createElement('button');
     btn.className = 'btn btn-gold btn-sm';
     slot.appendChild(btn);
+    // 카드와 같은 길로 받는다(위 경매 방식 버튼과 같은 이유).
+    // 버튼은 글자만 바뀌며 재사용되므로 여기서 한 번만 묶는다.
+    onTap(btn, () => { if (btn._fire) btn._fire(); });
   }
   btn.textContent = `${selectedBidCard.kind}번 (${selectedBidCard.grade}등급) 배팅 확정`;
-  btn.onclick = () => {
+  btn._fire = () => {
     const card = selectedBidCard; if (!card) return;
     playSound('place');
     const el = document.querySelector('#myHand .card.sel');
