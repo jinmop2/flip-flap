@@ -317,7 +317,9 @@ function ceilingFor(g, me) {
 function aiAct(g, me, rnd = Math.random) {
   if (g.over) return null;
   const A = g.auctioneer;
-  if (g.phase === 'settled') return { act: 'next' };
+  // 정산은 AI 가 넘기지 않는다. 넘겨 버리면 누가 무엇을 가져갔는지 볼 새도 없이
+  // 다음 턴이 시작된다 — "확확 바뀐다" 의 정체가 이것이었다. 넘기는 건 사람 몫.
+  if (g.phase === 'settled') return null;
   if (g.phase === 'draw') return me === A ? { act: 'draw' } : null;
 
   if (g.phase === 'offer') {

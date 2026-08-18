@@ -1621,6 +1621,13 @@
       #q-myhand .card { width:60px; height:84px; }
       body.q-n3 #q-myhand .card { width:52px; height:73px; }
     }
+    /* 좁은 화면에서는 덱이 경매대 위로 올라온다 — 덱을 줄이고 더 붙인다 */
+    @media (max-width:430px) {
+      #tv-deck { left:0; gap:12px; }
+      #tv-deckStack, #tv-deckStack .card { width:40px; height:56px; }
+      #tv-mat { min-width:0; padding:10px 12px 12px; }
+      .tv-lot { gap:6px; }
+    }
     @media (max-height:700px) {
       #q-myhand .card { width:56px; height:78px; }
       body.q-n3 #q-myhand .card { width:50px; height:70px; }
@@ -3871,7 +3878,11 @@
        그래서 위(상대) · 가운데(경매대) · 아래(나) 를 격자로 고정하고,
        문구·버튼 칸도 높이를 못 박는다. */
     #tv {
+      /* position 은 fixed 하나뿐이어야 한다. 나중에 relative 를 덧붙였더니 그것이
+         이겨서 판이 화면을 못 채우고 내용만큼만 줄어들었다(덱이 경매대 위로
+         올라앉던 원인). 날아다니는 것들의 기준점은 fixed 로도 충분하다. */
       display:none; position:fixed; inset:0; z-index:30;
+      grid-template-columns:1fr;      /* 한 칸을 화면 폭에 꽉 채운다 */
       grid-template-rows:auto 1fr auto auto auto;
       justify-items:center; align-items:center;
       padding:calc(8px + var(--safe-t)) 12px calc(8px + var(--safe-b)); gap:4px; overflow:hidden;
@@ -3884,7 +3895,9 @@
       font-size:.72rem; font-weight:800; color:rgba(255,255,255,.6); letter-spacing:1px; }
 
     .tv-side { display:flex; flex-direction:column; align-items:center; gap:3px; width:100%; }
-    #tv .tv-side:first-of-type { padding-top:50px; }        /* 위 버튼 자리 */
+    /* :first-of-type 은 클래스가 아니라 태그로 센다 — 그래서 예전 규칙이 안 걸렸고
+       상대 줄이 왼쪽 위 버튼과 겹쳤다. 이름표를 달아 확실히 건다. */
+    #tv .tv-side.opp { padding-top:56px; }
     .tv-who { display:flex; align-items:center; gap:8px; font-size:.76rem; color:#cfe4f2; }
     .tv-who b { font-weight:800; color:#fff; }
 
@@ -3914,7 +3927,11 @@
 
     /* 가운데 칸 — 경매대가 화면 한가운데. 덱은 왼쪽에 띄워 붙여, 경매대가
        덱 폭만큼 밀리지 않게 한다. */
-    #tv-mid { position:relative; display:flex; align-items:center; justify-content:center; width:100%; }
+    /* 격자가 justify-items:center 라 칸이 내용만큼만 넓어진다. 그러면 이 칸이
+       경매대 폭과 같아져, 왼쪽에 띄워 둔 덱이 경매대 위로 올라앉는다.
+       이 줄만 화면 폭을 다 쓰게 늘린다. */
+    #tv-mid { position:relative; display:flex; align-items:center; justify-content:center;
+      justify-self:stretch; width:100%; }
     #tv-deck { position:absolute; left:6px; top:50%; transform:translateY(-50%);
       display:flex; flex-direction:column; align-items:center; gap:20px; cursor:default; }
     #tv-deckStack { position:relative; width:52px; height:73px; }
@@ -3933,7 +3950,7 @@
 
     #tv-mat {
       display:flex; flex-direction:column; align-items:center; gap:8px;
-      padding:12px 20px 14px; border-radius:18px; min-width:210px;
+      padding:12px 20px 14px; border-radius:18px; min-width:210px; position:relative; z-index:1;
       background:radial-gradient(ellipse at 50% 40%, rgba(0,0,0,.34), rgba(0,0,0,.12));
       border:1.5px dashed rgba(140,210,255,.32);
     }
@@ -3981,6 +3998,42 @@
       color:#fff; padding:0 6px; display:flex; align-items:center; justify-content:center; gap:5px; height:46px;
     }
 
+
+    /* 말풍선 — 누가 얼마를 불렀는지, 물러섰는지가 눈에 남아야 한다.
+       숫자만 조용히 바뀌면 무슨 일이 일어났는지 모르고 지나간다. */
+    .tv-say { height:30px; display:flex; align-items:center; justify-content:center; }
+    .tv-say .bub {
+      position:relative; padding:5px 13px; border-radius:14px;
+      font-family:'Fredoka'; font-size:.86rem; font-weight:800; color:#0d1e2c;
+      background:linear-gradient(180deg,#dff0ff,#a8d8f5); border:1.5px solid #fff;
+      box-shadow:0 3px 10px rgba(0,0,0,.45);
+      display:inline-flex; align-items:center; gap:5px;
+      animation:tvSay .3s cubic-bezier(.34,1.5,.64,1);
+    }
+    .tv-say .bub::after {
+      content:''; position:absolute; left:50%; margin-left:-6px; border:6px solid transparent;
+    }
+    .tv-say:not(.me) .bub::after { top:100%; border-top-color:#a8d8f5; }
+    .tv-say.me .bub::after { bottom:100%; border-bottom-color:#dff0ff; }
+    .tv-say .bub.fold { background:linear-gradient(180deg,#4a5a68,#2c3a46); color:#dfe8f0; border-color:#6a7a88; }
+    .tv-say:not(.me) .bub.fold::after { border-top-color:#2c3a46; }
+    .tv-say.me .bub.fold::after { border-bottom-color:#4a5a68; }
+    @keyframes tvSay { from { opacity:0; transform:scale(.7) translateY(6px) } to { opacity:1; transform:none } }
+    .tv-say .bub.go { animation:tvSayOut .28s ease-in forwards; }
+    @keyframes tvSayOut { to { opacity:0; transform:scale(.85) } }
+
+    /* 날아다니는 것들 — 카드는 이긴 쪽으로, 칩은 은행(가운데)으로 */
+    #tv-fx { position:absolute; inset:0; pointer-events:none; z-index:9; }
+    .tv-fly { position:absolute; transition:transform .62s cubic-bezier(.4,.05,.3,1), opacity .3s; }
+    .tv-flychip { position:absolute; width:17px; height:17px;
+      transition:transform .5s cubic-bezier(.5,0,.4,1), opacity .25s; }
+
+    /* 프로필 카드는 원래 떠 있는 칸(#mebar) 안에서 쓰던 것이라 position:absolute 다.
+       여기서는 칩 옆에 나란히 놓아야 하므로 흐름 안으로 되돌린다 —
+       안 그러면 카드가 칩 위에 겹쳐 앉아 칩이 안 보인다. */
+    #tv .tv-who { gap:10px; }
+    #tv .game-pcard { position:static; max-width:170px; }
+
     #tv-over { display:none; position:fixed; inset:0; z-index:40; background:rgba(4,10,18,.9);
       align-items:center; justify-content:center; }
     body.twelve #tv-over.show { display:flex; }
@@ -3992,7 +4045,7 @@
     .tv-obtns { display:flex; gap:8px; margin-top:14px; }
     .tv-obtns .btn { flex:1; }
     @media (max-height:700px) {
-      #tv .tv-side:first-of-type { padding-top:44px; }
+      #tv .tv-side.opp { padding-top:48px; }
       #tv-mat { padding:8px 14px 10px; gap:6px; }
       .tv-slot > div:last-child { width:58px; height:81px; }
       #tv-actions { height:52px; }
@@ -5481,12 +5534,17 @@
   <div id="tv-turn">턴 1</div>
 
   <!-- 상대 -->
-  <div class="tv-side">
-    <div class="tv-who"><b id="tv-oppNick">상대</b><span class="tv-chips" id="tv-oppChips"><i class="chip dark"></i><b>20</b></span></div>
+  <div class="tv-side opp">
+    <div class="tv-who">
+      <div class="game-pcard" id="tv-oppProfile" onclick="toggleStats(this)"><div class="pc-body"></div><div class="pc-stats"></div></div>
+      <span class="tv-chips" id="tv-oppChips"><i class="chip dark"></i><b>20</b></span>
+    </div>
+    <div class="tv-say" id="tv-oppSay"></div>
     <div class="fan top" id="tv-oppHand"></div>
     <div class="pile" id="tv-oppAcq"></div>
   </div>
 
+  <div id="tv-fx"></div>
   <!-- 가운데 칸 — 덱은 왼쪽에 붙이고 경매대가 화면 한가운데에 오게 한다 -->
   <div id="tv-mid">
     <div id="tv-deck" title="눌러서 뒤집기">
@@ -5514,7 +5572,11 @@
   <div class="tv-side me">
     <div class="pile" id="tv-myAcq"></div>
     <div class="fan" id="tv-myHand"></div>
-    <div class="tv-who"><b id="tv-myNick">나</b><span class="tv-chips" id="tv-myChips"><i class="chip light"></i><b>20</b></span></div>
+    <div class="tv-say me" id="tv-mySay"></div>
+    <div class="tv-who">
+      <div class="game-pcard" id="tv-myProfile" onclick="toggleStats(this)"><div class="pc-body"></div><div class="pc-stats"></div></div>
+      <span class="tv-chips" id="tv-myChips"><i class="chip light"></i><b>20</b></span>
+    </div>
   </div>
 </div>
 

@@ -260,6 +260,8 @@ console.log('\n⑮ AI 끼리 붙여도 판이 굴러간다');
       const a1 = T.applyAi(g, 1, rnd);
       if (g.over) break;
       const a2 = T.applyAi(g, 2, rnd);
+      // 정산은 AI 가 안 넘긴다(사람이 보고 넘기는 자리다) — 여기서는 시험이 대신 넘긴다
+      if (!g.over && g.phase === 'settled') T.nextTurn(g);
       const after = JSON.stringify([g.phase, g.turn, g.lot && g.lot.turnToAct, g.chips[1], g.chips[2]]);
       if (!a1 && !a2 && before === after) { bad++; break; }   // 아무도 둘 수 없으면 멈춘 것
     }
@@ -339,6 +341,26 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('카드 자리 고정', /\.tv-slot > div:last-child \{ width:70px; height:98px/.test(htm));
   ok('격자로 세 칸을 잡는다', /body\.twelve #tv \{ display:grid/.test(htm) && /grid-template-rows:auto 1fr auto auto auto/.test(htm));
   ok('덱은 띄워 붙여 경매대를 안 민다', /#tv-deck \{ position:absolute/.test(htm));
+}
+
+console.log('\n⑲ 무슨 일이 있었는지 보이는가');
+{
+  const fs = require('fs'), path = require('path');
+  const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const cli = read('public/client.js'), htm = read('public/index.html'), tw = read('../twelve.js'.replace('../',''));
+  ok('부른 값이 말풍선으로 뜬다', /function tvSay/.test(cli) && /tvSay\(meSide, tvChipHtml\(v\.lot\.myBet, true\)\)/.test(cli));
+  ok('상대가 물러선 것도 보인다', /물러설게요/.test(cli) && /안 살래요/.test(cli));
+  ok('칩이 은행으로 날아간다', /function tvFlyChips/.test(cli));
+  ok('카드가 이긴 쪽으로 날아간다', /tvFlyTo\(el, document\.getElementById\('tv-mat'\), dest\)/.test(cli));
+  ok('정산 중에도 경매품이 보인다', /정산 중에는 경매품을 그대로 둔다/.test(cli));
+  ok('연출이 끝나기 전엔 못 넘긴다', /b\.disabled = true;[\s\S]{0,120}1100/.test(cli));
+  ok('AI 가 정산을 대신 넘기지 않는다', /if \(g\.phase === 'settled'\) return null;/.test(tw));
+  ok('AI 가 뜸을 들인다', /\(g\.phase === 'bid' \|\| g\.phase === 'close'\) \? 950 : 700/.test(read('server.js')));
+  ok('내 프로필이 보인다', /id="tv-myProfile"/.test(htm) && /renderGameProfile\('tv-myProfile'/.test(cli));
+  ok('프로필이 칩을 안 덮는다', /#tv \.game-pcard \{ position:static/.test(htm));
+  ok('판이 화면을 채운다', /#tv \{[\s\S]{0,400}position:fixed; inset:0/.test(htm)
+     && !/grid-template-rows:auto 1fr auto auto auto;\s*\n\s*position:relative/.test(htm));
+  ok('상대 줄이 버튼을 피한다', /#tv \.tv-side\.opp \{ padding-top:56px/.test(htm));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
