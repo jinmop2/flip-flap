@@ -73,6 +73,12 @@
       color:#f0e2c8; min-height:100vh;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
       overflow-x:hidden;
+      /* 한글은 기본값이면 글자 하나하나에서 줄이 바뀐다. 좁은 칸에서 한 글자씩
+         뚝뚝 떨어져 내려가 보이던 게 이것 — 낱말 단위로만 끊게 한다.
+         띄어쓰기 없는 긴 코드·주소는 anywhere 가 받아 준다. */
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      line-break: normal;
     }
 
     /* ─── 로비 ─── */
@@ -1817,7 +1823,7 @@
     .clan-stat span { font-size:.64rem; color:#9a8878; }
     .clan-notice {
       background:rgba(0,0,0,.22); border-left:3px solid #b98d34; border-radius:0 8px 8px 0;
-      padding:8px 11px; font-size:.75rem; color:#d8c0a0; margin-top:9px; line-height:1.5; word-break:break-all;
+      padding:8px 11px; font-size:.75rem; color:#d8c0a0; margin-top:9px; line-height:1.5; word-break:keep-all; overflow-wrap:anywhere;
     }
     .clan-cost { text-align:center; font-size:.76rem; color:#c8a97e; margin:4px 0 2px; }
 
@@ -3518,6 +3524,37 @@
       #myZone { padding-bottom:calc(16px + var(--safe-b)); }
       #myProfile { transform:scale(.9); transform-origin:bottom right; }
     }
+    /* ── 가로 화면 · PC: 가운데 세로 프레임 ─────────────────────────────
+       세로가 본판이다. 폰 세로 비율에 맞춰 짠 화면이라, 가로로 넓어지면
+       카드와 글씨 비율이 통째로 어긋난다(PC 에서 "비율이 안 맞는다").
+       그래서 가로에서는 늘리지 않고, 화면 높이에 맞춘 세로 틀 안에 넣고
+       양옆은 배경으로 남긴다. 폰을 눕혀도 같은 틀이 쓰인다. */
+    @media (orientation:landscape) {
+      /* 높이에 맞춘 폭. 다만 340px 아래로는 줄이지 않는다 —
+         판이 그보다 좁아지면 손패와 경매대가 서로 밀려 깨진다. */
+      :root { --frame-w: min(100vw, max(340px, calc(var(--app-h, 100vh) * 0.66))); }
+      #game, #mini { max-width:var(--frame-w); max-height:var(--app-h, 100vh); }
+      #game4 {
+        left:50%; right:auto; transform:translateX(-50%);
+        width:var(--frame-w);
+        border-left:1.5px solid rgba(185,141,52,.5);
+        border-right:1.5px solid rgba(185,141,52,.5);
+      }
+      #navBar, #profileBar { width:min(480px, var(--frame-w)); }
+      /* 로비 본문도 같은 폭 안에 — 버튼이 가로로 길게 늘어지지 않게 */
+      #lobby { width:min(480px, var(--frame-w)); margin:0 auto; }
+      /* 틀 바깥은 판을 비추는 조명만 */
+      body::after {
+        content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+        background:radial-gradient(ellipse 60% 80% at 50% 45%, rgba(0,0,0,0) 40%, rgba(0,0,0,.45) 100%);
+      }
+    }
+    /* 눕힌 폰처럼 높이가 아주 낮을 때 — 위아래 여백을 더 줄인다 */
+    @media (orientation:landscape) and (max-height:480px) {
+      #game, #mini { padding:8px 12px; }
+      #game4 { padding:calc(3px + var(--safe-t)) 6px calc(3px + var(--safe-b)); gap:3px; }
+      #navBar { padding:calc(3px + var(--safe-t)) 4px 3px; }
+    }
   </style>
 </head>
 <body>
@@ -4061,8 +4098,6 @@
     <div class="sp-row" onclick="toggleBgm()"><span class="sp-lbl">🎵 배경음악</span><span class="sp-toggle" id="togBgm"><span class="sp-knob"></span></span></div>
     <div class="sp-row" onclick="toggleSfx()"><span class="sp-lbl">🔊 효과음</span><span class="sp-toggle" id="togSfx"><span class="sp-knob"></span></span></div>
     <div class="sp-row" onclick="toggleGuide()"><span class="sp-lbl"><span data-ico="💡"></span> 턴 안내</span><span class="sp-toggle" id="togGuide"><span class="sp-knob"></span></span></div>
-    <div class="sp-row" onclick="toggleKeepAudio()"><span class="sp-lbl">🎧 듣던 음악 유지</span><span class="sp-toggle" id="togKeep"><span class="sp-knob"></span></span></div>
-    <div class="sp-note">켜면 게임 소리를 모두 끄고, 듣고 있던 음악을 그대로 둡니다</div>
     <div class="sp-row sp-lang"><span class="sp-lbl">🌐 언어</span>
       <span class="sp-seg">
         <button class="sp-segb" data-lang="ko" onclick="pickLang('ko')">한국어</button>
@@ -4187,8 +4222,7 @@
         참가비 <b style="color:#ffd94a">🪙200</b> · 우승 <b style="color:#ffd94a">🪙1000</b> · 준우승 <b style="color:#ffd94a">🪙200</b>
       </p>
       <p class="auth-hint" style="text-align:center;margin:0 0 4px;font-size:.7rem">
-        매시 <b style="color:#ffe9a8">정각</b>과 <b style="color:#ffe9a8">30분</b>에 열려요.
-        시작할 때 자리가 비면 AI 가 채웁니다.
+        매시 정각과 30분에 열려요. 시작할 때 자리가 비면 AI 가 채웁니다.
       </p>
       <p class="auth-hint" id="tourNextAt" style="text-align:center;margin:0 0 10px;font-size:.72rem;color:#ffd94a"></p>
       <button class="btn btn-gold" onclick="tourJoin()">🪙200 내고 참가</button>

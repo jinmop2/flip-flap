@@ -2605,10 +2605,17 @@ function startBGM(track = 'game') {
     bgmGain.gain.value = bgmOff ? 0 : BGM_VOL;
     src.connect(bgmGain); bgmGain.connect(AC.destination);
   } catch (e) { bgmAudio.volume = bgmOff ? 0 : BGM_VOL; }   // 폴백: 엘리먼트 볼륨
-  const tryPlay = () => bgmAudio.play().catch(() => {});
+  const el = bgmAudio;
+  // 우리가 멈춘 게 아닌데 멈췄다 = 다른 앱이 소리를 가져갔다. 자리를 내준다.
+  el.addEventListener('pause', () => { if (bgmOn && bgmAudio === el && !el.ended) yieldToOtherAudio(); });
+  const tryPlay = () => el.play().catch(() => {});
   tryPlay();
-  if (bgmAudio.paused) {   // 자동재생 차단 → 첫 상호작용에서 재생
-    const kick = () => { try { AC.resume(); } catch (_) {} tryPlay(); document.removeEventListener('pointerdown', kick); };
+  if (el.paused) {   // 자동재생 차단 → 첫 상호작용에서 한 번만 더
+    const kick = () => {
+      document.removeEventListener('pointerdown', kick);
+      try { AC.resume(); } catch (_) {}
+      el.play().catch(() => yieldToOtherAudio());   // 그래도 안 되면 밖의 음악에 양보
+    };
     document.addEventListener('pointerdown', kick, { once: true });
   }
 }
@@ -2629,22 +2636,25 @@ function inGameNow() {
 // 로비 음악을 켠다. 자동재생이 막혀 있으면 첫 터치에서 시작된다(startBGM 안에 처리).
 function lobbyBGM() { startBGM('lobby'); }
 
-// ── 다른 앱 음악 유지 ────────────────────────────────────────
-// 웹은 오디오 세션을 "섞어서" 로 지정할 수 없다. 소리를 내는 순간 듣던 음악이 끊긴다.
-// 그래서 끄는 것 말고는 방법이 없다 — 켜 두면 우리 소리를 전부 죽인다.
-// (앱으로 감쌀 때는 네이티브에서 ambient/mixWithOthers 로 지정하면 진짜로 섞인다)
-let keepOtherAudio = localStorage.getItem('ff_keepaudio') === 'on';
-function applyKeepOtherAudio() {
-  if (keepOtherAudio) { stopBGM(); try { AC.suspend(); } catch (_) {} }
-  else { try { AC.resume(); } catch (_) {} }
+// ── 밖에서 듣던 음악은 그대로 둔다 ────────────────────────────
+// 설정 항목이 아니라 기본 동작이다. 켜고 끄는 버튼이 있을 이유가 없다 —
+// 밖에서 노래를 틀어 둔 사람은 그걸 계속 듣고 싶은 것이지, 우리 곡을
+// 들으려고 온 게 아니다.
+//
+// 웹은 오디오 세션을 "섞어서" 로 지정할 수 없어서, 우리가 소리를 내는 순간
+// 상대 음악이 끊긴다. 대신 브라우저가 주는 신호로 알아챌 수는 있다:
+// 다른 앱이 소리를 잡고 있으면 자동재생이 거부되거나, 재생하던 오디오가
+// 우리가 시키지도 않았는데 멈춘다. 그때는 우리 음악을 접는다.
+// (앱으로 감쌀 때는 네이티브에서 ambient/mixWithOthers 로 진짜로 섞는다)
+let keepOtherAudio = sessionStorage.getItem('ff_yield') === '1';
+// 밖의 음악에 자리를 내준다 — 이번 접속 동안만. 다음에 열면 다시 시도한다.
+function yieldToOtherAudio() {
+  if (keepOtherAudio) return;
+  keepOtherAudio = true;
+  sessionStorage.setItem('ff_yield', '1');
+  stopBGM();
+  try { AC.suspend(); } catch (_) {}
 }
-window.toggleKeepAudio = function () {
-  keepOtherAudio = !keepOtherAudio;
-  localStorage.setItem('ff_keepaudio', keepOtherAudio ? 'on' : 'off');
-  applyKeepOtherAudio();
-  if (!keepOtherAudio) startBGM(inGameNow() ? 'game' : 'lobby');
-  applySettings();
-};
 
 // ── 인게임 설정 패널 (배경음악 / 효과음 / 가이드) ──
 let guideOff = localStorage.getItem('ff_guide') === 'off';
@@ -2653,7 +2663,6 @@ function applySettings() {   // 저장된 상태를 화면·오디오에 반영
   const sb = document.getElementById('statusBar'); if (sb) sb.style.display = guideOff ? 'none' : '';
   const set = (id, on) => { const t = document.getElementById(id); if (t) t.classList.toggle('on', on); };
   set('togBgm', !bgmOff); set('togSfx', !sfxOff); set('togGuide', !guideOff);
-  set('togKeep', keepOtherAudio);
   const cur = (window.FF && FF.lang()) || 'ko';
   document.querySelectorAll('.sp-segb[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === cur));
 }
@@ -2700,7 +2709,6 @@ document.addEventListener('pointerdown', e => {
   document.body.classList.remove('lobby-settings');
 });
 window.addEventListener('DOMContentLoaded', applySettings);   // 저장된 상태 반영
-window.addEventListener('DOMContentLoaded', applyKeepOtherAudio);
 window.addEventListener('DOMContentLoaded', () => { try { paintEmoteButtons(); paintIcons(); } catch (_) {} });   // 기본 이모트·라벨 아이콘
 
 // ── 미니게임 (두 장 승부 · 2~4인) ────────────────────────────

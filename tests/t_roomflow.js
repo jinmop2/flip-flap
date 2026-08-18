@@ -24,5 +24,14 @@ ok('판이 시작되면 다인전 화면을 켠다', /if \(!q4Live\)[\s\S]{0,200
 const room = c4.slice(c4.indexOf("socket.on('g4_room'"), c4.indexOf("socket.on('g4_cancelled'"));
 ok('자리 넷짜리로 옮겨져도 화면을 켠다', /if \(!q4Live\)[\s\S]{0,300}enterWaiting\(\)/.test(room));
 
+// 화면 비율·줄바꿈·오디오 — 이번에 손본 것들
+const htm = read('public/index.html');
+ok('한글이 낱말 단위로만 끊긴다', /word-break:\s*keep-all/.test(htm) && !/word-break:break-all/.test(htm));
+ok('가로 화면은 세로 프레임 안에 넣는다', /@media \(orientation:landscape\)[\s\S]{0,400}--frame-w/.test(htm));
+ok('프레임이 너무 좁아지지 않는다', /max\(340px/.test(htm));
+ok('듣던 음악 유지 토글은 없앴다', !/toggleKeepAudio/.test(htm) && !/togKeep/.test(htm));
+ok('밖의 음악에 자동으로 양보한다', /yieldToOtherAudio/.test(cli));
+ok('양보는 이번 접속 동안만', /sessionStorage[\s\S]{0,40}ff_yield/.test(cli));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

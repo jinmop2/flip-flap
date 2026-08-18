@@ -17,6 +17,48 @@
   // ── 사전 ────────────────────────────────────────────────────────────────
   // 한국어 원문 → 영어. 순서는 화면 순서를 따른다.
   const EN = {
+
+    // ── 이번에 새로 들어온 문구 ──
+    '코드로 시작': 'Start with a code',
+    '들어가기': 'Enter',
+    '내 방': 'My room',
+    '친구 부르기': 'Invite a friend',
+    '친구 초대': 'Invite a friend',
+    '눌러서 부르기': 'Tap to invite',
+    '부르기': 'Invite',
+    '지금 부를 수 있는 친구가 없어요.': 'No friends are free right now.',
+    '코드를 공유해 보세요.': 'Try sharing the code.',
+    '불러오는 중…': 'Loading…',
+    '닫기': 'Close',
+    '게임 시작': 'Start game',
+    '상대를 기다려요': 'Waiting for players',
+    '빈자리': 'Empty seat',
+    '방장': 'Host',
+    '게스트': 'Guest',
+    // 미니게임 — 달
+    '0 달': '0 moons',
+    '🃏 두 장 승부': '🃏 Two-card showdown',
+    '🪙 200 → 2000달': '🪙 200 → 2,000 moons',
+    '코인을 달로 바꿔 앉습니다 · 일어설 때 남은 달을 코인으로 돌려받습니다':
+      'Coins become moons when you sit · leftover moons return as coins when you stand',
+    '같은 줄끼리 붙으면': 'Within the same rank,',
+    '뒷자리 합': 'the lower back-digit sum',
+    '이 작은 쪽, 그것도 같으면': 'wins; if those tie,',
+    '더 강한 카드': 'the stronger single card',
+    '를 쥔 쪽이 이깁니다.': 'takes it.',
+    // 토너먼트
+    '8강 · 4강은 단판,': 'Quarter- and semi-finals are single games,',
+    '결승은 3판 2선승': 'the final is best of three',
+    '· 모든 경기는 2인전': '· every match is 1v1',
+    '참가비': 'Entry fee',
+    '· 우승': '· Winner',
+    '· 준우승': '· Runner-up',
+    '매시 정각과 30분에 열려요. 시작할 때 자리가 비면 AI 가 채웁니다.':
+      'Starts every hour on the hour and at half past. Empty seats are filled by AI.',
+    // 룰북 탭
+    '2인용': '1v1',
+    '3인용': '3 players',
+    '4인용': '4 players',
     // ── 로비·기본 ──
     '랭킹': 'Ranking',
     '게임방법': 'How to Play',
