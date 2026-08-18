@@ -70,7 +70,9 @@ console.log('\n⑤ 랭킹은 화면을 통째로 쓴다');
 {
   ok('전체화면 상자', /\.lb-box\.rank-box \{[\s\S]{0,200}height:100dvh/.test(html));
   ok('목록만 스크롤한다', /\.lb-box\.rank-box #lbList \{[\s\S]{0,120}overflow-y:auto/.test(html));
-  ok('넓은 화면에서는 가운데로', /min-width:700px[\s\S]{0,200}rank-box .lb-title/.test(html));
+  // 자손이 아니라 직계여야 한다 — 자손이면 줄 안의 칭호 칸까지 늘어난다
+  ok('넓은 화면에서는 가운데로', /min-width:700px[\s\S]{0,400}rank-box > \.lb-title/.test(html));
+  ok('줄 안의 칭호는 안 늘어난다', /\.lb-row \.lb-title \{[^}]*flex-grow:0/.test(html));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

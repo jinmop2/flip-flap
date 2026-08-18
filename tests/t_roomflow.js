@@ -134,5 +134,14 @@ ok('그 버튼에 onclick 을 안 쓴다', !/b[oc]\.onclick =/.test(cli));
 ok('배팅 확정도 onTap', /onTap\(btn, \(\) => \{ if \(btn\._fire\)/.test(cli));
 ok('확정 버튼은 한 번만 묶는다', /if \(!btn\) \{[\s\S]{0,300}onTap\(btn,/.test(cli));
 
+// 랭킹 · 강퇴 · 화면 밀림
+ok('랭킹 줄 안의 칭호가 안 늘어난다', /\.lb-row \.lb-title \{[^}]*flex-grow:0/.test(htm));
+ok('넓은 화면 규칙은 직계에만', /rank-box > \.lb-title/.test(htm) && !/rank-box \.lb-title,/.test(htm));
+ok('방장이 내보낼 수 있다', /socket\.on\('room_kick'/.test(srv) && /window\.roomKick/.test(cli));
+ok('방장만 · 자기는 못 내보낸다', /socket\.playerIndex !== 0\) return;[\s\S]{0,200}i <= 0/.test(srv));
+ok('쫓겨나면 알려준다', /room_kicked/.test(srv) && /room_kicked/.test(cli));
+ok('다인전도 화면이 안 움직인다', /body\.ingame, body\.quad4 \{[^}]*position:fixed/.test(htm));
+ok('밀린 화면을 되돌린다', /function pinViewport/.test(cli) && /visualViewport\.addEventListener\('scroll', pinViewport\)/.test(cli));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

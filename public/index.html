@@ -62,7 +62,9 @@
     html, body { overscroll-behavior:none; -webkit-user-select:none; -moz-user-select:none; user-select:none; }   /* 당겨서 새로고침·바운스·드래그 선택 방지 */
     input, textarea, [contenteditable] { -webkit-user-select:text; user-select:text; }   /* 입력창만 선택 허용 */
     img, svg { -webkit-user-drag:none; user-drag:none; }
-    body.ingame { position:fixed; inset:0; width:100%; overflow:hidden; }   /* 게임 중 화면 스크롤 잠금 */
+    /* 게임 중 화면 스크롤 잠금. 다인전(quad4)이 빠져 있어서 3·4인전만 화면이
+       움직였다 — 판이 열려 있는 동안은 어느 판이든 안 움직여야 한다. */
+    body.ingame, body.quad4 { position:fixed; inset:0; width:100%; overflow:hidden; }
     body {
       font-family:'Fredoka',system-ui,sans-serif;
       background:#180509;
@@ -2908,7 +2910,7 @@
     .lb-rp { font-size:.75rem; color:#ffe9a8; font-weight:700; flex-shrink:0; }
     .lb-wl { font-size:.66rem; color:#8a7a80; flex-shrink:0; }
     /* 칭호 — 오른쪽에 작게. 이름이 길어도 밀리지 않게 이름 쪽이 먼저 줄어든다. */
-    .lb-title { flex-shrink:0; max-width:38%; overflow:hidden; }
+    .lb-row .lb-title { flex-shrink:0; flex-grow:0; width:auto; max-width:38%; overflow:hidden; font-size:inherit; }
     .lb-title .title-tag { font-size:.62rem; opacity:.95; white-space:nowrap; }
     .lb-title .ti-ico { width:.72em; height:.72em; }
     @media (max-width:420px) { .lb-title { max-width:30%; } .lb-wl { display:none; } }
@@ -2946,6 +2948,16 @@
       padding:12px 8px; border-radius:14px;
       background:rgba(0,0,0,.26); border:1px solid rgba(185,141,52,.35);
     }
+    .wc-seat { position:relative; }
+    /* 방장만 보이는 내보내기 단추 — 자리 오른쪽 위 */
+    .ws-kick {
+      position:absolute; top:3px; right:3px; z-index:2;
+      width:22px; height:22px; line-height:1; border-radius:50%;
+      background:rgba(140,30,45,.5); border:1px solid rgba(255,140,150,.45);
+      color:#ffc8ce; font-family:'Fredoka'; font-size:.95rem; font-weight:800; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; padding:0;
+    }
+    .ws-kick:hover { background:rgba(180,40,60,.75); color:#fff; }
     .wc-seat.empty { border-style:dashed; opacity:.75; cursor:pointer; font-family:inherit; }
     .wc-seat.empty:hover { opacity:1; border-color:var(--gold); }
     .wc-seat .ws-face { font-size:1.6rem; line-height:1; }
@@ -2978,7 +2990,7 @@
       border-radius:0; border:none; gap:10px; overflow:hidden;
       padding:calc(14px + var(--safe-t)) 14px calc(14px + var(--safe-b));
     }
-    .lb-box.rank-box .lb-title { flex-shrink:0; }
+    .lb-box.rank-box > .lb-title { flex-shrink:0; }
     .lb-box.rank-box .close-x { top:calc(10px + var(--safe-t)); right:12px; }
     /* 목록만 스크롤한다 — 제목과 닫기는 제자리 */
     .lb-box.rank-box #lbList {
@@ -2987,7 +2999,10 @@
     }
     /* 넓은 화면에서는 가운데로 모은다 — 한 줄이 과하게 늘어지지 않게 */
     @media (min-width:700px) {
-      .lb-box.rank-box .lb-title, .lb-box.rank-box #lbList { max-width:620px; width:100%; margin-left:auto; margin-right:auto; }
+      /* 창 제목과 목록만 가운데로 모은다. 예전엔 자손 선택자라 줄 안의 칭호 칸
+         (.lb-row .lb-title)까지 620px 로 늘어나, 넓은 화면에서 닉네임·전적·RP 가
+         화면 밖으로 밀려났다 — 순위와 칭호만 보이던 그 화면. */
+      .lb-box.rank-box > .lb-title, .lb-box.rank-box > #lbList { max-width:620px; width:100%; margin-left:auto; margin-right:auto; }
     }
 
     /* 손패 위에 떠 있는 칸들이 탭을 삼키던 문제.

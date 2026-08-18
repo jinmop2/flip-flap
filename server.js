@@ -1577,6 +1577,25 @@ io.on('connection', (socket) => {
     pushRoomLobby(roomId);
   });
 
+  // 방장이 내보내기 — 시작 전 대기실에서만. 나간 사람은 로비로 돌아간다.
+  socket.on('room_kick', ({ seat } = {}) => {
+    const roomId = socket.roomId;
+    const room = rooms[roomId];
+    if (!room || room.game || socket.playerIndex !== 0) return;
+    const i = Number(seat);
+    if (!Number.isInteger(i) || i <= 0 || i >= capOf(room)) return;   // 방장 자신은 못 내보낸다
+    const sid = room.players[i];
+    if (!sid) return;
+    const sk = io.sockets.sockets.get(sid);
+    io.to(sid).emit('room_kicked');
+    if (sk) leaveWaitingRoom(sk, roomId, i);
+    else {
+      room.players[i] = null; room.pids[i] = null;
+      room.nicks[i] = null; room.profiles[i] = null; room.tokens[i] = null;
+      pushRoomLobby(roomId); broadcastRooms();
+    }
+  });
+
   // 방장이 시작
   socket.on('room_start', ({ mode } = {}) => {
     const roomId = socket.roomId;

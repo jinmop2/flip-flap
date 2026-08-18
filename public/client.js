@@ -14,6 +14,28 @@ function syncAppHeight() {
     if (h > 0) document.documentElement.style.setProperty('--app-h', h + 'px');
   });
 }
+// 화면 아래쪽을 연달아 두 번 두드리면, iOS 는 보이는 영역(visual viewport)을
+// 아래로 밀어 놓고 그대로 굳어 버린다 — 화면이 내려간 채 안 돌아오는 그것.
+// 글자를 넣는 중(키보드가 밀어 올린 경우)이 아니면 제자리로 되돌린다.
+function pinViewport() {
+  const el = document.activeElement;
+  if (el && /^(INPUT|TEXTAREA)$/.test(el.tagName)) return;   // 키보드가 올린 것은 정상이다
+  const vv = window.visualViewport;
+  const off = vv ? vv.offsetTop : 0;
+  if (off > 0 || window.scrollY !== 0) {
+    // 판이 열려 있으면 스크롤이 있을 이유가 없다. 로비는 스크롤을 건드리지 않고
+    // 밀린 만큼만 되돌린다.
+    const ingame = document.body.classList.contains('ingame')
+                || document.body.classList.contains('quad4');
+    if (ingame) window.scrollTo(0, 0);
+    else if (off > 0) window.scrollTo(0, window.scrollY);
+  }
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('scroll', pinViewport);
+  window.visualViewport.addEventListener('resize', pinViewport);
+}
+
 syncAppHeight();
 addEventListener('resize', syncAppHeight);
 addEventListener('orientationchange', () => setTimeout(syncAppHeight, 250));   // 회전은 값이 늦게 확정된다
@@ -4018,16 +4040,20 @@ socket.on('room_lobby', (r) => {
   if (r.code) { document.getElementById('waitCode').textContent = r.code; sharedCode = r.code; }
 
   // 자리 — 누가 들어와 있는지 그대로 보여준다
+  _lastSeats = r.seats || null;
   const box = document.getElementById('wcSeats');
   if (box) {
     box.classList.toggle('four', (r.cap || 2) > 2);
-    box.innerHTML = (r.seats || [null, null]).map((s2) => {
+    box.innerHTML = (r.seats || [null, null]).map((s2, i) => {
       // 빈자리를 누르면 친구를 부른다 — 코드를 따로 알려주지 않아도 되게
       if (!s2) return `<button class="wc-seat empty" onclick="roomInvite()"><div class="ws-face">＋</div>
         <div class="ws-nick">친구 초대</div><div class="ws-tag">눌러서 부르기</div></button>`;
       const face = (typeof faceOf === 'function' && s2.profile) ? faceOf(s2.profile) : '🙂';
       const lvl = s2.profile && s2.profile.level ? `Lv.${s2.profile.level}` : '게스트';
-      return `<div class="wc-seat"><div class="ws-face">${face}</div>
+      // 방장은 남을 내보낼 수 있다. 자기 자리와 방장 자리에는 안 붙인다.
+      const kick = (roomIsHost && !s2.host)
+        ? `<button class="ws-kick" title="내보내기" onclick="event.stopPropagation();roomKick(${i})">×</button>` : '';
+      return `<div class="wc-seat">${kick}<div class="ws-face">${face}</div>
         <div class="ws-nick">${esc(s2.nick)}</div>
         ${s2.host ? '<div class="ws-host">방장</div>' : `<div class="ws-tag">${esc(lvl)}</div>`}</div>`;
     }).join('');
@@ -4049,6 +4075,19 @@ socket.on('room_lobby', (r) => {
   const note = document.getElementById('wcGuestNote');
   if (note) note.style.display = roomIsHost ? 'none' : '';
 });
+// 방장이 자리 하나를 비운다. 남의 화면을 마음대로 끄는 일이라 한 번 묻는다.
+window.roomKick = function (seat) {
+  const nick = (_lastSeats && _lastSeats[seat] && _lastSeats[seat].nick) || '이 사람';
+  askConfirm({ icon: '🚪', title: `${nick} 님을 내보낼까요?`,
+               desc: '대기실에서 나가고 로비로 돌아갑니다.', yes: '내보내기', no: '취소' },
+    () => socket.emit('room_kick', { seat }));
+};
+let _lastSeats = null;
+socket.on('room_kicked', () => {
+  toast('방장이 내보냈어요.');
+  setTimeout(() => cancelWait(), 500);
+});
+
 const MODE_NAME = { classic: '클래식', item: '아이템전' };
 
 let sharedCode = '';
