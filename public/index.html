@@ -3140,7 +3140,11 @@
 
     /* 존 공통 */
     .zone { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; }
-    #oppZone { padding-top:0; margin-top:-6px; }   /* 상대 손패 좀 더 위로 */
+    /* 상대 손패는 왼쪽 위 버튼·오른쪽 위 프로필 아래에서 시작해야 한다.
+       예전엔 이 자리 비우기를 좁은 화면에서만 해서, 넓은 화면(맥북 등)에서는
+       상대 패가 버튼 위로 겹쳐 올라왔다. 겹치는 건 화면 폭과 상관없는 일이다.
+       (버튼 14+52 = 66, 프로필 6+63 = 69 → 72) */
+    #oppZone { padding-top:72px; margin-top:0; }
     #centerZone { flex:1; justify-content:center; gap:10px; }
     #myZone { justify-content:flex-end; padding-bottom:calc(40px + var(--safe-b)); }   /* 손패를 프로필/네비바 위로 */
 
@@ -3572,7 +3576,7 @@
       .pile-group .card .c-num { font-size:1.3rem; }
       .pile-group .card .c-rank { font-size:.55rem; padding:0 2px; min-width:11px; border-radius:4px; }
       #myZone { padding-bottom:calc(24px + var(--safe-b)); }
-      #oppZone { margin-top:-4px; }
+      #oppZone { padding-top:50px; }
       #centerZone { gap:6px; }
     }
 

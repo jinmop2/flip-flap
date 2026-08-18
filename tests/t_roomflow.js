@@ -111,5 +111,13 @@ ok('창을 열 때는 안 버린다',
    && !/function openClan\(\) \{[\s\S]{0,200}cacheDrop/.test(cli));
 ok('상점 표는 다음에도 남는다', /localStorage\.setItem\('ff_shop'/.test(cli));
 
+// 상대 손패가 위쪽 버튼·프로필과 겹치지 않게 자리를 비운다.
+// 화면 폭과 상관없는 일이라 미디어쿼리 밖에 있어야 한다.
+{
+  // 미디어쿼리 안은 여섯 칸, 바깥은 네 칸 들여쓴다 — 들여쓰기로 위치를 본다
+  ok('상대 손패 위 자리를 비운다', /\n {4}#oppZone \{ padding-top:72px/.test(htm));
+  ok('좁은 화면에서만 비우던 옛 규칙이 없다', !/#oppZone \{ padding-top:0/.test(htm));
+}
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
