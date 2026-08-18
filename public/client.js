@@ -334,8 +334,10 @@ function renderAccount() {
     const p = myAccount;
     const total = p.wins + p.losses;
     body.innerHTML = `
-      <span class="pb-lv">Lv.${p.level}</span>
-      <div class="pb-ava" style="color:${p.rankColor}">${faceOf(p)}</div>
+      <div class="pb-avawrap">
+        <div class="pb-ava" style="color:${p.rankColor}">${faceOf(p)}</div>
+        <span class="pb-lv">Lv.${p.level}</span>
+      </div>
       <div class="pb-mid">
         <div class="pb-nickrow"><span class="pb-nick${ncClass(p.nickColor)}${npClass(p.plate)}" onclick="event.stopPropagation();openPlate()" title="명패 고르기">${esc(p.nick)}</span>${titleTag(p.titleInfo)}</div>
         <div class="pb-stats">${p.wins}승 ${p.losses}패${total ? ` (${p.winRate}%)` : ''} · <span style="color:${p.rankColor}">${esc(p.rank)}</span></div>

@@ -356,12 +356,13 @@
     .pb-badge { font-size:.72rem; font-weight:800; padding:2px 9px; border-radius:7px; white-space:nowrap; }
     .pb-coin { color:#ffd97a; background:rgba(255,215,80,.12); border:1px solid rgba(255,215,120,.35); }
     .pb-rp   { color:#ffe9b8; background:rgba(200,160,0,.12); border:1px solid rgba(200,160,0,.35); }
-    /* 레벨은 XP 게이지 한가운데에 얹는다 — 왼쪽 구석에 붙어 있으면
-       무엇의 레벨인지도, 게이지와 무슨 상관인지도 안 보였다. */
-    .pb-lv { position:absolute; top:-1px; left:50%; transform:translateX(-50%);
-      font-size:.6rem; font-weight:800; color:#241008;
+    /* 레벨은 프로필 사진 바로 위 한가운데. 바 왼쪽 구석에 떠 있으면
+       누구의 레벨인지가 안 보였다. */
+    .pb-avawrap { position:relative; flex-shrink:0; }
+    .pb-lv { position:absolute; bottom:calc(100% - 4px); left:50%; transform:translateX(-50%);
+      font-size:.6rem; font-weight:800; color:#241008; white-space:nowrap;
       background:linear-gradient(180deg,#ffd97a,#c8912e);
-      border:1px solid #8a5a12; border-radius:0 0 8px 8px; padding:1px 9px 2px;
+      border:1px solid #8a5a12; border-radius:8px; padding:1px 7px;
       box-shadow:0 1px 4px rgba(0,0,0,.5); }
     .pb-login { margin-left:auto; flex-shrink:0; background:rgba(200,160,0,.15); border:1.5px solid var(--gold); color:#ffe9a8; border-radius:10px; padding:8px 14px; font-family:'Fredoka'; font-size:.8rem; font-weight:700; cursor:pointer; }
     #lobby { padding-top:calc(66px + var(--safe-t)); padding-bottom:calc(84px + var(--safe-b)); }   /* 위 탭바 · 아래 프로필 바에 안 가리게 */
