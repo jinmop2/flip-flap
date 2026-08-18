@@ -118,6 +118,7 @@
 
   // 고른 카드에 테두리를 주고, 확정 버튼 문구를 맞춘다
   let curPick = null;      // 지금 무엇을 고르는 중인가 ('offer' | 'bid' | null)
+  let q4Spec = false;      // 관전 중인가 — 남의 판을 보기만 한다
   function paintSel() {
     const hand = $('q-myhand'); if (!hand) return;
     hand.querySelectorAll('.card').forEach((el) => {
@@ -567,6 +568,7 @@
 
     // 상태 문구 + 손패 선택 가능 여부
     let msg = '', pickMode = null;
+    const iAmSpec = q4Spec || s.watching;
     if (s.phase === 'draw') msg = iAmAuc ? '내가 진행자! 덱을 눌러 카드를 뽑으세요' : `${s.seats[s.auctioneer].name} 님이 카드를 공개하는 중…`;
     else if (s.phase === 'offer') { if (iAmAuc) { msg = '내놓을 카드를 고른 뒤 확정을 누르세요'; pickMode = 'offer'; } else msg = `${s.seats[s.auctioneer].name} 님이 출품하는 중…`; }
     else if (s.phase === 'choose_type') msg = iAmAuc ? '경매 방식을 고르세요' : `${s.seats[s.auctioneer].name} 님이 방식을 고르는 중…`;
@@ -613,6 +615,7 @@
     //
     // 손패를 매번 다시 만들지도 않는다. 상태는 자주 오는데 그때마다 DOM 을
     // 갈아엎으면 누르는 도중에 대상이 사라진다. 내용이 바뀔 때만 다시 만든다.
+    if (iAmSpec) pickMode = null;  // 관전은 고르지 않는다
     curPick = pickMode;            // 확정 버튼이 무엇을 낼지 알아야 한다
     const hand = $('q-myhand');
     const sorted = [...s.myHand].sort((x, y) => (x.kind * 100 + x.grade) - (y.kind * 100 + y.grade));
@@ -815,7 +818,8 @@
   };
 
   window.q4Quit = function () {
-    socket.emit('g4_leave');
+    if (q4Spec) socket.emit('g4_spec_leave'); else socket.emit('g4_leave');
+    q4Spec = false; document.body.classList.remove('q-spec');
     // 2인전은 나갈 때 페이지를 새로고침해서 저절로 로비 곡으로 돌아간다.
     // 다인전은 화면만 숨기므로 직접 로비 곡으로 바꿔 준다.
     try { if (typeof startBGM === 'function') startBGM('lobby'); } catch (_) {}
@@ -846,6 +850,8 @@
         const wc = document.getElementById('waitCard'); if (wc) wc.style.display = 'none';
         enterWaiting();
       }
+      q4Spec = !!d.watching;                       // 관전이면 아무것도 못 낸다
+      document.body.classList.toggle('q-spec', q4Spec);
       q4Room = d.roomId; mySeat = d.me || 0; lastRecv = Date.now(); q4Pend = null;
       resetFx();   // 새 판 — 딜·뒤집기 연출을 처음부터 다시
       $('q-startPanel').classList.remove('show');

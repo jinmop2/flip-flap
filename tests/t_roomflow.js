@@ -54,7 +54,7 @@ ok('막히면 다음 손짓마다 다시 시도한다', /function armKick/.test(
 // 알림·관전·손패 탭·랭킹
 ok('로비 탭바 배지에 안 읽은 메시지를 얹는다', /function paintSocialBadges/.test(cli) && /gcClanUnread/.test(cli));
 ok('메시지가 오면 로비 배지도 다시 칠한다', /gcPaintDot[\s\S]{0,400}paintSocialBadges\(\)/.test(cli));
-ok('친구 목록에 관전 버튼', /watchFriend\('\$\{esc\(f\.watch\)\}'\)/.test(cli));
+ok('친구 목록에 관전 버튼', /watchFriend\('\$\{esc\(f\.watch\)\}',\$\{f\.watchQuad/.test(cli));
 ok('관전은 서버에 spectate 로 붙는다', /socket\.emit\('spectate'/.test(cli));
 ok('시계는 탭을 삼키지 않는다', /#mebar \.timer[^}]*pointer-events:none/.test(htm));
 ok('겹치는 자리에서 손패가 이긴다', /#myHand \{[^}]*z-index:8/.test(htm));
@@ -263,6 +263,22 @@ ok('그 탭을 보면 표시가 꺼진다', /function navGo[\s\S]{0,260}navSeen\
 ok('새 일이 생기면 다시 뜬다', /const left = \(navCount\[key\] \|\| 0\) - \(navSeenAt\[key\] \|\| 0\)/.test(cli));
 ok('처리해서 줄면 기준도 내린다', /if \(n < \(navSeenAt\[key\] \|\| 0\)\) navSeenAt\[key\] = n;/.test(cli));
 ok('옛 배지 요소는 걷어냈다', !/id="friendBadge"/.test(htm) && !/id="clanBadge"/.test(htm) && !/id="missionDot"/.test(htm));
+
+// 친구가 다인전을 하고 있어도 관전할 수 있다
+{
+  const s4 = read('server4.js');
+  const c4 = read('public/client4.js');
+  ok('다인전에 관전 통로가 있다', /safe\(socket, 'g4_spectate'/.test(s4));
+  ok('관전자에게도 상태를 보낸다', /for \(const sid of r\.specs \|\| \[\]\)/.test(s4));
+  ok('관전자에게 손패는 안 보낸다', /function stateForSpec[\s\S]{0,200}st\.myHand = \[\];/.test(s4));
+  ok('앉아 있는 사람은 관전이 아니다', /r\.seats\.some\(\(s\) => s\.sid === socket\.id\)\) return;/.test(s4));
+  ok('친구 목록이 다인전도 알려준다', /watchQuad: watchable \? false : !!w4/.test(srv));
+  ok('어느 문을 두드릴지 가른다', /if \(quad\) socket\.emit\('g4_spectate'/.test(cli));
+  ok('관전 중에는 못 고른다', /if \(iAmSpec\) pickMode = null;/.test(c4));
+  ok('관전 중에는 버튼을 감춘다', /body\.q-spec #q-confirm/.test(htm));
+  ok('나갈 때 관전 명단에서 뺀다', /if \(q4Spec\) socket\.emit\('g4_spec_leave'\)/.test(c4)
+     && /safe\(socket, 'g4_spec_leave'/.test(s4));
+}
 
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

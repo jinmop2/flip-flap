@@ -1398,7 +1398,7 @@ function friendRow(f, kind) {
     friend: `<button class="soc-btn" onclick="friendTalk('${esc(f.idl)}','${esc(f.nick)}')">대화${
                gcUnread[f.idl] ? ` <b>${gcUnread[f.idl]}</b>` : ''}</button>
              ${f.online && !f.ingame ? `<button class="soc-btn good" onclick="challengeFriendInApp('${esc(f.idl)}')">도전장</button>` : ''}
-             ${f.watch ? `<button class="soc-btn" onclick="watchFriend('${esc(f.watch)}')">관전</button>` : ''}
+             ${f.watch ? `<button class="soc-btn" onclick="watchFriend('${esc(f.watch)}',${f.watchQuad ? 'true' : 'false'})">관전</button>` : ''}
              <button class="soc-btn bad" onclick="confirmRemoveFriend('${esc(f.idl)}','${esc(f.nick)}')">삭제</button>`,
     in:     `<button class="soc-btn good" onclick="respondFriend('${esc(f.idl)}',true)">수락</button>
              <button class="soc-btn bad" onclick="respondFriend('${esc(f.idl)}',false)">거절</button>`,
@@ -1417,10 +1417,12 @@ function friendRow(f, kind) {
 
 
 // 친구가 하는 판을 보러 간다. 서버가 관전자로 붙여 준다(패는 안 보인다).
-window.watchFriend = function (roomId) {
+window.watchFriend = function (roomId, quad) {
   if (!roomId) return;
   closeFriends();
-  socket.emit('spectate', { roomId });
+  // 2인전과 다인전은 엔진이 달라 문도 다르다
+  if (quad) socket.emit('g4_spectate', { roomId });
+  else socket.emit('spectate', { roomId });
 };
 
 function renderFriends() {

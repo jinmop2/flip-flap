@@ -120,12 +120,23 @@ function attach4(io, hooks = {}) {
     } catch (_) { return null; }
   }
 
+  // 관전자가 볼 상태. 자리 0 시점을 빌리되 손패는 지운다 —
+  // 관전은 남의 패를 보는 자리가 아니다.
+  function stateForSpec(g, rp, room) {
+    const st = stateFor(g, 0, rp, room);
+    st.myHand = [];
+    st.me = null;
+    st.watching = true;
+    return st;
+  }
+
   function push(roomId) {
     const r = rooms4[roomId]; if (!r || r.dead) return;
     for (let i = 0; i < r.seats.length; i++) {
       const sid = r.seats[i].sid;
       if (sid) io.to(sid).emit('g4_state', stateFor(r.game, i, r.rp, r));
     }
+    for (const sid of r.specs || []) io.to(sid).emit('g4_state', stateForSpec(r.game, r.rp, r));
   }
 
   function destroy(roomId, why) {
@@ -609,6 +620,25 @@ function attach4(io, hooks = {}) {
       schedule(roomId, T.next);
     });
 
+    // 친구가 하는 다인전을 보러 간다. 자리에 앉지 않고 상태만 받는다.
+    safe(socket, 'g4_spectate', (data = {}) => {
+      const r = rooms4[data.roomId];
+      if (!r || r.dead || !r.game || r.game.over) return socket.emit('g4_error', '이미 끝난 판이에요.');
+      if (r.seats.some((s) => s.sid === socket.id)) return;   // 앉아 있는 사람은 관전이 아니다
+      r.specs = r.specs || [];
+      if (!r.specs.includes(socket.id)) r.specs.push(socket.id);
+      socket.g4spec = data.roomId;
+      const g = r.game;
+      socket.emit('g4_begin', { roomId: data.roomId, me: null, n: g.n, solo: false, watching: true,
+        seats: r.seats.map((s) => ({ name: s.nick, isBot: s.isBot })) });
+      socket.emit('g4_state', stateForSpec(g, r.rp, r));
+    });
+    safe(socket, 'g4_spec_leave', () => {
+      const r = socket.g4spec && rooms4[socket.g4spec];
+      if (r && r.specs) r.specs = r.specs.filter((x) => x !== socket.id);
+      socket.g4spec = null;
+    });
+
     safe(socket, 'g4_resume', (data = {}) => {
       const roomId = String(data.roomId || '');
       const r = rooms4[roomId];
@@ -621,6 +651,11 @@ function attach4(io, hooks = {}) {
       dbg('이어하기', roomId, 'seat=' + seat);
       push(roomId);
       if (humanToAct(r.game, r) === null && r.game.phase !== 'game_over') schedule(roomId, 400);
+    });
+
+    socket.on('disconnect', () => {
+      const r = socket.g4spec && rooms4[socket.g4spec];
+      if (r && r.specs) r.specs = r.specs.filter((x) => x !== socket.id);
     });
 
     safe(socket, 'g4_leave', () => {
@@ -688,8 +723,16 @@ function attach4(io, hooks = {}) {
     return p.id;
   }
 
+  // 이 소켓이 지금 하는 다인전을 남이 볼 수 있는가 (친구 목록의 관전 버튼용)
+  function watchableRoomOf(sid) {
+    const sk = io.sockets.sockets.get(sid);
+    const id = sk && sk.g4room;
+    const r = id && rooms4[id];
+    return (r && !r.dead && r.game && !r.game.over && !r.solo) ? id : null;
+  }
+
   return { count: () => Object.keys(rooms4).length, waiting: () => Object.keys(pendings).length,
-           groupPending, startGroup };
+           groupPending, startGroup, watchableRoomOf };
 }
 
 module.exports = { attach4 };

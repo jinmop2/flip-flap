@@ -3060,6 +3060,10 @@
     }
     .lb-box.rank-box > .lb-title { flex-shrink:0; }
     .lb-box.rank-box .close-x { top:calc(10px + var(--safe-t)); right:12px; }
+    /* 관전 중에는 낼 것이 없다 — 고르는 버튼들을 감춘다 */
+    body.q-spec #q-confirm, body.q-spec #q-typeBtns, body.q-spec #q-startPanel { display:none !important; }
+    body.q-spec #q-myhand { opacity:.4; }
+
     /* ── 친구와 1:1 대화 (친구 탭 안) ─────────────────────────────
        판 안의 채팅 칸(gc-*)과 같은 결이되, 전체화면 탭에 맞춰 넓게 쓴다. */
     #fpane-talk { flex:1; min-height:0; display:flex; flex-direction:column; gap:8px; }

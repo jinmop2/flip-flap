@@ -320,8 +320,11 @@ function busyState(idl) {
   const r = sk.roomId && rooms[sk.roomId];
   // 서버의 spectate 조건과 같아야 한다 — 버튼만 보이고 눌러도 안 되면 더 답답하다
   const watchable = !!(r && r.game && r.game.phase !== 'game_over' && !r.secret && !r.vsBot && !r.tutorial);
+  // 다인전도 볼 수 있다. 어느 쪽 판인지 알려 줘야 클라이언트가 맞는 문을 두드린다.
+  const w4 = (!watchable && g4 && g4.watchableRoomOf) ? g4.watchableRoomOf(sid) : null;
   return { online: true, ingame: !!(sk.roomId || sk.g4room),
-    watch: watchable ? sk.roomId : null };
+    watch: watchable ? sk.roomId : (w4 || null),
+    watchQuad: watchable ? false : !!w4 };
 }
 function withOnline(list) {
   return (list || []).map(f => ({ ...f, ...busyState(f.idl) }));
