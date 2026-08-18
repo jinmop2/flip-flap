@@ -17,12 +17,11 @@
   // ── 사전 ────────────────────────────────────────────────────────────────
   // 한국어 원문 → 영어. 순서는 화면 순서를 따른다.
   const EN = {
+    '경매에서 지면 아이템이 들어와요': 'Lose an auction and an item arrives',
 
-    '진행자가 먼저 배팅해요 — 잠시만요': 'The auctioneer bids first — one moment',
     '세로로 돌려주세요': 'Please turn your phone upright',
     'FLIP FLAP 은 세로 화면으로만 즐길 수 있어요.': 'FLIP FLAP is played in portrait only.',
 
-    '경매에서 지면 아이템이 들어온다': 'Lose an auction and an item arrives',
     '무작위 매칭 · RP 반영': 'Random matching · counts for RP',
     '기록 안 됨': 'Not recorded',
     '방': 'Rooms',

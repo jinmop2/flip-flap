@@ -69,9 +69,10 @@ function setConn(text, cls) {
   if (!el) return;
   el.textContent = text; el.className = cls || '';
 }
-// 로딩 스플래시 — 최소 1.8초는 로고를 보여준 뒤 부드럽게 사라짐 (실패해도 8초 후 숨김)
+// 로딩 스플래시 — 로고를 잠깐만 보여주고 곧바로 사라진다(실패해도 8초 후 숨김).
+// 예전엔 최소 1.8초 + 0.7초 페이드라, 이미 다 준비된 화면을 2.5초나 가리고 있었다.
 // 단, 게임 나가기 등 내부 이동으로 돌아온 경우엔 즉시 스킵
-const SPLASH_START = Date.now(), SPLASH_MIN = 1800;
+const SPLASH_START = Date.now(), SPLASH_MIN = 450;
 let splashHidden = false;
 if (sessionStorage.getItem('ff_skipsplash')) {
   sessionStorage.removeItem('ff_skipsplash');
@@ -86,7 +87,7 @@ function hideSplash() {
   if (splashHidden) return; splashHidden = true;
   const s = document.getElementById('splash'); if (!s) return;
   const wait = Math.max(0, SPLASH_MIN - (Date.now() - SPLASH_START));
-  setTimeout(() => { s.classList.add('hide'); setTimeout(() => { s.style.display = 'none'; }, 700); }, wait);   // 페이드 후 완전 제거 — 숨은 무한 스피너 정지
+  setTimeout(() => { s.classList.add('hide'); setTimeout(() => { s.style.display = 'none'; }, 260); }, wait);   // 페이드 후 완전 제거 — 숨은 무한 스피너 정지
 }
 setTimeout(hideSplash, 8000);
 // 내부 이동용 새로고침 (스플래시 없이)
@@ -956,10 +957,13 @@ let _iuItem = null, _iuCard = null;
 // 아이템전 진입은 솔로·멀티 팝업 안으로 옮겼다. 전에는 로비에 따로 버튼이
 // 있고 거기서 다시 "솔로 / 빠른플레이" 를 물었는데, AI전은 솔로 안에,
 // 온라인 매칭은 멀티 안에 있는 게 찾기 쉽다 — 한 번 덜 묻는다.
-window.startItemGame = function () {
+window.startItemGame = function (diff) {
   closeModePanels();
   isVsBot = true; isItemMode = true;
-  socket.emit('create_room', { vsBot: true, difficulty: 'normal', pid: PID, nick: getNick(), itemMode: true });
+  // 난이도를 고를 수 있다. 예전엔 '보통' 으로만 붙어서, 클래식에서는 고르는데
+  // 아이템전만 못 고르는 게 이상했다.
+  difficulty = ['easy', 'hard', 'expert'].includes(diff) ? diff : 'normal';
+  socket.emit('create_room', { vsBot: true, difficulty, pid: PID, nick: getNick(), itemMode: true });
 };
 
 // 슬롯 3칸 렌더 — 지금 쓸 수 있는 것만 밝게
@@ -2717,24 +2721,40 @@ function startBGM(track = 'game') {
     src.connect(bgmGain); bgmGain.connect(AC.destination);
   } catch (e) { bgmAudio.volume = bgmOff ? 0 : BGM_VOL; }   // 폴백: 엘리먼트 볼륨
   const el = bgmAudio;
-  // 우리가 멈춘 게 아닌데 멈췄다 = 다른 앱이 소리를 가져갔다. 자리를 내준다.
-  el.addEventListener('pause', () => { if (bgmOn && bgmAudio === el && !el.ended) yieldToOtherAudio(); });
-  const tryPlay = () => el.play().catch(() => {});
-  tryPlay();
-  if (el.paused) {   // 자동재생 차단 → 첫 상호작용에서 한 번만 더
-    const kick = () => {
-      document.removeEventListener('pointerdown', kick);
-      try { AC.resume(); } catch (_) {}
-      el.play().catch(() => yieldToOtherAudio());   // 그래도 안 되면 밖의 음악에 양보
-    };
-    document.addEventListener('pointerdown', kick, { once: true });
+  let played = false;
+  el.addEventListener('playing', () => { played = true; });
+  // 한 번 잘 나오던 곡이 우리가 시키지도 않았는데 멈췄다 = 다른 앱이 소리를
+  // 가져갔다. 그때만 자리를 내준다. 한 번도 못 나온 것은 그냥 자동재생 차단이라,
+  // 여기서 접어 버리면 음악이 영영 안 나온다(그게 "음악이 아예 안 나오던" 이유).
+  el.addEventListener('pause', () => {
+    if (played && bgmOn && bgmAudio === el && !el.ended && !stoppingBGM) yieldToOtherAudio();
+  });
+
+  // 자동재생은 대개 막힌다. 막히면 다음 손짓마다 다시 시도한다 —
+  // 한 번 실패하고 포기하면 그 뒤로는 아무리 눌러도 소리가 안 났다.
+  const tryPlay = () => el.play().then(() => { armKick(false); }).catch(() => { armKick(true); });
+  let kickArmed = false;
+  function armKick(on) {
+    if (on === kickArmed) return;
+    kickArmed = on;
+    for (const t of ['pointerdown', 'keydown', 'touchend'])
+      on ? document.addEventListener(t, kick, true) : document.removeEventListener(t, kick, true);
   }
+  function kick() {
+    if (bgmAudio !== el) return armKick(false);      // 이미 다른 곡으로 갈아탔다
+    try { AC.resume(); } catch (_) {}
+    tryPlay();
+  }
+  tryPlay();
 }
 // 배경음악을 멈춘다. 2인전은 나갈 때 페이지를 통째로 새로고침해서 저절로
 // 꺼졌는데, 다인전은 화면만 숨기므로 로비로 돌아가도 계속 흘렀다.
+let stoppingBGM = false;
 function stopBGM() {
   if (!bgmAudio) { bgmOn = false; return; }
+  stoppingBGM = true;
   try { bgmAudio.pause(); bgmAudio.currentTime = 0; } catch (_) {}
+  setTimeout(() => { stoppingBGM = false; }, 0);
   try { if (bgmGain) bgmGain.disconnect(); } catch (_) {}
   bgmAudio = null; bgmGain = null; bgmOn = false; bgmTrack = null;
 }
@@ -2757,12 +2777,13 @@ function lobbyBGM() { startBGM('lobby'); }
 // 다른 앱이 소리를 잡고 있으면 자동재생이 거부되거나, 재생하던 오디오가
 // 우리가 시키지도 않았는데 멈춘다. 그때는 우리 음악을 접는다.
 // (앱으로 감쌀 때는 네이티브에서 ambient/mixWithOthers 로 진짜로 섞는다)
-let keepOtherAudio = sessionStorage.getItem('ff_yield') === '1';
-// 밖의 음악에 자리를 내준다 — 이번 접속 동안만. 다음에 열면 다시 시도한다.
+// 이 화면이 살아 있는 동안만 기억한다. 예전엔 sessionStorage 에 적어 둬서,
+// 한 번 잘못 접히면 새로고침을 해도 계속 따라다녔다 — 게임에서 나와 로비로
+// 돌아왔을 때 음악이 안 나오던 이유.
+let keepOtherAudio = false;
 function yieldToOtherAudio() {
   if (keepOtherAudio) return;
   keepOtherAudio = true;
-  sessionStorage.setItem('ff_yield', '1');
   stopBGM();
   try { AC.suspend(); } catch (_) {}
 }
@@ -4643,6 +4664,23 @@ function onTap(el, fn) {
 }
 window.onTap = onTap;   // 다인전(client4)도 같은 처리를 쓴다
 
+// 버튼용 — 눌림을 두 길(pointerup·click) 모두에서 받는다.
+// 마우스에서는 둘 중 하나가 조용히 사라지는 일이 실제로 생긴다(포인터가 다른
+// 요소에 잡혀 있거나, 눌린 요소가 그 사이 다시 그려지거나). 둘 다 듣고, 같은
+// 누름은 한 번만 처리한다.
+function onPress(el, fn) {
+  let last = 0;
+  const fire = (e) => {
+    const now = Date.now();
+    if (now - last < 350) return;   // 같은 누름에서 두 번 오는 것을 거른다
+    last = now;
+    fn(e);
+  };
+  el.addEventListener('pointerup', (e) => { if (e.button === 0) fire(e); });
+  el.addEventListener('click', fire);
+}
+window.onPress = onPress;
+
 function makeCard(card, opts = {}) {
   const el = document.createElement('div');
   el.className = 'card';
@@ -4954,10 +4992,10 @@ function renderAuction(changed) {
     // 요소가 다시 그려지면 click 만 조용히 없어진다. pointerup 은 늘 온다.
     const bo = document.createElement('button'); bo.className = 'btn btn-gold btn-sm'; bo.textContent = '오픈 경매';
     bo.title = '경매품 공개 · 배팅 비공개';
-    onTap(bo, () => { playSound('card'); socket.emit('choose_auction', { type: 'open' }); });
+    onPress(bo, () => { playSound('card'); socket.emit('choose_auction', { type: 'open' }); });
     const bc = document.createElement('button'); bc.className = 'btn btn-ink btn-sm'; bc.textContent = '클로즈 경매';
     bc.title = '경매품 비공개 · 배팅 공개';
-    onTap(bc, () => { playSound('card'); socket.emit('choose_auction', { type: 'closed' }); });
+    onPress(bc, () => { playSound('card'); socket.emit('choose_auction', { type: 'closed' }); });
     row.appendChild(bo); row.appendChild(bc); action.appendChild(row);
   }
 
@@ -4995,7 +5033,7 @@ function paintBidSel() {
     slot.appendChild(btn);
     // 카드와 같은 길로 받는다(위 경매 방식 버튼과 같은 이유).
     // 버튼은 글자만 바뀌며 재사용되므로 여기서 한 번만 묶는다.
-    onTap(btn, () => { if (btn._fire) btn._fire(); });
+    onPress(btn, () => { if (btn._fire) btn._fire(); });
   }
   btn.textContent = `${selectedBidCard.kind}번 (${selectedBidCard.grade}등급) 배팅 확정`;
   btn._fire = () => {
@@ -5095,8 +5133,6 @@ function renderHand() {
   // 규칙상 진행자가 먼저 내는데, 그걸 모르면 "눌러도 아무 반응이 없다" 로만 보인다.
   const waiting = s.phase === 'bidding' && a && !a.myBid && !bidding;
   el.classList.toggle('locked', !!waiting);
-  const note = document.getElementById('handWait');
-  if (note) note.style.display = waiting ? '' : 'none';
 
   const sig = hand.map(c => c.id).join(',') + '|' + (offer ? 'o' : '') + (bidding ? 'b' : '');
   if (lastSig.hand === sig) { paintBidSel(); return; } lastSig.hand = sig;

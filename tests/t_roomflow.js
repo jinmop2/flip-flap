@@ -31,7 +31,10 @@ ok('가로 화면은 세로 프레임 안에 넣는다', /@media \(orientation:l
 ok('프레임이 너무 좁아지지 않는다', /max\(340px/.test(htm));
 ok('듣던 음악 유지 토글은 없앴다', !/toggleKeepAudio/.test(htm) && !/togKeep/.test(htm));
 ok('밖의 음악에 자동으로 양보한다', /yieldToOtherAudio/.test(cli));
-ok('양보는 이번 접속 동안만', /sessionStorage[\s\S]{0,40}ff_yield/.test(cli));
+// 접힌 상태를 저장하지 않는다 — 새로고침하면 늘 다시 시도한다
+ok('양보를 저장하지 않는다', !/ff_yield/.test(cli) && /let keepOtherAudio = false/.test(cli));
+ok('한 번 나온 뒤에 멈춰야 양보한다', /if \(played && bgmOn/.test(cli));
+ok('막히면 다음 손짓마다 다시 시도한다', /function armKick/.test(cli) && /addEventListener\(t, kick, true\)/.test(cli));
 
 // 알림·관전·손패 탭·랭킹
 ok('로비 탭바 배지에 안 읽은 메시지를 얹는다', /function paintSocialBadges/.test(cli) && /gcClanUnread/.test(cli));
@@ -89,7 +92,7 @@ ok('UI 잔소리는 기타 탭으로 옮겼다',
   // 주석에도 같은 말이 들어 있으므로, 실제로 누르는 버튼의 순서를 본다
   const order = [...solo.matchAll(/onclick="(soloPlay|startItemGame|q4Start)\(/g)].map((m) => m[1]);
   ok('솔로는 클래식 → 아이템전 → 다인전 순',
-     order.join(',') === 'soloPlay,soloPlay,soloPlay,startItemGame,q4Start,q4Start', order.join(','));
+     order.join(',') === 'soloPlay,soloPlay,soloPlay,startItemGame,startItemGame,startItemGame,q4Start,q4Start', order.join(','));
 }
 
 // 파편 상점 · 방에서 나가면 멀티 창으로
@@ -128,12 +131,14 @@ ok('손패는 칸이 누름을 받는다', /if \(cardEl\._tap\) onTap\(slot, car
 ok('그때 카드에는 안 묶는다', /if \(opts\.tapOnSlot\) el\._tap =/.test(cli));
 
 // 판 안의 버튼은 click 이 아니라 pointerup 으로 받는다
-ok('오픈·클로즈 버튼이 onTap 을 쓴다',
-   /onTap\(bo, \(\) => \{[\s\S]{0,80}choose_auction/.test(cli)
-   && /onTap\(bc, \(\) => \{[\s\S]{0,80}choose_auction/.test(cli));
+// 마우스에서는 pointerup 과 click 중 하나가 조용히 사라지는 일이 있다 — 둘 다 듣는다
+ok('오픈·클로즈 버튼이 두 길로 받는다',
+   /onPress\(bo, \(\) => \{[\s\S]{0,80}choose_auction/.test(cli)
+   && /onPress\(bc, \(\) => \{[\s\S]{0,80}choose_auction/.test(cli));
+ok('같은 누름은 한 번만', /if \(now - last < 350\) return;/.test(cli));
 ok('그 버튼에 onclick 을 안 쓴다', !/b[oc]\.onclick =/.test(cli));
-ok('배팅 확정도 onTap', /onTap\(btn, \(\) => \{ if \(btn\._fire\)/.test(cli));
-ok('확정 버튼은 한 번만 묶는다', /if \(!btn\) \{[\s\S]{0,300}onTap\(btn,/.test(cli));
+ok('배팅 확정도 두 길로', /onPress\(btn, \(\) => \{ if \(btn\._fire\)/.test(cli));
+ok('확정 버튼은 한 번만 묶는다', /if \(!btn\) \{[\s\S]{0,300}onPress\(btn,/.test(cli));
 
 // 랭킹 · 강퇴 · 화면 밀림
 ok('랭킹 줄 안의 칭호가 안 늘어난다', /\.lb-row \.lb-title \{[^}]*flex-grow:0/.test(htm));
@@ -146,7 +151,7 @@ ok('밀린 화면을 되돌린다', /function pinViewport/.test(cli) && /visualV
 
 // 배팅 차례가 아닐 때 이유가 보이는가 · 세로 고정
 ok('차례가 아니면 손패를 잠근 티를 낸다', /el\.classList\.toggle\('locked', !!waiting\)/.test(cli));
-ok('왜 안 눌리는지 한 줄로 알려준다', /id="handWait"/.test(htm) && /진행자가 먼저 배팅해요/.test(htm));
+ok('말 대신 흐리게만 알린다', !/handWait/.test(htm) && !/진행자가 먼저 배팅해요/.test(htm));
 ok('잠기면 흐리게', /#myHand\.locked \.card \{[^}]*opacity:\.5/.test(htm));
 ok('올리면 반응은 있다', /\n {4}\.card\.selectable:hover \{ border-color/.test(htm));
 ok('눕히면 판을 덮는다', /id="rotateNote"/.test(htm) && /orientation:landscape\) and \(hover:none\) and \(pointer:coarse\)/.test(htm));
