@@ -3668,9 +3668,13 @@
       /* #game 은 자바스크립트가 style.display 로 켠다 — 인라인이 클래스보다 세서
          !important 가 없으면 이 격자가 안 걸린다. */
       display:grid !important;
-      grid-template-columns:minmax(120px, 21%) 1fr;
+      /* 오른쪽에 왼쪽과 같은 폭의 빈 칸을 둔다. 그래야 가운데 칸이 판의
+         한가운데에 온다 — 두 칸으로 두면 경매대가 상대 칸만큼 오른쪽으로
+         밀린다. 빈 칸이라고 노는 자리는 아니다: 위에는 상대 프로필·시계,
+         아래에는 이모트·내 프로필이 떠 있는 자리다. */
+      grid-template-columns:minmax(120px, 21%) 1fr minmax(120px, 21%);
       grid-template-rows:1fr auto;
-      grid-template-areas:"opp center" "mine mine";
+      grid-template-areas:"opp center pad" "mine mine mine";
       gap:2px; padding:6px 10px calc(4px + var(--safe-b));
       align-items:stretch;
     }
@@ -3681,13 +3685,18 @@
     }
     body.land #myZone {
       grid-area:mine; flex-direction:row; align-items:flex-end; justify-content:center;
-      gap:8px; padding-bottom:0; padding-right:124px;   /* 오른쪽 아래 이모트·시계 자리 */
+      /* 오른쪽 아래 이모트·시계 자리만 비운다. 왼쪽까지 같이 비우면 배팅·획득
+         칸이 손패를 오른쪽으로 밀어 오히려 더 치우친다(재 보니 -12 → +34). */
+      gap:8px; padding-bottom:0; padding-right:124px;
     }
-    /* 덱과 턴 표시는 가운데 칸 안으로 들어온다 (세로에서는 판에 절대 배치) */
-    body.land #turnInfo { position:static; width:auto; order:1; align-self:center; }
-    body.land #deckStack { position:static; transform:none; order:2; align-self:center; }
+    /* 덱과 턴 표시는 가운데 칸의 왼쪽 끝에 붙인다.
+       줄에 같이 세우면 [턴][덱][경매대] 세 덩어리가 함께 가운데로 몰려,
+       정작 경매대가 오른쪽으로 밀린다 — 가운데에 와야 하는 건 경매대다. */
+    body.land #centerZone { position:relative; }
+    body.land #turnInfo { position:absolute; left:4px; top:calc(50% - 64px); width:58px; }
+    body.land #deckStack { position:absolute; left:4px; top:50%; transform:translateY(-50%); }
     body.land #deckStack .deck-count { bottom:-19px; }
-    body.land #auctionMat { order:3; min-height:0; }
+    body.land #auctionMat { min-height:0; }
     body.land #statusBar { order:4; position:absolute; bottom:0; left:50%; transform:translateX(-50%); margin:0; }
     /* 상대 자리는 좁으므로 카드도 작게 */
     body.land #oppHand .card { width:34px; height:48px; padding:3px; border-radius:6px; border-width:1.5px; }

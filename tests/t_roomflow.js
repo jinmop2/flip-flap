@@ -33,10 +33,13 @@ ok('폰 세로는 손대지 않는다', /if \(vw <= 700 && vh > vw\) \{[\s\S]{0,
 ok('배율을 화면에서 계산한다', /Math\.min\(\(vw - 16\) \/ W, \(vh - 8\) \/ H\)/.test(cli));
 ok('가로를 막지 않는다', !/rotateNote/.test(htm) && !/lock\('portrait'\)/.test(cli));
 // 가로 전용 배치 — 왼쪽 상대 · 가운데 경매대 · 아래 한 줄이 내 자리
-ok('가로에서는 격자로 편다', /body\.land #game \{[\s\S]{0,300}grid-template-areas:"opp center" "mine mine"/.test(htm));
+// 오른쪽에 같은 폭의 빈 칸을 둬야 가운데 칸이 판 한가운데에 온다
+ok('가로에서는 격자로 편다', /body\.land #game \{[\s\S]{0,600}grid-template-areas:"opp center pad" "mine mine mine"/.test(htm));
+ok('좌우 칸 폭이 같다', /grid-template-columns:minmax\(120px, 21%\) 1fr minmax\(120px, 21%\)/.test(htm));
 ok('인라인 display 를 이긴다', /display:grid !important/.test(htm));
-ok('덱과 턴 표시가 가운데 칸으로 들어온다',
-   /body\.land #deckStack \{ position:static/.test(htm) && /body\.land #turnInfo \{ position:static/.test(htm));
+// 줄에 같이 세우면 세 덩어리가 함께 가운데로 몰려 경매대가 밀린다 — 왼쪽 끝에 붙인다
+ok('덱과 턴 표시는 가운데 칸 왼쪽 끝에',
+   /body\.land #deckStack \{ position:absolute; left:4px/.test(htm) && /body\.land #turnInfo \{ position:absolute; left:4px/.test(htm));
 ok('가로 설계 크기가 따로 있다', /LAND_W = 940, LAND_H = 520/.test(cli));
 ok('눕히고 높이가 좁을 때만 쓴다', /vw > vh \* 1\.15 && vh < 760/.test(cli));
 ok('듣던 음악 유지 토글은 없앴다', !/toggleKeepAudio/.test(htm) && !/togKeep/.test(htm));
