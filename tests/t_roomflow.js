@@ -178,5 +178,13 @@ ok('두 자리 등급에 표시를 붙인다', /card\.grade >= 10 \? ' two' : ''
 ok('다인전도 같이', /card\.grade >= 10 \? ' two' : ''/.test(read('public/client4.js')));
 ok('두 자리는 여백을 줄인다', /\.c-rank\.two \{[^}]*padding:2px 4px/.test(htm));
 
+// 프로필은 위, 메뉴는 아래. 둘 다 금테 없음.
+ok('프로필 바가 위', /#profileBar \{[\s\S]{0,120}position:fixed; top:0/.test(htm));
+ok('메뉴바가 아래', /#navBar \{[\s\S]{0,120}position:fixed; bottom:0/.test(htm));
+ok('프로필 바에 금테가 없다', /#profileBar \{[\s\S]{0,260}border:none/.test(htm));
+ok('메뉴바에 금테가 없다', /\n    #navBar \{[\s\S]{0,320}border:none/.test(htm));
+ok('로비 여백이 뒤바뀐 순서에 맞다', /#lobby \{ padding-top:calc\(84px[^}]*padding-bottom:calc\(72px/.test(htm));
+ok('레벨 배지가 사진 아래로', /\.pb-lv \{ position:absolute; top:calc\(100% - 6px\)/.test(htm));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
