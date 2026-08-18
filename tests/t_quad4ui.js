@@ -286,7 +286,7 @@ console.log('\n⑬ 나가기 확인 · 친구 초대 · 상대 명패');
 console.log('\n⑭ 내 정보 · 명패 고르기');
 {
   ok('전체화면', /#myInfoModal \{ padding:0/.test(html)
-     && /\.lb-box\.myinfo-box \{[^}]*height:100dvh/.test(html));
+     && /\.lb-box\.myinfo-box \{[^}]*height:100%/.test(html));
   ok('탭 셋', (html.match(/class="mi-tab[^"]*" data-mi=/g) || []).length === 3);
   ok('칸 셋', /id="miPaneInv"/.test(html) && /id="miPaneTitle"/.test(html) && /id="miPaneHist"/.test(html));
   ok('탭 전환 함수', /function miTab/.test(cli));

@@ -58,7 +58,8 @@ ok('친구 목록에 관전 버튼', /watchFriend\('\$\{esc\(f\.watch\)\}'\)/.te
 ok('관전은 서버에 spectate 로 붙는다', /socket\.emit\('spectate'/.test(cli));
 ok('시계는 탭을 삼키지 않는다', /#mebar \.timer[^}]*pointer-events:none/.test(htm));
 ok('겹치는 자리에서 손패가 이긴다', /#myHand \{[^}]*z-index:8/.test(htm));
-ok('랭킹은 전체화면', /\.lb-box\.rank-box \{[\s\S]{0,120}height:100dvh/.test(htm));
+// 창의 여백(로비에서는 메뉴바 자리)을 지켜야 하므로 100dvh 가 아니라 100%
+ok('랭킹은 전체화면', /\.lb-box\.rank-box \{[\s\S]{0,120}height:100%/.test(htm));
 
 // 랭크게임 · 빠른 입장 · 코드 로그인 제거
 ok('RP 는 랭크게임에서만', /noRank: !room\.ranked/.test(srv));
@@ -193,6 +194,13 @@ ok('열린 탭 표시에 랭킹도 있다', /open\('lbModal'\) \? 'rank'/.test(c
 ok('로비 한가운데 랭킹 버튼은 뺐다', !/class="rank-btn"/.test(htm));
 ok('설정은 아이콘만', /id="setBtn"[\s\S]{0,200}<svg/.test(htm) && !/id="setBtn"[\s\S]{0,400}>설정</.test(htm));
 ok('설정 누름이 프로필로 안 퍼진다', /id="setBtn"[^>]*event\.stopPropagation\(\)/.test(htm));
+
+// 아래 탭 — 켜진 곳은 금색, 창을 닫지 않고 바로 옮겨간다
+ok('메뉴바가 로비 창들 위에 있다', /#navBar \{[\s\S]{0,140}z-index:50/.test(htm));
+ok('켜진 탭은 금색 판', /\.nav-item\.active::before \{[\s\S]{0,160}rgba\(200,160,0,\.15\)/.test(htm));
+ok('탭을 옮기면 열린 창을 닫는다', /function navGo[\s\S]{0,200}closeAllNavModals\(\)/.test(cli));
+ok('랭킹 창도 같이 닫는다', /function closeAllNavModals[\s\S]{0,120}closeLb\(\)/.test(cli));
+ok('메뉴바 자리만큼 창 아래를 비운다', /body:not\(\.ingame\):not\(\.quad4\) \.lb-modal \{ padding-bottom/.test(htm));
 
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

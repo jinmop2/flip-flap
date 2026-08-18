@@ -306,7 +306,7 @@
     /* 상점은 상품 수가 많아 좁은 상자에 우겨넣으면 이름도 설명도 잘린다.
        화면을 통째로 쓴다 — 타일이 커져 이름이 안 잘리고 설명도 여유가 생긴다. */
     #shopModal { padding:0; align-items:stretch; justify-content:stretch; }
-    .lb-box.shop-box { width:100%; max-width:none; height:100dvh; max-height:none;
+    .lb-box.shop-box { width:100%; max-width:none; height:100%; max-height:none;
       border-radius:0; border:none; padding:calc(12px + var(--safe-t)) 14px calc(12px + var(--safe-b));
       gap:9px; overflow:hidden; }
     /* 목록만 스크롤한다 — 헤더·상세·닫기는 늘 제자리 */
@@ -436,8 +436,11 @@
     #lobby { padding-top:calc(84px + var(--safe-t)); padding-bottom:calc(72px + var(--safe-b)); }   /* 위 프로필 바 · 아래 메뉴바에 안 가리게 */
 
     /* ── 하단 탭바 ── */
+    /* 로비 창들(z-index 45~46)보다 위에 둔다. 창이 열려 있어도 탭이 눌려야
+       × 를 먼저 누르지 않고 바로 다른 탭으로 옮길 수 있다.
+       판 안에서는 이 바가 아예 숨으므로 게임 화면을 가릴 일은 없다. */
     #navBar {
-      position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:30;
+      position:fixed; bottom:0; left:50%; transform:translateX(-50%); z-index:50;
       width:min(480px, 100%); display:flex;
       padding:6px 4px calc(6px + var(--safe-b));
       background:linear-gradient(180deg, #3a1018 0%, #240a10 100%);
@@ -452,7 +455,15 @@
     }
     .nav-item .svgi { width:21px; height:21px; color:currentColor; }
     .nav-item:hover { color:#c8a86a; }
+    /* 켜진 탭 — 금색 글자에 은은한 판을 깔아 "지금 여기" 가 바로 보이게 */
     .nav-item.active { color:var(--gold); }
+    .nav-item.active::before {
+      content:''; position:absolute; inset:2px 4px;
+      border-radius:12px; background:rgba(200,160,0,.15);
+      box-shadow:inset 0 0 0 1px rgba(200,160,0,.35);
+      pointer-events:none;
+    }
+    .nav-item.active .svgi { filter:drop-shadow(0 0 6px rgba(255,215,120,.5)); }
     .nav-badge {
       position:absolute; top:2px; right:calc(50% - 20px); min-width:15px; height:15px;
       border-radius:8px; background:#c8102e; color:#fff; font-size:.55rem; font-weight:800;
@@ -469,7 +480,7 @@
     /* 상점과 같은 전체화면 — 인벤토리·칭호가 좁은 상자 안에서 잘렸다.
        바깥 여백(20px)을 없애야 진짜 끝까지 찬다 — 상점도 같은 방식이다. */
     #myInfoModal { padding:0; align-items:stretch; justify-content:stretch; }
-    .lb-box.myinfo-box { width:100%; max-width:none; height:100dvh; max-height:none;
+    .lb-box.myinfo-box { width:100%; max-width:none; height:100%; max-height:none;
       border-radius:0; border:none; padding:calc(12px + var(--safe-t)) 14px calc(12px + var(--safe-b));
       gap:9px; overflow:hidden; }
     @media (min-width:700px) { .lb-box.myinfo-box { max-width:640px; margin:0 auto;
@@ -657,7 +668,7 @@
 
 
     /* ── 뽑기 ── */
-    .lb-box.gacha-box { width:100%; max-width:none; height:100dvh; max-height:none;
+    .lb-box.gacha-box { width:100%; max-width:none; height:100%; max-height:none;
       border-radius:0; border:none; padding:calc(12px + var(--safe-t)) 14px calc(12px + var(--safe-b));
       gap:10px; overflow:hidden; }
     @media (min-width:700px) { .lb-box.gacha-box { max-width:720px; margin:0 auto;
@@ -2116,6 +2127,8 @@
     .wc-sub { font-size:.72rem; color:#6a5a70; margin-top:-4px; text-align:center; }
     /* 로비 다이얼로그 */
     .lb-modal { display:none; position:fixed; inset:0; background:rgba(8,2,4,.82); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); z-index:45; align-items:center; justify-content:center; padding:20px; animation:fadeIn .25s; }
+    /* 로비에서는 메뉴바가 창 위에 떠 있다 — 그만큼 아래를 비워 창이 안 가리게 */
+    body:not(.ingame):not(.quad4) .lb-modal { padding-bottom:calc(76px + var(--safe-b)); }
     .lb-modal.show { display:flex; }
     .lb-box {
       background:linear-gradient(180deg,#3a1018,#22090e); border:1.5px solid #b98d34; border-radius:18px; padding:24px 22px; width:300px;
@@ -3009,7 +3022,7 @@
        이름이 잘리고 칭호가 밀렸다. 화면을 통째로 쓴다. */
     #lbModal { padding:0; align-items:stretch; justify-content:stretch; }
     .lb-box.rank-box {
-      width:100%; max-width:none; height:100dvh; max-height:none;
+      width:100%; max-width:none; height:100%; max-height:none;
       border-radius:0; border:none; gap:10px; overflow:hidden;
       padding:calc(14px + var(--safe-t)) 14px calc(14px + var(--safe-b));
     }
