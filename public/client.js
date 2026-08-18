@@ -4639,7 +4639,10 @@ function makeCard(card, opts = {}) {
   if (opts.selectable) {
     el.classList.add('selectable');
     // 두 번째 인자로 카드 요소도 넘긴다 — 그 자리에 파티클을 얹으려면 필요하다
-    onTap(el, () => { playSound('select'); opts.onClick(card, el); });
+    // tapOnSlot 이면 여기서 묶지 않는다. 손패는 카드가 들리면서 커서 밖으로
+    // 빠져나가므로, 제자리에 있는 칸이 대신 누름을 받아야 한다(renderHand 참고).
+    if (opts.tapOnSlot) el._tap = () => { playSound('select'); opts.onClick(card, el); };
+    else onTap(el, () => { playSound('select'); opts.onClick(card, el); });
   }
   return el;
 }
@@ -5041,7 +5044,7 @@ function renderHand() {
   hand.forEach((card, i) => {
     let cardEl;
     if (offer)
-      cardEl = makeCard(card, { selectable: true, onClick: (c, el) => {
+      cardEl = makeCard(card, { selectable: true, tapOnSlot: true, onClick: (c, el) => {
         playSound('place');
         try { playPlaceFx(el); } catch (_) {}
         // 출품은 서버가 답할 때까지 손패가 그대로다. 왕복이 100ms 만 돼도
@@ -5052,11 +5055,14 @@ function renderHand() {
         socket.emit('offer_card', { cardId: c.id });
       } });
     else if (bidding)
-      cardEl = makeCard(card, { selectable: true, selected: selectedBidCard?.id === card.id, onClick: c => { selectedBidCard = selectedBidCard?.id === c.id ? null : c; paintBidSel(); } });
+      cardEl = makeCard(card, { selectable: true, tapOnSlot: true, selected: selectedBidCard?.id === card.id, onClick: c => { selectedBidCard = selectedBidCard?.id === c.id ? null : c; paintBidSel(); } });
     else
       cardEl = makeCard(card);
     const slot = document.createElement('div'); slot.className = 'fan-slot';
     slot.appendChild(cardEl); el.appendChild(slot);
+    // 카드가 들려 올라가면 그 아래에 빈 자리가 생긴다. 커서가 거기 있으면
+    // 카드에는 닿지 않는다 — 칸이 대신 받는다. 칸은 움직이지 않는다.
+    if (cardEl._tap) onTap(slot, cardEl._tap);
   });
   fanRow(el, false);
   if (deal) {

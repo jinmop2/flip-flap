@@ -3202,7 +3202,21 @@
     .card.back .bf.flap { font-size:1.05rem; transform:rotate(180deg); margin-top:-2px; opacity:.8; }
 
     .card.selectable { cursor:pointer; }
-    .card.selectable:hover { transform:translateY(-14px) scale(1.06); box-shadow:0 16px 30px rgba(0,0,0,.6); z-index:20!important; border-color:var(--gold); }
+    /* 마우스로 겨누면 카드가 들린다. 그런데 들리는 순간 카드가 커서 밖으로
+       빠져나가 hover 가 풀리고, 내려왔다가 다시 들리기를 반복한다 — 마우스로
+       카드를 누르면 안 눌리던 정체다(폰은 hover 가 없어서 안 겪는다).
+       그래서 들리는 신호는 "칸"이 받는다. 칸은 제자리에 있으므로 흔들리지 않고,
+       카드가 비운 아래쪽도 칸이 그대로 덮고 있어 누르는 자리가 안 사라진다. */
+    .fan-slot:has(> .card.selectable):hover > .card.selectable {
+      transform:translateY(-14px) scale(1.06); box-shadow:0 16px 30px rgba(0,0,0,.6);
+      z-index:20!important; border-color:var(--gold);
+    }
+    /* 손패 밖(경매대 위 등)에서는 칸이 없으니 카드가 직접 받는다.
+       거기 카드는 겹쳐 있지 않아 들려도 커서를 벗어나지 않는다. */
+    .a-slot > .card.selectable:hover, #pickRow .card.selectable:hover {
+      transform:translateY(-14px) scale(1.06); box-shadow:0 16px 30px rgba(0,0,0,.6);
+      z-index:20!important; border-color:var(--gold);
+    }
     .card.selected { transform:translateY(-16px) scale(1.08); box-shadow:0 18px 34px rgba(200,160,0,.5); z-index:20!important; border-color:var(--gold); }
 
     @keyframes dealIn { from{opacity:0; transform:translateY(-40px) scale(.7) rotate(8deg)} to{opacity:1; transform:none} }

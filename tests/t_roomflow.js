@@ -119,5 +119,12 @@ ok('상점 표는 다음에도 남는다', /localStorage\.setItem\('ff_shop'/.te
   ok('좁은 화면에서만 비우던 옛 규칙이 없다', !/#oppZone \{ padding-top:0/.test(htm));
 }
 
+// 마우스로 손패를 누를 때 — 카드가 들려도 누르는 자리가 사라지지 않아야 한다
+ok('손패 hover 는 칸이 받는다', /\.fan-slot:has\(> \.card\.selectable\):hover > \.card\.selectable/.test(htm));
+ok('카드가 직접 hover 로 들리지 않는다',
+   !/\n {4}\.card\.selectable:hover \{/.test(htm));
+ok('손패는 칸이 누름을 받는다', /if \(cardEl\._tap\) onTap\(slot, cardEl\._tap\)/.test(cli));
+ok('그때 카드에는 안 묶는다', /if \(opts\.tapOnSlot\) el\._tap =/.test(cli));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
