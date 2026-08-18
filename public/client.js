@@ -5461,9 +5461,27 @@ function tvPile(box, cards) {
 function tvRender(v) {
   const $ = (id) => document.getElementById(id);
   $('tv-turn').textContent = `턴 ${v.turn}`;
-  $('tv-myChips').textContent = `\u{1F535} ${v.chips.me}`;
-  $('tv-oppChips').textContent = `\u{1F535} ${v.chips.opp}`;
+  $('tv-myChips').innerHTML = `<i class="chip light"></i><b>${v.chips.me}</b>`;
+  $('tv-oppChips').innerHTML = `<i class="chip dark"></i><b>${v.chips.opp}</b>`;
   $('tv-deckLeft').textContent = v.centerLeft;
+
+  // 덱 — 남은 장수만큼 겹쳐 쌓고, 뽑을 수 있을 때만 눌린다
+  const deck = $('tv-deck'), stack = $('tv-deckStack');
+  const canDraw = !v.over && v.phase === 'draw' && v.auctioneer === v.me;
+  const dsig = v.centerLeft + '|' + canDraw;
+  if (stack.dataset.sig !== dsig) {
+    stack.dataset.sig = dsig;
+    stack.innerHTML = '';
+    for (let i = 0; i < Math.min(v.centerLeft, 5); i++) {
+      const c = makeCard(null);
+      c.style.transform = `translate(${i * 2}px, ${-i * 2}px)`;
+      c.style.zIndex = String(i);
+      stack.appendChild(c);
+    }
+    stack.style.visibility = v.centerLeft ? '' : 'hidden';
+  }
+  deck.classList.toggle('on', canDraw);
+  if (!deck._bound) { deck._bound = true; onTap(deck, () => { if (deck.classList.contains('on')) tvAct('draw'); }); }
 
   const c = $('tv-center'), o = $('tv-offer');
   c.innerHTML = ''; o.innerHTML = '';
@@ -5501,6 +5519,28 @@ function tvRender(v) {
   tvActions(v);
 }
 
+
+// 배팅 액수 고르개. 숫자 입력칸의 작은 화살표는 손가락으로 못 누른다 —
+// 46px 짜리 ─ / ＋ 두 개로 만든다. step 이 2 면 짝수만 나온다(클로즈).
+function tvAmount(box, lo, hi, step, init) {
+  const wrap = document.createElement('div'); wrap.className = 'tv-amt';
+  const minus = document.createElement('button'); minus.className = 'tv-step'; minus.textContent = '\u2212';
+  const num = document.createElement('div'); num.className = 'tv-num';
+  const plus = document.createElement('button'); plus.className = 'tv-step'; plus.textContent = '+';
+  wrap.append(minus, num, plus); box.appendChild(wrap);
+  let v = Math.max(lo, Math.min(hi, init));
+  const paint = () => {
+    num.innerHTML = `<i class="chip light"></i>${v}`;
+    minus.disabled = v - step < lo;
+    plus.disabled = v + step > hi;
+  };
+  onTap(minus, () => { if (v - step >= lo) { v -= step; paint(); sfxTick(); } });
+  onTap(plus,  () => { if (v + step <= hi) { v += step; paint(); sfxTick(); } });
+  paint();
+  return { get: () => v };
+}
+function sfxTick() { try { playSound('select'); } catch (_) {} }
+
 function tvActions(v) {
   const st = document.getElementById('tv-status');
   const box = document.getElementById('tv-actions');
@@ -5514,8 +5554,9 @@ function tvActions(v) {
 
   if (v.over) { st.textContent = '판 종료'; return; }
   if (v.phase === 'draw') {
-    st.textContent = mine ? '중앙덱에서 카드를 뒤집으세요' : '상대가 카드를 뒤집는 중…';
-    if (mine) btn('카드 뒤집기', () => tvAct('draw'));
+    // 덱 자체가 버튼이다 — 같은 일을 하는 버튼을 하나 더 두면 어디를 눌러야
+    // 하는지가 흐려진다.
+    st.textContent = mine ? '덱을 눌러 카드를 뒤집으세요' : '상대가 카드를 뒤집는 중…';
     return;
   }
   if (v.phase === 'offer') {
@@ -5537,15 +5578,8 @@ function tvActions(v) {
     const lo = v.lot.minRaise, hi = v.chips.me;
     if (lo > hi) { st.textContent = '칩이 모자라요 — 물러서야 해요'; btn('물러서기', () => tvAct('fold'), true); return; }
     st.textContent = `내 차례 — ${lo} 이상 부르거나 물러서요`;
-    const wrap = document.createElement('div'); wrap.className = 'tv-amt';
-    const inp = document.createElement('input');
-    inp.type = 'number'; inp.min = String(lo); inp.max = String(hi); inp.value = String(lo);
-    wrap.appendChild(inp); box.appendChild(wrap);
-    btn('부르기', () => {
-      const n = Math.floor(Number(inp.value));
-      if (!(n >= lo && n <= hi)) return toast(`${lo} 이상 ${hi} 이하로 불러주세요`);
-      tvAct('raise', { amount: n });
-    });
+    const amt = tvAmount(box, lo, hi, 1, lo);
+    btn('부르기', () => tvAct('raise', { amount: amt.get() }));
     btn('물러서기', () => tvAct('fold'), true);
     return;
   }
@@ -5555,15 +5589,8 @@ function tvActions(v) {
       if (!myTurn) { st.textContent = '상대가 살지 고르는 중…'; return; }
       const hi = v.chips.me - (v.chips.me % 2);
       st.textContent = '짝수 개를 부르세요 (상대는 얼마인지 몰라요)';
-      const wrap = document.createElement('div'); wrap.className = 'tv-amt';
-      const inp = document.createElement('input');
-      inp.type = 'number'; inp.min = '2'; inp.max = String(hi); inp.step = '2'; inp.value = '2';
-      wrap.appendChild(inp); box.appendChild(wrap);
-      btn('부르기', () => {
-        const n = Math.floor(Number(inp.value));
-        if (!(n >= 2 && n <= hi && n % 2 === 0)) return toast(`2 이상 ${hi} 이하의 짝수로 불러주세요`);
-        tvAct('closeBet', { amount: n });
-      });
+      const amt = tvAmount(box, 2, hi, 2, 2);
+      btn('부르기', () => tvAct('closeBet', { amount: amt.get() }));
       return;
     }
     if (!myTurn) { st.textContent = '상대가 부르는 중…'; return; }

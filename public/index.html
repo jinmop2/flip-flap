@@ -3865,66 +3865,120 @@
     }
 
     /* ══ TWELVE ══════════════════════════════════════════════════════════
-       클래식과 같은 펠트 위에서 하되, 값을 부르는 모드라 "칩" 과 "지금 얼마" 가
-       늘 보여야 한다. 카드보다 숫자가 먼저 읽히게 짠다. */
+       값을 부르는 모드라 "칩" 과 "지금 얼마" 가 늘 보여야 한다.
+       그리고 화면이 흔들리면 안 된다 — 단계마다 버튼·문구 수가 달라지는데,
+       그때마다 판이 위아래로 밀리면 카드를 눈으로 좇기 어렵다.
+       그래서 위(상대) · 가운데(경매대) · 아래(나) 를 격자로 고정하고,
+       문구·버튼 칸도 높이를 못 박는다. */
     #tv {
-      display:none; position:fixed; inset:0; z-index:30; flex-direction:column; align-items:center;
-      padding:calc(8px + var(--safe-t)) 12px calc(8px + var(--safe-b)); gap:6px; overflow:hidden;
+      display:none; position:fixed; inset:0; z-index:30;
+      grid-template-rows:auto 1fr auto auto auto;
+      justify-items:center; align-items:center;
+      padding:calc(8px + var(--safe-t)) 12px calc(8px + var(--safe-b)); gap:4px; overflow:hidden;
       background:radial-gradient(ellipse 90% 70% at 50% 50%, #24506b 0%, #16324a 72%, #0b1a2a 100%);
     }
-    body.twelve #tv { display:flex; }
+    body.twelve #tv { display:grid; }
     body.twelve #lobby, body.twelve #navBar, body.twelve #profileBar { display:none !important; }
     #tv-controls { position:absolute; top:calc(10px + var(--safe-t)); left:12px; z-index:4; display:flex; gap:6px; }
     #tv-turn { position:absolute; top:calc(16px + var(--safe-t)); right:14px; z-index:4;
       font-size:.72rem; font-weight:800; color:rgba(255,255,255,.6); letter-spacing:1px; }
 
     .tv-side { display:flex; flex-direction:column; align-items:center; gap:3px; width:100%; }
-    .tv-side.me { margin-top:auto; }
-    #tv .tv-side:first-of-type { padding-top:52px; }   /* 위 버튼 자리 비우기 */
+    #tv .tv-side:first-of-type { padding-top:50px; }        /* 위 버튼 자리 */
     .tv-who { display:flex; align-items:center; gap:8px; font-size:.76rem; color:#cfe4f2; }
     .tv-who b { font-weight:800; color:#fff; }
+
+    /* 칩 — 검·흰 카지노 칩. 가장자리 눈금은 원뿔 그라디언트로 그린다. */
+    .chip {
+      width:17px; height:17px; border-radius:50%; display:inline-block; flex-shrink:0;
+      position:relative; box-shadow:0 1px 3px rgba(0,0,0,.6);
+    }
+    .chip::after {
+      content:''; position:absolute; inset:3.5px; border-radius:50%;
+    }
+    .chip.dark {
+      background:conic-gradient(#1a1a1a 0 12.5%, #f2f2f2 0 25%, #1a1a1a 0 37.5%, #f2f2f2 0 50%,
+                                #1a1a1a 0 62.5%, #f2f2f2 0 75%, #1a1a1a 0 87.5%, #f2f2f2 0);
+    }
+    .chip.dark::after { background:#1a1a1a; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5); }
+    .chip.light {
+      background:conic-gradient(#f2f2f2 0 12.5%, #1a1a1a 0 25%, #f2f2f2 0 37.5%, #1a1a1a 0 50%,
+                                #f2f2f2 0 62.5%, #1a1a1a 0 75%, #f2f2f2 0 87.5%, #1a1a1a 0);
+    }
+    .chip.light::after { background:#f2f2f2; box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.45); }
     .tv-chips {
-      font-size:.8rem; font-weight:900; color:#8fd8ff; letter-spacing:.5px;
-      background:rgba(0,0,0,.34); border:1px solid rgba(140,210,255,.4); border-radius:99px; padding:2px 10px;
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:.86rem; font-weight:900; color:#eaf4ff;
+      background:rgba(0,0,0,.34); border:1px solid rgba(180,210,235,.35); border-radius:99px; padding:2px 11px 2px 5px;
     }
 
+    /* 가운데 칸 — 경매대가 화면 한가운데. 덱은 왼쪽에 띄워 붙여, 경매대가
+       덱 폭만큼 밀리지 않게 한다. */
+    #tv-mid { position:relative; display:flex; align-items:center; justify-content:center; width:100%; }
+    #tv-deck { position:absolute; left:6px; top:50%; transform:translateY(-50%);
+      display:flex; flex-direction:column; align-items:center; gap:20px; cursor:default; }
+    #tv-deckStack { position:relative; width:52px; height:73px; }
+    #tv-deckStack .card { position:absolute; top:0; left:0; width:52px; height:73px; padding:3px; border-radius:7px; border-width:1.5px; }
+    #tv-deckCount { font-size:.6rem; color:rgba(255,255,255,.5); white-space:nowrap; }
+    #tv-deckCount b { color:#cfe4f2; }
+    /* 뽑을 수 있을 때만 눌리는 티를 낸다 */
+    #tv-deck.on { cursor:pointer; }
+    #tv-deck.on #tv-deckStack { animation:tvDeckPulse 1.6s ease-in-out infinite; }
+    #tv-deck.on #tv-deckStack::after {
+      content:''; position:absolute; inset:-5px; border-radius:11px;
+      border:1.5px solid rgba(143,216,255,.8); box-shadow:0 0 14px rgba(143,216,255,.45);
+    }
+    @keyframes tvDeckPulse { 0%,100% { transform:translateY(0) } 50% { transform:translateY(-4px) } }
+    @media (prefers-reduced-motion:reduce) { #tv-deck.on #tv-deckStack { animation:none; } }
+
     #tv-mat {
-      display:flex; flex-direction:column; align-items:center; gap:8px; position:relative;
-      padding:12px 20px 14px; border-radius:18px;
+      display:flex; flex-direction:column; align-items:center; gap:8px;
+      padding:12px 20px 14px; border-radius:18px; min-width:210px;
       background:radial-gradient(ellipse at 50% 40%, rgba(0,0,0,.34), rgba(0,0,0,.12));
       border:1.5px dashed rgba(140,210,255,.32);
     }
-    .tv-badge { min-height:16px; font-size:.66rem; font-weight:800; letter-spacing:1px; color:#8fd8ff; }
+    .tv-badge { height:16px; font-size:.66rem; font-weight:800; letter-spacing:1px; color:#8fd8ff; }
     .tv-lot { display:flex; align-items:center; gap:10px; }
     .tv-slot { display:flex; flex-direction:column; align-items:center; gap:4px; }
-    .tv-lbl { font-size:.6rem; color:rgba(255,255,255,.45); letter-spacing:1px; }
-    .tv-plus { font-size:1rem; color:rgba(255,255,255,.35); font-weight:800; }
-    .tv-bets { display:flex; gap:14px; font-size:.68rem; color:#a8c8e0; }
+    .tv-lbl { font-size:.6rem; color:rgba(255,255,255,.45); letter-spacing:1px; height:12px; }
+    .tv-slot > div:last-child { width:70px; height:98px; }   /* 카드 자리 고정 — 비어도 안 밀린다 */
+    .tv-plus { font-size:1rem; color:rgba(255,255,255,.35); font-weight:800; margin-top:12px; }
+    .tv-bets { display:flex; gap:14px; font-size:.68rem; color:#a8c8e0; height:20px; align-items:center; }
     .tv-bet b { font-size:1rem; font-weight:900; color:#fff; margin-right:3px; }
     .tv-bet.me b { color:#ffe9a8; }
     .tv-bet.opp b { color:#8fd8ff; }
-    #tv-deck { font-size:.62rem; color:rgba(255,255,255,.45); }
-    #tv-deck b { color:#cfe4f2; }
 
+    /* 문구와 버튼 칸은 높이를 못 박는다 — 단계가 바뀌어도 판이 안 밀린다 */
     #tv-status {
-      font-size:.86rem; font-weight:700; color:#e8f4ff; text-align:center; min-height:22px;
-      padding:5px 16px; border-radius:99px; background:rgba(0,0,0,.34);
+      font-size:.86rem; font-weight:700; color:#e8f4ff; text-align:center;
+      height:34px; display:flex; align-items:center; justify-content:center;
+      padding:0 16px; border-radius:99px; background:rgba(0,0,0,.34);
       border:1px solid rgba(140,210,255,.28); max-width:92%;
     }
-    #tv-actions { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; min-height:40px; align-items:center; }
+    #tv-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; align-items:center; height:56px; }
     .tv-btn {
       font-family:'Fredoka'; font-size:.82rem; font-weight:800; cursor:pointer;
-      padding:9px 16px; border-radius:11px; color:#0d1e2c;
+      padding:10px 18px; border-radius:11px; color:#0d1e2c;
       background:linear-gradient(180deg,#8fd8ff,#4aa8dd); border:1.5px solid #b8e8ff;
     }
     .tv-btn.ghost { background:rgba(0,0,0,.3); color:#cfe4f2; border-color:rgba(140,210,255,.4); }
     .tv-btn:active { transform:scale(.96); }
     .tv-btn:disabled { opacity:.4; cursor:default; }
-    .tv-amt { display:flex; align-items:center; gap:6px; }
-    .tv-amt input {
-      width:64px; padding:8px; border-radius:9px; text-align:center;
-      font-family:'Fredoka'; font-size:.95rem; font-weight:800;
-      background:#0d1e2c; border:1.5px solid #3a6a90; color:#fff;
+
+    /* 배팅 액수 — 손가락으로 누를 만한 크기의 ─ / ＋ */
+    .tv-amt { display:flex; align-items:center; gap:0; border-radius:12px; overflow:hidden;
+      border:1.5px solid #4a7fa0; background:#0d1e2c; }
+    .tv-step {
+      width:46px; height:46px; flex-shrink:0; cursor:pointer; border:none; padding:0;
+      background:linear-gradient(180deg,#2f6389,#1b3d58); color:#dff0ff;
+      font-family:'Fredoka'; font-size:1.5rem; font-weight:900; line-height:1;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .tv-step:active { background:#4aa8dd; color:#0d1e2c; }
+    .tv-step:disabled { opacity:.35; cursor:default; }
+    .tv-amt .tv-num {
+      min-width:58px; text-align:center; font-family:'Fredoka'; font-size:1.35rem; font-weight:900;
+      color:#fff; padding:0 6px; display:flex; align-items:center; justify-content:center; gap:5px; height:46px;
     }
 
     #tv-over { display:none; position:fixed; inset:0; z-index:40; background:rgba(4,10,18,.9);
@@ -3937,6 +3991,12 @@
     #tv-orewards { font-size:.86rem; color:#ffd94a; font-weight:800; margin-top:8px; min-height:20px; }
     .tv-obtns { display:flex; gap:8px; margin-top:14px; }
     .tv-obtns .btn { flex:1; }
+    @media (max-height:700px) {
+      #tv .tv-side:first-of-type { padding-top:44px; }
+      #tv-mat { padding:8px 14px 10px; gap:6px; }
+      .tv-slot > div:last-child { width:58px; height:81px; }
+      #tv-actions { height:52px; }
+    }
 
   </style>
 </head>
@@ -5422,24 +5482,29 @@
 
   <!-- 상대 -->
   <div class="tv-side">
-    <div class="tv-who"><b id="tv-oppNick">상대</b><span class="tv-chips" id="tv-oppChips">🔵 20</span></div>
+    <div class="tv-who"><b id="tv-oppNick">상대</b><span class="tv-chips" id="tv-oppChips"><i class="chip dark"></i><b>20</b></span></div>
     <div class="fan top" id="tv-oppHand"></div>
     <div class="pile" id="tv-oppAcq"></div>
   </div>
 
-  <!-- 경매대 -->
-  <div id="tv-mat">
-    <div class="tv-badge" id="tv-typeBadge"></div>
-    <div class="tv-lot">
-      <div class="tv-slot"><div class="tv-lbl">공개 카드</div><div id="tv-center"></div></div>
-      <div class="tv-plus">+</div>
-      <div class="tv-slot"><div class="tv-lbl" id="tv-offerLbl">출품 카드</div><div id="tv-offer"></div></div>
+  <!-- 가운데 칸 — 덱은 왼쪽에 붙이고 경매대가 화면 한가운데에 오게 한다 -->
+  <div id="tv-mid">
+    <div id="tv-deck" title="눌러서 뒤집기">
+      <div id="tv-deckStack"></div>
+      <div id="tv-deckCount">덱 <b id="tv-deckLeft">12</b></div>
     </div>
-    <div class="tv-bets">
-      <span class="tv-bet me"><b id="tv-myBet">0</b> 내 배팅</span>
-      <span class="tv-bet opp"><b id="tv-oppBet">–</b> 상대</span>
+    <div id="tv-mat">
+      <div class="tv-badge" id="tv-typeBadge"></div>
+      <div class="tv-lot">
+        <div class="tv-slot"><div class="tv-lbl">공개 카드</div><div id="tv-center"></div></div>
+        <div class="tv-plus">+</div>
+        <div class="tv-slot"><div class="tv-lbl" id="tv-offerLbl">출품 카드</div><div id="tv-offer"></div></div>
+      </div>
+      <div class="tv-bets">
+        <span class="tv-bet me"><b id="tv-myBet">0</b> 내 배팅</span>
+        <span class="tv-bet opp"><b id="tv-oppBet">–</b> 상대</span>
+      </div>
     </div>
-    <div id="tv-deck">덱 <b id="tv-deckLeft">12</b></div>
   </div>
 
   <div id="tv-status">–</div>
@@ -5449,7 +5514,7 @@
   <div class="tv-side me">
     <div class="pile" id="tv-myAcq"></div>
     <div class="fan" id="tv-myHand"></div>
-    <div class="tv-who"><b id="tv-myNick">나</b><span class="tv-chips" id="tv-myChips">🔵 20</span></div>
+    <div class="tv-who"><b id="tv-myNick">나</b><span class="tv-chips" id="tv-myChips"><i class="chip light"></i><b>20</b></span></div>
   </div>
 </div>
 

@@ -313,11 +313,32 @@ console.log('\n⑰ 서버·화면에 제대로 물렸는가');
   ok('RP 는 안 건드린다', /noRank: true,\s*\/\/ 트웰브는 RP 미반영/.test(srv));
   ok('방 모드로도 열린다', /room\.mode === 'twelve'\) \{ tvStart/.test(srv));
   ok('빠른 입장에 있다', /'classic', 'item', 'quad', 'twelve'/.test(srv));
-  ok('화면이 있다', /id="tv"/.test(htm) && /body\.twelve #tv \{ display:flex/.test(htm));
+  ok('화면이 있다', /id="tv"/.test(htm) && /body\.twelve #tv \{ display:grid/.test(htm));
   ok('클라이언트가 상태를 받는다', /socket\.on\('tv_state'/.test(cli) && /function tvRender/.test(cli));
   ok('클라이언트는 셈을 하지 않는다', !/tvView[\s\S]{0,200}Math\.floor\(.*\/ 2\)/.test(cli));
   ok('설명서 탭이 있다', /data-rt="twelve"/.test(htm) && /id="rulesTwelveModal"/.test(htm));
   ok('솔로·빠른입장 입구', /onclick="tvSolo\(\)"/.test(htm) && /quickJoin\('twelve'\)/.test(htm));
+}
+
+console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
+{
+  const fs = require('fs'), path = require('path');
+  const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const cli = read('public/client.js'), htm = read('public/index.html');
+  ok('덱을 누르면 뽑힌다', /id="tv-deck"/.test(htm) && /deck\.classList\.contains\('on'\)\) tvAct\('draw'\)/.test(cli));
+  ok('같은 일을 하는 버튼을 겹쳐 두지 않는다', !/btn\('카드 뒤집기'/.test(cli));
+  ok('뽑을 수 있을 때만 눌리는 티', /deck\.classList\.toggle\('on', canDraw\)/.test(cli) && /#tv-deck\.on/.test(htm));
+  ok('칩은 검·흰 카지노 칩', /\.chip\.dark \{[\s\S]{0,160}conic-gradient/.test(htm) && /\.chip\.light \{[\s\S]{0,160}conic-gradient/.test(htm));
+  ok('칩 그림을 숫자와 같이 쓴다', /<i class="chip light"><\/i><b>\$\{v\.chips\.me\}<\/b>/.test(cli));
+  ok('액수는 큰 버튼으로 고른다', /function tvAmount/.test(cli) && /\.tv-step \{[\s\S]{0,80}width:46px; height:46px/.test(htm));
+  ok('클로즈는 짝수만 나온다', /tvAmount\(box, 2, hi, 2, 2\)/.test(cli));
+  ok('숫자 입력칸의 작은 화살표는 안 쓴다', !/inp\.type = 'number'/.test(cli));
+  // 단계가 바뀌어도 판이 안 밀리게 — 칸마다 높이를 못 박았는가
+  ok('문구 칸 높이 고정', /#tv-status \{[\s\S]{0,200}height:34px/.test(htm));
+  ok('버튼 칸 높이 고정', /#tv-actions \{[\s\S]{0,140}height:56px/.test(htm));
+  ok('카드 자리 고정', /\.tv-slot > div:last-child \{ width:70px; height:98px/.test(htm));
+  ok('격자로 세 칸을 잡는다', /body\.twelve #tv \{ display:grid/.test(htm) && /grid-template-rows:auto 1fr auto auto auto/.test(htm));
+  ok('덱은 띄워 붙여 경매대를 안 민다', /#tv-deck \{ position:absolute/.test(htm));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
