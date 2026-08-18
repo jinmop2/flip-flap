@@ -826,9 +826,10 @@ async function renderLeaderboard(r) {
           <div class="pod-ava" style="color:${p.rankColor}">${faceOf(p)}</div>
           <div class="pod-stand">
             <div class="pod-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</div>
-            <div class="pod-rp">${p.rp} RP</div>
-            <div class="pod-no">${p.no}</div>
             <div class="pod-title">${titleTag(p.titleInfo) || ''}</div>
+            <div class="pod-grade" style="color:${p.rankColor}">${rankIco(p.rankIcon)} ${esc(p.rank)}</div>
+            <div class="pod-rp">${p.rp} RP</div>
+            <div class="pod-medal">${rankIco(['🥇', '🥈', '🥉'][p.no - 1])}</div>
           </div>
         </div>`).join('')}</div>` : '';
     }
@@ -871,14 +872,36 @@ function closeLb() { document.getElementById('lbModal').classList.remove('show')
 // ── 일일 미션 ──
 // 수령식으로 바꾸면서 "받을 게 있다" 를 어딘가 알려야 한다 — 안 그러면
 // 미션 창을 열어 보기 전엔 모른다. 탭바의 점(마크업만 있고 아무도 안 켜던
-// #missionDot)을 여기서 켠다.
+// 아래 탭에 켠다.
 async function refreshMissionDot() {
-  const dot = document.getElementById('missionDot');
-  if (!dot) return;
-  if (!myAccount) { dot.style.display = 'none'; return; }
+  if (!myAccount) return navMark('mission', 0);
   const r = await apiPost('/api/missions', { token: localStorage.getItem('ff_auth') });
-  const ready = !r.error && (r.list || []).some((m) => m.done && !m.claimed);
-  dot.style.display = ready ? '' : 'none';
+  const ready = !r.error ? (r.list || []).filter((m) => m.done && !m.claimed).length : 0;
+  navMark('mission', ready);
+}
+
+// ── 아래 탭 알림 ────────────────────────────────────────────────────────
+// 새로 생긴 일이 있으면 탭에 빨간 표를 띄우고, 그 탭을 눌러 보고 나면 끈다.
+// "봤다" 를 그때의 개수로 기억한다 — 그래서 새 일이 하나 더 생기면 다시 뜨고,
+// 처리해서 줄어들면 기준도 같이 내려간다.
+const navCount = {};      // 탭 → 지금 몇 건인가
+const navSeenAt = {};     // 탭 → 마지막으로 보고 나갔을 때의 건수
+function navMark(key, n) {
+  n = Math.max(0, Number(n) || 0);
+  navCount[key] = n;
+  if (n < (navSeenAt[key] || 0)) navSeenAt[key] = n;   // 처리해서 줄었으면 기준도 내린다
+  paintNavBadge(key);
+}
+function navSeen(key) { navSeenAt[key] = navCount[key] || 0; paintNavBadge(key); }
+function paintNavBadge(key) {
+  const item = document.querySelector(`#navBar [data-nav="${key}"]`);
+  if (!item) return;
+  const left = (navCount[key] || 0) - (navSeenAt[key] || 0);
+  let b = item.querySelector('.nav-badge');
+  if (left <= 0) { if (b) b.style.display = 'none'; return; }
+  if (!b) { b = document.createElement('i'); b.className = 'nav-badge'; item.appendChild(b); }
+  b.textContent = left > 99 ? '99+' : String(left);
+  b.style.display = '';
 }
 
 // ── 탭 내용 미리 받아 두기 ──────────────────────────────────────────────
@@ -1651,11 +1674,7 @@ function blockChatUser(idl, nick) {
 function updateChatBadge() {
   const b = document.getElementById('clanChatBadge');
   if (b) { b.textContent = _chatUnread > 99 ? '99+' : _chatUnread; b.style.display = _chatUnread > 0 ? '' : 'none'; }
-  const cb = document.getElementById('clanBadge');
-  if (cb && _chatUnread > 0 && cb.style.display === 'none') {   // 로비 버튼에도 표시
-    cb.textContent = _chatUnread > 99 ? '99+' : _chatUnread;
-    cb.style.display = '';
-  }
+  try { paintSocialBadges(); } catch (_) {}   // 아래 탭 표시도 같이
 }
 
 // 실시간 수신
@@ -1792,7 +1811,7 @@ function clanLeave(isOwner) {
 async function updateSocialBadges() {
   if (!myAccount) {
     _badgeBase = { friend: 0, clan: 0 };
-    for (const id of ['friendBadge', 'clanBadge']) { const e = document.getElementById(id); if (e) e.style.display = 'none'; }
+    navMark('friends', 0); navMark('clan', 0); navMark('mission', 0);
     return;
   }
   const setBadge = (id, n) => {
@@ -1816,15 +1835,10 @@ async function updateSocialBadges() {
 // 와도 아무 표시가 없었다 — 판 안의 채팅 버튼에만 점이 켜졌다.
 let _badgeBase = { friend: 0, clan: 0 };
 function paintSocialBadges() {
-  const set = (id, n) => {
-    const e = document.getElementById(id); if (!e) return;
-    e.textContent = n > 99 ? '99+' : n;
-    e.style.display = n > 0 ? '' : 'none';
-  };
   let dm = 0;
   for (const k in gcUnread) if (Object.prototype.hasOwnProperty.call(gcUnread, k)) dm += gcUnread[k] || 0;
-  set('friendBadge', _badgeBase.friend + dm);
-  set('clanBadge', _badgeBase.clan + _chatUnread + gcClanUnread);
+  navMark('friends', _badgeBase.friend + dm);
+  navMark('clan', _badgeBase.clan + _chatUnread + gcClanUnread);
 }
 
 // ── 칭호 (내 정보에서 관리) ──
@@ -2161,6 +2175,7 @@ function navGo(key) {
   if (key !== 'home') closeAllNavModals();   // 탭끼리 겹쳐 열리지 않게
   act();
   navSync(key);
+  navSeen(key);                              // 보고 나면 그 탭의 빨간 표는 끈다
 }
 // 어떤 탭이 켜져 있는지 표시. 모달을 ESC·닫기로 끄면 다시 '홈'으로 돌아온다.
 function navSync(key) {

@@ -1266,10 +1266,10 @@ function kakaoLogin(kakaoId, kNick)   { return socialLogin('kakao', kakaoId, kNi
 function googleLogin(googleId, gNick) { return socialLogin('google', googleId, gNick); }
 
 // 랭킹 (RP 상위)
-function topPlayers(limit = 20) {
+function topPlayers(limit = 100) {
   return Object.values(db.users)
     .sort((a, b) => (b.rp - a.rp) || (b.wins - a.wins))
-    .slice(0, Math.min(limit, 50))
+    .slice(0, Math.min(limit, 100))
     .map((u, i) => { const p = profileOf(u); return { no: i + 1, nick: p.nick, nickColor: p.nickColor, plate: p.plate, titleInfo: p.titleInfo, level: p.level, rank: p.rank, rankIcon: p.rankIcon, rankColor: p.rankColor, rp: p.rp, wins: p.wins, losses: p.losses }; });
 }
 

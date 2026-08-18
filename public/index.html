@@ -464,11 +464,16 @@
       pointer-events:none;
     }
     .nav-item.active .svgi { filter:drop-shadow(0 0 6px rgba(255,215,120,.5)); }
+    /* 탭 알림 — 아이콘 오른쪽 위에 붙는 빨간 표. 새로 생긴 일이 있을 때만 뜨고
+       그 탭을 눌러 보고 나면 사라진다(paintNavBadge). */
     .nav-badge {
-      position:absolute; top:2px; right:calc(50% - 20px); min-width:15px; height:15px;
-      border-radius:8px; background:#c8102e; color:#fff; font-size:.55rem; font-weight:800;
+      position:absolute; top:1px; right:calc(50% - 22px); min-width:17px; height:17px;
+      border-radius:9px; background:#e0243c; color:#fff; font-size:.58rem; font-weight:800;
       font-style:normal; display:flex; align-items:center; justify-content:center; padding:0 4px;
+      border:1.5px solid #2a0f16; box-shadow:0 1px 4px rgba(0,0,0,.5);
+      animation:navPop .22s cubic-bezier(.34,1.5,.64,1);
     }
+    @keyframes navPop { from { transform:scale(.4); opacity:0 } to { transform:scale(1); opacity:1 } }
     .nav-dot {
       position:absolute; top:5px; right:calc(50% - 14px);
       width:7px; height:7px; border-radius:50%; background:var(--gold);
@@ -3105,12 +3110,14 @@
       box-shadow:inset 0 1px 0 rgba(255,215,120,.18);
     }
     .pod-rp { font-size:.78rem; font-weight:900; color:#ffe9a8; white-space:nowrap; }
-    .pod-no {
-      width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-      font-family:'Fredoka'; font-size:.9rem; font-weight:900; color:#2a1206;
-      background:linear-gradient(180deg,#e8e8ee,#9aa0aa); border:1.5px solid rgba(255,255,255,.5);
-    }
-    .pod-title { min-height:14px; display:flex; align-items:center; justify-content:center; }
+    /* 등수는 숫자 원판 대신 메달 — 금·은·동이 한눈에 읽힌다 */
+    .pod-medal { font-size:1.5rem; line-height:1; display:flex; align-items:center; justify-content:center; }
+    .pod-medal svg, .pod-medal .rank-art svg, .pod-medal .g-ico svg { width:1.5rem; height:1.5rem; display:block; }
+    /* 급수 — 색은 등급 색을 따라간다 */
+    .pod-grade { font-size:.66rem; font-weight:800; display:flex; align-items:center; justify-content:center; gap:3px; white-space:nowrap; }
+    .pod-grade svg, .pod-grade .rank-art svg, .pod-grade .g-ico svg { width:.8em; height:.8em; display:block; }
+    /* 칭호는 닉네임 바로 밑, 가운데 */
+    .pod-title { min-height:14px; width:100%; display:flex; align-items:center; justify-content:center; }
     .pod-title .title-tag { font-size:.56rem; white-space:nowrap; }
     .pod-title .ti-ico { width:.7em; height:.7em; }
 
@@ -3121,11 +3128,10 @@
     .pod-1 .pod-stand { padding-top:22px; padding-bottom:22px; border-color:var(--gold);
       background:linear-gradient(180deg,#6d2f5e,#3d1436); }
     .pod-1 .pod-rp { font-size:.88rem; color:#fff2c8; }
-    .pod-1 .pod-no { width:30px; height:30px; font-size:1rem;
-      background:linear-gradient(180deg,#ffe9a8,#c8912e); }
+    .pod-1 .pod-medal { font-size:1.8rem; }
+    .pod-1 .pod-medal svg, .pod-1 .pod-medal .rank-art svg { width:1.8rem; height:1.8rem; }
     /* 3등은 조금 낮게 */
     .pod-3 .pod-stand { padding-bottom:6px; }
-    .pod-3 .pod-no { background:linear-gradient(180deg,#e0a878,#a06a3c); }
     .pod.me .pod-stand { box-shadow:inset 0 0 0 1px var(--gold), inset 0 1px 0 rgba(255,215,120,.18); }
     @media (max-width:360px) {
       .pod-ava { width:46px; height:46px; font-size:1.6rem; }
@@ -3993,18 +3999,15 @@
     </button>
     <button class="nav-item" data-nav="mission" onclick="navGo('mission')">
       <svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/></svg><span>미션</span>
-      <i class="nav-dot" id="missionDot" style="display:none"></i>
     </button>
     <button class="nav-item" data-nav="shop" onclick="navGo('shop')">
       <svg class="svgi" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg><span>상점</span>
     </button>
     <button class="nav-item" data-nav="friends" onclick="navGo('friends')">
       <svg class="svgi" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>친구</span>
-      <i class="nav-badge" id="friendBadge" style="display:none">0</i>
     </button>
     <button class="nav-item" data-nav="clan" onclick="navGo('clan')">
       <svg class="svgi" viewBox="0 0 24 24"><path d="M5 3h14v9a7 7 0 0 1-7 7 7 7 0 0 1-7-7z"/><path d="M9 21h6"/><path d="M12 19v2"/><path d="M9.5 8.5l2.5-2 2.5 2-1 3h-3z"/></svg><span>클랜</span>
-      <i class="nav-badge" id="clanBadge" style="display:none">0</i>
     </button>
     <!-- 설정은 게임 안에서만 열 수 있었다. 언어를 바꾸려고 판을 시작해야 했다. -->
     <button class="nav-item" data-nav="rank" onclick="navGo('rank')">

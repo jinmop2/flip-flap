@@ -228,8 +228,8 @@ ok('메뉴바 자리만큼 창 아래를 비운다', /body:not\(\.ingame\):not\(
 // 1·2·3등 시상대
 ok('시상대 자리가 목록 밖에 있다', /<div id="lbPodium"><\/div>\s*<div id="lbList">/.test(htm));
 ok('2 · 1 · 3 순서로 세운다', /\[top\[1\], top\[0\], top\[2\]\]\.filter\(Boolean\)/.test(cli));
-ok('얼굴·닉·RP·등수·칭호를 담는다',
-   ['pod-ava', 'pod-nick', 'pod-rp', 'pod-no', 'pod-title'].every((c) => cli.includes(c)));
+ok('얼굴·닉·칭호·급수·RP·메달을 담는다',
+   ['pod-ava', 'pod-nick', 'pod-title', 'pod-grade', 'pod-rp', 'pod-medal'].every((c) => cli.includes(c)));
 ok('칭호는 같은 함수로 그린다', /pod-title">\$\{titleTag\(p\.titleInfo\)/.test(cli));
 ok('1등은 더 높고 크다', /\.pod-1 \.pod-ava \{[^}]*width:66px/.test(htm) && /\.pod-1 \.pod-stand \{[^}]*padding-top:22px/.test(htm));
 ok('시상대에 올린 셋은 목록에서 뺀다', /r\.players\.slice\(3\)\.forEach/.test(cli));
@@ -249,6 +249,20 @@ ok('같은 통로를 쓴다', /friendTalk[\s\S]{0,400}apiPost\('\/api\/dm'/.test
 ok('상대 말이 바로 붙는다', /ftalkWith === from && ftalk/.test(cli));
 ok('다른 탭으로 가면 대화 칸을 접는다', /function friendTab[\s\S]{0,600}talk\.style\.display = 'none'/.test(cli));
 ok('안 읽은 수를 대화 버튼에 보여준다', /대화\$\{\s*gcUnread\[f\.idl\]/.test(cli));
+
+// 시상대 메달·급수·칭호 자리 · 상위 100명 · 아래 탭 알림
+ok('1·2·3 은 금·은·동 메달', /rankIco\(\['🥇', '🥈', '🥉'\]\[p\.no - 1\]\)/.test(cli) && /pod-medal/.test(htm));
+ok('숫자 원판은 뺐다', !/pod-no/.test(cli) && !/\.pod-no \{/.test(htm));
+ok('급수를 보여준다', /pod-grade[^>]*>\$\{rankIco\(p\.rankIcon\)\} \$\{esc\(p\.rank\)\}/.test(cli));
+ok('칭호는 닉네임 바로 밑', /pod-nick[\s\S]{0,120}pod-title/.test(cli));
+ok('칭호는 가운데', /\.pod-title \{[^}]*justify-content:center/.test(htm));
+ok('랭킹은 100명까지', /topPlayers\(100\)/.test(srv) && /function topPlayers\(limit = 100\)/.test(read('accounts.js')));
+
+ok('탭 알림을 한 곳에서 만든다', /function paintNavBadge/.test(cli) && /function navMark/.test(cli));
+ok('그 탭을 보면 표시가 꺼진다', /function navGo[\s\S]{0,260}navSeen\(key\)/.test(cli));
+ok('새 일이 생기면 다시 뜬다', /const left = \(navCount\[key\] \|\| 0\) - \(navSeenAt\[key\] \|\| 0\)/.test(cli));
+ok('처리해서 줄면 기준도 내린다', /if \(n < \(navSeenAt\[key\] \|\| 0\)\) navSeenAt\[key\] = n;/.test(cli));
+ok('옛 배지 요소는 걷어냈다', !/id="friendBadge"/.test(htm) && !/id="clanBadge"/.test(htm) && !/id="missionDot"/.test(htm));
 
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
