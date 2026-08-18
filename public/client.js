@@ -2072,11 +2072,13 @@ const NAV_ACTIONS = {
   gacha:   () => openGacha(),
   friends: () => openFriends(),
   clan:    () => openClan(),
+  rank:    () => openLeaderboard(),
   // 설정은 원래 게임 안에서만 열렸다. 언어를 바꾸려고 판을 시작해야 했다.
   settings: () => { document.body.classList.add('lobby-settings'); toggleSettings(true); },
 };
 function closeAllNavModals() {
   try { closeGacha(); } catch (_) {}
+  try { closeLb(); } catch (_) {}
   try { closeMissions(); } catch (_) {}
   try { closeShop(); } catch (_) {}
   try { closeFriends(); } catch (_) {}
@@ -2102,6 +2104,7 @@ function navRefresh() {
   const setOpen = !!sp && sp.classList.contains('show') && document.body.classList.contains('lobby-settings');
   navSync(open('missionModal') ? 'mission' : open('shopModal') ? 'shop'
         : open('friendsModal') ? 'friends' : open('clanModal') ? 'clan'
+        : open('lbModal') ? 'rank'
         : setOpen ? 'settings' : 'home');
 }
 // 모달은 여러 경로(ESC·바깥 클릭·닫기 버튼)로 닫히므로 상태를 맞춰 줘야 한다.
@@ -2118,7 +2121,7 @@ function navRefresh() {
     if (typeof queueMicrotask === 'function') queueMicrotask(run);
     else Promise.resolve().then(run);
   });
-  for (const id of ['missionModal', 'shopModal', 'friendsModal', 'clanModal', 'gachaModal', 'settingsPanel']) {
+  for (const id of ['missionModal', 'shopModal', 'friendsModal', 'clanModal', 'gachaModal', 'lbModal', 'settingsPanel']) {
     const el = document.getElementById(id);
     if (el) obs.observe(el, { attributes: true, attributeFilter: ['class'] });
   }

@@ -186,5 +186,13 @@ ok('메뉴바에 금테가 없다', /\n    #navBar \{[\s\S]{0,320}border:none/.t
 ok('로비 여백이 뒤바뀐 순서에 맞다', /#lobby \{ padding-top:calc\(84px[^}]*padding-bottom:calc\(72px/.test(htm));
 ok('레벨 배지가 사진 아래로', /\.pb-lv \{ position:absolute; top:calc\(100% - 6px\)/.test(htm));
 
+// 랭킹은 메뉴바로, 설정은 프로필 바 오른쪽에 아이콘만
+ok('메뉴바 끝 칸이 랭킹', /data-nav="rank" onclick="navGo\('rank'\)"/.test(htm) && !/data-nav="settings"/.test(htm));
+ok('랭킹 탭이 랭킹 창을 연다', /rank:\s*\(\) => openLeaderboard\(\)/.test(cli));
+ok('열린 탭 표시에 랭킹도 있다', /open\('lbModal'\) \? 'rank'/.test(cli));
+ok('로비 한가운데 랭킹 버튼은 뺐다', !/class="rank-btn"/.test(htm));
+ok('설정은 아이콘만', /id="setBtn"[\s\S]{0,200}<svg/.test(htm) && !/id="setBtn"[\s\S]{0,400}>설정</.test(htm));
+ok('설정 누름이 프로필로 안 퍼진다', /id="setBtn"[^>]*event\.stopPropagation\(\)/.test(htm));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

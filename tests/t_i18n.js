@@ -105,10 +105,11 @@ console.log('\n⑤ 화면 밖에서도 따라잡는가');
   ok('돌아오면 한 번 더 훑는다', /visibilitychange[\s\S]{0,120}?apply\(document\.body\)/.test(i18nSrc));
 }
 
-console.log('\n⑤′ 로비 설정 탭');
+console.log('\n⑤′ 로비 설정 버튼');
 {
   // 설정은 게임 안에서만 열렸다 — 언어를 바꾸려고 판을 시작해야 했다.
-  ok('상단 탭에 설정이 있다', /data-nav="settings"/.test(html));
+  // 지금은 메뉴바가 아니라 프로필 바 오른쪽의 톱니 버튼이다(글자 없이 아이콘만).
+  ok('로비에 설정 버튼이 있다', /id="setBtn"/.test(html) && /navGo\('settings'\)/.test(html));
   ok('탭이 설정을 연다', /settings: \(\) => \{ document\.body\.classList\.add\('lobby-settings'\)/.test(cli));
   ok('다른 탭으로 가면 닫힌다', /toggleSettings\(false\); document\.body\.classList\.remove\('lobby-settings'\)/.test(cli));
   ok('로비에서는 가운데로 내려온다', /body\.lobby-settings #settingsPanel \{ left:calc\(50% - 105px\)/.test(html));
