@@ -202,5 +202,28 @@ ok('탭을 옮기면 열린 창을 닫는다', /function navGo[\s\S]{0,200}close
 ok('랭킹 창도 같이 닫는다', /function closeAllNavModals[\s\S]{0,120}closeLb\(\)/.test(cli));
 ok('메뉴바 자리만큼 창 아래를 비운다', /body:not\(\.ingame\):not\(\.quad4\) \.lb-modal \{ padding-bottom/.test(htm));
 
+// 탭 화면은 모두 전체화면 · 큰 닫기 버튼 없음
+{
+  const tabs = ['missionModal', 'shopModal', 'friendsModal', 'clanModal', 'lbModal', 'gachaModal'];
+  ok('탭 창이 화면을 통째로 쓴다',
+     /#missionModal, #friendsModal, #clanModal, #gachaModal \{[\s\S]{0,120}padding:0 0 var\(--tabgap/.test(htm)
+     && /#shopModal \{ padding:0 0 var\(--tabgap/.test(htm)
+     && /#lbModal \{ padding:0 0 var\(--tabgap/.test(htm));
+  ok('메뉴바 자리는 로비에서만 비운다',
+     /body:not\(\.ingame\):not\(\.quad4\) \{ --tabgap/.test(htm));
+  ok('전체화면 틀이 있다', /\.lb-box\.tab-box \{[\s\S]{0,160}height:100%/.test(htm));
+  ok('미션·친구·클랜에 그 틀을 붙였다',
+     (htm.match(/class="lb-box(?: soc-box)? tab-box"/g) || []).length === 3);
+  // 큰 "닫기" 버튼은 뺐다 — 아래 탭으로 오간다. 오른쪽 위 × 만 남긴다.
+  for (const id of tabs) {
+    const at = htm.indexOf('id="' + id + '"');
+    const box = htm.slice(at, at + 4000);
+    const end = box.indexOf('\n</div>');
+    const body = end > 0 ? box.slice(0, end) : box;
+    ok(id + ' 에 닫기 버튼이 없다', !/>닫기<\/button>/.test(body));
+    ok(id + ' 에 × 가 있다', /class="close-x"/.test(body));
+  }
+}
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

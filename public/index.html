@@ -305,7 +305,7 @@
     /* ── 상점 ── */
     /* 상점은 상품 수가 많아 좁은 상자에 우겨넣으면 이름도 설명도 잘린다.
        화면을 통째로 쓴다 — 타일이 커져 이름이 안 잘리고 설명도 여유가 생긴다. */
-    #shopModal { padding:0; align-items:stretch; justify-content:stretch; }
+    #shopModal { padding:0 0 var(--tabgap, 0px); align-items:stretch; justify-content:stretch; }
     .lb-box.shop-box { width:100%; max-width:none; height:100%; max-height:none;
       border-radius:0; border:none; padding:calc(12px + var(--safe-t)) 14px calc(12px + var(--safe-b));
       gap:9px; overflow:hidden; }
@@ -479,7 +479,7 @@
     /* ── 내 정보 ── */
     /* 상점과 같은 전체화면 — 인벤토리·칭호가 좁은 상자 안에서 잘렸다.
        바깥 여백(20px)을 없애야 진짜 끝까지 찬다 — 상점도 같은 방식이다. */
-    #myInfoModal { padding:0; align-items:stretch; justify-content:stretch; }
+    #myInfoModal { padding:0 0 var(--tabgap, 0px); align-items:stretch; justify-content:stretch; }
     .lb-box.myinfo-box { width:100%; max-width:none; height:100%; max-height:none;
       border-radius:0; border:none; padding:calc(12px + var(--safe-t)) 14px calc(12px + var(--safe-b));
       gap:9px; overflow:hidden; }
@@ -2127,7 +2127,32 @@
     .wc-sub { font-size:.72rem; color:#6a5a70; margin-top:-4px; text-align:center; }
     /* 로비 다이얼로그 */
     .lb-modal { display:none; position:fixed; inset:0; background:rgba(8,2,4,.82); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); z-index:45; align-items:center; justify-content:center; padding:20px; animation:fadeIn .25s; }
-    /* 로비에서는 메뉴바가 창 위에 떠 있다 — 그만큼 아래를 비워 창이 안 가리게 */
+    /* 로비에서만 메뉴바 자리를 비운다. 판 안에서는 바가 없으므로 0. */
+    body:not(.ingame):not(.quad4) { --tabgap: calc(76px + var(--safe-b)); }
+    #missionModal, #friendsModal, #clanModal, #gachaModal {
+      padding:0 0 var(--tabgap, 0px); align-items:stretch; justify-content:stretch;
+    }
+
+    /* ── 탭 화면은 모두 전체화면 ────────────────────────────────────
+       아래 탭으로 오가는 구조라, 작은 상자가 가운데 뜨는 것보다 화면을
+       통째로 쓰는 편이 읽기도 쉽고 오갈 때 덜 어지럽다. */
+    .lb-box.tab-box {
+      width:100%; max-width:none; height:100%; max-height:none;
+      border-radius:0; border:none; padding:calc(16px + var(--safe-t)) 16px 10px;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    @media (min-width:700px) {
+      .lb-box.tab-box { max-width:640px; border-left:1.5px solid #b98d34; border-right:1.5px solid #b98d34; }
+    }
+    /* 목록만 스크롤한다 — 제목은 제자리 */
+    .lb-box.tab-box > .lb-title { flex-shrink:0; }
+    .lb-box.tab-box .close-x { top:calc(10px + var(--safe-t)); right:12px; }
+    .lb-box.tab-box #missionList,
+    .lb-box.tab-box .soc-list,
+    .lb-box.tab-box #friendListBox,
+    .lb-box.tab-box #clanBody { flex:1; min-height:0; overflow-y:auto; max-height:none; }
+
+    /* 탭이 아닌 작은 창들도 메뉴바에 안 가리게 */
     body:not(.ingame):not(.quad4) .lb-modal { padding-bottom:calc(76px + var(--safe-b)); }
     .lb-modal.show { display:flex; }
     .lb-box {
@@ -3020,7 +3045,7 @@
 
     /* 랭킹 — 한 줄에 등수·아바타·이름·칭호·전적·RP 가 다 들어가서 좁은 상자에서는
        이름이 잘리고 칭호가 밀렸다. 화면을 통째로 쓴다. */
-    #lbModal { padding:0; align-items:stretch; justify-content:stretch; }
+    #lbModal { padding:0 0 var(--tabgap, 0px); align-items:stretch; justify-content:stretch; }
     .lb-box.rank-box {
       width:100%; max-width:none; height:100%; max-height:none;
       border-radius:0; border:none; gap:10px; overflow:hidden;
@@ -4112,7 +4137,6 @@
       <div id="gcShop" class="gc-stage"></div>
     </div>
 
-    <button class="btn btn-outline" onclick="closeGacha()">닫기</button>
   </div>
 </div>
 
@@ -5014,17 +5038,15 @@
     </div>
     <div id="shopMsg" class="shop-msg"></div>
     <div id="shopList" class="shop-grid"></div>
-    <button class="btn btn-outline" onclick="closeShop()">닫기</button>
   </div>
 </div>
 
 <!-- 일일 미션 -->
 <div class="lb-modal" id="missionModal" onclick="if(event.target===this)closeMissions()">
-  <div class="lb-box">
-    <div class="lb-title"><span data-ico="🎯"></span> 일일 미션</div>
+  <div class="lb-box tab-box">
+    <div class="lb-title"><span data-ico="🎯"></span> 일일 미션 <span class="close-x" onclick="closeMissions()">×</span></div>
     <p class="auth-hint" style="margin:0 0 6px">다 채우면 <b>수령</b>을 눌러 코인을 받으세요 · 매일 자정 리셋</p>
     <div id="missionList" class="mis-list"></div>
-    <button class="btn btn-outline" onclick="closeMissions()">닫기</button>
   </div>
 </div>
 
@@ -5065,8 +5087,8 @@
 
 <!-- 친구 -->
 <div class="lb-modal" id="friendsModal" onclick="if(event.target===this)closeFriends()">
-  <div class="lb-box soc-box">
-    <div class="lb-title"><span data-ico="👥"></span> 친구</div>
+  <div class="lb-box soc-box tab-box">
+    <div class="lb-title"><span data-ico="👥"></span> 친구 <span class="close-x" onclick="closeFriends()">×</span></div>
     <div class="soc-tabs">
       <button class="soc-tab active" id="ftab-list" onclick="friendTab('list')">목록</button>
       <button class="soc-tab" id="ftab-req" onclick="friendTab('req')">요청<span class="tl-badge sm" id="ftabBadge" style="display:none">0</span></button>
@@ -5093,16 +5115,14 @@
       <p class="auth-hint" id="friendAddMsg" style="margin:10px 0 0"></p>
     </div>
 
-    <button class="btn btn-outline" onclick="closeFriends()">닫기</button>
   </div>
 </div>
 
 <!-- 클랜 -->
 <div class="lb-modal" id="clanModal" onclick="if(event.target===this)closeClan()">
-  <div class="lb-box soc-box">
-    <div class="lb-title"><span data-ico="🛡️"></span> 클랜</div>
+  <div class="lb-box soc-box tab-box">
+    <div class="lb-title"><span data-ico="🛡️"></span> 클랜 <span class="close-x" onclick="closeClan()">×</span></div>
     <div id="clanBody"></div>
-    <button class="btn btn-outline" onclick="closeClan()">닫기</button>
   </div>
 </div>
 
