@@ -350,11 +350,19 @@
     .pb-mid { flex:1; min-width:0; text-align:left; }
     .pb-nick { font-size:.95rem; font-weight:800; color:#f5e6c0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .pb-stats { font-size:.68rem; color:#c8a86a; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .pb-right { display:flex; flex-direction:column; gap:4px; align-items:flex-end; flex-shrink:0; }
+    /* 코인과 RP 는 한 줄로. 위아래로 쌓으면 아바타·닉네임 줄과 높이가 안 맞아
+       바 오른쪽이 들쭉날쭉해 보였다. */
+    .pb-right { display:flex; flex-direction:row; align-items:center; gap:5px; flex-shrink:0; }
     .pb-badge { font-size:.72rem; font-weight:800; padding:2px 9px; border-radius:7px; white-space:nowrap; }
     .pb-coin { color:#ffd97a; background:rgba(255,215,80,.12); border:1px solid rgba(255,215,120,.35); }
     .pb-rp   { color:#ffe9b8; background:rgba(200,160,0,.12); border:1px solid rgba(200,160,0,.35); }
-    .pb-lv { position:absolute; top:9px; left:14px; font-size:.6rem; font-weight:800; color:#241008; background:linear-gradient(180deg,#ffd97a,#c8912e); border:1px solid #8a5a12; border-radius:8px; padding:1px 7px; }
+    /* 레벨은 XP 게이지 한가운데에 얹는다 — 왼쪽 구석에 붙어 있으면
+       무엇의 레벨인지도, 게이지와 무슨 상관인지도 안 보였다. */
+    .pb-lv { position:absolute; top:-1px; left:50%; transform:translateX(-50%);
+      font-size:.6rem; font-weight:800; color:#241008;
+      background:linear-gradient(180deg,#ffd97a,#c8912e);
+      border:1px solid #8a5a12; border-radius:0 0 8px 8px; padding:1px 9px 2px;
+      box-shadow:0 1px 4px rgba(0,0,0,.5); }
     .pb-login { margin-left:auto; flex-shrink:0; background:rgba(200,160,0,.15); border:1.5px solid var(--gold); color:#ffe9a8; border-radius:10px; padding:8px 14px; font-family:'Fredoka'; font-size:.8rem; font-weight:700; cursor:pointer; }
     #lobby { padding-top:calc(66px + var(--safe-t)); padding-bottom:calc(84px + var(--safe-b)); }   /* 위 탭바 · 아래 프로필 바에 안 가리게 */
 
