@@ -622,10 +622,15 @@ function attach4(io, hooks = {}) {
 
     // 친구가 하는 다인전을 보러 간다. 자리에 앉지 않고 상태만 받는다.
     safe(socket, 'g4_spectate', (data = {}) => {
-      const r = rooms4[data.roomId];
+      const id = typeof data.roomId === 'string' ? data.roomId : '';
+      const r = Object.prototype.hasOwnProperty.call(rooms4, id) ? rooms4[id] : null;
       if (!r || r.dead || !r.game || r.game.over) return socket.emit('g4_error', '이미 끝난 판이에요.');
+      // 혼자 AI 와 하는 판은 남이 볼 자리가 아니다. 방 번호를 찍어 보는 식으로
+      // 아무 판에나 붙는 것도 여기서 막는다(2인전 spectate 와 같은 규칙).
+      if (r.solo) return socket.emit('g4_error', '관전할 수 없는 게임이에요.');
       if (r.seats.some((s) => s.sid === socket.id)) return;   // 앉아 있는 사람은 관전이 아니다
       r.specs = r.specs || [];
+      if (r.specs.length >= 10) return socket.emit('g4_error', '관전 인원이 가득 찼어요.');
       if (!r.specs.includes(socket.id)) r.specs.push(socket.id);
       socket.g4spec = data.roomId;
       const g = r.game;

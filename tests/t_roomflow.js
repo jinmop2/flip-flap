@@ -280,5 +280,20 @@ ok('옛 배지 요소는 걷어냈다', !/id="friendBadge"/.test(htm) && !/id="c
      && /safe\(socket, 'g4_spec_leave'/.test(s4));
 }
 
+// 클랜에 들어도 다른 클랜을 볼 수 있다
+ok('클랜 탭에 "다른 클랜" 이 있다', /clanViewTab\('browse'\)/.test(cli) && /id="clanPaneBrowse"/.test(cli));
+ok('세 칸을 순서대로 칠한다', /const order = \['chat', 'info', 'browse'\]/.test(cli));
+ok('우리 클랜을 표시한다', /우리 클랜<\/span>/.test(cli));
+ok('거기서는 가입 신청을 안 받는다', !/clanPaneBrowse[\s\S]{0,900}clanApply/.test(cli));
+
+// 관전 통로 문단속
+{
+  const s4 = read('server4.js');
+  ok('아무 방 번호나 못 붙는다', /Object\.prototype\.hasOwnProperty\.call\(rooms4, id\)/.test(s4));
+  ok('혼자 하는 판은 관전 대상이 아니다', /if \(r\.solo\) return socket\.emit\('g4_error'/.test(s4));
+  ok('관전 인원에 한도가 있다', /r\.specs\.length >= 10/.test(s4));
+}
+ok('안 쓰는 배경음 원본은 뺐다', !fs.existsSync(path.join(__dirname, '..', 'public', 'bgm.mp3')));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

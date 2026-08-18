@@ -17,6 +17,30 @@
   // ── 사전 ────────────────────────────────────────────────────────────────
   // 한국어 원문 → 영어. 순서는 화면 순서를 따른다.
   const EN = {
+
+    // ── 아직 안 덮여 있던 말들 ──
+    '랭크게임': 'Ranked match',
+    '🏆 랭크게임': '🏆 Ranked match',
+    '빠른 입장': 'Quick join',
+    '아직 안 나온 카드 &nbsp;': 'Cards not yet seen &nbsp;',
+    '자리에서 일어나기': 'Leave the table',
+    '메시지를 입력하세요': 'Type a message',
+    '토너먼트는 로그인하면 참가할 수 있어요!': 'Sign in to enter tournaments!',
+    '로그인하면 친구를 부를 수 있어요.': 'Sign in to invite friends.',
+    '방장이 내보냈어요.': 'The host removed you.',
+    '😢 상대가 도전을 받지 않았어요': '😢 They did not take the challenge',
+    '👁 관전': '👁 Spectating',
+    '소지금이 떨어졌어요.': 'You have run out of moons.',
+    '🏆 승리!': '🏆 You win!',
+    '접속이 끊겨 판이 종료됐어요. 다시 시작해주세요.': 'The connection dropped and the game ended. Please start again.',
+    '아쉽네요…': 'So close…',
+    '자리에 앉는 중…': 'Taking a seat…',
+    '자리 배치 중…': 'Seating players…',
+    '다른 클랜': 'Other clans',
+    '우리 클랜': 'Our clan',
+    '아직 만들어진 클랜이 없어요.': 'No clans have been founded yet.',
+    '대화': 'Chat',
+    '보내기': 'Send',
     '경매에서 지면 아이템이 들어와요': 'Lose an auction and an item arrives',
 
 

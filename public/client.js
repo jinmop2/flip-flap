@@ -1551,6 +1551,9 @@ function renderMyClan(c) {
       <button class="soc-tab ${_clanView === 'info' ? 'active' : ''}" onclick="clanViewTab('info')">
         클랜원${c.isOwner && c.applicantCount ? `<span class="tl-badge sm">${c.applicantCount}</span>` : ''}
       </button>
+      <button class="soc-tab ${_clanView === 'browse' ? 'active' : ''}" onclick="clanViewTab('browse')">
+        다른 클랜
+      </button>
     </div>
     <div id="clanPaneChat" style="display:${_clanView === 'chat' ? '' : 'none'}">
       <div class="chat-list" id="chatList"><div class="chat-empty">불러오는 중…</div></div>
@@ -1570,8 +1573,36 @@ function renderMyClan(c) {
         ${c.isOwner ? `<button class="soc-btn" style="flex:1" onclick="clanEditNotice()">공지 수정</button>` : ''}
         <button class="soc-btn bad" style="flex:1" onclick="clanLeave(${c.isOwner})">${c.isOwner && c.memberCount > 1 ? '탈퇴(위임)' : '탈퇴'}</button>
       </div>
+    </div>
+    <!-- 클랜에 들었어도 다른 클랜을 둘러볼 수 있다. 어떤 클랜이 있는지 안 보이면
+         우리 클랜이 몇 등인지도, 옮길 곳이 있는지도 알 수 없다. -->
+    <div id="clanPaneBrowse" style="display:${_clanView === 'browse' ? '' : 'none'}">
+      <div class="soc-empty">불러오는 중…</div>
     </div>`;
+  _myClanId = c.id || null;
   if (_clanView === 'chat') loadClanChat();
+  if (_clanView === 'browse') loadClanBrowseList(_myClanId);
+}
+
+// 다른 클랜 목록 — 이미 클랜에 든 사람에게 보여 준다(가입 신청 버튼은 없다).
+async function loadClanBrowseList(myClanId) {
+  const pane = document.getElementById('clanPaneBrowse');
+  if (!pane) return;
+  const paint = (r) => {
+    if (document.getElementById('clanPaneBrowse') !== pane) return;   // 그새 다시 그려졌다
+    if (!r || !r.ok || !r.clans.length) { pane.innerHTML = '<div class="soc-empty">아직 만들어진 클랜이 없어요.</div>'; return; }
+    pane.innerHTML = `<div class="soc-list">${r.clans.map((c, i) => `
+      <div class="soc-item">
+        <div class="soc-info">
+          <div class="soc-nick"><span class="soc-clan">#${i + 1}</span><span class="clan-tag">${esc(c.tag)}</span>${esc(c.name)}${
+            c.id === myClanId ? '<span class="soc-role owner">우리 클랜</span>' : ''}</div>
+          <div class="soc-meta">${c.memberCount}/${c.max}명 · ${c.totalRp} RP · 클랜장 ${esc(c.ownerNick || '-')}</div>
+        </div>
+      </div>`).join('')}</div>`;
+  };
+  const had = cacheGet('clanlist');
+  if (had) paint(had);
+  paint(await fetchInto('clanlist', () => apiPost('/api/clan-list', { token: authToken() })));
 }
 
 // ── 클랜 채팅 ──────────────────────────────────────────────
@@ -1581,12 +1612,20 @@ let _chatMsgs = [];
 
 function clanViewTab(which) {
   _clanView = which;
-  document.getElementById('clanPaneChat').style.display = which === 'chat' ? '' : 'none';
-  document.getElementById('clanPaneInfo').style.display = which === 'info' ? '' : 'none';
+  const PANES = { chat: 'clanPaneChat', info: 'clanPaneInfo', browse: 'clanPaneBrowse' };
+  for (const [k, id] of Object.entries(PANES)) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = k === which ? '' : 'none';
+  }
+  // 탭 순서(채팅 · 클랜원 · 다른 클랜)와 같은 순서로 칠한다.
+  // 예전엔 두 개뿐이라 "첫 칸이면 채팅" 으로 눌러 뒀는데, 셋이 되면서 어긋났다.
+  const order = ['chat', 'info', 'browse'];
   document.querySelectorAll('#clanBody .soc-tabs .soc-tab').forEach((t, i) =>
-    t.classList.toggle('active', (i === 0) === (which === 'chat')));
+    t.classList.toggle('active', order[i] === which));
   if (which === 'chat') { loadClanChat(); setTimeout(() => document.getElementById('chatInput')?.focus(), 60); }
+  if (which === 'browse') loadClanBrowseList(_myClanId);
 }
+let _myClanId = null;
 
 const chatOpen = () => document.getElementById('clanModal')?.classList.contains('show') && _clanView === 'chat';
 
