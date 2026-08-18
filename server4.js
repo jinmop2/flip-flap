@@ -656,6 +656,22 @@ function attach4(io, hooks = {}) {
 
   // 2인 방에서 "다인전" 으로 바꿀 때, 앉아 있던 사람들을 통째로 한 대기방에 옮긴다.
   // 하나씩 joinPending 을 부르면 서로 다른 방에 흩어질 수 있어서 방을 먼저 만들어 준다.
+  // 2인 방에서 모드를 다인전으로 바꾸고 시작을 누른 경우 — 대기방을 거치지 않고
+  // 그 인원 그대로 바로 시작한다. 자리가 남으면 AI 가 채운다.
+  function startGroup(list) {
+    const humans = [];
+    for (const e of list || []) {
+      const sk = io.sockets.sockets.get(e.sid);
+      if (!sk) continue;
+      if (sk.g4room) destroy(sk.g4room, '다인전으로 전환');
+      leavePending(sk.id); sk.g4pending = null;
+      humans.push({ sid: e.sid, nick: String(e.nick || '플레이어').slice(0, 12) });
+    }
+    if (!humans.length) return false;
+    startRoom(humans, false, seatsFor(humans.length));
+    return true;
+  }
+
   function groupPending(list) {
     const p = { id: 'W' + Math.random().toString(36).slice(2, 7).toUpperCase(),
                 seats: [null, null, null, null] };
@@ -673,7 +689,7 @@ function attach4(io, hooks = {}) {
   }
 
   return { count: () => Object.keys(rooms4).length, waiting: () => Object.keys(pendings).length,
-           groupPending };
+           groupPending, startGroup };
 }
 
 module.exports = { attach4 };

@@ -54,5 +54,15 @@ ok('랭크게임 버튼', /quickMatch\(\)">🏆 랭크게임/.test(htm));
 ok('다인전 빠른 입장은 다인전 대기방으로', /mode === 'quad'[\s\S]{0,80}q4Quick/.test(cli));
 ok('코드 로그인은 화면에서 사라졌다', !/코드로 시작/.test(htm) && !/codeLogin/.test(htm) && !/submitCode/.test(cli));
 
+// 다인전 = 자리 늘리기
+ok('방마다 자리 수가 있다', /function capOf\(room\)[\s\S]{0,80}'quad' \? 4 : 2/.test(srv));
+ok('다인전을 골라도 방을 안 옮긴다',
+   /if \(mode === 'quad'\) \{[\s\S]{0,200}pushRoomLobby/.test(srv));
+ok('엔진을 갈아타는 것은 시작할 때', /room\.mode === 'quad'[\s\S]{0,600}g4\.startGroup/.test(srv));
+ok('다인전은 세 명부터', /다인전은 세 명부터/.test(srv));
+ok('빈자리는 자리 수만큼 받는다', /for \(let i = 0; i < cap; i\+\+\) if \(!room\.players\[i\]\)/.test(srv));
+ok('방장 승계가 네 자리를 다 훑는다', /for \(let i = 0; i < cap; i\+\+\) if \(room\.players\[i\]\) kept\.push\(i\)/.test(srv));
+ok('대기실이 네 자리로 늘어난다', /wc-seats\.four/.test(htm));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

@@ -2888,6 +2888,8 @@
     .wc-head > b { font-size:1.02rem; color:#ffe9a8; max-width:100%;
       overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .wc-seats { display:flex; gap:8px; width:100%; }
+    /* 다인전으로 늘어나면 두 줄로 접는다 */
+    .wc-seats.four { display:grid; grid-template-columns:repeat(2, 1fr); }
     .wc-seat {
       flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px;
       padding:12px 8px; border-radius:14px;

@@ -139,17 +139,18 @@ console.log('\n⑦ 방 만들기 · 모드 고르기');
   // 대기실 — 사람이 들락날락해도 방이 살아 있어야 한다
   ok('시작 전에 나가면 자리만 비운다', /function leaveWaitingRoom/.test(srv));
   ok('아무도 없을 때만 방을 지운다', /if \(!room\.players\.some\(Boolean\)\) \{ delete rooms\[roomId\]/.test(srv));
-  ok('방장이 나가면 물려받는다', /if \(!room\.players\[0\] && room\.players\[1\]\)/.test(srv));
+  ok('방장이 나가면 물려받는다', /kept\.push\(i\)/.test(srv) && /sk\.playerIndex = i;/.test(srv));
   ok('연결이 끊겨도 자리만 비운다', /r && !r\.game && r\.hostStart && !socket\.isSpec/.test(srv));
-  ok('누가 있는지 내려보낸다', /const seats = room\.players\.map/.test(srv));
+  ok('누가 있는지 내려보낸다', /seats\.push\(sid \? \{ nick: room\.nicks\[i\]/.test(srv));
   ok('자리를 그린다', /id="wcSeats"/.test(html) && /wc-seat/.test(cli));
   ok('들어온 사람 모두 대기실 화면으로', /waitCard'\)\.style\.display = 'flex';\s*\n\s*roomIsHost/.test(cli));
   ok('나갈 때 서버에도 알린다', /function cancelWait\(\) \{\s*\n\s*socket\.emit\('leave_room'\)/.test(cli));
-  // 다인전은 엔진이 다르지만, 쓰는 사람 눈엔 자리가 늘어난 것으로만 보여야 한다
-  ok('다인전은 방을 닫지 않고 서버에 맡긴다',
-     /socket\.emit\('room_mode', \{ mode: 'quad' \}\)/.test(cli) && !/다인전으로 바꿀까요/.test(cli));
-  ok('서버가 앉은 사람 그대로 옮긴다', /g4\.groupPending\(list\)/.test(srv));
-  ok('넷짜리 대기방을 만들어 준다', /function groupPending/.test(fs.readFileSync(src + '/server4.js', 'utf8')));
+  // 다인전은 엔진이 다르지만, 쓰는 사람 눈엔 자리가 늘어난 것으로만 보여야 한다.
+  // 고르는 순간에는 아무 데도 안 간다 — 자리만 넷이 되고 화면은 대기실 그대로.
+  ok('다인전은 방을 닫지 않는다', !/다인전으로 바꿀까요/.test(cli) && !/q4Open\(\)/.test(cli));
+  ok('고를 때는 자리만 늘린다', /if \(mode === 'quad'\) \{[\s\S]{0,200}room\.mode = 'quad'[\s\S]{0,120}pushRoomLobby/.test(srv));
+  ok('시작을 눌러야 엔진을 갈아탄다', /g4\.startGroup\(list\)/.test(srv));
+  ok('앉은 사람 그대로 시작한다', /function startGroup/.test(fs.readFileSync(src + '/server4.js', 'utf8')));
   ok('옮겨진 사람은 다인전 화면이 열린다', /if \(!q4Live\) \{[\s\S]{0,300}enterWaiting\(\);/.test(fs.readFileSync(src + '/public/client4.js', 'utf8')));
 
   // 빈자리 → 친구 초대

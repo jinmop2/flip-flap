@@ -3884,12 +3884,9 @@ let roomModeCur = 'classic', roomIsHost = false, roomReady = false;
 
 window.roomMode = function (m) {
   if (!roomIsHost) return toast('방장만 고를 수 있어요.');
-  if (m === 'quad') {
-    // 자리가 둘에서 넷으로 늘어난다. 앉아 있던 사람은 그대로 옮겨가므로
-    // 쓰는 사람 눈에는 "슬롯이 늘어난 것" 으로만 보인다.
-    socket.emit('room_mode', { mode: 'quad' });
-    return;
-  }
+  // 다인전도 다른 모드와 똑같이 알리기만 한다. 자리가 넷으로 늘어날 뿐,
+  // 화면은 대기실 그대로다 — 실제로 판이 열리는 건 시작을 눌렀을 때.
+
   roomModeCur = m;
   for (const b of document.querySelectorAll('#wcModes .wc-mode')) b.classList.toggle('on', b.dataset.m === m);
   socket.emit('room_mode', { mode: m });
@@ -3945,6 +3942,7 @@ socket.on('room_lobby', (r) => {
   // 자리 — 누가 들어와 있는지 그대로 보여준다
   const box = document.getElementById('wcSeats');
   if (box) {
+    box.classList.toggle('four', (r.cap || 2) > 2);
     box.innerHTML = (r.seats || [null, null]).map((s2) => {
       // 빈자리를 누르면 친구를 부른다 — 코드를 따로 알려주지 않아도 되게
       if (!s2) return `<button class="wc-seat empty" onclick="roomInvite()"><div class="ws-face">＋</div>
@@ -3967,7 +3965,8 @@ socket.on('room_lobby', (r) => {
   if (btn) {
     btn.style.display = roomIsHost ? '' : 'none';
     btn.disabled = !roomReady;
-    btn.textContent = roomReady ? '게임 시작' : '상대를 기다려요';
+    btn.textContent = roomReady ? '게임 시작'
+      : (roomModeCur === 'quad' ? '세 명부터 시작할 수 있어요' : '상대를 기다려요');
   }
   const note = document.getElementById('wcGuestNote');
   if (note) note.style.display = roomIsHost ? 'none' : '';

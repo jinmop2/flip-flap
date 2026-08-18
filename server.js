@@ -1239,13 +1239,21 @@ function leaveWaitingRoom(socket, roomId, slot) {
   socket.roomId = null; socket.playerIndex = undefined;
   socket.join('lobby');
 
-  // 자리를 앞으로 당긴다 — 0번이 방장이라 비워 두면 주인 없는 방이 된다
-  if (!room.players[0] && room.players[1]) {
-    for (const k of ['players', 'pids', 'nicks', 'profiles', 'tokens']) {
-      room[k][0] = room[k][1]; room[k][1] = null;
+  // 자리를 앞으로 당긴다 — 0번이 방장이라 비워 두면 주인 없는 방이 된다.
+  // 다인전이면 자리가 넷이라, 둘만 보고 당기면 3·4번이 남겨진다.
+  {
+    const cap = capOf(room);
+    const keys = ['players', 'pids', 'nicks', 'profiles', 'tokens'];
+    const kept = [];
+    for (let i = 0; i < cap; i++) if (room.players[i]) kept.push(i);
+    for (let i = 0; i < cap; i++) {
+      const from = kept[i];
+      for (const k of keys) room[k][i] = from === undefined ? null : room[k][from];
     }
-    const sk = io.sockets.sockets.get(room.players[0]);
-    if (sk) sk.playerIndex = 0;
+    for (let i = 0; i < cap; i++) {
+      const sk = room.players[i] && io.sockets.sockets.get(room.players[i]);
+      if (sk) sk.playerIndex = i;
+    }
   }
   if (!room.players.some(Boolean)) { delete rooms[roomId]; broadcastRooms(); return; }
   pushRoomLobby(roomId);
@@ -1254,17 +1262,26 @@ function leaveWaitingRoom(socket, roomId, slot) {
 
 // 방 대기 화면 상태 — 방장인지, 둘 다 찼는지, 무슨 모드인지.
 // 방장·손님이 서로 다른 것을 봐야 해서 사람마다 따로 보낸다.
+// 이 방이 몇 자리짜리인가. 다인전을 고르면 넷으로 늘어난다 —
+// 방을 닫고 옮기는 게 아니라 슬롯만 늘어난다.
+function capOf(room) { return room && room.mode === 'quad' ? 4 : 2; }
+
 function pushRoomLobby(roomId) {
   const room = rooms[roomId];
   if (!room || room.game) return;
-  const ready = room.players.filter(Boolean).length >= 2;
-  const seats = room.players.map((sid, i) => (sid
-    ? { nick: room.nicks[i] || '???', profile: room.profiles[i] || null, host: i === 0 }
-    : null));
+  const cap = capOf(room);
+  const n = room.players.filter(Boolean).length;
+  // 다인전은 셋부터 할 수 있다 (넷이 차면 더 못 들어온다)
+  const ready = cap === 4 ? n >= 3 : n >= 2;
+  const seats = [];
+  for (let i = 0; i < cap; i++) {
+    const sid = room.players[i];
+    seats.push(sid ? { nick: room.nicks[i] || '???', profile: room.profiles[i] || null, host: i === 0 } : null);
+  }
   room.players.forEach((sid, i) => {
     if (!sid) return;
     io.to(sid).emit('room_lobby', { host: i === 0, ready, mode: room.mode || 'classic',
-      name: room.name || '', code: roomId, seats, me: i });
+      name: room.name || '', code: roomId, seats, me: i, cap });
   });
 }
 
@@ -1515,16 +1532,20 @@ io.on('connection', (socket) => {
   socket.on('join_room', ({ roomId, pid, nick, password }) => {
     const room = rooms[roomId];
     if (!room) return socket.emit('error', '방을 찾을 수 없어요.');
-    if (room.game || room.players.filter(Boolean).length >= 2) return socket.emit('error', '이미 시작했거나 꽉 찬 방이에요.');
+    const cap = capOf(room);
+    if (room.game || room.players.filter(Boolean).length >= cap) return socket.emit('error', '이미 시작했거나 꽉 찬 방이에요.');
     if (room.secret) {
       if ((room.pwFails || 0) >= 10) return socket.emit('error', '비밀번호 시도 초과. 방이 잠겼어요.');
       if (String(password || '') !== room.password) { room.pwFails = (room.pwFails || 0) + 1; return socket.emit('need_password', { roomId, wrong: password != null }); }
     }
     const prof = myProfile(nick);
-    room.players[1] = socket.id; room.pids[1] = pid || null; room.nicks[1] = prof.nick;
-    room.profiles[1] = prof; room.tokens[1] = socket.token || null;
+    let seat = -1;
+    for (let i = 0; i < cap; i++) if (!room.players[i]) { seat = i; break; }
+    if (seat < 0) return socket.emit('error', '이미 시작했거나 꽉 찬 방이에요.');
+    room.players[seat] = socket.id; room.pids[seat] = pid || null; room.nicks[seat] = prof.nick;
+    room.profiles[seat] = prof; room.tokens[seat] = socket.token || null;
     socket.leave('lobby');
-    socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 1; socket.pid = pid;
+    socket.join(roomId); socket.roomId = roomId; socket.playerIndex = seat; socket.pid = pid;
     // 손으로 만든 방은 방장이 모드를 고르고 시작한다. 예전엔 들어오는 순간 시작해서
     // "무슨 판인지" 고를 새가 없었다. 빠른 매칭으로 만든 방은 예전처럼 바로 시작한다.
     if (room.hostStart) { pushRoomLobby(roomId); broadcastRooms(); return; }
@@ -1542,22 +1563,12 @@ io.on('connection', (socket) => {
     const room = rooms[roomId];
     if (!room || room.game || socket.playerIndex !== 0) return;
 
-    // 다인전은 엔진이 다르다(3·4인). 그렇다고 방을 닫고 각자 옮겨 가라고 하면
-    // 같이 있던 사람이 흩어진다 — 앉아 있던 사람 그대로 자리 넷짜리 대기방으로 옮긴다.
-    // 쓰는 사람 눈에는 "자리가 늘어난 것" 으로만 보인다.
+    // 다인전을 골라도 방은 그대로다. 자리만 둘에서 넷으로 늘어난다 —
+    // 예전엔 여기서 곧장 다인전 엔진으로 옮겨서, 고르는 순간 화면이 판으로
+    // 넘어가 버렸다. 실제로 옮겨 가는 것은 방장이 시작을 누를 때다.
     if (mode === 'quad') {
-      const list = room.players
-        .map((sid, i) => (sid ? { sid, nick: room.nicks[i] || '플레이어' } : null))
-        .filter(Boolean);
-      if (!list.length) return;
-      const pid = g4.groupPending(list);
-      if (!pid) return socket.emit('error', '다인전으로 옮기지 못했어요.');
-      for (const { sid } of list) {
-        const sk = io.sockets.sockets.get(sid);
-        if (sk) { sk.leave(roomId); sk.roomId = null; sk.playerIndex = undefined; }
-      }
-      delete rooms[roomId];
-      broadcastRooms();
+      room.mode = 'quad'; room.itemMode = false;
+      pushRoomLobby(roomId); broadcastRooms();
       return;
     }
 
@@ -1571,8 +1582,27 @@ io.on('connection', (socket) => {
     const roomId = socket.roomId;
     const room = rooms[roomId];
     if (!room || room.game || socket.playerIndex !== 0) return;
-    if (room.players.filter(Boolean).length < 2) return socket.emit('error', '상대가 아직 없어요.');
-    if (mode === 'item' || mode === 'classic') { room.itemMode = mode === 'item'; room.mode = mode; }
+    if (mode === 'item' || mode === 'classic' || mode === 'quad') {
+      room.mode = mode; room.itemMode = mode === 'item';
+    }
+    const here = room.players.filter(Boolean);
+    // 다인전은 셋부터. 실제로 엔진을 갈아타는 것은 지금 이 순간이다 —
+    // 모드를 고를 때가 아니라, 방장이 시작을 누를 때.
+    if (room.mode === 'quad') {
+      if (here.length < 3) return socket.emit('error', '다인전은 세 명부터 시작할 수 있어요.');
+      const list = room.players
+        .map((sid, i) => (sid ? { sid, nick: room.nicks[i] || '플레이어' } : null))
+        .filter(Boolean);
+      for (const { sid } of list) {
+        const sk = io.sockets.sockets.get(sid);
+        if (sk) { sk.leave(roomId); sk.roomId = null; sk.playerIndex = undefined; }
+      }
+      delete rooms[roomId];
+      broadcastRooms();
+      if (!g4.startGroup(list)) socket.emit('error', '다인전을 시작하지 못했어요.');
+      return;
+    }
+    if (here.length < 2) return socket.emit('error', '상대가 아직 없어요.');
     // createGame 에 모드를 넘겨야 한다. 손으로 items/itemUsed 만 채웠더니
     // fx(이번 경매 한정 효과)가 없어서 아이템을 쓰는 순간 전부 튕겼다 —
     // "멀티 아이템전이 작동 안 한다" 의 정체.
