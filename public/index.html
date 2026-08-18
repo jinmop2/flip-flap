@@ -3659,14 +3659,21 @@
       height:var(--board-h, 920px); max-height:none;
       zoom:var(--board-zoom, 1);
     }
+    /* 미니게임은 가로 배치가 따로 없다. 가로 설계 크기(940×520)를 그대로
+       씌우면 세로로 눌린다 — 원래 반응형 규칙에 맡긴다. */
+    body.land #mini {
+      width:100%; max-width:780px; height:var(--app-h, 100vh); max-height:920px;
+      zoom:1;
+    }
 
     /* ── 가로 전용 배치 ──────────────────────────────────────────────
        세로 한 칸으로 쌓은 배치를 눕힌 화면에 그대로 넣으면 높이가 발목을
        잡아 판이 아주 작아진다. 가로에서는 칸을 옆으로 편다 —
        왼쪽에 상대, 가운데에 경매대, 아래 한 줄이 내 자리. */
-    body.land #game {
-      /* #game 은 자바스크립트가 style.display 로 켠다 — 인라인이 클래스보다 세서
-         !important 가 없으면 이 격자가 안 걸린다. */
+    /* .ingame 을 같이 걸어야 한다. #game 은 자바스크립트가 style.display 로
+       켜고 끄는데, !important 를 무조건 걸면 로비에서 꺼 둔 것까지 되살아나
+       로비에 판이 뜬다. 판이 열려 있을 때만 격자로 바꾼다. */
+    body.land.ingame #game {
       display:grid !important;
       /* 오른쪽에 왼쪽과 같은 폭의 빈 칸을 둔다. 그래야 가운데 칸이 판의
          한가운데에 온다 — 두 칸으로 두면 경매대가 상대 칸만큼 오른쪽으로

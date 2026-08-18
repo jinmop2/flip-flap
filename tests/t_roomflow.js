@@ -34,9 +34,11 @@ ok('배율을 화면에서 계산한다', /Math\.min\(\(vw - 16\) \/ W, \(vh - 8
 ok('가로를 막지 않는다', !/rotateNote/.test(htm) && !/lock\('portrait'\)/.test(cli));
 // 가로 전용 배치 — 왼쪽 상대 · 가운데 경매대 · 아래 한 줄이 내 자리
 // 오른쪽에 같은 폭의 빈 칸을 둬야 가운데 칸이 판 한가운데에 온다
-ok('가로에서는 격자로 편다', /body\.land #game \{[\s\S]{0,600}grid-template-areas:"opp center pad" "mine mine mine"/.test(htm));
+ok('가로에서는 격자로 편다', /body\.land\.ingame #game \{[\s\S]{0,700}grid-template-areas:"opp center pad" "mine mine mine"/.test(htm));
 ok('좌우 칸 폭이 같다', /grid-template-columns:minmax\(120px, 21%\) 1fr minmax\(120px, 21%\)/.test(htm));
-ok('인라인 display 를 이긴다', /display:grid !important/.test(htm));
+// !important 를 무조건 걸면 로비에서 꺼 둔 판까지 되살아난다 — .ingame 을 같이 건다
+ok('판 안에서만 격자로 바꾼다', /body\.land\.ingame #game \{[\s\S]{0,40}display:grid !important/.test(htm));
+ok('미니게임에는 가로 크기를 안 씌운다', /body\.land #mini \{[^}]*zoom:1/.test(htm));
 // 줄에 같이 세우면 세 덩어리가 함께 가운데로 몰려 경매대가 밀린다 — 왼쪽 끝에 붙인다
 ok('덱과 턴 표시는 가운데 칸 왼쪽 끝에',
    /body\.land #deckStack \{ position:absolute; left:4px/.test(htm) && /body\.land #turnInfo \{ position:absolute; left:4px/.test(htm));
