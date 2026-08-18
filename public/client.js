@@ -1601,6 +1601,7 @@ function clanLeave(isOwner) {
 // 로비 버튼의 알림 배지 (받은 친구요청 / 클랜 가입신청)
 async function updateSocialBadges() {
   if (!myAccount) {
+    _badgeBase = { friend: 0, clan: 0 };
     for (const id of ['friendBadge', 'clanBadge']) { const e = document.getElementById(id); if (e) e.style.display = 'none'; }
     return;
   }
@@ -1614,11 +1615,26 @@ async function updateSocialBadges() {
     apiPost('/api/clan', { token: authToken() }),
   ]);
   const nIn = f.ok ? f.reqIn.length : 0;
-  setBadge('friendBadge', nIn);
   const tb = document.getElementById('ftabBadge');
   if (tb) { tb.textContent = nIn; tb.style.display = nIn > 0 ? '' : 'none'; }
-  const applicants = (c.ok && c.clan && c.clan.isOwner) ? c.clan.applicantCount : 0;
-  setBadge('clanBadge', applicants + _chatUnread);   // 가입 신청 + 안 읽은 채팅
+  _badgeBase.friend = nIn;
+  _badgeBase.clan = (c.ok && c.clan && c.clan.isOwner) ? c.clan.applicantCount : 0;
+  paintSocialBadges();
+}
+// 로비 탭바 배지 — 친구요청·가입신청에 "안 읽은 메시지" 를 얹는다.
+// 예전엔 로비를 열 때 한 번만 셌다. 그래서 로비에 앉아 있는 동안 메시지가
+// 와도 아무 표시가 없었다 — 판 안의 채팅 버튼에만 점이 켜졌다.
+let _badgeBase = { friend: 0, clan: 0 };
+function paintSocialBadges() {
+  const set = (id, n) => {
+    const e = document.getElementById(id); if (!e) return;
+    e.textContent = n > 99 ? '99+' : n;
+    e.style.display = n > 0 ? '' : 'none';
+  };
+  let dm = 0;
+  for (const k in gcUnread) if (Object.prototype.hasOwnProperty.call(gcUnread, k)) dm += gcUnread[k] || 0;
+  set('friendBadge', _badgeBase.friend + dm);
+  set('clanBadge', _badgeBase.clan + _chatUnread + gcClanUnread);
 }
 
 // ── 칭호 (내 정보에서 관리) ──
@@ -3447,6 +3463,8 @@ function gcPaintDot() {
   for (const id of ['chatDot', 'chatDot4']) {
     const d = document.getElementById(id); if (d) d.style.display = on ? '' : 'none';
   }
+  // 로비에 있을 때도 보여야 한다 — 판 안의 채팅 버튼은 로비에서 안 보인다
+  try { paintSocialBadges(); } catch (_) {}
 }
 // 새 1:1 메시지가 도착
 socket.on('dm', ({ from, msg }) => {

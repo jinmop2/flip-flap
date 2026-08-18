@@ -33,5 +33,14 @@ ok('듣던 음악 유지 토글은 없앴다', !/toggleKeepAudio/.test(htm) && !
 ok('밖의 음악에 자동으로 양보한다', /yieldToOtherAudio/.test(cli));
 ok('양보는 이번 접속 동안만', /sessionStorage[\s\S]{0,40}ff_yield/.test(cli));
 
+// 알림·관전·손패 탭·랭킹
+ok('로비 탭바 배지에 안 읽은 메시지를 얹는다', /function paintSocialBadges/.test(cli) && /gcClanUnread/.test(cli));
+ok('메시지가 오면 로비 배지도 다시 칠한다', /gcPaintDot[\s\S]{0,400}paintSocialBadges\(\)/.test(cli));
+ok('친구 목록에 관전 버튼', /watchFriend\('\$\{esc\(f\.watch\)\}'\)/.test(cli));
+ok('관전은 서버에 spectate 로 붙는다', /socket\.emit\('spectate'/.test(cli));
+ok('시계는 탭을 삼키지 않는다', /#mebar \.timer[^}]*pointer-events:none/.test(htm));
+ok('겹치는 자리에서 손패가 이긴다', /#myHand \{[^}]*z-index:8/.test(htm));
+ok('랭킹은 전체화면', /\.lb-box\.rank-box \{[\s\S]{0,120}height:100dvh/.test(htm));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

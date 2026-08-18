@@ -2954,6 +2954,11 @@
     #mebar, #itemBar, #oppbar { pointer-events:none; }
     #mebar > *, #itemBar > *, #oppbar > *,
     #mebar .emote-wrap, #mebar .game-pcard, #itemBar .ib-slot { pointer-events:auto; }
+    /* 시계는 읽는 것이지 누르는 것이 아니다 — 손패 위를 덮고 있으면 탭만 삼킨다 */
+    #mebar .timer, #oppbar .timer { pointer-events:none; }
+    /* 그래도 이모트 버튼·프로필 칸은 눌러야 하므로, 겹치는 자리에서는 손패가 이긴다.
+       내 손패의 양 끝(특히 오른쪽 끝)이 안 눌리던 이유가 이 겹침이었다. */
+    #myHand { position:relative; z-index:8; }
     /* 룰북 탭 — 상자 밖에 둔다(상자 안은 영어판이 통째로 갈아끼우는 자리다) */
     .rules-wrap { display:flex; flex-direction:column; gap:8px; max-width:480px; width:100%; max-height:86vh; }
     .rules-wrap .rules-box { max-width:none; width:100%; margin:0; min-height:0; }
