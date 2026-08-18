@@ -140,28 +140,6 @@ app.post('/api/admin/temp-revoke', rateLimit(20), (req, res) => {
   res.json(accounts.revokeTempCode((req.body || {}).id));
 });
 
-// 코드로 로그인. 여기가 유일하게 열려 있는 문이라 좁게 연다.
-//   · IP 당 분당 8회 (rateLimit)
-//   · 틀릴수록 느려진다 — 자동으로 찍어 보는 쪽만 손해를 본다
-//   · 맞든 틀리든 답이 같은 시간에 나가게 최소 대기를 둔다
-const codeFail = new Map();     // ip → { n, ts }
-app.post('/api/code-login', rateLimit(8), async (req, res) => {
-  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'x').split(',')[0].trim();
-  const now = Date.now();
-  let f = codeFail.get(ip);
-  if (!f || now - f.ts > 10 * 60000) f = { n: 0, ts: now };
-  // 틀린 횟수만큼 기다리게 한다(최대 4초). 사람은 못 느끼고 기계는 못 견딘다.
-  const wait = Math.min(4000, f.n * 400);
-  const started = now;
-  const out = accounts.codeLogin((req.body || {}).code);
-  if (out.error) { f.n++; f.ts = now; codeFail.set(ip, f); }
-  else codeFail.delete(ip);
-  const spent = Date.now() - started;
-  await new Promise((r) => setTimeout(r, Math.max(0, wait + 120 - spent)));
-  res.json(out);
-});
-setInterval(() => { const now = Date.now(); for (const [k, v] of codeFail) if (now - v.ts > 15 * 60000) codeFail.delete(k); }, 5 * 60000);
-
 // 관리자 페이지 — 키는 이 화면에서 입력받아 요청 본문으로만 보낸다 (URL 에 안 남음)
 app.get('/admin', rateLimit(20), (req, res) => {
   res.type('html').send(`<!DOCTYPE html><meta charset="utf-8">
@@ -319,6 +297,7 @@ async function tload(){
 $('key').addEventListener('change',()=>{load();tload();});
 </script>`);
 });
+
 
 app.post('/api/nick',   rateLimit(20), (req, res) => { const { token, nick } = req.body || {}; res.json(accounts.setNick(token, nick)); });
 app.post('/api/delete-account', rateLimit(10), (req, res) => {   // 구글플레이 필수 정책 — 계정 영구 삭제
@@ -1333,6 +1312,7 @@ function startBotMatch(entry) {
     profiles: [prof, null], tokens: [entry.token || null, null],
     name: entry.itemMode ? '아이템전' : '빠른 대전', game: null, vsBot: false, difficulty: 'expert',   // 보상은 멀티 기준
     secret: false, password: '', cpuIndex: 1, botMatch: true, itemMode: !!entry.itemMode,
+    ranked: true,                                  // 랭크게임 대기 중 봇이 들어온 판
     aiMem: expert3.createMem(),
   };
   rooms[roomId].profiles[1] = { nick: rooms[roomId].nicks[1], guest: true };   // 게스트 유저처럼 보이게
@@ -1646,6 +1626,59 @@ io.on('connection', (socket) => {
     }
   });
   socket.on('cancel_match', () => { dequeue(socket.id); socket.emit('unqueued'); });
+
+  // 빠른 입장 — 랭크가 안 걸린 판. 그 모드로 열려 있는 방이 있으면 거기로
+  // 들어가고, 없으면 하나 열어 두고 기다린다(다음 사람이 들어오면 바로 시작).
+  // 매칭 대기열이 아니라 "방" 이라 무엇을 기다리는지가 방 목록에 보인다.
+  socket.on('quick_join', ({ mode, pid, nick } = {}) => {
+    if (socket.roomId && rooms[socket.roomId]) return;
+    dequeue(socket.id);
+    const item = mode === 'item';
+    if (mode !== 'item' && mode !== 'classic') return socket.emit('error', '알 수 없는 모드예요.');
+
+    // 들어갈 만한 방: 같은 모드 · 비밀방 아님 · AI전 아님 · 아직 안 시작 · 자리 하나
+    const openId = Object.keys(rooms).find((id) => {
+      const r = rooms[id];
+      return r && !r.game && !r.secret && !r.vsBot && !r.tutorial && !r.ranked
+        && !!r.itemMode === item && r.players.filter(Boolean).length === 1;
+    });
+    if (openId) {
+      const room = rooms[openId];
+      const prof = myProfile(nick);
+      room.players[1] = socket.id; room.pids[1] = pid || null; room.nicks[1] = prof.nick;
+      room.profiles[1] = prof; room.tokens[1] = socket.token || null;
+      socket.leave('lobby');
+      socket.join(openId); socket.roomId = openId; socket.playerIndex = 1; socket.pid = pid;
+      // 빠른 입장으로 연 방은 방장이 따로 시작을 누르지 않는다 — 차는 즉시 시작.
+      if (room.hostStart) { pushRoomLobby(openId); broadcastRooms(); return; }
+      room.game = createGame(!!room.itemMode);
+      room.startedAt = Date.now();
+      io.to(openId).emit('game_start', { vsBot: false, roomId: openId, nicks: room.nicks,
+        profiles: room.profiles, itemMode: !!room.itemMode });
+      broadcast(openId);
+      startClock(openId);
+      broadcastRooms();
+      return;
+    }
+
+    if (Object.keys(rooms).length >= MAX_ROOMS) return socket.emit('error', '서버가 혼잡해요. 잠시 후 시도하세요.');
+    const prof = myProfile(nick);
+    const roomId = makeRoomId();
+    rooms[roomId] = {
+      players: [socket.id, null], pids: [pid || null, null], nicks: [prof.nick, null],
+      profiles: [prof, null], tokens: [socket.token || null, null],
+      name: item ? '아이템전 빠른 입장' : '클래식 빠른 입장',
+      game: null, vsBot: false, difficulty: 'hard',
+      secret: false, password: '', itemMode: item,
+      mode: item ? 'item' : 'classic',
+      hostStart: false,        // 두 번째 사람이 들어오면 바로 시작
+      quickOpen: true,
+    };
+    socket.leave('lobby');
+    socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
+    socket.emit('quick_waiting', { roomId, mode: item ? 'item' : 'classic' });
+    broadcastRooms();
+  });
 
   // 선공 뽑기: 중앙 카드 2장 중 하나 선택
   socket.on('pick_card', ({ slot } = {}) => {
@@ -1966,8 +1999,9 @@ function startMatch(a, b) {
   rooms[roomId] = {
     players: [a.sid, b.sid], pids: [a.pid || null, b.pid || null], nicks: [pA.nick, pB.nick],
     profiles: [pA, pB], tokens: [a.token || null, b.token || null],
-    name: itemMode ? '아이템전' : '빠른 대전', game: null, vsBot: false, difficulty: 'hard',
+    name: '랭크게임', game: null, vsBot: false, difficulty: 'hard',
     secret: false, password: '', itemMode,
+    ranked: true,          // RP 가 오가는 판은 오직 여기서만 만들어진다
   };
   sa.leave('lobby'); sa.join(roomId); sa.roomId = roomId; sa.playerIndex = 0; sa.pid = a.pid;
   sb.leave('lobby'); sb.join(roomId); sb.roomId = roomId; sb.playerIndex = 1; sb.pid = b.pid;
@@ -2371,7 +2405,9 @@ function finishStats(room, winner, forfeit = false, setKind = null) {
       // 유저 입장에서는 사람과 붙은 것과 구별되지 않는데 보상만 다르면 억울하다.
       // 대가로 RP 는 더 이상 유저끼리 제로섬이 아니게 된다 — 봇은 잃지 않으니
       // 이긴 만큼이 새로 생긴다. 아이템전은 그대로 제외(코인·XP만).
-      noRank: !!room.itemMode || !!room.noRank,   // 아이템전·토너먼트는 RP 미반영
+      // RP 는 랭크게임(무작위 매칭)에서만 오간다. 빠른 입장·방 만들기·친구방은
+      // 코인과 경험치만 준다 — 이겨도 잃어도 등급이 안 움직이니 편하게 붙는다.
+      noRank: !room.ranked || !!room.itemMode || !!room.noRank,
     });
     if (out && room.players[i]) io.to(room.players[i]).emit('profile', { profile: out.profile, result, rewards: out.rewards });
   });

@@ -682,39 +682,6 @@ function hideTitle() {
 }
 function showTitle() { sessionStorage.removeItem('ff_guest'); const t = document.getElementById('title'); if (t) { t.style.display = ''; t.classList.remove('hide'); } }
 
-// ── 코드로 로그인 ──────────────────────────────────────────
-// 코드는 서버에도 해시로만 남는다. 여기서는 보내고 받은 토큰만 저장한다.
-window.toggleCodeLogin = function () {
-  const box = document.getElementById('codeLogin');
-  const on = box.style.display === 'none';
-  box.style.display = on ? 'flex' : 'none';
-  if (on) document.getElementById('codeInput').focus();
-};
-// 넣는 대로 네 자리마다 하이픈을 넣어 준다 — 받아 적기 쉬우라고
-window.codeFormat = function (el) {
-  const raw = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
-  el.value = raw.replace(/(.{4})(?=.)/g, '$1-');
-  document.getElementById('codeMsg').textContent = '';
-};
-window.submitCode = async function () {
-  const el = document.getElementById('codeInput');
-  const msg = document.getElementById('codeMsg');
-  const btn = document.getElementById('codeBtn');
-  const code = el.value.replace(/[^A-Za-z0-9]/g, '');
-  if (code.length !== 12) { msg.className = 'code-msg'; msg.textContent = '코드 12자를 넣어주세요.'; return; }
-  btn.disabled = true; msg.className = 'code-msg'; msg.textContent = '확인 중…';
-  try {
-    const r = await apiPost('/api/code-login', { code });
-    if (!r.ok) { msg.textContent = r.error || '코드가 올바르지 않아요.'; return; }
-    msg.className = 'code-msg ok'; msg.textContent = `${r.profile.nick} 님으로 들어갑니다`;
-    localStorage.setItem('ff_auth', r.token);
-    sessionStorage.removeItem('ff_guest');
-    setTimeout(() => location.reload(), 400);
-  } catch (_) {
-    msg.textContent = '연결이 안 돼요. 잠시 후 다시 시도해주세요.';
-  } finally { btn.disabled = false; }
-};
-
 function startAsGuest() { sessionStorage.setItem('ff_guest', '1'); hideTitle(); }   // 게스트 선택 기억
 const cameFromOAuth = kakaoFirstLogin || location.href.includes('ktoken');   // 방금 로그인하고 돌아온 경우
 
@@ -733,15 +700,41 @@ fetch('/api/auth-config').then(r => r.json()).then(d => {
 }).catch(() => {});
 
 // ── 빠른 대전 (자동 매칭) ───────────────────────────────────
-function quickMatch(itemMode) {
+// 랭크게임 — 무작위 매칭. RP 가 오가는 유일한 길이다.
+function quickMatch() {
   closeModePanels();
-  isItemMode = !!itemMode;
-  socket.emit('quick_match', { pid: PID, nick: getNick(), itemMode: !!itemMode });
-  const m = document.getElementById('matchModal');
-  m.classList.add('show');
+  isItemMode = false;
+  socket.emit('quick_match', { pid: PID, nick: getNick(), itemMode: false });
+  document.getElementById('matchModal').classList.add('show');
   const t = document.getElementById('matchTitle');
-  if (t) t.textContent = itemMode ? '🎪 아이템전 빠른플레이' : '⚡ 빠른 대전';
+  if (t) t.textContent = '🏆 랭크게임';
 }
+
+// 빠른 입장 — 그 모드로 열린 방이 있으면 바로 들어가고, 없으면 하나 열고 기다린다.
+// 랭크가 안 걸리므로 편하게 붙는 자리다.
+window.quickJoin = function (mode) {
+  closeModePanels();
+  if (mode === 'quad') { if (typeof q4Quick === 'function') q4Quick(); return; }
+  isItemMode = mode === 'item';
+  socket.emit('quick_join', { mode, pid: PID, nick: getNick() });
+};
+// 기다리는 방이 열렸다 — 대기실 화면으로. 사람이 들어오면 서버가 바로 시작한다.
+socket.on('quick_waiting', ({ roomId, mode } = {}) => {
+  sharedCode = roomId;
+  roomIsHost = true; roomReady = false; roomModeCur = mode || 'classic';
+  document.getElementById('lobbyMain').style.display = 'none';
+  const wc = document.getElementById('waitCard');
+  wc.style.display = 'flex';
+  document.getElementById('waitCode').textContent = roomId;
+  document.getElementById('waitRoomName').textContent =
+    mode === 'item' ? '아이템전 빠른 입장' : '클래식 빠른 입장';
+  const seats = document.getElementById('wcSeats');
+  if (seats) seats.innerHTML = '';
+  // 시작 버튼·모드 고르기는 숨긴다 — 차는 즉시 시작이라 누를 것이 없다
+  for (const id of ['wcStart', 'wcModes']) { const e = document.getElementById(id); if (e) e.style.display = 'none'; }
+  const note = document.getElementById('wcGuestNote');
+  if (note) { note.style.display = ''; note.textContent = '상대가 들어오면 바로 시작해요'; }
+});
 function cancelMatch() {
   socket.emit('cancel_match');
   document.getElementById('matchModal').classList.remove('show');

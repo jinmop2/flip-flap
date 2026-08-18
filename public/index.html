@@ -127,6 +127,8 @@
     /* 섹션 */
     .lobby-sec { display:flex; flex-direction:column; gap:9px; }
     .sec-title { display:flex; justify-content:space-between; align-items:center; font-size:.72rem; font-weight:600; color:#6a5a70; letter-spacing:1px; padding:0 2px; }
+    .qenter-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:8px; }
+    .qenter-grid .btn { padding:9px 4px; font-size:.76rem; }
     .online-actions { display:flex; gap:8px; }
     .online-actions .btn { flex:1; }
     /* 게임 방법 · 튜토리얼 · 상점 (한 줄 고정) */
@@ -2563,18 +2565,6 @@
     @keyframes peekPulse { 0%,100% { opacity:.35 } 50% { opacity:1 } }
     @media (prefers-reduced-motion: reduce) { .mn-cards .card.mn-hidden::after { animation:none; opacity:.7 } }
 
-    /* 코드 로그인 */
-    .social-btn.code { background:rgba(255,255,255,.06); border:1px solid rgba(245,207,110,.45); color:#ffe9a8; }
-    #codeLogin { display:flex; flex-direction:column; gap:8px; align-items:stretch; margin-top:10px; width:100%; }
-    .code-in {
-      width:100%; padding:12px 14px; border-radius:12px; text-align:center;
-      font-family:'Fredoka',monospace; font-size:1.05rem; font-weight:700; letter-spacing:2px;
-      background:#160f1c; border:1.5px solid #3a2a46; color:#ffe9a8;
-    }
-    .code-in:focus { outline:none; border-color:var(--gold); }
-    .code-msg { font-size:.76rem; color:#ff8fa3; text-align:center; min-height:1em; }
-    .code-msg.ok { color:#8fe0a0; }
-
     /* ── 달 (판에서 쓰는 돈) ── */
     /* 카지노 칩(톱니 테두리에 액면가)을 그리면 그림만으로 도박판이 된다.
        같은 정보를 달로 준다 — 큰 달일수록 값이 크고, 여러 개면 겹쳐 뜬다. */
@@ -3613,17 +3603,6 @@
       <button class="social-btn guest" onclick="startAsGuest()">
         <span>게스트로 시작</span>
       </button>
-      <button class="social-btn code" onclick="toggleCodeLogin()">
-        <span>코드로 시작</span>
-      </button>
-    </div>
-    <!-- 코드 로그인 — 받은 코드 한 줄로 들어온다 -->
-    <div id="codeLogin" style="display:none">
-      <input id="codeInput" class="code-in" maxlength="14" autocomplete="off" autocapitalize="characters"
-             spellcheck="false" placeholder="XXXX-XXXX-XXXX" oninput="codeFormat(this)"
-             onkeydown="if(event.key==='Enter')submitCode()">
-      <button class="btn btn-gold btn-sm" id="codeBtn" onclick="submitCode()">들어가기</button>
-      <div class="code-msg" id="codeMsg"></div>
     </div>
     <p class="title-note">로그인하면 랭크·코인·전적이 저장돼요</p>
   </div>
@@ -3834,7 +3813,17 @@
 <div class="lb-modal" id="multiModal" onclick="if(event.target===this)closeModePanels()">
   <div class="lb-box">
     <div class="lb-title"><span data-ico="⚔️"></span> 멀티플레이</div>
-    <button class="btn btn-gold" onclick="quickMatch()">⚡ 빠른 대전 (자동 매칭)</button>
+    <!-- 랭크게임 — RP 가 오가는 유일한 곳 -->
+    <button class="btn btn-gold" onclick="quickMatch()">🏆 랭크게임 (무작위 매칭)</button>
+    <p class="auth-hint" style="text-align:center;margin:2px 0 8px;font-size:.68rem">
+      여기서 붙은 판만 RP 가 오르내려요
+    </p>
+    <div class="sec-title"><span>빠른 입장 <span class="mc-tag">RP 없음</span></span></div>
+    <div class="qenter-grid">
+      <button class="btn btn-outline btn-sm" onclick="quickJoin('classic')">🃏 클래식</button>
+      <button class="btn btn-item btn-sm" onclick="quickJoin('item')">🎪 아이템전</button>
+      <button class="btn btn-outline btn-sm" onclick="quickJoin('quad')">👥 다인전</button>
+    </div>
     <div class="online-actions">
       <button class="btn btn-outline btn-sm" onclick="openCreate()">➕ 방 만들기</button>
       <button class="btn btn-outline btn-sm" onclick="openCode()"># 코드로 참가</button>
@@ -3844,12 +3833,6 @@
       <button class="rl-refresh" onclick="refreshRooms()" title="새로고침">↻</button>
     </div>
     <div id="roomList"><div class="rl-empty">열린 방이 없어요. 방을 만들어보세요!</div></div>
-    <!-- 아이템전 빠른플레이는 온라인 매칭이라 멀티 안이 제자리다 -->
-    <div class="sec-title" style="margin-top:10px"><span>아이템전 <span class="mc-tag">이벤트</span></span></div>
-    <button class="btn btn-item" onclick="quickMatch(true)">🎪 아이템전 — 빠른 대전</button>
-    <p class="auth-hint" style="text-align:center;margin:4px 0 0;font-size:.68rem">
-      아이템전끼리 매칭돼요 · 랭킹 미반영, 코인·경험치만
-    </p>
     <button class="btn btn-outline" onclick="closeModePanels()">닫기</button>
   </div>
 </div>

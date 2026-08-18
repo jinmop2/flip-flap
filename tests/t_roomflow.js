@@ -42,5 +42,17 @@ ok('시계는 탭을 삼키지 않는다', /#mebar \.timer[^}]*pointer-events:no
 ok('겹치는 자리에서 손패가 이긴다', /#myHand \{[^}]*z-index:8/.test(htm));
 ok('랭킹은 전체화면', /\.lb-box\.rank-box \{[\s\S]{0,120}height:100dvh/.test(htm));
 
+// 랭크게임 · 빠른 입장 · 코드 로그인 제거
+ok('RP 는 랭크게임에서만', /noRank: !room\.ranked/.test(srv));
+ok('랭크 표시는 무작위 매칭에서만 붙는다',
+   (srv.match(/ranked: true/g) || []).length === 2 && !/ranked: true[\s\S]{0,200}quick_join/.test(srv));
+ok('빠른 입장 통로가 있다', /socket\.on\('quick_join'/.test(srv));
+ok('빠른 입장 방은 랭크 방을 안 집는다', /!r\.ranked/.test(srv));
+ok('빠른 입장은 차면 바로 시작', /hostStart: false/.test(srv));
+ok('클라이언트에 빠른 입장 버튼 셋', (htm.match(/quickJoin\('(classic|item|quad)'\)/g) || []).length === 3);
+ok('랭크게임 버튼', /quickMatch\(\)">🏆 랭크게임/.test(htm));
+ok('다인전 빠른 입장은 다인전 대기방으로', /mode === 'quad'[\s\S]{0,80}q4Quick/.test(cli));
+ok('코드 로그인은 화면에서 사라졌다', !/코드로 시작/.test(htm) && !/codeLogin/.test(htm) && !/submitCode/.test(cli));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

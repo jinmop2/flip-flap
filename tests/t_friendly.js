@@ -139,7 +139,7 @@ console.log('\n⑤ 위장 봇 매치도 사람과 같은 보상');
   // 이건 생성된 값이 아니라 불러지는 자리라 소스로 본다.
   const srv = fs.readFileSync(src + '/server.js', 'utf8');
   ok('위장 봇 매치는 RP 제외 목록에 없다', !/noRank:[^,\n]*room\.botMatch/.test(srv));
-  ok('아이템전은 그대로 제외', /noRank: !!room\.itemMode/.test(srv));
+  ok('아이템전은 그대로 제외', /noRank:[^\n]*!!room\.itemMode/.test(srv));
 
   // noRank 를 주면 여전히 RP 가 안 붙어야 한다 (아이템전 경로)
   const t2 = player();

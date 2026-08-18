@@ -125,13 +125,13 @@ console.log('\n⑨ 서버 쪽 문단속');
   ok('만들기는 관리자 키가 필요하다', /temp-new[\s\S]{0,120}adminOk\(req, res\)/.test(srv));
   ok('재발급·해지도 관리자 키', /temp-rotate[\s\S]{0,120}adminOk/.test(srv) && /temp-revoke[\s\S]{0,120}adminOk/.test(srv));
   ok('목록도 관리자 키', /temp-list[\s\S]{0,120}adminOk/.test(srv));
-  ok('코드 로그인에 횟수 제한', /app\.post\('\/api\/code-login', rateLimit\(\d+\)/.test(srv));
-  ok('틀릴수록 느려진다', /codeFail/.test(srv) && /Math\.min\(4000/.test(srv));
+  // 코드 로그인 창구는 없앴다. 열어 둔 인증 통로가 하나 줄었으므로,
+  // "다시 생기지 않았는지" 를 대신 지킨다.
+  ok('코드 로그인 통로가 없다', !/code-login/.test(srv) && !/codeFail/.test(srv));
   // 임시 계정 쪽은 키를 본문으로만 받는다 — 쿼리로 받으면 브라우저 기록·리퍼러·
   // 서버 로그에 계정을 찍어낼 권한이 그대로 남는다.
-  const tempBlock = srv.slice(srv.indexOf("/api/admin/temp-new"), srv.indexOf("setInterval(() => { const now = Date.now(); for (const [k, v] of codeFail)"));
+  const tempBlock = srv.slice(srv.indexOf("/api/admin/temp-new"), srv.indexOf("/api/admin/temp-list") + 800);
   ok('임시 계정 쪽은 키를 쿼리로 안 받는다', !/req\.query/.test(tempBlock));
-  ok('코드도 본문으로만 받는다', /\(req\.body \|\| \{\}\)\.code/.test(tempBlock));
   const acc = fs.readFileSync(src + '/accounts.js', 'utf8');
   ok('코드는 해시로만 저장한다', /u\.tempHash = hashPw\(/.test(acc));
   ok('비교는 timingSafeEqual', /crypto\.timingSafeEqual\(got, want\)/.test(acc));
