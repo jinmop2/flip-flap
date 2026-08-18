@@ -2066,7 +2066,11 @@ function recordResult(token, result, opts = {}) {
 
   // 최근 전적 (최대 10)
   u.history = u.history || [];
-  u.history.unshift({ vs: opts.oppLabel || (opts.vsBot ? 'AI' : '상대'), result, coins, at: Date.now() });
+  // RP 도 같이 남긴다. 코인만 적어 두면 "이 판에서 등급이 얼마나 움직였는지"
+  // 를 나중에 알 길이 없다. 랭크가 안 걸린 판은 0 이 아니라 아예 안 적는다 —
+  // 0 과 "해당 없음" 은 다르다.
+  u.history.unshift({ vs: opts.oppLabel || (opts.vsBot ? 'AI' : '상대'), result, coins,
+                      ...(rankable ? { rp } : {}), at: Date.now() });
   if (u.history.length > 10) u.history.length = 10;
   persist(idl);
 

@@ -1180,6 +1180,8 @@
     .hist-win { background:rgba(200,160,0,.2); color:#ffd94a; } .hist-loss { background:rgba(120,110,130,.2); color:#a89aae; } .hist-draw { background:rgba(120,140,180,.18); color:#9ab0d0; }
     .hist-vs { flex:1; font-size:.85rem; color:#e8e2d8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .hist-coin { font-size:.82rem; font-weight:700; white-space:nowrap; }
+    .hist-rp { font-size:.7rem; font-weight:800; flex-shrink:0; min-width:52px; text-align:right; }
+    .hist-rp.none { color:#5d5648; font-weight:600; }
     /* ── 랭킹 내 순위 ── */
     .lb-mydiv { text-align:center; font-size:.7rem; color:#6a5a70; padding:4px 0 2px; }
     .lb-row.lb-mine { border-color:var(--gold); background:rgba(200,160,0,.08); }
@@ -3053,6 +3055,29 @@
     }
     .lb-box.rank-box > .lb-title { flex-shrink:0; }
     .lb-box.rank-box .close-x { top:calc(10px + var(--safe-t)); right:12px; }
+    /* ── 친구와 1:1 대화 (친구 탭 안) ─────────────────────────────
+       판 안의 채팅 칸(gc-*)과 같은 결이되, 전체화면 탭에 맞춰 넓게 쓴다. */
+    #fpane-talk { flex:1; min-height:0; display:flex; flex-direction:column; gap:8px; }
+    .ftalk-head { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .ftalk-head b { font-size:.9rem; color:#f5e6c0; }
+    .ftalk-back {
+      width:30px; height:30px; border-radius:9px; cursor:pointer; flex-shrink:0;
+      background:rgba(0,0,0,.3); border:1px solid rgba(200,160,0,.3); color:#e0cba0;
+      font-family:'Fredoka'; font-size:1rem; font-weight:800;
+    }
+    .ftalk-back:hover { background:rgba(200,160,0,.2); color:#ffe9a8; }
+    .ftalk-msgs {
+      flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:5px;
+      padding:8px; border-radius:12px; background:rgba(0,0,0,.24);
+    }
+    .ftalk-input { display:flex; gap:6px; flex-shrink:0; }
+    .ftalk-input input {
+      flex:1; min-width:0; padding:9px 11px; border-radius:10px;
+      background:#160f1c; border:1.5px solid #3a2a46; color:#f0ead8;
+      font-family:'Fredoka'; font-size:.84rem;
+    }
+    .ftalk-input input:focus { outline:none; border-color:var(--gold); }
+
     /* ── 1·2·3등 시상대 ──────────────────────────────────────────────
        2등 왼쪽 · 1등 가운데(높고 크게) · 3등 오른쪽. 아래에서 위로 자란
        받침 위에 얼굴이 올라앉은 모양이라, 받침을 flex-end 로 바닥에 맞춘다. */
@@ -5153,6 +5178,20 @@
 
     <div class="soc-pane" id="fpane-list">
       <div id="friendListBox" class="soc-list"></div>
+    </div>
+
+    <!-- 친구와 1:1 대화. 목록에서 "대화" 를 누르면 이 칸으로 바뀐다. -->
+    <div class="soc-pane" id="fpane-talk" style="display:none">
+      <div class="ftalk-head">
+        <button class="ftalk-back" onclick="friendTalkBack()">←</button>
+        <b id="ftalkNick">친구</b>
+      </div>
+      <div id="ftalkMsgs" class="ftalk-msgs"></div>
+      <div class="ftalk-input">
+        <input id="ftalkInput" maxlength="200" placeholder="메시지를 입력하세요"
+               autocomplete="off" onkeydown="if(event.key==='Enter')friendTalkSend()">
+        <button class="btn btn-gold btn-sm" onclick="friendTalkSend()">보내기</button>
+      </div>
     </div>
 
     <div class="soc-pane" id="fpane-req" style="display:none">

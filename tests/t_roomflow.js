@@ -234,5 +234,21 @@ ok('칭호는 같은 함수로 그린다', /pod-title">\$\{titleTag\(p\.titleInf
 ok('1등은 더 높고 크다', /\.pod-1 \.pod-ava \{[^}]*width:66px/.test(htm) && /\.pod-1 \.pod-stand \{[^}]*padding-top:22px/.test(htm));
 ok('시상대에 올린 셋은 목록에서 뺀다', /r\.players\.slice\(3\)\.forEach/.test(cli));
 
+// 전적에 RP · 친구 탭 대화
+{
+  const acc = read('accounts.js');
+  // 랭크가 안 걸린 판은 0 이 아니라 아예 안 적는다 — 0 과 "해당 없음" 은 다르다
+  ok('전적에 RP 를 남긴다', /\.\.\.\(rankable \? \{ rp \} : \{\}\)/.test(acc));
+  ok('없는 판은 자리를 비운다', /typeof m\.rp === 'number'/.test(cli) && /hist-rp none/.test(cli));
+  ok('오르내림을 색으로', /m\.rp >= 0 \? '#8fe0a0' : '#ff9aa8'/.test(cli));
+}
+ok('친구 줄에 대화 버튼', /onclick="friendTalk\('\$\{esc\(f\.idl\)\}','\$\{esc\(f\.nick\)\}'\)"/.test(cli));
+ok('친구 탭에 대화 칸이 있다', /id="fpane-talk"/.test(htm) && /id="ftalkMsgs"/.test(htm));
+ok('같은 통로를 쓴다', /friendTalk[\s\S]{0,400}apiPost\('\/api\/dm'/.test(cli)
+   && /friendTalkSend[\s\S]{0,300}apiPost\('\/api\/dm-send'/.test(cli));
+ok('상대 말이 바로 붙는다', /ftalkWith === from && ftalk/.test(cli));
+ok('다른 탭으로 가면 대화 칸을 접는다', /function friendTab[\s\S]{0,600}talk\.style\.display = 'none'/.test(cli));
+ok('안 읽은 수를 대화 버튼에 보여준다', /대화\$\{\s*gcUnread\[f\.idl\]/.test(cli));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

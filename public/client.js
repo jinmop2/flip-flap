@@ -540,8 +540,14 @@ function renderMiHist() {
   h.forEach(m => {
     const res = m.result === 'win' ? { t: '승', c: 'hist-win' } : m.result === 'loss' ? { t: '패', c: 'hist-loss' } : { t: '무', c: 'hist-draw' };
     const row = document.createElement('div'); row.className = 'hist-row';
+    // RP 는 랭크게임에서만 붙는다. 없는 판(빠른 입장·AI전 등)은 자리를 비운다 —
+    // 0 으로 적으면 "안 움직였다" 로 읽혀 랭크가 걸린 판처럼 보인다.
+    const rp = (typeof m.rp === 'number')
+      ? `<span class="hist-rp" style="color:${m.rp >= 0 ? '#8fe0a0' : '#ff9aa8'}">${m.rp > 0 ? '+' : ''}${m.rp} RP</span>`
+      : '<span class="hist-rp none">—</span>';
     row.innerHTML = `<span class="hist-res ${res.c}">${res.t}</span>
       <span class="hist-vs">vs ${esc(m.vs)}</span>
+      ${rp}
       <span class="hist-coin" style="color:${m.coins >= 0 ? '#ffd94a' : '#ff8a8a'}">🪙 ${m.coins > 0 ? '+' : ''}${m.coins}</span>`;
     list.appendChild(row);
   });
@@ -1306,8 +1312,48 @@ function friendTab(which) {
     document.getElementById('ftab-' + t).classList.toggle('active', t === which);
     document.getElementById('fpane-' + t).style.display = t === which ? '' : 'none';
   }
+  // 대화 칸은 탭이 아니다 — 다른 탭으로 가면 접는다
+  const talk = document.getElementById('fpane-talk');
+  if (talk) talk.style.display = 'none';
   if (which === 'find') setTimeout(() => document.getElementById('friendNickInput').focus(), 60);
 }
+
+// ── 친구와 1:1 대화 (친구 탭 안) ─────────────────────────────
+// 판 안의 채팅 칸과 같은 통로(/api/dm)를 쓴다. 로비에서도 말을 걸 수 있어야
+// 친구 목록이 목록으로만 끝나지 않는다.
+let ftalkWith = null;
+window.friendTalk = async function (idl, nick) {
+  ftalkWith = idl;
+  document.getElementById('fpane-list').style.display = 'none';
+  document.getElementById('fpane-talk').style.display = 'flex';
+  document.getElementById('ftalkNick').textContent = nick || '친구';
+  const box = document.getElementById('ftalkMsgs');
+  box.innerHTML = '<div class="gc-empty">불러오는 중…</div>';
+  const r = await apiPost('/api/dm', { token: authToken(), idl });
+  if (!r || r.error) { box.innerHTML = `<div class="gc-empty">${esc((r && r.error) || '불러오기 실패')}</div>`; return; }
+  gcPaint(box, r.messages, false);
+  delete gcUnread[idl]; gcPaintDot();          // 봤으니 안 읽음에서 뺀다
+  setTimeout(() => document.getElementById('ftalkInput').focus(), 60);
+};
+window.friendTalkBack = function () {
+  ftalkWith = null;
+  document.getElementById('fpane-talk').style.display = 'none';
+  document.getElementById('fpane-list').style.display = '';
+  renderFriends();                              // 안 읽음 표시를 다시 그린다
+};
+window.friendTalkSend = async function () {
+  const input = document.getElementById('ftalkInput');
+  const text = input.value.trim();
+  if (!text || !ftalkWith) return;
+  input.value = '';
+  const r = await apiPost('/api/dm-send', { token: authToken(), idl: ftalkWith, text });
+  if (!r || r.error) { toast(esc((r && r.error) || '보내지 못했어요')); input.value = text; return; }
+  // 보낸 건 바로 붙인다 — 서버를 한 번 더 다녀오면 느리게 느껴진다
+  const box = document.getElementById('ftalkMsgs');
+  const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
+  box.insertAdjacentHTML('beforeend', `<div class="gc-m mine">${esc(text)}</div>`);
+  box.scrollTop = box.scrollHeight;
+};
 
 function loadFriends() {
   const box = document.getElementById('friendListBox');
@@ -1326,7 +1372,9 @@ function loadFriends() {
 function friendRow(f, kind) {
   const clan = f.clan ? `<span class="soc-clan">[${esc(f.clan.tag)}]</span>` : '';
   const acts = {
-    friend: `${f.online && !f.ingame ? `<button class="soc-btn good" onclick="challengeFriendInApp('${esc(f.idl)}')">도전장</button>` : ''}
+    friend: `<button class="soc-btn" onclick="friendTalk('${esc(f.idl)}','${esc(f.nick)}')">대화${
+               gcUnread[f.idl] ? ` <b>${gcUnread[f.idl]}</b>` : ''}</button>
+             ${f.online && !f.ingame ? `<button class="soc-btn good" onclick="challengeFriendInApp('${esc(f.idl)}')">도전장</button>` : ''}
              ${f.watch ? `<button class="soc-btn" onclick="watchFriend('${esc(f.watch)}')">관전</button>` : ''}
              <button class="soc-btn bad" onclick="confirmRemoveFriend('${esc(f.idl)}','${esc(f.nick)}')">삭제</button>`,
     in:     `<button class="soc-btn good" onclick="respondFriend('${esc(f.idl)}',true)">수락</button>
@@ -3636,6 +3684,16 @@ function gcPaintDot() {
 }
 // 새 1:1 메시지가 도착
 socket.on('dm', ({ from, msg }) => {
+  // 친구 탭에서 그 사람과 대화 중이면 거기에 바로 붙인다
+  const ftalk = document.getElementById('fpane-talk');
+  if (ftalkWith === from && ftalk && ftalk.style.display !== 'none') {
+    const box = document.getElementById('ftalkMsgs');
+    const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
+    box.insertAdjacentHTML('beforeend', `<div class="gc-m">${esc(msg.text)}</div>`);
+    box.scrollTop = box.scrollHeight;
+    apiPost('/api/dm', { token: authToken(), idl: from });   // 읽음 처리
+    return;
+  }
   if (gameChatOpen() && gcTab === 'friend' && gcWith === from) {
     const box = document.getElementById('gcFriendMsgs');
     const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
