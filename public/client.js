@@ -718,23 +718,6 @@ window.quickJoin = function (mode) {
   isItemMode = mode === 'item';
   socket.emit('quick_join', { mode, pid: PID, nick: getNick() });
 };
-// 기다리는 방이 열렸다 — 대기실 화면으로. 사람이 들어오면 서버가 바로 시작한다.
-socket.on('quick_waiting', ({ roomId, mode } = {}) => {
-  sharedCode = roomId;
-  roomIsHost = true; roomReady = false; roomModeCur = mode || 'classic';
-  document.getElementById('lobbyMain').style.display = 'none';
-  const wc = document.getElementById('waitCard');
-  wc.style.display = 'flex';
-  document.getElementById('waitCode').textContent = roomId;
-  document.getElementById('waitRoomName').textContent =
-    mode === 'item' ? '아이템전 빠른 입장' : '클래식 빠른 입장';
-  const seats = document.getElementById('wcSeats');
-  if (seats) seats.innerHTML = '';
-  // 시작 버튼·모드 고르기는 숨긴다 — 차는 즉시 시작이라 누를 것이 없다
-  for (const id of ['wcStart', 'wcModes']) { const e = document.getElementById(id); if (e) e.style.display = 'none'; }
-  const note = document.getElementById('wcGuestNote');
-  if (note) { note.style.display = ''; note.textContent = '상대가 들어오면 바로 시작해요'; }
-});
 function cancelMatch() {
   socket.emit('cancel_match');
   document.getElementById('matchModal').classList.remove('show');

@@ -1701,12 +1701,13 @@ io.on('connection', (socket) => {
       game: null, vsBot: false, difficulty: 'hard',
       secret: false, password: '', itemMode: item,
       mode: item ? 'item' : 'classic',
-      hostStart: false,        // 두 번째 사람이 들어오면 바로 시작
+      hostStart: true,         // 방 만들기와 똑같다 — 자리도 보이고 시작도 방장이 누른다
       quickOpen: true,
     };
     socket.leave('lobby');
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
-    socket.emit('quick_waiting', { roomId, mode: item ? 'item' : 'classic' });
+    socket.emit('room_created', { roomId, name: rooms[roomId].name });
+    pushRoomLobby(roomId);
     broadcastRooms();
   });
 
