@@ -36,6 +36,13 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', pinViewport);
 }
 
+// 세로 고정. 앱으로 설치했거나 전체화면이면 진짜로 잠글 수 있다 —
+// 그냥 브라우저 탭에서는 브라우저가 잠글 방법을 안 준다(그때는 화면을 덮는다).
+try {
+  const so = screen.orientation;
+  if (so && so.lock) so.lock('portrait').catch(() => {});
+} catch (_) {}
+
 syncAppHeight();
 addEventListener('resize', syncAppHeight);
 addEventListener('orientationchange', () => setTimeout(syncAppHeight, 250));   // 회전은 값이 늦게 확정된다
@@ -5084,6 +5091,13 @@ function renderHand() {
   // 예전엔 여기에 "고른 카드" 까지 넣어서, 카드를 한 번 누를 때마다 손패 여섯 장을
   // 통째로 다시 만들고 부채꼴까지 다시 계산했다 — 그게 탭이 굼뜨게 느껴지던 이유다.
   // 고른 표시는 DOM 을 새로 만들 일이 아니라 클래스만 바꾸면 되는 일이다.
+  // 배팅 단계인데 아직 내 차례가 아니면 손패를 잠근 티를 낸다.
+  // 규칙상 진행자가 먼저 내는데, 그걸 모르면 "눌러도 아무 반응이 없다" 로만 보인다.
+  const waiting = s.phase === 'bidding' && a && !a.myBid && !bidding;
+  el.classList.toggle('locked', !!waiting);
+  const note = document.getElementById('handWait');
+  if (note) note.style.display = waiting ? '' : 'none';
+
   const sig = hand.map(c => c.id).join(',') + '|' + (offer ? 'o' : '') + (bidding ? 'b' : '');
   if (lastSig.hand === sig) { paintBidSel(); return; } lastSig.hand = sig;
   const deal = needsDeal && hand.length >= 6;   // 첫 손패 완성 시 딜 모션

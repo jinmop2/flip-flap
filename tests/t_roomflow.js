@@ -121,8 +121,9 @@ ok('상점 표는 다음에도 남는다', /localStorage\.setItem\('ff_shop'/.te
 
 // 마우스로 손패를 누를 때 — 카드가 들려도 누르는 자리가 사라지지 않아야 한다
 ok('손패 hover 는 칸이 받는다', /\.fan-slot:has\(> \.card\.selectable\):hover > \.card\.selectable/.test(htm));
+// 카드 자체 hover 는 남기되 "움직이지 않는" 것만 — 움직이면 커서에서 빠져나가 떨린다
 ok('카드가 직접 hover 로 들리지 않는다',
-   !/\n {4}\.card\.selectable:hover \{/.test(htm));
+   !/\n {4}\.card\.selectable:hover \{[^}]*transform/.test(htm));
 ok('손패는 칸이 누름을 받는다', /if \(cardEl\._tap\) onTap\(slot, cardEl\._tap\)/.test(cli));
 ok('그때 카드에는 안 묶는다', /if \(opts\.tapOnSlot\) el\._tap =/.test(cli));
 
@@ -142,6 +143,14 @@ ok('방장만 · 자기는 못 내보낸다', /socket\.playerIndex !== 0\) retur
 ok('쫓겨나면 알려준다', /room_kicked/.test(srv) && /room_kicked/.test(cli));
 ok('다인전도 화면이 안 움직인다', /body\.ingame, body\.quad4 \{[^}]*position:fixed/.test(htm));
 ok('밀린 화면을 되돌린다', /function pinViewport/.test(cli) && /visualViewport\.addEventListener\('scroll', pinViewport\)/.test(cli));
+
+// 배팅 차례가 아닐 때 이유가 보이는가 · 세로 고정
+ok('차례가 아니면 손패를 잠근 티를 낸다', /el\.classList\.toggle\('locked', !!waiting\)/.test(cli));
+ok('왜 안 눌리는지 한 줄로 알려준다', /id="handWait"/.test(htm) && /진행자가 먼저 배팅해요/.test(htm));
+ok('잠기면 흐리게', /#myHand\.locked \.card \{[^}]*opacity:\.5/.test(htm));
+ok('올리면 반응은 있다', /\n {4}\.card\.selectable:hover \{ border-color/.test(htm));
+ok('눕히면 판을 덮는다', /id="rotateNote"/.test(htm) && /orientation:landscape\) and \(hover:none\) and \(pointer:coarse\)/.test(htm));
+ok('앱에서는 진짜로 잠근다', /so\.lock\('portrait'\)/.test(cli));
 
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
