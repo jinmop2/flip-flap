@@ -3784,7 +3784,7 @@ socket.on('clan_chat', ({ msg }) => {
 // 3인용·4인용은 규칙이 같고 손패·덱 장수만 다르다. 그래서 상자는 하나를 같이 쓰고,
 // 다른 숫자만 탭 아래 한 줄로 띄운다 — 같은 글을 두 벌로 두면 한쪽만 고치게 된다.
 const RULES_MODALS = { '2': 'rulesModal', '3': 'rules4Modal', '4': 'rules4Modal',
-  item: 'rulesItemModal', mini: 'rulesMiniModal', etc: 'rulesEtcModal' };
+  item: 'rulesItemModal', mini: 'rulesMiniModal', twelve: 'rulesTwelveModal', etc: 'rulesEtcModal' };
 const RULES_N = { '3': { hand: 7, deck: 17 }, '4': { hand: 6, deck: 14 } };
 let rulesCur = '2';
 
@@ -5398,3 +5398,187 @@ window.addEventListener('appinstalled', () => {
   deferredInstall = null;
   const b = document.getElementById('installBtn'); if (b) b.style.display = 'none';
 });
+
+
+// ══ TWELVE ════════════════════════════════════════════════════════
+// 규칙은 서버(twelve.js)가 전부 쥔다. 여기서는 받은 상태를 그리고, 누른 것을
+// 그대로 보낸다 — 값이나 승패를 화면에서 계산하지 않는다.
+let tvView = null, tvMe = 0, tvBot = false;
+
+function tvOpen() {
+  document.body.classList.add('twelve');
+  document.getElementById('tv-over').classList.remove('show');
+  try { startBGM('game'); } catch (_) {}
+}
+window.tvSolo = function () {
+  closeModePanels();
+  tvBot = true;
+  socket.emit('tv_solo', { pid: PID, nick: getNick() });
+};
+window.tvQuit = function () {
+  document.body.classList.remove('twelve');
+  document.getElementById('tv-over').classList.remove('show');
+  tvView = null;
+  clearSession(); fastReload();
+};
+window.tvAgain = function () {
+  document.getElementById('tv-over').classList.remove('show');
+  // 혼자 하기는 그 자리에서 다시. 온라인은 상대를 다시 잡아야 하므로 로비로.
+  if (tvBot) { socket.emit('leave_room'); setTimeout(() => socket.emit('tv_solo', { pid: PID, nick: getNick() }), 150); }
+  else tvQuit();
+};
+window.tvRules = function (show) { if (show && typeof rulesTab === 'function') { toggleRules(true); rulesTab('twelve'); } };
+const tvAct = (act, extra) => socket.emit('tv_act', Object.assign({ act }, extra || {}));
+
+socket.on('tv_begin', (d) => {
+  tvMe = d.me; tvBot = !!d.vsBot;
+  tvOpen();
+  const nicks = d.nicks || [];
+  document.getElementById('tv-oppNick').textContent = nicks[d.me === 1 ? 1 : 0] || '상대';
+  document.getElementById('tv-myNick').textContent = nicks[d.me === 1 ? 0 : 1] || getNick();
+});
+socket.on('tv_state', (v) => { tvView = v; tvRender(v); });
+socket.on('tv_over', ({ win, endBy, view }) => {
+  if (view) { tvView = view; tvRender(view); }
+  document.getElementById('tv-otitle').textContent = win ? '승리!' : '패배';
+  document.getElementById('tv-owhy').textContent =
+    endBy === 'set' ? '세트 완성' : endBy === 'chips' ? '칩이 떨어졌어요' : '덱 소진 — 세트에 더 가까운 쪽';
+  setTimeout(() => document.getElementById('tv-over').classList.add('show'), 500);
+  try { playSound(win ? 'setwin' : 'lose'); } catch (_) {}
+});
+
+function tvPile(box, cards) {
+  box.innerHTML = '';
+  const byKind = {};
+  for (const c of cards) (byKind[c.kind] = byKind[c.kind] || []).push(c);
+  for (const k of Object.keys(byKind)) {
+    const g = document.createElement('div'); g.className = 'pile-group';
+    for (const c of byKind[k]) g.appendChild(makeCard(c));
+    box.appendChild(g);
+  }
+}
+
+function tvRender(v) {
+  const $ = (id) => document.getElementById(id);
+  $('tv-turn').textContent = `턴 ${v.turn}`;
+  $('tv-myChips').textContent = `\u{1F535} ${v.chips.me}`;
+  $('tv-oppChips').textContent = `\u{1F535} ${v.chips.opp}`;
+  $('tv-deckLeft').textContent = v.centerLeft;
+
+  const c = $('tv-center'), o = $('tv-offer');
+  c.innerHTML = ''; o.innerHTML = '';
+  if (v.lot) {
+    c.appendChild(makeCard(v.lot.center));
+    if (v.lot.offered) o.appendChild(makeCard(v.lot.offered));
+    else if (v.lot.hasOffer) o.appendChild(makeCard(null));   // 클로즈 — 가려져 있다
+    $('tv-offerLbl').textContent = (v.lot.type === 'close' && !v.lot.offered) ? '출품 (비공개)' : '출품 카드';
+    $('tv-typeBadge').textContent = v.lot.type === 'open' ? '오픈 경매'
+      : v.lot.type === 'close' ? '클로즈 경매' : '';
+    $('tv-myBet').textContent = v.lot.myBet;
+    $('tv-oppBet').textContent = v.lot.oppBet === null ? '?' : v.lot.oppBet;
+  } else {
+    $('tv-typeBadge').textContent = '';
+    $('tv-myBet').textContent = '0'; $('tv-oppBet').textContent = '\u2013';
+  }
+
+  const mh = $('tv-myHand'); mh.innerHTML = '';
+  const canOffer = v.phase === 'offer' && v.auctioneer === v.me;
+  [...v.myHand].sort((a, b) => a.kind - b.kind || a.grade - b.grade).forEach((card) => {
+    const el = makeCard(card, canOffer ? { selectable: true, tapOnSlot: true,
+      onClick: (cc) => tvAct('offer', { cardId: cc.id }) } : {});
+    const slot = document.createElement('div'); slot.className = 'fan-slot';
+    slot.appendChild(el); mh.appendChild(slot);
+    if (el._tap) onTap(slot, el._tap);
+  });
+  if (typeof fanRow === 'function') fanRow(mh, false);
+  const oh = $('tv-oppHand'); oh.innerHTML = '';
+  for (let i = 0; i < v.oppHandLen; i++) {
+    const slot = document.createElement('div'); slot.className = 'fan-slot';
+    slot.appendChild(makeCard(null)); oh.appendChild(slot);
+  }
+  if (typeof fanRow === 'function') fanRow(oh, true);
+  tvPile($('tv-myAcq'), v.myAcq); tvPile($('tv-oppAcq'), v.oppAcq);
+  tvActions(v);
+}
+
+function tvActions(v) {
+  const st = document.getElementById('tv-status');
+  const box = document.getElementById('tv-actions');
+  box.innerHTML = '';
+  const mine = v.auctioneer === v.me;
+  const btn = (label, fn, ghost) => {
+    const b = document.createElement('button');
+    b.className = 'tv-btn' + (ghost ? ' ghost' : '');
+    b.textContent = label; onTap(b, fn); box.appendChild(b); return b;
+  };
+
+  if (v.over) { st.textContent = '판 종료'; return; }
+  if (v.phase === 'draw') {
+    st.textContent = mine ? '중앙덱에서 카드를 뒤집으세요' : '상대가 카드를 뒤집는 중…';
+    if (mine) btn('카드 뒤집기', () => tvAct('draw'));
+    return;
+  }
+  if (v.phase === 'offer') {
+    st.textContent = mine ? '손패에서 한 장을 내놓으세요' : '상대가 출품하는 중…';
+    return;
+  }
+  if (v.phase === 'choose') {
+    st.textContent = mine ? '경매 방식을 고르세요' : '상대가 방식을 고르는 중…';
+    if (mine) {
+      btn('오픈 경매', () => tvAct('choose', { type: 'open' }));
+      const b = btn('클로즈 경매', () => tvAct('choose', { type: 'close' }), true);
+      if (v.lot && v.lot.canClose === false) { b.disabled = true; b.title = '칩이 2개 이상 있어야 해요'; }
+    }
+    return;
+  }
+  if (v.phase === 'bid') {
+    const myTurn = v.lot && v.lot.turnToAct === v.me;
+    if (!myTurn) { st.textContent = '상대가 부르는 중…'; return; }
+    const lo = v.lot.minRaise, hi = v.chips.me;
+    if (lo > hi) { st.textContent = '칩이 모자라요 — 물러서야 해요'; btn('물러서기', () => tvAct('fold'), true); return; }
+    st.textContent = `내 차례 — ${lo} 이상 부르거나 물러서요`;
+    const wrap = document.createElement('div'); wrap.className = 'tv-amt';
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.min = String(lo); inp.max = String(hi); inp.value = String(lo);
+    wrap.appendChild(inp); box.appendChild(wrap);
+    btn('부르기', () => {
+      const n = Math.floor(Number(inp.value));
+      if (!(n >= lo && n <= hi)) return toast(`${lo} 이상 ${hi} 이하로 불러주세요`);
+      tvAct('raise', { amount: n });
+    });
+    btn('물러서기', () => tvAct('fold'), true);
+    return;
+  }
+  if (v.phase === 'close') {
+    const myTurn = v.lot && v.lot.turnToAct === v.me;
+    if (mine) {
+      if (!myTurn) { st.textContent = '상대가 살지 고르는 중…'; return; }
+      const hi = v.chips.me - (v.chips.me % 2);
+      st.textContent = '짝수 개를 부르세요 (상대는 얼마인지 몰라요)';
+      const wrap = document.createElement('div'); wrap.className = 'tv-amt';
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.min = '2'; inp.max = String(hi); inp.step = '2'; inp.value = '2';
+      wrap.appendChild(inp); box.appendChild(wrap);
+      btn('부르기', () => {
+        const n = Math.floor(Number(inp.value));
+        if (!(n >= 2 && n <= hi && n % 2 === 0)) return toast(`2 이상 ${hi} 이하의 짝수로 불러주세요`);
+        tvAct('closeBet', { amount: n });
+      });
+      return;
+    }
+    if (!myTurn) { st.textContent = '상대가 부르는 중…'; return; }
+    const cost = v.lot.takeCost;
+    st.textContent = `${cost} 을 내고 살까요? (상대가 얼마 걸었는지는 몰라요)`;
+    const b = btn(`${cost} 내고 사기`, () => tvAct('take'));
+    if (v.chips.me < cost) { b.disabled = true; b.title = '칩이 모자라요'; }
+    btn('안 사기', () => tvAct('decline'), true);
+    return;
+  }
+  if (v.phase === 'settled') {
+    const l = v.last;
+    st.textContent = l
+      ? `${l.winner === v.me ? '내가' : '상대가'} 가져갔어요 · 낸 칩 ${l.winner === v.me ? l.wPay : l.lPay}개`
+      : '정산 중…';
+    btn('다음 턴', () => tvAct('next'));
+  }
+}

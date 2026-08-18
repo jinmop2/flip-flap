@@ -12,15 +12,16 @@ const i18n = fs.readFileSync(src + '/public/i18n.js', 'utf8');
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra !== undefined ? '  ' + extra : ''))); };
 
-console.log('① 여섯 개 탭');
+console.log('① 일곱 개 탭');
 {
   const TABS = [['2', '2인용'], ['3', '3인용'], ['4', '4인용'], ['item', '아이템전'],
-                ['mini', '미니게임'], ['etc', '기타']];
+                ['mini', '미니게임'], ['twelve', 'TWELVE'], ['etc', '기타']];
   for (const [key, label] of TABS) {
     ok(`${label} 탭`, html.includes(`data-rt="${key}"`) && html.includes(`rulesTab('${key}')`));
   }
   // 창마다 같은 탭 줄을 갖고 있어야 어디서 열어도 오갈 수 있다
-  const modals = ['rulesModal', 'rules4Modal', 'rulesItemModal', 'rulesMiniModal', 'rulesEtcModal'];
+  const modals = ['rulesModal', 'rules4Modal', 'rulesItemModal', 'rulesMiniModal',
+                  'rulesTwelveModal', 'rulesEtcModal'];
   for (const m of modals) ok(`${m} 에 탭이 있다`, new RegExp(`id="${m}"[\\s\\S]{0,600}rules-tabs`).test(html));
   ok('탭 줄이 창 수만큼 있다', (html.match(/class="rules-tabs"/g) || []).length === modals.length,
      String((html.match(/class="rules-tabs"/g) || []).length));

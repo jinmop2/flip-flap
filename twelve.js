@@ -281,6 +281,125 @@ function viewFor(g, me) {
   };
 }
 
+
+// ── AI ────────────────────────────────────────────────────────────────────
+// 이 모드는 "언제 물러설지" 가 전부다. 이긴 쪽은 전액, 진 쪽도 절반을 낸다 —
+// 그래서 값어치보다 높게 부르면 이겨도 손해고, 끝까지 따라가다 지면 두 번 손해다.
+// 그래서 AI 는 먼저 이 경매품이 나에게 몇 칩짜리인지를 셈하고, 그 선을 넘지 않는다.
+
+// 경매품이 나에게 얼마나 값진가 — 칩 단위로 환산한다.
+// 세트를 완성시키거나 상대의 완성을 막는 수는 값을 매기지 않는다(무조건 간다).
+function lotWorth(g, me) {
+  const you = me === 1 ? 2 : 1;
+  const cards = [g.lot.center, g.lot.offered].filter(Boolean);
+  const myAfter = needLeft(g.acq[me].concat(cards));
+  const opAfter = needLeft(g.acq[you].concat(cards));
+  if (myAfter === 0) return Infinity;        // 이걸 먹으면 내가 이긴다
+  if (opAfter === 0) return Infinity;        // 뺏기면 상대가 이긴다 — 막아야 한다
+  const gain = needLeft(g.acq[me]) - myAfter;    // 내가 몇 걸음 다가가나
+  const deny = needLeft(g.acq[you]) - opAfter;   // 상대를 몇 걸음 막나
+  // 남은 칩이 적을수록 한 칩이 무겁다. 그래서 값도 가진 칩에 비례해 잡는다.
+  const scale = Math.max(2, g.chips[me]) / 10;
+  return Math.max(1, Math.round((gain * 3.2 + deny * 1.8) * scale));
+}
+
+// 이 판에서 내가 더 낼 수 있는 상한
+function ceilingFor(g, me) {
+  const w = lotWorth(g, me);
+  if (w === Infinity) return g.chips[me];        // 승부수 — 다 건다
+  return Math.max(1, Math.min(g.chips[me], w));
+}
+
+// AI 가 지금 할 일 하나. 서버가 이걸 받아 그대로 둔다.
+// { act:'draw' } | { act:'offer', cardId } | { act:'choose', type }
+// | { act:'raise', amount } | { act:'fold' } | { act:'closeBet', amount }
+// | { act:'take' } | { act:'decline' } | { act:'next' }
+function aiAct(g, me, rnd = Math.random) {
+  if (g.over) return null;
+  const A = g.auctioneer;
+  if (g.phase === 'settled') return { act: 'next' };
+  if (g.phase === 'draw') return me === A ? { act: 'draw' } : null;
+
+  if (g.phase === 'offer') {
+    if (me !== A) return null;
+    // 내 세트에 가장 덜 쓸모없는 카드를 내놓는다. 상대 세트를 채워 줄 카드는 피한다.
+    const you = me === 1 ? 2 : 1;
+    const hand = g.hands[me];
+    let best = hand[0], bestScore = Infinity;
+    for (const c of hand) {
+      const mineLoss = needLeft(g.acq[me]) - needLeft(g.acq[me].concat([c]));   // 나에게 쓸모
+      const oppHelp = needLeft(g.acq[you]) - needLeft(g.acq[you].concat([c]));  // 상대에게 쓸모
+      const score = mineLoss * 2 + oppHelp * 3;   // 낮을수록 내놓기 좋다
+      if (score < bestScore) { bestScore = score; best = c; }
+    }
+    return { act: 'offer', cardId: best.id };
+  }
+
+  if (g.phase === 'choose') {
+    if (me !== A) return null;
+    const worth = lotWorth(g, me);
+    // 꼭 갖고 싶으면 클로즈로 조용히 가져간다(출품 카드도 가려진다).
+    // 별로면 오픈으로 열어 두고, 상대가 비싸게 부르면 물러선다.
+    const wantClose = canChoose(g, 'close') && (worth === Infinity || worth >= 4) && rnd() < 0.72;
+    return { act: 'choose', type: wantClose ? 'close' : 'open' };
+  }
+
+  if (g.phase === 'bid') {
+    if (g.lot.turnToAct !== me) return null;
+    const cap = ceilingFor(g, me);
+    const lo = minRaise(g, me);
+    if (lo > cap || !canRaise(g, me)) return { act: 'fold' };
+    // 상한 안에서는 조금씩 올린다. 한 번에 상한까지 지르면 읽히기도 쉽고,
+    // 상대가 물러설 자리도 안 준다.
+    const step = 1 + Math.floor(rnd() * 2);
+    return { act: 'raise', amount: Math.min(cap, lo + (rnd() < 0.55 ? 0 : step)) };
+  }
+
+  if (g.phase === 'close') {
+    if (g.lot.turnToAct !== me) return null;
+    if (me === A) {
+      // 값어치만큼 부르되 짝수로. 너무 크게 부르면 상대가 안 사도 내가 전액 낸다.
+      const cap = ceilingFor(g, me);
+      let v = Math.max(2, Math.min(cap, g.chips[me]));
+      if (v % 2) v -= 1;
+      if (v < 2) v = 2;
+      if (v > g.chips[me]) v = g.chips[me] - (g.chips[me] % 2);
+      return { act: 'closeBet', amount: Math.max(2, v) };
+    }
+    // 사는 쪽 — 부르는 값을 모르지만 "얼마를 내야 하는지" 는 안다
+    const cost = g.lot.closeBet + 1;
+    const cap = ceilingFor(g, me);
+    if (cost <= cap && g.chips[me] >= cost) return { act: 'take' };
+    return { act: 'decline' };
+  }
+  return null;
+}
+
+// AI 의 한 수를 실제로 둔다 (서버가 쓰는 입구)
+function applyAi(g, me, rnd = Math.random) {
+  const a = aiAct(g, me, rnd);
+  if (!a) return null;
+  switch (a.act) {
+    case 'draw':     draw(g, me); break;
+    case 'offer':    offer(g, me, a.cardId); break;
+    case 'choose':   chooseType(g, me, a.type); break;
+    case 'raise':    if (!raise(g, me, a.amount)) fold(g, me); break;
+    case 'fold':     fold(g, me); break;
+    case 'closeBet': if (!closeBet(g, me, a.amount)) chooseFallback(g, me); break;
+    case 'take':     closeTake(g, me); break;
+    case 'decline':  closeDecline(g, me); break;
+    case 'next':     nextTurn(g); break;
+    default: return null;
+  }
+  return a;
+}
+// 클로즈를 부르지 못하는 상황(있어선 안 되지만)에 판이 멈추지 않게 한다
+function chooseFallback(g, me) {
+  for (let v = 2; v <= g.chips[me]; v += 2) if (closeBet(g, me, v)) return;
+  // 그래도 안 되면 상대에게 넘긴다 — 멈추는 것보다 낫다
+  if (g.lot) { g.lot.closeBet = 0; closeDecline(g, me === 1 ? 2 : 1); }
+}
+
 module.exports = {
   SPEC, START_CHIPS, HAND, CENTER,
   createGame, draw, offer, chooseType,
@@ -288,4 +407,5 @@ module.exports = {
   canCloseBet, closeBet, closeTake, closeDecline,
   settle, nextTurn, viewFor,
   completedKind, needLeft, byProgress, initDeck,
+  aiAct, applyAi, lotWorth,
 };

@@ -6,6 +6,7 @@ const path = require('path');
 const accounts = require('./accounts');
 const expert3 = require('./expert3');   // 전문가 AI v3 (카운팅+몬테카를로+종반탐색)
 const items = require('./items');       // 아이템전(이벤트 모드) 아이템 12종
+const twelve = require('./twelve');     // TWELVE — 칩으로 사는 경매 (모드 하나)
 const stats = require('./stats');       // 방문·활동 통계 (자체 수집)
 const { attach4 } = require('./server4'); // 4인전 (AI 3명) — 2인 엔진과 완전 분리
 
@@ -1576,7 +1577,7 @@ io.on('connection', (socket) => {
     }
 
     room.itemMode = mode === 'item';
-    room.mode = room.itemMode ? 'item' : 'classic';
+    room.mode = mode === 'twelve' ? 'twelve' : (room.itemMode ? 'item' : 'classic');
     pushRoomLobby(roomId);
   });
 
@@ -1604,7 +1605,7 @@ io.on('connection', (socket) => {
     const roomId = socket.roomId;
     const room = rooms[roomId];
     if (!room || room.game || socket.playerIndex !== 0) return;
-    if (mode === 'item' || mode === 'classic' || mode === 'quad') {
+    if (['item', 'classic', 'quad', 'twelve'].includes(mode)) {
       room.mode = mode; room.itemMode = mode === 'item';
     }
     const here = room.players.filter(Boolean);
@@ -1625,6 +1626,7 @@ io.on('connection', (socket) => {
       return;
     }
     if (here.length < 2) return socket.emit('error', '상대가 아직 없어요.');
+    if (room.mode === 'twelve') { tvStart(roomId); return; }
     // createGame 에 모드를 넘겨야 한다. 손으로 items/itemUsed 만 채웠더니
     // fx(이번 경매 한정 효과)가 없어서 아이템을 쓰는 순간 전부 튕겼다 —
     // "멀티 아이템전이 작동 안 한다" 의 정체.
@@ -1678,6 +1680,102 @@ io.on('connection', (socket) => {
     }
   });
   socket.on('cancel_match', () => { dequeue(socket.id); socket.emit('unqueued'); });
+  // ── TWELVE ──────────────────────────────────────────────────────────────
+  // 규칙은 twelve.js 가 전부 쥔다. 서버는 "누가 무엇을 했는지" 만 넘기고
+  // 결과를 양쪽에 보낸다. AI 판이면 상대 자리를 여기서 대신 둔다.
+  function tvPush(roomId) {
+    const room = rooms[roomId]; const g = room && room.tv;
+    if (!g) return;
+    room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('tv_state', twelve.viewFor(g, i + 1)); });
+    if (g.over) tvFinish(roomId);
+  }
+  // AI 자리를 둘 수 있는 만큼 둔다. 사람이 둘 차례가 오면 멈춘다.
+  function tvBot(roomId) {
+    const room = rooms[roomId]; const g = room && room.tv;
+    if (!g || g.over || room.cpuIndex === undefined) return;
+    const me = room.cpuIndex + 1;
+    const acted = twelve.applyAi(g, me);
+    tvPush(roomId);
+    if (acted && !g.over) setTimeout(() => tvBot(roomId), 520);
+  }
+  function tvFinish(roomId) {
+    const room = rooms[roomId]; const g = room && room.tv;
+    if (!g || room.tvDone) return;
+    room.tvDone = true;
+    room.players.forEach((sid, i) => {
+      if (!sid) return;
+      const me = i + 1;
+      io.to(sid).emit('tv_over', { win: g.winner === me, endBy: g.endBy, view: twelve.viewFor(g, me) });
+    });
+    // 보상은 클래식 멀티와 같은 표를 쓰되 RP 는 안 건드린다(모드 규칙).
+    const turns = g.turn, playtimeSec = Math.round((Date.now() - (room.startedAt || Date.now())) / 1000);
+    room.players.forEach((sid, i) => {
+      const tok = room.tokens && room.tokens[i]; if (!tok) return;
+      const me = i + 1;
+      const out = accounts.recordResult(tok, g.winner === me ? 'win' : 'loss', {
+        vsBot: !!room.vsBot, difficulty: room.difficulty || 'hard',
+        oppLabel: room.vsBot ? 'AI' : (room.nicks ? room.nicks[1 - i] : '상대'),
+        turns, playtimeSec, noRank: true,          // 트웰브는 RP 미반영
+      });
+      if (out) io.to(sid).emit('profile', { profile: out.profile, result: g.winner === me ? 'win' : 'loss', rewards: out.rewards });
+    });
+    setTimeout(() => { const r = rooms[roomId]; if (r && r.tv && r.tv.over) { delete rooms[roomId]; broadcastRooms(); } }, 60000);
+  }
+  function tvStart(roomId) {
+    const room = rooms[roomId]; if (!room) return;
+    room.tv = twelve.createGame({ first: 1 });
+    room.startedAt = Date.now(); room.tvDone = false;
+    room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('tv_begin', {
+      roomId, me: i + 1, vsBot: !!room.vsBot,
+      nicks: room.nicks, profiles: room.profiles }); });
+    tvPush(roomId);
+    tvBot(roomId);
+    broadcastRooms();
+  }
+
+  // 혼자 하기 (AI 와)
+  socket.on('tv_solo', ({ pid, nick } = {}) => {
+    if (socket.roomId && rooms[socket.roomId]) return;
+    if (Object.keys(rooms).length >= MAX_ROOMS) return socket.emit('error', '서버가 혼잡해요.');
+    leaveOldRoom();
+    const prof = myProfile(nick);
+    const roomId = makeRoomId();
+    rooms[roomId] = {
+      players: [socket.id, null], pids: [pid || null, null], nicks: [prof.nick, 'TWELVE AI'],
+      profiles: [prof, { nick: 'TWELVE AI', guest: true }], tokens: [socket.token || null, null],
+      name: 'TWELVE', game: null, vsBot: true, difficulty: 'hard',
+      secret: false, password: '', mode: 'twelve', cpuIndex: 1,
+    };
+    socket.leave('lobby');
+    socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
+    tvStart(roomId);
+  });
+
+  // 한 수 두기 — 규칙 검사는 전부 twelve.js 가 한다
+  socket.on('tv_act', (data = {}) => {
+    const roomId = socket.roomId; const room = rooms[roomId];
+    const g = room && room.tv;
+    if (!g || g.over) return;
+    const me = (socket.playerIndex === undefined ? -1 : socket.playerIndex) + 1;
+    if (me !== 1 && me !== 2) return;
+    let ok = false;
+    switch (data.act) {
+      case 'draw':     ok = twelve.draw(g, me); break;
+      case 'offer':    ok = twelve.offer(g, me, data.cardId); break;
+      case 'choose':   ok = twelve.chooseType(g, me, data.type); break;
+      case 'raise':    ok = twelve.raise(g, me, data.amount); break;
+      case 'fold':     ok = twelve.fold(g, me); break;
+      case 'closeBet': ok = twelve.closeBet(g, me, data.amount); break;
+      case 'take':     ok = twelve.closeTake(g, me); break;
+      case 'decline':  ok = twelve.closeDecline(g, me); break;
+      case 'next':     ok = twelve.nextTurn(g); break;
+      default: return;
+    }
+    if (!ok) return tvPush(roomId);      // 안 먹힌 행동 — 화면만 다시 맞춘다
+    tvPush(roomId);
+    tvBot(roomId);
+  });
+
 
   // 빠른 입장 — 랭크가 안 걸린 판. 그 모드로 열려 있는 방이 있으면 거기로
   // 들어가고, 없으면 하나 열어 두고 기다린다(다음 사람이 들어오면 바로 시작).
@@ -1685,7 +1783,7 @@ io.on('connection', (socket) => {
   socket.on('quick_join', ({ mode, pid, nick } = {}) => {
     if (socket.roomId && rooms[socket.roomId]) return;
     dequeue(socket.id);
-    if (!['classic', 'item', 'quad'].includes(mode)) return socket.emit('error', '알 수 없는 모드예요.');
+    if (!['classic', 'item', 'quad', 'twelve'].includes(mode)) return socket.emit('error', '알 수 없는 모드예요.');
     const item = mode === 'item';
 
     // 들어갈 만한 방: 같은 모드 · 비밀방 아님 · AI전 아님 · 아직 안 시작 · 자리 남음
@@ -1715,7 +1813,8 @@ io.on('connection', (socket) => {
     if (Object.keys(rooms).length >= MAX_ROOMS) return socket.emit('error', '서버가 혼잡해요. 잠시 후 시도하세요.');
     const prof = myProfile(nick);
     const roomId = makeRoomId();
-    const NAME = { classic: '클래식 빠른 입장', item: '아이템전 빠른 입장', quad: '다인전 빠른 입장' };
+    const NAME = { classic: '클래식 빠른 입장', item: '아이템전 빠른 입장',
+                   quad: '다인전 빠른 입장', twelve: 'TWELVE 빠른 입장' };
     rooms[roomId] = {
       players: [socket.id, null], pids: [pid || null, null], nicks: [prof.nick, null],
       profiles: [prof, null], tokens: [socket.token || null, null],

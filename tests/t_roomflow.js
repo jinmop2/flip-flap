@@ -78,7 +78,7 @@ ok('클라이언트에 빠른 입장 버튼 셋', (htm.match(/quickJoin\('(class
 ok('랭크게임 버튼', /onclick="quickMatch\(\)"[\s\S]{0,200}랭크게임/.test(htm));
 ok('랭크게임 칸에 내 등급이 보인다', /id="mmRank"/.test(htm) && /mmRank/.test(cli));
 ok('다인전 빠른 입장도 같은 대기실을 쓴다',
-   !/q4Quick/.test(cli) && /\['classic', 'item', 'quad'\]\.includes\(mode\)/.test(srv));
+   !/q4Quick/.test(cli) && /\['classic', 'item', 'quad', 'twelve'\]\.includes\(mode\)/.test(srv));
 ok('빠른 입장이 자리 남은 방을 찾는다', /n > 0 && n < capOf\(r\)/.test(srv));
 ok('다인전 빠른 입장 방 이름이 있다', /다인전 빠른 입장/.test(srv));
 ok('코드 로그인은 화면에서 사라졌다', !/코드로 시작/.test(htm) && !/codeLogin/.test(htm) && !/submitCode/.test(cli));

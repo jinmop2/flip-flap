@@ -247,5 +247,78 @@ console.log('\n⑭ 끝난 판은 더 못 건드린다');
   ok('다음 턴 막힘', T.nextTurn(g) === false);
 }
 
+console.log('\n⑮ AI 끼리 붙여도 판이 굴러간다');
+{
+  let done = 0, bad = 0, illegal = 0;
+  const by = { set: 0, chips: 0, deck: 0 };
+  for (let seed = 1; seed <= 400; seed++) {
+    const rnd = rng(seed + 5000);
+    const g = T.createGame({ rnd });
+    let guard = 0;
+    while (!g.over && guard++ < 400) {
+      const before = JSON.stringify([g.phase, g.turn, g.lot && g.lot.turnToAct, g.chips[1], g.chips[2]]);
+      const a1 = T.applyAi(g, 1, rnd);
+      if (g.over) break;
+      const a2 = T.applyAi(g, 2, rnd);
+      const after = JSON.stringify([g.phase, g.turn, g.lot && g.lot.turnToAct, g.chips[1], g.chips[2]]);
+      if (!a1 && !a2 && before === after) { bad++; break; }   // 아무도 둘 수 없으면 멈춘 것
+    }
+    if (!g.over) { bad++; continue; }
+    if (chipsTotal(g) !== 40) illegal++;
+    if (g.chips[1] < 0 || g.chips[2] < 0) illegal++;
+    const inLot = g.lot ? [g.lot.center, g.lot.offered].filter(Boolean).length : 0;
+    if (g.center.length + g.hands[1].length + g.hands[2].length
+        + g.acq[1].length + g.acq[2].length + inLot !== 24) illegal++;
+    by[g.endBy] = (by[g.endBy] || 0) + 1;
+    done++;
+  }
+  ok('400 판 모두 끝났다', done === 400 && bad === 0, `끝=${done} 멈춤=${bad}`);
+  ok('규칙을 어긴 판이 없다', illegal === 0, String(illegal));
+  ok('세트로 끝나는 판이 대부분', by.set > by.chips, `세트=${by.set} 칩=${by.chips} 덱=${by.deck || 0}`);
+  console.log(`     (세트 ${by.set} · 칩소진 ${by.chips} · 덱소진 ${by.deck || 0})`);
+}
+
+console.log('\n⑯ AI 가 승부수를 알아본다');
+{
+  // 이걸 먹으면 세트가 완성되는 자리 — 값을 아끼지 않아야 한다
+  const g = T.createGame({ rnd: rng(77) });
+  g.acq[1] = [{ kind: 2, grade: 1, id: 201 }];
+  g.center.unshift({ kind: 2, grade: 2, id: 202 });
+  T.draw(g, 1); T.offer(g, 1, g.hands[1][0].id);
+  ok('세트를 완성시키는 경매품은 값이 무한', T.lotWorth(g, 1) === Infinity);
+  // 상대가 완성 직전이면 막는 것도 무한
+  const h = T.createGame({ rnd: rng(78) });
+  h.acq[2] = [{ kind: 2, grade: 1, id: 201 }];
+  h.center.unshift({ kind: 2, grade: 2, id: 202 });
+  T.draw(h, 1); T.offer(h, 1, h.hands[1][0].id);
+  ok('상대 완성을 막는 것도 무한', T.lotWorth(h, 1) === Infinity);
+  // 아무 쓸모 없는 자리는 값이 작다
+  const k = T.createGame({ rnd: rng(79) });
+  T.draw(k, 1); T.offer(k, 1, k.hands[1][0].id);
+  const w = T.lotWorth(k, 1);
+  ok('보통 자리는 가진 칩보다 싸다', w !== Infinity && w <= k.chips[1], String(w));
+}
+
+console.log('\n⑰ 서버·화면에 제대로 물렸는가');
+{
+  const fs = require('fs'), path = require('path');
+  const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const srv = read('server.js'), cli = read('public/client.js'), htm = read('public/index.html');
+  ok('서버가 규칙 모듈을 쓴다', /require\('\.\/twelve'\)/.test(srv));
+  ok('한 수 통로가 있다', /socket\.on\('tv_act'/.test(srv));
+  ok('혼자 하기가 있다', /socket\.on\('tv_solo'/.test(srv));
+  ok('규칙 검사는 모듈이 한다',
+     ['draw', 'offer', 'chooseType', 'raise', 'fold', 'closeBet', 'closeTake', 'closeDecline', 'nextTurn']
+       .every((f) => srv.includes('twelve.' + f + '(')));
+  ok('RP 는 안 건드린다', /noRank: true,\s*\/\/ 트웰브는 RP 미반영/.test(srv));
+  ok('방 모드로도 열린다', /room\.mode === 'twelve'\) \{ tvStart/.test(srv));
+  ok('빠른 입장에 있다', /'classic', 'item', 'quad', 'twelve'/.test(srv));
+  ok('화면이 있다', /id="tv"/.test(htm) && /body\.twelve #tv \{ display:flex/.test(htm));
+  ok('클라이언트가 상태를 받는다', /socket\.on\('tv_state'/.test(cli) && /function tvRender/.test(cli));
+  ok('클라이언트는 셈을 하지 않는다', !/tvView[\s\S]{0,200}Math\.floor\(.*\/ 2\)/.test(cli));
+  ok('설명서 탭이 있다', /data-rt="twelve"/.test(htm) && /id="rulesTwelveModal"/.test(htm));
+  ok('솔로·빠른입장 입구', /onclick="tvSolo\(\)"/.test(htm) && /quickJoin\('twelve'\)/.test(htm));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

@@ -160,6 +160,10 @@
     .mm-tiles { display:grid; gap:8px; }
     .mm-tiles.c2 { grid-template-columns:repeat(2, 1fr); }
     .mm-tiles.c3 { grid-template-columns:repeat(3, 1fr); }
+    .mm-tiles.c4 { grid-template-columns:repeat(4, 1fr); }
+    .mm-tiles.c4 .mt-name { font-size:.74rem; }
+    .mm-tile.t-tv { background:linear-gradient(180deg,#1c4a6b,#0d2a44); border-color:#4aa8dd; }
+    .mm-tile.t-tv .mt-name { color:#bfe8ff; }
     .mm-tile {
       display:flex; flex-direction:column; align-items:center; gap:3px;
       padding:12px 6px 10px; border-radius:13px; cursor:pointer; font-family:'Fredoka';
@@ -3859,6 +3863,81 @@
       #game4 { padding:calc(3px + var(--safe-t)) 6px calc(3px + var(--safe-b)); gap:3px; }
       #navBar { padding:3px 4px calc(3px + var(--safe-b)); }
     }
+
+    /* ══ TWELVE ══════════════════════════════════════════════════════════
+       클래식과 같은 펠트 위에서 하되, 값을 부르는 모드라 "칩" 과 "지금 얼마" 가
+       늘 보여야 한다. 카드보다 숫자가 먼저 읽히게 짠다. */
+    #tv {
+      display:none; position:fixed; inset:0; z-index:30; flex-direction:column; align-items:center;
+      padding:calc(8px + var(--safe-t)) 12px calc(8px + var(--safe-b)); gap:6px; overflow:hidden;
+      background:radial-gradient(ellipse 90% 70% at 50% 50%, #24506b 0%, #16324a 72%, #0b1a2a 100%);
+    }
+    body.twelve #tv { display:flex; }
+    body.twelve #lobby, body.twelve #navBar, body.twelve #profileBar { display:none !important; }
+    #tv-controls { position:absolute; top:calc(10px + var(--safe-t)); left:12px; z-index:4; display:flex; gap:6px; }
+    #tv-turn { position:absolute; top:calc(16px + var(--safe-t)); right:14px; z-index:4;
+      font-size:.72rem; font-weight:800; color:rgba(255,255,255,.6); letter-spacing:1px; }
+
+    .tv-side { display:flex; flex-direction:column; align-items:center; gap:3px; width:100%; }
+    .tv-side.me { margin-top:auto; }
+    #tv .tv-side:first-of-type { padding-top:52px; }   /* 위 버튼 자리 비우기 */
+    .tv-who { display:flex; align-items:center; gap:8px; font-size:.76rem; color:#cfe4f2; }
+    .tv-who b { font-weight:800; color:#fff; }
+    .tv-chips {
+      font-size:.8rem; font-weight:900; color:#8fd8ff; letter-spacing:.5px;
+      background:rgba(0,0,0,.34); border:1px solid rgba(140,210,255,.4); border-radius:99px; padding:2px 10px;
+    }
+
+    #tv-mat {
+      display:flex; flex-direction:column; align-items:center; gap:8px; position:relative;
+      padding:12px 20px 14px; border-radius:18px;
+      background:radial-gradient(ellipse at 50% 40%, rgba(0,0,0,.34), rgba(0,0,0,.12));
+      border:1.5px dashed rgba(140,210,255,.32);
+    }
+    .tv-badge { min-height:16px; font-size:.66rem; font-weight:800; letter-spacing:1px; color:#8fd8ff; }
+    .tv-lot { display:flex; align-items:center; gap:10px; }
+    .tv-slot { display:flex; flex-direction:column; align-items:center; gap:4px; }
+    .tv-lbl { font-size:.6rem; color:rgba(255,255,255,.45); letter-spacing:1px; }
+    .tv-plus { font-size:1rem; color:rgba(255,255,255,.35); font-weight:800; }
+    .tv-bets { display:flex; gap:14px; font-size:.68rem; color:#a8c8e0; }
+    .tv-bet b { font-size:1rem; font-weight:900; color:#fff; margin-right:3px; }
+    .tv-bet.me b { color:#ffe9a8; }
+    .tv-bet.opp b { color:#8fd8ff; }
+    #tv-deck { font-size:.62rem; color:rgba(255,255,255,.45); }
+    #tv-deck b { color:#cfe4f2; }
+
+    #tv-status {
+      font-size:.86rem; font-weight:700; color:#e8f4ff; text-align:center; min-height:22px;
+      padding:5px 16px; border-radius:99px; background:rgba(0,0,0,.34);
+      border:1px solid rgba(140,210,255,.28); max-width:92%;
+    }
+    #tv-actions { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; min-height:40px; align-items:center; }
+    .tv-btn {
+      font-family:'Fredoka'; font-size:.82rem; font-weight:800; cursor:pointer;
+      padding:9px 16px; border-radius:11px; color:#0d1e2c;
+      background:linear-gradient(180deg,#8fd8ff,#4aa8dd); border:1.5px solid #b8e8ff;
+    }
+    .tv-btn.ghost { background:rgba(0,0,0,.3); color:#cfe4f2; border-color:rgba(140,210,255,.4); }
+    .tv-btn:active { transform:scale(.96); }
+    .tv-btn:disabled { opacity:.4; cursor:default; }
+    .tv-amt { display:flex; align-items:center; gap:6px; }
+    .tv-amt input {
+      width:64px; padding:8px; border-radius:9px; text-align:center;
+      font-family:'Fredoka'; font-size:.95rem; font-weight:800;
+      background:#0d1e2c; border:1.5px solid #3a6a90; color:#fff;
+    }
+
+    #tv-over { display:none; position:fixed; inset:0; z-index:40; background:rgba(4,10,18,.9);
+      align-items:center; justify-content:center; }
+    body.twelve #tv-over.show { display:flex; }
+    .tv-obox { background:linear-gradient(180deg,#1c3a52,#0d1e2c); border:1.5px solid #4aa8dd;
+      border-radius:18px; padding:26px 24px; text-align:center; width:290px; }
+    #tv-otitle { font-family:'Bangers',cursive; font-size:2.4rem; color:#8fd8ff; letter-spacing:2px; }
+    #tv-owhy { font-size:.8rem; color:#a8c8e0; margin-top:4px; }
+    #tv-orewards { font-size:.86rem; color:#ffd94a; font-weight:800; margin-top:8px; min-height:20px; }
+    .tv-obtns { display:flex; gap:8px; margin-top:14px; }
+    .tv-obtns .btn { flex:1; }
+
   </style>
 </head>
 <body>
@@ -4109,6 +4188,16 @@
       </button>
     </div>
 
+    <div class="mm-sec"><b>TWELVE</b><span class="mc-tag">신규</span><i></i></div>
+    <p class="mm-hint">카드가 아니라 칩으로 값을 부르는 경매예요</p>
+    <button class="mm-hero" style="background:linear-gradient(135deg,#1c4a6b 0%,#2d7ab0 45%,#0d2a44 100%);border-color:#6ac0f0" onclick="tvSolo()">
+      <span class="hh-ico">🔵</span>
+      <span class="hh-txt">
+        <span class="hh-name">TWELVE — AI와 대전</span>
+        <span class="hh-sub">칩 20개로 시작 · 세트를 먼저 완성하면 승리</span>
+      </span>
+    </button>
+
     <div class="mm-sec"><b>다인전</b><span class="mc-tag beta">3·4인</span><i></i></div>
     <div class="mm-tiles c2">
       <button class="mm-tile t-quad" onclick="q4Start(3)">
@@ -4144,7 +4233,7 @@
     </button>
 
     <div class="mm-sec"><b>빠른 입장</b><i></i></div>
-    <div class="mm-tiles c3">
+    <div class="mm-tiles c4">
       <button class="mm-tile" onclick="quickJoin('classic')">
         <span class="mt-ico">🃏</span>
         <span class="mt-name">클래식</span>
@@ -4152,6 +4241,10 @@
       <button class="mm-tile t-item" onclick="quickJoin('item')">
         <span class="mt-ico">🎪</span>
         <span class="mt-name">아이템전</span>
+      </button>
+      <button class="mm-tile t-tv" onclick="quickJoin('twelve')">
+        <span class="mt-ico">🔵</span>
+        <span class="mt-name">TWELVE</span>
       </button>
       <button class="mm-tile t-quad" onclick="quickJoin('quad')">
         <span class="mt-ico">👥</span>
@@ -4624,6 +4717,7 @@
       <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
       <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+      <button class="rt" data-rt="twelve" onclick="rulesTab('twelve')">TWELVE</button>
       <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
     <div class="rules-note" id="rules4Note"></div>
@@ -4732,6 +4826,7 @@
       <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
       <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+      <button class="rt" data-rt="twelve" onclick="rulesTab('twelve')">TWELVE</button>
       <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
   <div class="rules-box" data-i18n-block="rulesMini">
@@ -4819,6 +4914,7 @@
       <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
       <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+      <button class="rt" data-rt="twelve" onclick="rulesTab('twelve')">TWELVE</button>
       <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
     <div class="rules-box" data-i18n-block="rulesItem">
@@ -4877,6 +4973,67 @@
   </div>
 </div>
 
+<div id="rulesTwelveModal" class="rules-modal" onclick="if(event.target===this)rulesClose()">
+  <div class="rules-wrap">
+    <div class="rules-tabs" role="tablist">
+      <button class="rt" data-rt="2" onclick="rulesTab('2')">2인용</button>
+      <button class="rt" data-rt="3" onclick="rulesTab('3')">3인용</button>
+      <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
+      <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
+      <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+      <button class="rt" data-rt="twelve" onclick="rulesTab('twelve')">TWELVE</button>
+      <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
+    </div>
+    <div class="rules-box" data-i18n-block="rulesTwelve">
+      <span class="close-x" onclick="rulesClose()">×</span>
+      <h2>TWELVE</h2>
+      <p style="color:#8a7a80">카드는 클래식과 같아요. 다른 건 <b style="color:#ffe9a8">무엇으로 사느냐</b>예요 —
+         손패 대신 <b style="color:#8fd8ff">칩 20개</b>로 값을 부릅니다.</p>
+
+      <h3><span data-ico="🔵"></span> 왜 다른가</h3>
+      <p>클래식은 강한 카드를 내면 이기지만 그 카드가 상대에게 넘어갑니다.
+         TWELVE 에서는 칩이 <b>은행으로 사라집니다</b> — 이긴 쪽은 부른 값 전부,
+         진 쪽도 절반을 냅니다. <b>지기만 해도 칩이 녹아요.</b>
+         그래서 언제 물러설지가 곧 실력입니다.</p>
+
+      <h3><span data-ico="🔄"></span> 한 턴의 흐름</h3>
+      <div class="r4-steps">
+        <div class="r4-step"><b>1</b><span>진행자가 중앙덱에서 <b>한 장을 뒤집는다</b></span></div>
+        <div class="r4-step"><b>2</b><span>진행자가 손패에서 <b>한 장을 더한다</b> — 이 둘이 경매품</span></div>
+        <div class="r4-step"><b>3</b><span>진행자가 <b>오픈 / 클로즈</b>를 고른다</span></div>
+        <div class="r4-step"><b>4</b><span>정산하고 <b>진행자를 넘긴다</b></span></div>
+      </div>
+
+      <h3><span data-ico="👁"></span> 오픈 경매</h3>
+      <p>값을 <b>서로 보이며</b> 번갈아 올립니다. 앞사람보다 많이 부르거나 물러서요.
+         한 명이 물러설 때까지 계속 올릴 수 있습니다.</p>
+
+      <h3><span data-ico="🙈"></span> 클로즈 경매</h3>
+      <p>진행자가 <b>짝수 개</b>를 딱 한 번 부릅니다. 얼마인지는 상대에게 안 보여요
+         (출품 카드도 가려집니다). 상대는 <b>거기에 하나를 더 얹어</b> 사거나, 안 삽니다.
+         <b>안 사면 진행자가 가져갑니다.</b></p>
+      <p style="color:#8a7a80;font-size:.78rem">칩이 2개보다 적으면 클로즈를 고를 수 없어요 — 부를 짝수가 없으니까요.</p>
+
+      <h3><span data-ico="🏦"></span> 정산 — 여기가 핵심</h3>
+      <div class="etc-table">
+        <div class="etc-row etc-head"><span>누가</span><span>얼마를 내나</span></div>
+        <div class="etc-row"><span>이긴 쪽</span><span>부른 값 <b>전부</b></span></div>
+        <div class="etc-row"><span>진 쪽</span><span>부른 값의 <b>절반</b> (반내림)</span></div>
+      </div>
+      <p>경매품 <b>두 장은 모두 이긴 쪽</b>이 가져갑니다. 진 쪽은 카드를 못 받고 칩만 반 잃어요.
+         예: 7을 불러 이기면 7을 내고, 4를 불렀다 지면 2를 냅니다.</p>
+
+      <h3><span data-ico="🏁"></span> 이기는 법</h3>
+      <ul>
+        <li>앞에 깐 카드로 <b>세트를 완성</b>하면 그 자리에서 승리 (2짜리 2장 · 3짜리 3장 · 4짜리 4장 · 6짜리 6장)</li>
+        <li><b>칩이 0</b>이 되면, 그 경매에서 세트를 못 냈을 때 집니다</li>
+        <li>덱이 다 떨어지면 <b>세트에 더 가까운 쪽</b>이 이깁니다</li>
+      </ul>
+      <p style="color:#8a7a80;font-size:.78rem">랭킹(RP)에는 반영되지 않아요. 코인과 경험치만 들어옵니다.</p>
+    </div>
+  </div>
+</div>
+
 <div id="rulesEtcModal" class="rules-modal" onclick="if(event.target===this)rulesClose()">
   <div class="rules-wrap">
     <div class="rules-tabs" role="tablist">
@@ -4885,6 +5042,7 @@
       <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
       <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+      <button class="rt" data-rt="twelve" onclick="rulesTab('twelve')">TWELVE</button>
       <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
     <div class="rules-box" data-i18n-block="rulesEtc">
@@ -4984,6 +5142,7 @@
       <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
       <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
+      <button class="rt" data-rt="twelve" onclick="rulesTab('twelve')">TWELVE</button>
       <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
   <div id="rulesBox" class="rules-box" data-i18n-block="rules2">
@@ -5253,6 +5412,60 @@
 </div>
 
 <!-- ══════════ 4인전 화면 (AI 3명) ══════════ -->
+<!-- ══ TWELVE — 칩으로 사는 경매 ══ -->
+<div id="tv">
+  <div id="tv-controls">
+    <button class="ctrl-btn" onclick="tvQuit()"><span class="ci">🚪</span><span class="cl">나가기</span></button>
+    <button class="ctrl-btn" onclick="tvRules(true)"><span class="ci">📖</span><span class="cl">설명</span></button>
+  </div>
+  <div id="tv-turn">턴 1</div>
+
+  <!-- 상대 -->
+  <div class="tv-side">
+    <div class="tv-who"><b id="tv-oppNick">상대</b><span class="tv-chips" id="tv-oppChips">🔵 20</span></div>
+    <div class="fan top" id="tv-oppHand"></div>
+    <div class="pile" id="tv-oppAcq"></div>
+  </div>
+
+  <!-- 경매대 -->
+  <div id="tv-mat">
+    <div class="tv-badge" id="tv-typeBadge"></div>
+    <div class="tv-lot">
+      <div class="tv-slot"><div class="tv-lbl">공개 카드</div><div id="tv-center"></div></div>
+      <div class="tv-plus">+</div>
+      <div class="tv-slot"><div class="tv-lbl" id="tv-offerLbl">출품 카드</div><div id="tv-offer"></div></div>
+    </div>
+    <div class="tv-bets">
+      <span class="tv-bet me"><b id="tv-myBet">0</b> 내 배팅</span>
+      <span class="tv-bet opp"><b id="tv-oppBet">–</b> 상대</span>
+    </div>
+    <div id="tv-deck">덱 <b id="tv-deckLeft">12</b></div>
+  </div>
+
+  <div id="tv-status">–</div>
+  <div id="tv-actions"></div>
+
+  <!-- 나 -->
+  <div class="tv-side me">
+    <div class="pile" id="tv-myAcq"></div>
+    <div class="fan" id="tv-myHand"></div>
+    <div class="tv-who"><b id="tv-myNick">나</b><span class="tv-chips" id="tv-myChips">🔵 20</span></div>
+  </div>
+</div>
+
+<!-- 결과 -->
+<div id="tv-over">
+  <div class="tv-obox">
+    <div id="tv-otitle">승리!</div>
+    <div id="tv-owhy"></div>
+    <div id="tv-orewards"></div>
+    <div class="tv-obtns">
+      <button class="btn btn-gold" onclick="tvAgain()">한 판 더</button>
+      <button class="btn btn-outline" onclick="tvQuit()">나가기</button>
+    </div>
+  </div>
+</div>
+
 <div id="game4">
   <!-- 좌측 상단 조작 — 2인전과 같은 자리, 같은 모양 -->
   <div id="q-controls">

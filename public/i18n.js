@@ -18,6 +18,37 @@
   // 한국어 원문 → 영어. 순서는 화면 순서를 따른다.
   const EN = {
 
+    // ── TWELVE ──
+    'TWELVE — AI와 대전': 'TWELVE — vs AI',
+    '칩 20개로 시작 · 세트를 먼저 완성하면 승리': 'Start with 20 chips · first to a set wins',
+    '카드가 아니라 칩으로 값을 부르는 경매예요': 'An auction where you bid chips, not cards',
+    '중앙덱에서 카드를 뒤집으세요': 'Flip a card from the centre deck',
+    '상대가 카드를 뒤집는 중…': 'They are flipping a card…',
+    '손패에서 한 장을 내놓으세요': 'Put up one card from your hand',
+    '상대가 출품하는 중…': 'They are putting up a card…',
+    '경매 방식을 고르세요': 'Choose the auction type',
+    '상대가 방식을 고르는 중…': 'They are choosing the type…',
+    '오픈 경매': 'Open auction',
+    '클로즈 경매': 'Closed auction',
+    '카드 뒤집기': 'Flip a card',
+    '부르기': 'Bid',
+    '물러서기': 'Fold',
+    '안 사기': "Don't buy",
+    '다음 턴': 'Next turn',
+    '상대가 부르는 중…': 'They are bidding…',
+    '상대가 살지 고르는 중…': 'They are deciding whether to buy…',
+    '짝수 개를 부르세요 (상대는 얼마인지 몰라요)': 'Bid an even number (they cannot see it)',
+    '칩이 모자라요 — 물러서야 해요': 'Not enough chips — you must fold',
+    '칩이 2개 이상 있어야 해요': 'You need at least 2 chips',
+    '출품 (비공개)': 'Offered (hidden)',
+    '판 종료': 'Game over',
+    '정산 중…': 'Settling…',
+    '세트 완성': 'Set completed',
+    '칩이 떨어졌어요': 'You ran out of chips',
+    '덱 소진 — 세트에 더 가까운 쪽': 'Deck empty — closer to a set wins',
+    '한 판 더': 'One more',
+    '신규': 'New',
+
     // ── 아직 안 덮여 있던 말들 ──
     '랭크게임': 'Ranked match',
     '🏆 랭크게임': '🏆 Ranked match',
