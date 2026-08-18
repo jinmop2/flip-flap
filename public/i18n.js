@@ -18,6 +18,13 @@
   // 한국어 원문 → 영어. 순서는 화면 순서를 따른다.
   const EN = {
 
+    '경매에서 지면 아이템이 들어온다': 'Lose an auction and an item arrives',
+    '무작위 매칭 · RP 반영': 'Random matching · counts for RP',
+    '기록 안 됨': 'Not recorded',
+    '방': 'Rooms',
+    'AI 2명 · 손패 7장': '2 AI · 7 cards',
+    'AI 3명 · 손패 6장': '3 AI · 6 cards',
+
     '솔로플레이': 'Solo play',
     '클래식': 'Classic',
     '기타': 'More',
@@ -73,7 +80,6 @@
     '멀티플레이': 'Multiplayer',
     '온라인 대전': 'Online Match',
     '아이템전': 'Item Battle',
-    '\ud83c\udfaa 아이템전 — AI와 대전': '\ud83c\udfaa Item Battle — vs AI',
 
     '이벤트': 'Event',
     '다인전': 'Multiplayer',
@@ -469,9 +475,6 @@
     'FLIP FLAP — 경매·블러핑 심리전 카드 보드게임': 'FLIP FLAP — an auction & bluffing card game',
     '로그인하면 랭크·코인·전적이 저장돼요': 'Log in to save your rank, coins and history',
     'AI 대전': 'vs AI',
-    '승리 🪙5': 'Win 🪙5',
-    '승리 🪙15': 'Win 🪙15',
-    '승리 🪙40': 'Win 🪙40',
     '⚡ 빠른 대전': '⚡ Quick Match',
     '빠른대전 (온라인)': 'Quick Match (online)',
     '➕ 방 만들기': '➕ Create Room',

@@ -126,6 +126,54 @@
     .guest-tag { font-size:.62rem; color:#8a7a80; background:rgba(255,255,255,.06); border-radius:6px; padding:2px 8px; flex-shrink:0; }
     /* 섹션 */
     .lobby-sec { display:flex; flex-direction:column; gap:9px; }
+    /* ── 모드 고르는 창 (솔로·멀티 공통) ─────────────────────────────
+       두 창이 서로 다른 모양을 쓰고 있어서, 같은 자리에서 뜨는데도 딴 화면처럼
+       보였다. 칸 모양을 한 벌로 맞춘다. */
+    .mm-sec { display:flex; align-items:center; gap:8px; margin:12px 0 7px; }
+    .mm-sec:first-of-type { margin-top:4px; }
+    .mm-sec b { font-size:.74rem; font-weight:800; color:#c8a86a; letter-spacing:.5px; white-space:nowrap; }
+    .mm-sec i { flex:1; height:1px; background:linear-gradient(90deg, rgba(185,141,52,.45), transparent); }
+    .mm-sec .mc-tag { flex-shrink:0; }
+
+    /* 큰 칸 하나 — 그 창에서 제일 하고 싶은 것 */
+    .mm-hero {
+      display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+      padding:13px 15px; border-radius:15px; cursor:pointer; font-family:'Fredoka';
+      background:linear-gradient(135deg,#6d4a10 0%,#8d5f16 45%,#5a3a0c 100%);
+      border:1.5px solid #e0b45c; box-shadow:inset 0 1px 0 rgba(255,235,170,.35), 0 4px 16px rgba(0,0,0,.4);
+      transition:.14s;
+    }
+    .mm-hero:hover { filter:brightness(1.1); transform:translateY(-1px); }
+    .mm-hero:active { transform:translateY(0); }
+    .mm-hero .hh-ico { font-size:1.7rem; line-height:1; flex-shrink:0; filter:drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+    .mm-hero .hh-txt { flex:1; min-width:0; }
+    /* span 을 블록으로 — 안 그러면 이름과 설명이 한 줄에 이어 붙어 읽기 나쁘다 */
+    .mm-hero .hh-name { display:block; font-size:1rem; font-weight:900; color:#fff6dc; }
+    .mm-hero .hh-sub { display:block; font-size:.66rem; color:rgba(255,240,205,.75); margin-top:1px; }
+    .mm-hero .hh-side { flex-shrink:0; text-align:right; font-size:.66rem; font-weight:800; color:#fff0c8; }
+    .mm-hero .hh-side b { display:block; font-size:.86rem; }
+
+    /* 나란한 칸들 */
+    .mm-tiles { display:grid; gap:8px; }
+    .mm-tiles.c2 { grid-template-columns:repeat(2, 1fr); }
+    .mm-tiles.c3 { grid-template-columns:repeat(3, 1fr); }
+    .mm-tile {
+      display:flex; flex-direction:column; align-items:center; gap:3px;
+      padding:12px 6px 10px; border-radius:13px; cursor:pointer; font-family:'Fredoka';
+      background:linear-gradient(180deg,#3a1018,#260a10); border:1.5px solid #b98d34;
+      box-shadow:inset 0 1px 0 rgba(255,215,120,.16); transition:.14s;
+    }
+    .mm-tile:hover { transform:translateY(-2px); filter:brightness(1.14); }
+    .mm-tile:active { transform:translateY(0); }
+    .mm-tile .mt-ico { font-size:1.3rem; line-height:1.1; filter:drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+    .mm-tile .mt-name { font-size:.86rem; font-weight:800; color:#f5e6c0; }
+    .mm-tile .mt-sub { font-size:.6rem; color:#a89880; text-align:center; line-height:1.35; }
+    /* 아이템전은 보라, 다인전은 청록 — 판이 다르다는 걸 색으로 먼저 알린다 */
+    .mm-tile.t-item { background:linear-gradient(180deg,#3a2358,#241040); border-color:#8b6ad8; }
+    .mm-tile.t-item .mt-name { color:#e2d4ff; }
+    .mm-tile.t-quad { background:linear-gradient(180deg,#123a30,#0c2620); border-color:#4a9a7a; }
+    .mm-tile.t-quad .mt-name { color:#c8f0dc; }
+
     .sec-title { display:flex; justify-content:space-between; align-items:center; font-size:.72rem; font-weight:600; color:#6a5a70; letter-spacing:1px; padding:0 2px; }
     .qenter-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:8px; }
     .qenter-grid .btn { padding:9px 4px; font-size:.76rem; }
@@ -3776,71 +3824,99 @@
 <!-- 솔로플레이 팝업 (난이도 선택) -->
 <div class="lb-modal" id="soloModal" onclick="if(event.target===this)closeModePanels()">
   <div class="lb-box">
-    <div class="lb-title" style="text-align:center">솔로플레이</div>
+    <div class="lb-title"><span data-ico="♠️"></span> 솔로플레이
+      <span class="close-x" onclick="closeModePanels()">×</span></div>
 
-    <!-- 클래식 → 아이템전 → 다인전 순. 기본 규칙부터 눈에 들어와야 한다 -->
-    <div class="sec-title" style="justify-content:center"><span>클래식</span></div>
-    <div class="diff-cards">
-      <button class="diff-card d-easy" onclick="soloPlay('easy')">
-        <span class="dc-stars">★<i>★★</i></span>
-        <span class="dc-name">쉬움</span>
-        <span class="dc-reward">승리 🪙5</span>
+    <div class="mm-sec"><b>클래식</b><i></i></div>
+    <div class="mm-tiles c3">
+      <button class="mm-tile" onclick="soloPlay('easy')">
+        <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
+        <span class="mt-name">쉬움</span>
+        <span class="mt-sub">🪙 5</span>
       </button>
-      <button class="diff-card d-hard" onclick="soloPlay('hard')">
-        <span class="dc-stars">★★<i>★</i></span>
-        <span class="dc-name">보통</span>
-        <span class="dc-reward">승리 🪙15</span>
+      <button class="mm-tile" onclick="soloPlay('hard')">
+        <span class="mt-ico">★★<span style="opacity:.28">★</span></span>
+        <span class="mt-name">보통</span>
+        <span class="mt-sub">🪙 15</span>
       </button>
-      <button class="diff-card d-expert" onclick="soloPlay('expert')">
-        <span class="dc-crown">👑</span>
-        <span class="dc-name">전문가</span>
-        <span class="dc-reward">승리 🪙40</span>
+      <button class="mm-tile d-expert" onclick="soloPlay('expert')">
+        <span class="mt-ico">👑</span>
+        <span class="mt-name">전문가</span>
+        <span class="mt-sub">🪙 40</span>
       </button>
     </div>
 
-    <div class="sec-title" style="margin-top:10px"><span>아이템전 <span class="mc-tag">이벤트</span></span></div>
-    <button class="btn btn-item" onclick="startItemGame()">🎪 아이템전 — AI와 대전</button>
+    <div class="mm-sec"><b>아이템전</b><span class="mc-tag">이벤트</span><i></i></div>
+    <button class="mm-hero" style="background:linear-gradient(135deg,#4a2b7a 0%,#6b3fb0 45%,#33195c 100%);border-color:#a084e8" onclick="startItemGame()">
+      <span class="hh-ico">🎪</span>
+      <span class="hh-txt">
+        <span class="hh-name">아이템전</span>
+        <span class="hh-sub">경매에서 지면 아이템이 들어온다</span>
+      </span>
+    </button>
 
-    <div class="sec-title" style="margin-top:10px"><span>다인전 <span class="mc-tag beta">3·4인</span></span></div>
-    <div class="q-nsel">
-      <button class="q-ncard" onclick="q4Start(3)">
-        <span class="q-nbig">3인전</span>
-        <span class="q-nsub">AI 2명</span>
-        <span class="q-nmeta">손패 7장</span>
+    <div class="mm-sec"><b>다인전</b><span class="mc-tag beta">3·4인</span><i></i></div>
+    <div class="mm-tiles c2">
+      <button class="mm-tile t-quad" onclick="q4Start(3)">
+        <span class="mt-ico">👥</span>
+        <span class="mt-name">3인전</span>
+        <span class="mt-sub">AI 2명 · 손패 7장</span>
       </button>
-      <button class="q-ncard" onclick="q4Start(4)">
-        <span class="q-nbig">4인전</span>
-        <span class="q-nsub">AI 3명</span>
-        <span class="q-nmeta">손패 6장</span>
+      <button class="mm-tile t-quad" onclick="q4Start(4)">
+        <span class="mt-ico">👪</span>
+        <span class="mt-name">4인전</span>
+        <span class="mt-sub">AI 3명 · 손패 6장</span>
       </button>
     </div>
 
-    <button class="btn btn-outline" onclick="closeModePanels()">닫기</button>
+    <button class="btn btn-outline" style="margin-top:12px" onclick="closeModePanels()">닫기</button>
   </div>
 </div>
 
 <!-- 멀티플레이 팝업 -->
 <div class="lb-modal" id="multiModal" onclick="if(event.target===this)closeModePanels()">
   <div class="lb-box">
-    <div class="lb-title"><span data-ico="⚔️"></span> 멀티플레이</div>
-    <!-- 랭크게임 — RP 가 오가는 유일한 곳 -->
-    <button class="btn btn-gold" onclick="quickMatch()">🏆 랭크게임 (무작위 매칭)</button>
-    <div class="sec-title"><span>빠른 입장 <span class="mc-tag">RP 없음</span></span></div>
-    <div class="qenter-grid">
-      <button class="btn btn-outline btn-sm" onclick="quickJoin('classic')">🃏 클래식</button>
-      <button class="btn btn-item btn-sm" onclick="quickJoin('item')">🎪 아이템전</button>
-      <button class="btn btn-outline btn-sm" onclick="quickJoin('quad')">👥 다인전</button>
+    <div class="lb-title"><span data-ico="⚔️"></span> 멀티플레이
+      <span class="close-x" onclick="closeModePanels()">×</span></div>
+
+    <!-- 랭크게임 — RP 가 오가는 유일한 곳이라 제일 크게 -->
+    <button class="mm-hero" onclick="quickMatch()">
+      <span class="hh-ico">🏆</span>
+      <span class="hh-txt">
+        <span class="hh-name">랭크게임</span>
+        <span class="hh-sub">무작위 매칭 · RP 반영</span>
+      </span>
+      <span class="hh-side" id="mmRank"></span>
+    </button>
+
+    <div class="mm-sec"><b>빠른 입장</b><i></i></div>
+    <div class="mm-tiles c3">
+      <button class="mm-tile" onclick="quickJoin('classic')">
+        <span class="mt-ico">🃏</span>
+        <span class="mt-name">클래식</span>
+      </button>
+      <button class="mm-tile t-item" onclick="quickJoin('item')">
+        <span class="mt-ico">🎪</span>
+        <span class="mt-name">아이템전</span>
+      </button>
+      <button class="mm-tile t-quad" onclick="quickJoin('quad')">
+        <span class="mt-ico">👥</span>
+        <span class="mt-name">다인전</span>
+      </button>
     </div>
+
+    <div class="mm-sec"><b>방</b><i></i></div>
     <div class="online-actions">
       <button class="btn btn-outline btn-sm" onclick="openCreate()">➕ 방 만들기</button>
       <button class="btn btn-outline btn-sm" onclick="openCode()"># 코드로 참가</button>
     </div>
-    <div class="sec-title">
-      <span>열린 방</span>
+
+    <div class="mm-sec"><b>열린 방</b><i></i>
       <button class="rl-refresh" onclick="refreshRooms()" title="새로고침">↻</button>
     </div>
     <div id="roomList"><div class="rl-empty">열린 방이 없어요. 방을 만들어보세요!</div></div>
-    <button class="btn btn-outline" onclick="closeModePanels()">닫기</button>
+
+    <button class="btn btn-outline" style="margin-top:12px" onclick="closeModePanels()">닫기</button>
   </div>
 </div>
 

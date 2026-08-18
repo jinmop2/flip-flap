@@ -3672,6 +3672,13 @@ let prevMyAction = false;
 
 // ── 로비 모드 선택 (솔로/멀티) — 카드 위 팝업으로 표시 ──────
 function openMode(m) {
+  // 랭크게임 칸에 내 등급·RP 를 띄운다 — 무엇을 걸고 붙는지가 눌러 보기 전에 보인다
+  if (m !== 'solo') {
+    const side = document.getElementById('mmRank');
+    if (side) side.innerHTML = myAccount
+      ? `<b>${esc(myAccount.rank)}</b>${myAccount.rp} RP`
+      : '<b>게스트</b>기록 안 됨';
+  }
   document.getElementById(m === 'solo' ? 'soloModal' : 'multiModal').classList.add('show');
 }
 function closeModePanels() {

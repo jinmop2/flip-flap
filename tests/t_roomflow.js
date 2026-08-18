@@ -56,7 +56,8 @@ ok('빠른 입장 방은 랭크 방을 안 집는다', /!r\.ranked/.test(srv));
   ok('따로 만든 대기 화면이 없다', !/quick_waiting/.test(srv) && !/quick_waiting/.test(cli));
 }
 ok('클라이언트에 빠른 입장 버튼 셋', (htm.match(/quickJoin\('(classic|item|quad)'\)/g) || []).length === 3);
-ok('랭크게임 버튼', /quickMatch\(\)">🏆 랭크게임/.test(htm));
+ok('랭크게임 버튼', /onclick="quickMatch\(\)"[\s\S]{0,200}랭크게임/.test(htm));
+ok('랭크게임 칸에 내 등급이 보인다', /id="mmRank"/.test(htm) && /mmRank/.test(cli));
 ok('다인전 빠른 입장은 다인전 대기방으로', /mode === 'quad'[\s\S]{0,80}q4Quick/.test(cli));
 ok('코드 로그인은 화면에서 사라졌다', !/코드로 시작/.test(htm) && !/codeLogin/.test(htm) && !/submitCode/.test(cli));
 
