@@ -92,6 +92,7 @@ socket.on('auth_ok', ({ profile }) => {
   if (typeof updateSocialBadges === 'function') updateSocialBadges();   // 친구요청·가입신청 알림 표시
   refreshMissionDot();                                                  // 받아 갈 미션 보상 표시
   if (typeof gcRefreshUnread === 'function') gcRefreshUnread();          // 안 읽은 1:1 메시지 표시
+  prefetchTabs();                                                       // 탭 내용 미리 받아 두기
 });
 socket.on('dup_login', () => {   // 다른 기기에서 같은 계정 로그인 → 이 세션 종료
   clearSession();
@@ -732,13 +733,17 @@ socket.on('queued', () => document.getElementById('matchModal').classList.add('s
 socket.on('unqueued', () => document.getElementById('matchModal').classList.remove('show'));
 
 // ── 랭킹 ────────────────────────────────────────────────────
-async function openLeaderboard() {
+function openLeaderboard() {
   const modal = document.getElementById('lbModal'), list = document.getElementById('lbList');
-  list.innerHTML = '<div class="lb-empty">불러오는 중…</div>';
+  if (!cacheGet('lb')) list.innerHTML = '<div class="lb-empty">불러오는 중…</div>';
   modal.classList.add('show');
+  return showThenRefresh('lb',
+    () => fetch('/api/leaderboard').then((x) => x.json()), renderLeaderboard);
+}
+async function renderLeaderboard(r) {
+  const list = document.getElementById('lbList');
   try {
-    const r = await fetch('/api/leaderboard').then(x => x.json());
-    if (!r.ok || !r.players.length) { list.innerHTML = '<div class="lb-empty">아직 랭킹이 없어요. 첫 플레이어가 되어보세요!</div>'; return; }
+    if (!r || !r.ok || !r.players.length) { list.innerHTML = '<div class="lb-empty">아직 랭킹이 없어요. 첫 플레이어가 되어보세요!</div>'; return; }
     const myNick = myAccount && myAccount.nick;
     list.innerHTML = '';
     r.players.forEach(p => {
@@ -755,7 +760,9 @@ async function openLeaderboard() {
     // 내 순위가 톱20 밖이면 하단에 별도 표시
     if (myAccount) {
       const inTop = r.players.some(p => p.nick === myNick);
-      const mr = await apiPost('/api/myrank', { token: localStorage.getItem('ff_auth') });
+      // 내 순위도 담아 둔다 — 랭킹을 열 때마다 두 번 다녀오지 않게
+      const mr = cacheGet('myrank')
+        || await fetchInto('myrank', () => apiPost('/api/myrank', { token: authToken() }));
       if (!inTop && mr.me && mr.me.no) {
         const me = mr.me;
         const row = document.createElement('div'); row.className = 'lb-row me lb-mine';
@@ -785,13 +792,65 @@ async function refreshMissionDot() {
   const ready = !r.error && (r.list || []).some((m) => m.done && !m.claimed);
   dot.style.display = ready ? '' : 'none';
 }
-async function openMissions() {
+
+// ── 탭 내용 미리 받아 두기 ──────────────────────────────────────────────
+//
+// 미션·친구·클랜·랭킹은 누를 때마다 서버에 한 번 다녀온다. 서버가 하는 일은
+// 1ms 도 안 되는데, 오가는 데만 200~400ms 가 든다(Render 가 멀다). 그래서
+// 누르고 나서 잠깐 비어 있는 화면을 보게 된다.
+//
+// 고칠 방법은 두 가지다. 지난번에 받은 것을 먼저 그려 놓고 뒤에서 조용히
+// 새로 받아 오는 것(그러면 두 번째부터는 기다림이 없다), 그리고 로그인
+// 직후에 미리 한 번 받아 두는 것(그러면 첫 번째도 기다림이 없다).
+const _cache = new Map();          // 열쇠 → 마지막 응답
+const _inflight = new Map();       // 같은 것을 두 번 부르지 않게
+
+function cacheGet(key) { return _cache.get(key); }
+function cacheDrop(key) { _cache.delete(key); }
+// 받아 와서 담아 둔다. 이미 부르는 중이면 그 약속을 같이 쓴다.
+function fetchInto(key, fetcher) {
+  const going = _inflight.get(key);
+  if (going) return going;
+  const p = Promise.resolve().then(fetcher)
+    .then((r) => { if (r && !r.error) _cache.set(key, r); return r; })
+    .finally(() => _inflight.delete(key));
+  _inflight.set(key, p);
+  return p;
+}
+// 지난 값이 있으면 그걸로 먼저 그리고, 새 값이 오면 다시 그린다.
+function showThenRefresh(key, fetcher, render) {
+  const had = _cache.get(key);
+  if (had) render(had);
+  const p = fetchInto(key, fetcher);
+  if (!had) return p.then(render);
+  p.then((r) => { if (r && !r.error) render(r); });   // 조용히 갈아 끼운다
+  return p;
+}
+// 로그인 직후 미리 받아 둔다. 한꺼번에 쏘지 않고 조금씩 흘린다 —
+// 켜자마자 네 개를 동시에 던지면 정작 급한 로비 화면이 늦어진다.
+function prefetchTabs() {
+  if (!myAccount) return;
+  const jobs = [
+    () => fetchInto('missions', () => apiPost('/api/missions', { token: authToken() })),
+    () => fetchInto('friends',  () => apiPost('/api/friends',  { token: authToken() })),
+    () => fetchInto('clan',     () => apiPost('/api/clan',     { token: authToken() })),
+    () => fetchInto('lb',       () => fetch('/api/leaderboard').then((x) => x.json())),
+    () => fetchInto('clanlist', () => apiPost('/api/clan-list', { token: authToken() })),
+  ];
+  jobs.forEach((j, i) => setTimeout(() => { try { j(); } catch (_) {} }, 400 + i * 250));
+}
+
+function openMissions() {
   if (!myAccount) { alert('미션은 로그인하면 이용할 수 있어요!'); openAuth('login'); return; }
   const list = document.getElementById('missionList');
-  list.innerHTML = '<div class="lb-empty">불러오는 중…</div>';
+  if (!cacheGet('missions')) list.innerHTML = '<div class="lb-empty">불러오는 중…</div>';
   document.getElementById('missionModal').classList.add('show');
-  const r = await apiPost('/api/missions', { token: localStorage.getItem('ff_auth') });
-  if (r.error || !r.list) { list.innerHTML = '<div class="lb-empty">불러오기 실패</div>'; return; }
+  return showThenRefresh('missions',
+    () => apiPost('/api/missions', { token: authToken() }), renderMissions);
+}
+function renderMissions(r) {
+  const list = document.getElementById('missionList');
+  if (!r || r.error || !r.list) { list.innerHTML = '<div class="lb-empty">불러오기 실패</div>'; return; }
   // 받을 게 있는 것부터 위로. 아래로 내려야 보이면 받는 걸 놓친다.
   const rank = (m) => (m.done && !m.claimed ? 0 : m.claimed ? 2 : 1);
   list.innerHTML = '';
@@ -832,6 +891,7 @@ async function claimMission(id) {
     renderAccount();
     playSound('setwin');
     toast(`🪙 ${r.amount} 코인을 받았어요!`);
+    cacheDrop('missions');
     await openMissions();                        // 목록 다시 그려 상태 맞춤
   } finally { misClaiming = false; }
 }
@@ -1164,14 +1224,17 @@ function friendTab(which) {
   if (which === 'find') setTimeout(() => document.getElementById('friendNickInput').focus(), 60);
 }
 
-async function loadFriends() {
+function loadFriends() {
   const box = document.getElementById('friendListBox');
-  box.innerHTML = '<div class="soc-empty">불러오는 중…</div>';
-  const r = await apiPost('/api/friends', { token: authToken() });
-  if (!r.ok) { box.innerHTML = `<div class="soc-empty">${esc(r.error || '불러오기 실패')}</div>`; return; }
-  _friendData = r;
-  renderFriends();
-  updateSocialBadges();
+  if (!cacheGet('friends')) box.innerHTML = '<div class="soc-empty">불러오는 중…</div>';
+  return showThenRefresh('friends',
+    () => apiPost('/api/friends', { token: authToken() }),
+    (r) => {
+      if (!r || !r.ok) { box.innerHTML = `<div class="soc-empty">${esc((r && r.error) || '불러오기 실패')}</div>`; return; }
+      _friendData = r;
+      renderFriends();
+      updateSocialBadges();
+    });
 }
 
 // 친구 한 줄 — 온라인이면 초록 점 + 도전장 버튼
@@ -1232,22 +1295,22 @@ async function submitFriendAdd() {
   msg.innerHTML = r.friendIdl
     ? `🎉 <b>${esc(nick)}</b>님과 친구가 되었어요!`   // 상대도 나를 요청한 상태였음
     : `✅ <b>${esc(nick)}</b>님에게 요청을 보냈어요.`;
-  loadFriends();
+  cacheDrop('friends'); loadFriends();
 }
 
 async function respondFriend(idl, accept) {
   const r = await apiPost(accept ? '/api/friend-accept' : '/api/friend-decline', { token: authToken(), idl });
   if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.'));
   if (accept) toast(`🎉 ${esc(r.nick || '')}님과 친구가 되었어요!`);
-  loadFriends();
+  cacheDrop('friends'); loadFriends();
 }
 async function cancelFriend(idl) {
   await apiPost('/api/friend-cancel', { token: authToken(), idl });
-  loadFriends();
+  cacheDrop('friends'); loadFriends();
 }
 function confirmRemoveFriend(idl, nick) {
   askConfirm({ icon: '👋', title: `${nick}님을 삭제할까요?`, desc: '친구 목록에서 서로 사라져요.', yes: '삭제', no: '취소' },
-    async () => { await apiPost('/api/friend-remove', { token: authToken(), idl }); loadFriends(); });
+    async () => { await apiPost('/api/friend-remove', { token: authToken(), idl }); cacheDrop('friends'); loadFriends(); });
 }
 
 // 도전장 — 목록에 안 뜨는 방(secret, 비번 없음)을 만들고 방 코드를 친구에게 실시간 전송.
@@ -1274,11 +1337,15 @@ function openClan() {
 }
 function closeClan() { document.getElementById('clanModal').classList.remove('show'); closeChatMenu(); }
 
-async function loadClan() {
+function loadClan() {
   const body = document.getElementById('clanBody');
-  body.innerHTML = '<div class="soc-empty">불러오는 중…</div>';
-  const r = await apiPost('/api/clan', { token: authToken() });
-  if (!r.ok) { body.innerHTML = `<div class="soc-empty">${esc(r.error || '불러오기 실패')}</div>`; return; }
+  if (!cacheGet('clan')) body.innerHTML = '<div class="soc-empty">불러오는 중…</div>';
+  return showThenRefresh('clan',
+    () => apiPost('/api/clan', { token: authToken() }), renderClanData);
+}
+function renderClanData(r) {
+  const body = document.getElementById('clanBody');
+  if (!r || !r.ok) { body.innerHTML = `<div class="soc-empty">${esc((r && r.error) || '불러오기 실패')}</div>`; return; }
   if (r.clan) renderMyClan(r.clan);
   else renderClanBrowse(r);
   updateSocialBadges();
@@ -1500,7 +1567,15 @@ async function renderClanBrowse(meta) {
     return;
   }
 
-  const r = await apiPost('/api/clan-list', { token: authToken() });
+  // 클랜 목록도 담아 둔다 — 클랜에 안 든 사람은 이 창을 열 때마다 두 번 다녀왔다
+  const had = cacheGet('clanlist');
+  if (had) paintClanList(pane, had);
+  const r = had || await fetchInto('clanlist', () => apiPost('/api/clan-list', { token: authToken() }));
+  if (had) fetchInto('clanlist', () => apiPost('/api/clan-list', { token: authToken() }))
+    .then((fresh) => { if (fresh && fresh.ok && document.getElementById('clanPane') === pane) paintClanList(pane, fresh); });
+  paintClanList(pane, r);
+}
+function paintClanList(pane, r) {
   if (!r.ok || !r.clans.length) {
     pane.innerHTML = '<div class="soc-empty">아직 만들어진 클랜이 없어요.<br>첫 번째 클랜을 만들어보세요!</div>';
     return;
@@ -1529,35 +1604,35 @@ async function submitClanCreate() {
   toast(`🛡️ [${esc(tag)}] ${esc(name)} 클랜을 만들었어요!`);
   if (myAccount) myAccount.coins = r.coins;
   renderAccount();
-  loadClan();
+  cacheDrop('clan'); cacheDrop('clanlist'); loadClan();
 }
 
 async function clanApply(clanId) {
   const r = await apiPost('/api/clan-apply', { token: authToken(), clanId });
   if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.'));
   toast(`✅ ${esc(r.clanName || '')} 클랜에 가입을 신청했어요.`);
-  loadClan();
+  cacheDrop('clan'); cacheDrop('clanlist'); loadClan();
 }
 async function clanCancelApply(clanId) {
   await apiPost('/api/clan-cancel-apply', { token: authToken(), clanId });
-  loadClan();
+  cacheDrop('clan'); cacheDrop('clanlist'); loadClan();
 }
 async function clanDecide(idl, accept) {
   const r = await apiPost('/api/clan-decide', { token: authToken(), idl, accept });
   if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.'));
   if (r.accepted) toast(`🎉 ${esc(r.nick || '')}님이 클랜에 합류했어요!`);
-  loadClan();
+  cacheDrop('clan'); cacheDrop('clanlist'); loadClan();
 }
 function clanKick(idl, nick) {
   askConfirm({ icon: '⚠️', title: `${nick}님을 추방할까요?`, desc: '클랜에서 즉시 제외됩니다.', yes: '추방', no: '취소' },
     async () => { const r = await apiPost('/api/clan-kick', { token: authToken(), idl });
-      if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.')); loadClan(); });
+      if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.')); cacheDrop('clan'); cacheDrop('clanlist'); loadClan(); });
 }
 function clanTransfer(idl, nick) {
   askConfirm({ icon: '👑', title: `${nick}님에게 클랜장을 넘길까요?`, desc: '이후에는 클랜을 관리할 수 없게 됩니다.', yes: '위임', no: '취소' },
     async () => { const r = await apiPost('/api/clan-transfer', { token: authToken(), idl });
       if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.'));
-      toast(`👑 ${esc(nick)}님이 새 클랜장이 되었어요.`); loadClan(); });
+      toast(`👑 ${esc(nick)}님이 새 클랜장이 되었어요.`); cacheDrop('clan'); cacheDrop('clanlist'); loadClan(); });
 }
 function clanEditNotice() {
   const cur = (document.querySelector('.clan-notice')?.textContent || '').replace(/^📢\s*/, '');
@@ -1565,7 +1640,7 @@ function clanEditNotice() {
   if (n === null) return;
   apiPost('/api/clan-notice', { token: authToken(), notice: n }).then(r => {
     if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.'));
-    loadClan();
+    cacheDrop('clan'); cacheDrop('clanlist'); loadClan();
   });
 }
 function clanLeave(isOwner) {
@@ -1576,7 +1651,7 @@ function clanLeave(isOwner) {
       const r = await apiPost('/api/clan-leave', { token: authToken() });
       if (!r.ok) return toast('⚠️ ' + (r.error || '실패했어요.'));
       toast(r.disbanded ? '클랜이 해체되었어요.' : '클랜에서 탈퇴했어요.');
-      _clanTab = 'my'; loadClan();
+      _clanTab = 'my'; cacheDrop('clan'); cacheDrop('clanlist'); loadClan();
     });
 }
 
@@ -1675,7 +1750,13 @@ async function openShop() {
   document.getElementById('shopMsg').textContent = '';
   document.getElementById('shopModal').classList.add('show');
   if (!shopItems) {
-    try { shopItems = (await fetch('/api/shop').then(r => r.json())).items; } catch (_) { shopItems = null; }
+    // 지난번에 받아 둔 표가 있으면 그걸로 먼저 그린다 (물건 목록은 자주 안 바뀐다)
+    try { shopItems = JSON.parse(localStorage.getItem('ff_shop') || 'null'); } catch (_) {}
+    if (shopItems) renderShop();
+    try {
+      const got = (await fetch('/api/shop').then((r) => r.json())).items;
+      if (got) { shopItems = got; localStorage.setItem('ff_shop', JSON.stringify(got)); }
+    } catch (_) { /* 못 받아도 담아 둔 표로 버틴다 */ }
   }
   renderShop();
 }

@@ -96,5 +96,17 @@ ok('지갑이 제목 줄 밖으로 나왔다',
 ok('방을 나오면 멀티 창으로 돌아온다',
    /ff_openmulti/.test(cli) && /openMode\('multi'\)/.test(cli));
 
+// 탭을 누르면 바로 그려진다 (담아 둔 값 + 미리 받기)
+ok('담아 두는 틀이 있다', /function showThenRefresh/.test(cli) && /function fetchInto/.test(cli));
+ok('로그인하면 미리 받아 둔다', /function prefetchTabs/.test(cli) && /prefetchTabs\(\);/.test(cli));
+ok('미리 받는 것에 미션·친구·클랜·랭킹이 다 있다',
+   ['/api/missions', '/api/friends', '/api/clan', '/api/leaderboard', '/api/clan-list']
+     .every((u) => new RegExp("fetchInto\\('[a-z]+',\\s*\\(\\) => (apiPost\\('" + u + "'|fetch\\('" + u + "')").test(cli)));
+ok('무언가를 바꾸면 담아 둔 값을 버린다', (cli.match(/cacheDrop\(/g) || []).length >= 10);
+ok('창을 열 때는 안 버린다',
+   !/function openFriends\(\) \{[\s\S]{0,200}cacheDrop/.test(cli)
+   && !/function openClan\(\) \{[\s\S]{0,200}cacheDrop/.test(cli));
+ok('상점 표는 다음에도 남는다', /localStorage\.setItem\('ff_shop'/.test(cli));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
