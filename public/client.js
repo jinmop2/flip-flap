@@ -4698,7 +4698,8 @@ function makeCard(card, opts = {}) {
   const top = document.createElement('div');
   top.className = 'c-top';
   const rank = document.createElement('span');
-  rank.className = 'c-rank';
+  // 10 이상은 글자가 두 칸이라 좌우 여백을 줄여야 안 눌린다(6-10 이 대표)
+  rank.className = 'c-rank' + (card.grade >= 10 ? ' two' : '');
   rank.textContent = card.grade;          // 좌상단 = 등급번호만
   top.appendChild(rank);
   if (is21(card) || is610(card)) {
@@ -4740,6 +4741,13 @@ function slotEl(label, card, opts = {}) {
 function render(changed = false) {
   if (!state) return;
   const s = state, mine = s.auctioneer === s.myIndex, a = s.auction;
+  // 판이 돌아가는 중이면 결과창이 떠 있을 이유가 없다. 어떤 이유로든(재대결이
+  // 어긋났다거나 game_start 를 놓쳤다거나) 남아 있으면 inset:0 짜리 창이 판을
+  // 통째로 덮어, 화면은 멀쩡한데 아무것도 안 눌린다. 여기서 못을 박아 둔다.
+  if (s.phase !== 'game_over') {
+    const go = document.getElementById('gameOver');
+    if (go && go.style.display !== 'none') go.style.display = 'none';
+  }
   document.getElementById('turnInfo').textContent = `턴 ${s.turn}`;
   document.getElementById('game').classList.toggle('showdown', s.phase === 'showdown');
   if (s.time) updateClocks(s.time[1], s.time[2], s.active);

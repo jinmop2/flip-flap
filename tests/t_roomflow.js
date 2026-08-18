@@ -157,5 +157,12 @@ ok('올리면 반응은 있다', /\n {4}\.card\.selectable:hover \{ border-color
 ok('눕히면 판을 덮는다', /id="rotateNote"/.test(htm) && /orientation:landscape\) and \(hover:none\) and \(pointer:coarse\)/.test(htm));
 ok('앱에서는 진짜로 잠근다', /so\.lock\('portrait'\)/.test(cli));
 
+// 결과창이 남아 판을 덮는 것 · 두 자리 등급
+ok('판이 도는 중이면 결과창을 내린다',
+   /if \(s\.phase !== 'game_over'\) \{[\s\S]{0,220}gameOver[\s\S]{0,80}display = 'none'/.test(cli));
+ok('두 자리 등급에 표시를 붙인다', /card\.grade >= 10 \? ' two' : ''/.test(cli));
+ok('다인전도 같이', /card\.grade >= 10 \? ' two' : ''/.test(read('public/client4.js')));
+ok('두 자리는 여백을 줄인다', /\.c-rank\.two \{[^}]*padding:2px 4px/.test(htm));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

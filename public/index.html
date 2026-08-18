@@ -3206,7 +3206,10 @@
       text-shadow:0 1px 2px rgba(0,0,0,.6); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
     }
     .card.special .c-rank { background:var(--gold); color:#1a1008; text-shadow:none; }
-    .card .c-mark { font-size:.76rem; }
+    /* 두 자리(10 이상)는 좌우 여백을 줄이고 글자를 살짝 좁힌다. 예전엔 한 자리
+       기준 여백 그대로라 "10" 이 칸을 밀어내고 옆의 표식과 부딪혔다. */
+    .card .c-rank.two { padding:2px 4px; font-size:1.02rem; letter-spacing:-.5px; }
+    .card .c-mark { font-size:.76rem; flex-shrink:0; }
     .card .c-num {
       flex:1; display:flex; align-items:center; justify-content:center;
       font-family:'Bangers',cursive; font-size:3.35rem; line-height:.8; color:#fff;

@@ -231,7 +231,8 @@
     const top = document.createElement('div');
     top.className = 'c-top';
     const rank = document.createElement('span');
-    rank.className = 'c-rank'; rank.textContent = card.grade;
+    // 10 이상은 두 칸이라 여백을 줄인다 (2인전과 같은 처리)
+    rank.className = 'c-rank' + (card.grade >= 10 ? ' two' : ''); rank.textContent = card.grade;
     top.appendChild(rank);
     if (special) {
       const mk = document.createElement('span');
