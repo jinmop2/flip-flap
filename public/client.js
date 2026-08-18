@@ -721,7 +721,8 @@ function quickMatch() {
 // 랭크가 안 걸리므로 편하게 붙는 자리다.
 window.quickJoin = function (mode) {
   closeModePanels();
-  if (mode === 'quad') { if (typeof q4Quick === 'function') q4Quick(); return; }
+  // 다인전도 다른 모드와 같은 길로 간다 — 대기실에 앉아서 사람을 기다린다.
+  // 예전엔 여기서만 곧장 판 화면으로 들어가 버려 결이 달랐다.
   isItemMode = mode === 'item';
   socket.emit('quick_join', { mode, pid: PID, nick: getNick() });
 };

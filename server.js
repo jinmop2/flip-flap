@@ -1663,30 +1663,29 @@ io.on('connection', (socket) => {
   socket.on('quick_join', ({ mode, pid, nick } = {}) => {
     if (socket.roomId && rooms[socket.roomId]) return;
     dequeue(socket.id);
+    if (!['classic', 'item', 'quad'].includes(mode)) return socket.emit('error', '알 수 없는 모드예요.');
     const item = mode === 'item';
-    if (mode !== 'item' && mode !== 'classic') return socket.emit('error', '알 수 없는 모드예요.');
 
-    // 들어갈 만한 방: 같은 모드 · 비밀방 아님 · AI전 아님 · 아직 안 시작 · 자리 하나
+    // 들어갈 만한 방: 같은 모드 · 비밀방 아님 · AI전 아님 · 아직 안 시작 · 자리 남음
     const openId = Object.keys(rooms).find((id) => {
       const r = rooms[id];
-      return r && !r.game && !r.secret && !r.vsBot && !r.tutorial && !r.ranked
-        && !!r.itemMode === item && r.players.filter(Boolean).length === 1;
+      if (!r || r.game || r.secret || r.vsBot || r.tutorial || r.ranked) return false;
+      if ((r.mode || 'classic') !== mode) return false;
+      const n = r.players.filter(Boolean).length;
+      return n > 0 && n < capOf(r);
     });
     if (openId) {
       const room = rooms[openId];
+      const cap = capOf(room);
+      let seat = -1;
+      for (let i = 0; i < cap; i++) if (!room.players[i]) { seat = i; break; }
+      if (seat < 0) return socket.emit('error', '방이 막 찼어요. 다시 눌러주세요.');
       const prof = myProfile(nick);
-      room.players[1] = socket.id; room.pids[1] = pid || null; room.nicks[1] = prof.nick;
-      room.profiles[1] = prof; room.tokens[1] = socket.token || null;
+      room.players[seat] = socket.id; room.pids[seat] = pid || null; room.nicks[seat] = prof.nick;
+      room.profiles[seat] = prof; room.tokens[seat] = socket.token || null;
       socket.leave('lobby');
-      socket.join(openId); socket.roomId = openId; socket.playerIndex = 1; socket.pid = pid;
-      // 빠른 입장으로 연 방은 방장이 따로 시작을 누르지 않는다 — 차는 즉시 시작.
-      if (room.hostStart) { pushRoomLobby(openId); broadcastRooms(); return; }
-      room.game = createGame(!!room.itemMode);
-      room.startedAt = Date.now();
-      io.to(openId).emit('game_start', { vsBot: false, roomId: openId, nicks: room.nicks,
-        profiles: room.profiles, itemMode: !!room.itemMode });
-      broadcast(openId);
-      startClock(openId);
+      socket.join(openId); socket.roomId = openId; socket.playerIndex = seat; socket.pid = pid;
+      pushRoomLobby(openId);
       broadcastRooms();
       return;
     }
@@ -1694,13 +1693,14 @@ io.on('connection', (socket) => {
     if (Object.keys(rooms).length >= MAX_ROOMS) return socket.emit('error', '서버가 혼잡해요. 잠시 후 시도하세요.');
     const prof = myProfile(nick);
     const roomId = makeRoomId();
+    const NAME = { classic: '클래식 빠른 입장', item: '아이템전 빠른 입장', quad: '다인전 빠른 입장' };
     rooms[roomId] = {
       players: [socket.id, null], pids: [pid || null, null], nicks: [prof.nick, null],
       profiles: [prof, null], tokens: [socket.token || null, null],
-      name: item ? '아이템전 빠른 입장' : '클래식 빠른 입장',
+      name: NAME[mode],
       game: null, vsBot: false, difficulty: 'hard',
       secret: false, password: '', itemMode: item,
-      mode: item ? 'item' : 'classic',
+      mode,
       hostStart: true,         // 방 만들기와 똑같다 — 자리도 보이고 시작도 방장이 누른다
       quickOpen: true,
     };

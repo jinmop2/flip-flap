@@ -47,7 +47,7 @@ ok('RP 는 랭크게임에서만', /noRank: !room\.ranked/.test(srv));
 ok('랭크 표시는 무작위 매칭에서만 붙는다',
    (srv.match(/ranked: true/g) || []).length === 2 && !/ranked: true[\s\S]{0,200}quick_join/.test(srv));
 ok('빠른 입장 통로가 있다', /socket\.on\('quick_join'/.test(srv));
-ok('빠른 입장 방은 랭크 방을 안 집는다', /!r\.ranked/.test(srv));
+ok('빠른 입장 방은 랭크 방을 안 집는다', /r\.tutorial \|\| r\.ranked/.test(srv));
 // 방이 없으면 그냥 방을 만든 것과 똑같아야 한다 — 자리도 보이고 시작도 방장이 누른다
 {
   const qj = srv.slice(srv.indexOf("socket.on('quick_join'"), srv.indexOf("socket.on('quick_join'") + 3000);
@@ -58,7 +58,10 @@ ok('빠른 입장 방은 랭크 방을 안 집는다', /!r\.ranked/.test(srv));
 ok('클라이언트에 빠른 입장 버튼 셋', (htm.match(/quickJoin\('(classic|item|quad)'\)/g) || []).length === 3);
 ok('랭크게임 버튼', /onclick="quickMatch\(\)"[\s\S]{0,200}랭크게임/.test(htm));
 ok('랭크게임 칸에 내 등급이 보인다', /id="mmRank"/.test(htm) && /mmRank/.test(cli));
-ok('다인전 빠른 입장은 다인전 대기방으로', /mode === 'quad'[\s\S]{0,80}q4Quick/.test(cli));
+ok('다인전 빠른 입장도 같은 대기실을 쓴다',
+   !/q4Quick/.test(cli) && /\['classic', 'item', 'quad'\]\.includes\(mode\)/.test(srv));
+ok('빠른 입장이 자리 남은 방을 찾는다', /n > 0 && n < capOf\(r\)/.test(srv));
+ok('다인전 빠른 입장 방 이름이 있다', /다인전 빠른 입장/.test(srv));
 ok('코드 로그인은 화면에서 사라졌다', !/코드로 시작/.test(htm) && !/codeLogin/.test(htm) && !/submitCode/.test(cli));
 
 // 다인전 = 자리 늘리기
