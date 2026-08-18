@@ -645,12 +645,15 @@
     @media (min-width:700px) { .lb-box.gacha-box { max-width:720px; margin:0 auto;
       border-left:1.5px solid #b98d34; border-right:1.5px solid #b98d34; } }
     .gacha-entry { flex-shrink:0; }
-    .gc-wallet { font-size:.82rem; font-weight:800; color:#ffd94a; margin-right:42px; }
+    .gc-wallet { font-size:.78rem; font-weight:800; color:#ffd94a; text-align:center; margin:-2px 0 6px; }
     .gc-wallet b { color:#9fe8ff; }
     /* 오라가 카드 밖으로 번지므로 가로는 넘치지 않게 막는다 (스크롤바 방지) */
     .gc-stage { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; display:flex; flex-wrap:wrap;
       align-content:flex-start; justify-content:center; gap:8px; padding:10px 4px;
       background:rgba(0,0,0,.24); border-radius:14px; }
+    /* 교환소는 칸이 이미 저마다 테두리를 갖고 있다. 그 위에 상자 배경까지
+       깔면 아무것도 안 감싸는 네모 테두리 하나가 떠 있는 것처럼 보인다. */
+    #gcPaneExch #gcShop { background:none; border-radius:0; padding:6px 2px; }
     .gc-hint { align-self:center; font-size:.76rem; color:#8a7a80; }
     /* ── 뽑기 결과 카드 ─────────────────────────────────────
        뒷면으로 깔린 뒤 한 장씩 뒤집힌다. 등급은 뒤집히는 순간에 드러난다 —
@@ -3938,11 +3941,10 @@
 <!-- 뽑기 -->
 <div class="lb-modal" id="gachaModal" onclick="if(event.target===this)closeGacha()">
   <div class="lb-box gacha-box">
-    <div class="lb-title" style="display:flex;justify-content:space-between;align-items:center">
-      <span><span data-ico="🎁"></span> 뽑기</span>
-      <span class="gc-wallet"><span id="gcCoins">0</span> · <b id="gcShards">0</b> 파편</span>
-      <span class="close-x" onclick="closeGacha()">×</span>
-    </div>
+    <div class="lb-title"><span data-ico="🎁"></span> 뽑기
+      <span class="close-x" onclick="closeGacha()">×</span></div>
+    <!-- 지갑은 제목 줄에 같이 두면 닫기 버튼에 가려 파편 수가 잘렸다 -->
+    <div class="gc-wallet"><span id="gcCoins">0</span> · <b id="gcShards">0</b> 파편</div>
 
     <div class="gc-tabs">
       <button class="gc-tab active" id="gcTabRoll" onclick="gachaTab('roll')">뽑기</button>

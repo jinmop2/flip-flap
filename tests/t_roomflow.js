@@ -89,5 +89,12 @@ ok('UI 잔소리는 기타 탭으로 옮겼다',
      order.join(',') === 'soloPlay,soloPlay,soloPlay,startItemGame,q4Start,q4Start', order.join(','));
 }
 
+// 파편 상점 · 방에서 나가면 멀티 창으로
+ok('교환소에 상자 테두리가 없다', /#gcPaneExch #gcShop \{[^}]*background:none/.test(htm));
+ok('지갑이 제목 줄 밖으로 나왔다',
+   /<div class="gc-wallet">/.test(htm) && !/class="lb-title"[^>]*>\s*<span><span data-ico="🎁"/.test(htm));
+ok('방을 나오면 멀티 창으로 돌아온다',
+   /ff_openmulti/.test(cli) && /openMode\('multi'\)/.test(cli));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

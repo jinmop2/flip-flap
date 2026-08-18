@@ -685,6 +685,12 @@ function showTitle() { sessionStorage.removeItem('ff_guest'); const t = document
 function startAsGuest() { sessionStorage.setItem('ff_guest', '1'); hideTitle(); }   // 게스트 선택 기억
 const cameFromOAuth = kakaoFirstLogin || location.href.includes('ktoken');   // 방금 로그인하고 돌아온 경우
 
+// 방에서 막 나온 참이면 멀티플레이 창을 다시 띄운다
+if (sessionStorage.getItem('ff_openmulti')) {
+  sessionStorage.removeItem('ff_openmulti');
+  setTimeout(() => { try { hideTitle(); openMode('multi'); } catch (_) {} }, 120);
+}
+
 renderAccount();   // 게스트 상태로 하단 바 먼저 렌더
 // 앱을 열면 바로 로비 곡. 브라우저가 자동재생을 막으면 첫 터치에서 시작된다.
 try { lobbyBGM(); } catch (_) {}
@@ -4070,8 +4076,13 @@ function shareInvite(btn) {
 function cancelWait() {
   socket.emit('leave_room');
   roomIsHost = false; roomReady = false; roomModeCur = 'classic';
+  // 방을 나온 사람은 대개 다른 방을 고르려는 것이지 로비를 보려는 게 아니다.
+  // 여기서 창을 열어 봐야 바로 아래 새로고침에 쓸려 나가므로, 표시만 남기고
+  // 새로 뜬 화면에서 연다.
+  sessionStorage.setItem('ff_openmulti', '1');
   clearSession(); fastReload();
 }
+
 
 // ── 관전자 도전 (관전 → 대전 전환) ──
 function specChallenge(btn) {
