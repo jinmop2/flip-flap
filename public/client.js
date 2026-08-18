@@ -41,21 +41,31 @@ if (window.visualViewport) {
 // 폰 세로는 원래 이 비율로 만든 화면이라 손대지 않는다(각 기기 폭에 맞춰
 // 반응형 규칙이 이미 잡아 준다). 컴퓨터나 가로 화면에서는 설계 크기를
 // 화면에 꽉 차게 배율만 준다 — 폭만 늘리면 카드·글씨 비율이 어긋난다.
-const BOARD_W = 780, BOARD_H = 920;
+const BOARD_W = 780, BOARD_H = 920;     // 세로 배치의 설계 크기
+const LAND_W = 940, LAND_H = 520;       // 가로 배치의 설계 크기
 function fitBoard() {
   const vw = window.innerWidth;
   const vh = Math.round((window.visualViewport && window.visualViewport.height) || window.innerHeight);
-  // 손에 쥔 세로 화면 = 원래 판. 그 밖은 배율로 맞춘다.
-  const phonePortrait = vw <= 700 && vh > vw;
   const root = document.documentElement;
-  if (phonePortrait) {
-    document.body.classList.remove('board-zoom');
+  const body = document.body;
+
+  // 손에 쥔 세로 화면 = 원래 판. 그대로 둔다(기기 폭에 맞춘 반응형이 이미 잡는다).
+  if (vw <= 700 && vh > vw) {
+    body.classList.remove('board-zoom', 'land');
     root.style.removeProperty('--board-zoom');
     return;
   }
-  const z = Math.min((vw - 16) / BOARD_W, (vh - 8) / BOARD_H);
+
+  // 눕힌 화면(가로가 길고 높이가 넉넉지 않을 때)은 가로 전용 배치를 쓴다.
+  // 세로 배치를 그대로 눕히면 높이가 발목을 잡아 판이 아주 작아진다.
+  const land = vw > vh * 1.15 && vh < 760;
+  const W = land ? LAND_W : BOARD_W, H = land ? LAND_H : BOARD_H;
+  const z = Math.min((vw - 16) / W, (vh - 8) / H);
+  root.style.setProperty('--board-w', W + 'px');
+  root.style.setProperty('--board-h', H + 'px');
   root.style.setProperty('--board-zoom', String(Math.max(0.42, Math.min(1.9, z))));
-  document.body.classList.add('board-zoom');
+  body.classList.add('board-zoom');
+  body.classList.toggle('land', land);
 }
 fitBoard();
 addEventListener('resize', fitBoard);

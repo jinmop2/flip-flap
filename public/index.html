@@ -3655,9 +3655,45 @@
        좁히면 카드와 글씨 비율이 어긋나므로, 늘리지 않고 통째로 키운다.
        zoom 은 transform 과 달리 레이아웃·클릭 위치가 그대로 따라온다. */
     body.board-zoom #game, body.board-zoom #mini {
-      width:780px; max-width:none; height:920px; max-height:none;
+      width:var(--board-w, 780px); max-width:none;
+      height:var(--board-h, 920px); max-height:none;
       zoom:var(--board-zoom, 1);
     }
+
+    /* ── 가로 전용 배치 ──────────────────────────────────────────────
+       세로 한 칸으로 쌓은 배치를 눕힌 화면에 그대로 넣으면 높이가 발목을
+       잡아 판이 아주 작아진다. 가로에서는 칸을 옆으로 편다 —
+       왼쪽에 상대, 가운데에 경매대, 아래 한 줄이 내 자리. */
+    body.land #game {
+      /* #game 은 자바스크립트가 style.display 로 켠다 — 인라인이 클래스보다 세서
+         !important 가 없으면 이 격자가 안 걸린다. */
+      display:grid !important;
+      grid-template-columns:minmax(120px, 21%) 1fr;
+      grid-template-rows:1fr auto;
+      grid-template-areas:"opp center" "mine mine";
+      gap:2px; padding:6px 10px calc(4px + var(--safe-b));
+      align-items:stretch;
+    }
+    body.land #oppZone { grid-area:opp; padding-top:70px; justify-content:flex-start; gap:2px; }
+    body.land #centerZone {
+      grid-area:center; flex-direction:row; flex-wrap:wrap;
+      align-items:center; justify-content:center; gap:10px; padding-bottom:26px;
+    }
+    body.land #myZone {
+      grid-area:mine; flex-direction:row; align-items:flex-end; justify-content:center;
+      gap:8px; padding-bottom:0; padding-right:124px;   /* 오른쪽 아래 이모트·시계 자리 */
+    }
+    /* 덱과 턴 표시는 가운데 칸 안으로 들어온다 (세로에서는 판에 절대 배치) */
+    body.land #turnInfo { position:static; width:auto; order:1; align-self:center; }
+    body.land #deckStack { position:static; transform:none; order:2; align-self:center; }
+    body.land #deckStack .deck-count { bottom:-19px; }
+    body.land #auctionMat { order:3; min-height:0; }
+    body.land #statusBar { order:4; position:absolute; bottom:0; left:50%; transform:translateX(-50%); margin:0; }
+    /* 상대 자리는 좁으므로 카드도 작게 */
+    body.land #oppHand .card { width:34px; height:48px; padding:3px; border-radius:6px; border-width:1.5px; }
+    body.land #oppZone .pile-group .card { width:30px; height:42px; }
+    body.land #myHand { flex:1; min-width:0; }
+    body.land #myBid, body.land #oppBid { flex-shrink:0; }
     /* 눕힌 폰처럼 높이가 아주 낮을 때 — 위아래 여백을 더 줄인다 */
     @media (orientation:landscape) and (max-height:480px) {
       #game, #mini { padding:8px 12px; }
