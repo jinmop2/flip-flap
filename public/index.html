@@ -4051,7 +4051,10 @@
     @keyframes tvBankPop { 40% { transform:translateY(-50%) scale(1.18); } }
 
     #tv-fx { position:absolute; inset:0; pointer-events:none; z-index:9; }
-    .tv-fly { position:absolute; transition:transform .85s cubic-bezier(.4,.05,.3,1), opacity .35s; }
+    /* 날아가는 카드 — 도중에 흐려지면 "끊긴" 것처럼 보인다. 끝까지 또렷하게
+       가서 제 자리에 앉고, 그 순간 자리의 카드가 켜진다. */
+    .tv-fly { position:absolute; transition:transform .85s cubic-bezier(.33,.02,.25,1); z-index:2; }
+    .tv-landing { visibility:hidden; }
     .tv-flychip { position:absolute; width:17px; height:17px;
       transition:transform .7s cubic-bezier(.5,0,.4,1), opacity .3s; }
 

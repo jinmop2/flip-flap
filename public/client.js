@@ -2778,6 +2778,7 @@ function loadSample(key, url) {
     .then(buf => { samples[key] = buf; }).catch(() => {});
 }
 loadSample('cardPlace', '/card-place.mp3?v=1');
+loadSample('chips', '/chips.mp3?v=1');      // 트웰브 — 칩이 쌓이고 오가는 소리
 function playSample(key, vol = 0.9, rate = 1) {
   if (keepOtherAudio) return true;   // 다른 앱 음악 유지 중 — 소리를 내지 않는다
   const buf = samples[key]; if (!buf) return false;
@@ -2848,6 +2849,9 @@ function playSound(n) {
                    jbrass(1047,.32,.5,.14); [523,659,784,880].forEach(f=>tone(f,'sine',.06,.5,.34)); break;
     case 'ping':   tone(1046,'sine',.16,.16); tone(1568,'sine',.12,.22,.09); break;
     case 'emote':  tone(760,'sine',.1,.12); break;
+    // 칩 — 실제 카지노 칩 소리. 값을 부를 때는 짧고 가볍게, 은행으로 쓸릴 때는 크게.
+    case 'chip':   if (!playSample('chips', .5, 1.35)) { tone(900,'sine',.06,.08); } break;
+    case 'chips':  if (!playSample('chips', .85, 0.95)) { tone(880,'triangle',.1,.2); } break;
   }
 }
 
@@ -3831,16 +3835,7 @@ function toggleRules(show) {
   if (!show) return rulesClose();
   rulesTab(currentMode());
 }
-// 그 모드에 처음 들어왔으면 설명서를 먼저 펴 준다. 한 번 본 뒤로는 안 뜬다.
-function rulesFirstTime(mode) {
-  try {
-    const key = 'ff_rules_seen';
-    const seen = JSON.parse(localStorage.getItem(key) || '{}');
-    if (seen[mode]) return;
-    seen[mode] = 1; localStorage.setItem(key, JSON.stringify(seen));
-    setTimeout(() => rulesTab(mode), 400);
-  } catch (_) {}
-}
+
 function toggleRules4(show) { show ? rulesTab(document.body.classList.contains('q-n3') ? '3' : '4') : rulesClose(); }
 window.toggleRulesItem = function (show) { show ? rulesTab('item') : rulesClose(); };
 
@@ -4448,7 +4443,6 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spe
   isSpec = !!spectate;
   isItemMode = !!itemMode;
   document.body.classList.toggle('item-mode', isItemMode);   // 아이템전 전용 톤
-  rulesFirstTime(isItemMode ? 'item' : '2');   // 그 모드 첫 판이면 설명서를 먼저 편다
   gameNicks = nicks || null;
   gameProfiles = profiles || null;
   if (roomId && !isSpec) saveSession(roomId);   // 관전은 재접속 세션 저장 안 함
@@ -5443,7 +5437,6 @@ function tvOpen() {
   document.body.classList.add('twelve');
   tvMoveEmote('tv-emoteSlot');
   try { applyMySkins(); } catch (_) {}   // 장착한 테이블·카드앞면은 어느 모드에서나 그대로
-  rulesFirstTime('twelve');
   document.getElementById('tv-over').classList.remove('show');
   try { startBGM('game'); } catch (_) {}
 }
@@ -5555,7 +5548,11 @@ function tvFlyChips(n, mine) {
     c.className = 'chip ' + (mine ? 'light' : 'dark');
     setTimeout(() => tvFlyTo(c, from, bank, 'tv-flychip'), i * 110);
   }
-  if (n > 0) { const b = document.getElementById('tv-bank'); if (b) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); } }
+  if (n > 0) {
+    tvSfx('chips');   // 칩이 은행으로 쓸려 가는 소리
+    const b = document.getElementById('tv-bank');
+    if (b) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+  }
 }
 
 const tvSfx = (n) => { try { playSound(n); } catch (_) {} };
@@ -5572,8 +5569,8 @@ function tvReact(prev, v) {
 
   // 1) 누가 얼마를 불렀나 (오픈)
   if (v.lot && prev.lot && v.lot.type === 'open') {
-    if ((v.lot.myBet || 0) > (prev.lot.myBet || 0)) { tvSay(meSide, tvChipHtml(v.lot.myBet, true)); tvSfx('select'); }
-    if (v.lot.oppBet !== null && (v.lot.oppBet || 0) > (prev.lot.oppBet || 0)) { tvSay(oppSide, tvChipHtml(v.lot.oppBet, false)); tvSfx('select'); }
+    if ((v.lot.myBet || 0) > (prev.lot.myBet || 0)) { tvSay(meSide, tvChipHtml(v.lot.myBet, true)); tvSfx('chip'); }
+    if (v.lot.oppBet !== null && (v.lot.oppBet || 0) > (prev.lot.oppBet || 0)) { tvSay(oppSide, tvChipHtml(v.lot.oppBet, false)); tvSfx('chip'); }
   }
   // 클로즈 — 진행자가 불렀다(값은 안 보인다)
   if (v.lot && prev.lot && v.lot.type === 'close' && v.lot.turnToAct !== prev.lot.turnToAct) {
@@ -5581,7 +5578,7 @@ function tvReact(prev, v) {
     if (bidder === v.auctioneer) {
       if (bidder === v.me) tvSay(meSide, tvChipHtml(v.lot.closeBetKnown, true));
       else tvSay(oppSide, '<b>?</b> 걸었어요');
-      tvSfx('select');
+      tvSfx('chip');
     }
   }
 
@@ -5622,16 +5619,56 @@ function tvReact(prev, v) {
   }
 }
 
-function tvPile(box, cards, hideIds) {
+// 더미. 날아오는 중인 카드는 자리는 잡되 안 보이게 둔다 —
+// 그래야 날아온 카드가 내려앉을 곳이 미리 정해진다.
+function tvPile(box, cards, landingIds) {
+  if (!box) return;
   box.innerHTML = '';
-  if (hideIds && hideIds.length) cards = cards.filter((c) => !hideIds.includes(c.id));
   const byKind = {};
   for (const c of cards) (byKind[c.kind] = byKind[c.kind] || []).push(c);
   for (const k of Object.keys(byKind)) {
     const g = document.createElement('div'); g.className = 'pile-group';
-    for (const c of byKind[k]) g.appendChild(makeCard(c));
+    for (const c of byKind[k]) {
+      const el = makeCard(c);
+      el.dataset.cid = String(c.id);
+      if (landingIds && landingIds.includes(c.id)) el.classList.add('tv-landing');
+      g.appendChild(el);
+    }
     box.appendChild(g);
   }
+}
+
+// 경매대에서 더미의 제 자리까지 — 크기까지 맞춰 내려앉는다
+function tvLand(prize, iWon) {
+  const fx = document.getElementById('tv-fx'), mat = document.getElementById('tv-mat');
+  const dest = document.getElementById(iWon ? 'tv-myAcq' : 'tv-oppAcq');
+  if (!fx || !mat || !dest) { tvFlying = []; return; }
+  const host = fx.getBoundingClientRect(), from = mat.getBoundingClientRect();
+  const W = 70, H = 98;
+  prize.forEach((card, i) => {
+    const seat = dest.querySelector(`[data-cid="${card.id}"]`);
+    if (!seat) { tvFlyDone(card.id); return; }
+    const t = seat.getBoundingClientRect();
+    const el = makeCard(card);
+    el.classList.add('tv-fly');
+    el.style.width = W + 'px'; el.style.height = H + 'px';
+    el.style.left = (from.left - host.left + from.width / 2 - W / 2 + (i ? 26 : -26)) + 'px';
+    el.style.top = (from.top - host.top + from.height / 2 - H / 2) + 'px';
+    fx.appendChild(el);
+    const dx = (t.left + t.width / 2) - (from.left + from.width / 2) - (i ? 26 : -26);
+    const dy = (t.top + t.height / 2) - (from.top + from.height / 2);
+    const sc = t.width / W;
+    requestAnimationFrame(() => { el.style.transform = `translate(${dx}px, ${dy}px) scale(${sc})`; });
+    // 다 가서 자리에 앉으면, 그 자리의 카드를 켜고 날던 카드를 치운다
+    setTimeout(() => { el.remove(); tvFlyDone(card.id); tvSfx('place'); }, 880);
+  });
+}
+// 한 장이 다 내려앉았다 — 그 사이 판을 다시 그렸어도 켜지도록 더미를 다시 그린다
+function tvFlyDone(id) {
+  tvFlying = tvFlying.filter((x) => x !== id);
+  if (!tvView) return;
+  tvPile(document.getElementById('tv-myAcq'), tvView.myAcq, tvFlying);
+  tvPile(document.getElementById('tv-oppAcq'), tvView.oppAcq, tvFlying);
 }
 
 function tvRender(v) {
@@ -5702,12 +5739,9 @@ function tvRender(v) {
     slot.appendChild(makeOppBack()); oh.appendChild(slot);
   }
   if (typeof fanRow === 'function') fanRow(oh, true);
-  // 방금 낙찰된 카드는 날아가는 동안 더미에서 빼 둔다 — 안 그러면 카드가
-  // 두 장으로 보인다(하나는 날고, 하나는 이미 도착해 있고).
-  const flying = tvFlying.length ? tvFlying : null;
-  const iWonLast = v.last && v.last.winner === v.me;
-  tvPile($('tv-myAcq'), v.myAcq, flying && iWonLast ? flying : null);
-  tvPile($('tv-oppAcq'), v.oppAcq, flying && !iWonLast ? flying : null);
+  // 날아오는 중인 카드는 자리만 잡고 아직 안 보인다 (tvLand 가 켠다)
+  tvPile($('tv-myAcq'), v.myAcq, tvFlying);
+  tvPile($('tv-oppAcq'), v.oppAcq, tvFlying);
   tvActions(v);
 }
 
@@ -5731,7 +5765,7 @@ function tvAmount(box, lo, hi, step, init) {
   paint();
   return { get: () => v };
 }
-function sfxTick() { try { playSound('select'); } catch (_) {} }
+function sfxTick() { try { playSound(document.body.classList.contains('twelve') ? 'chip' : 'select'); } catch (_) {} }
 
 function tvActions(v) {
   const st = document.getElementById('tv-status');

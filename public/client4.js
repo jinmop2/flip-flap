@@ -797,7 +797,6 @@
     window.q4Close();
     $('q-over').classList.remove('show');
     document.body.classList.add('quad4');
-    try { rulesFirstTime(document.body.classList.contains('q-n3') ? '3' : '4'); } catch (_) {}
     applySkins4();
     q4Live = true; q4Room = null; lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
     $('q-status').textContent = '자리 배치 중…';

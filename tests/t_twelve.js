@@ -354,9 +354,17 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('부른 값이 말풍선으로 뜬다', /function tvSay/.test(cli) && /tvSay\(meSide, tvChipHtml\(v\.lot\.myBet, true\)\)/.test(cli));
   ok('상대가 물러선 것도 보인다', /물러설게요/.test(cli) && /안 살래요/.test(cli));
   ok('칩이 은행으로 날아간다', /function tvFlyChips/.test(cli));
-  ok('카드가 이긴 쪽으로 날아간다', /tvFlyTo\(el, document\.getElementById\('tv-mat'\), dest\)/.test(cli));
+  ok('카드가 이긴 쪽으로 날아간다', /function tvLand\(prize, iWon\)/.test(cli));
+  // 더미 상자 한가운데가 아니라, 실제로 놓일 자리의 좌표로 날아가야 끊겨 보이지 않는다
+  ok('제 자리로 정확히 내려앉는다', /dest\.querySelector\(`\[data-cid="\$\{card\.id\}"\]`\)/.test(cli)
+     && /const sc = t\.width \/ W;/.test(cli));
+  ok('가는 도중에 흐려지지 않는다', /\.tv-fly \{ position:absolute; transition:transform \.85s [^}]*\}/.test(htm)
+     && !/\.tv-fly \{[^}]*opacity/.test(htm));
+  ok('앉을 자리를 미리 잡아 둔다', /\.tv-landing \{ visibility:hidden; \}/.test(htm)
+     && /el\.classList\.add\('tv-landing'\)/.test(cli));
+  ok('다 앉으면 켜 준다', /function tvFlyDone\(id\)/.test(cli));
   ok('경매품은 경매대에 안 남는다', !/정산 중에는 경매품을 그대로 둔다/.test(cli));
-  ok('넘어가기 전에 연출할 틈이 있다', /\}, 1700\);/.test(cli));
+  ok('넘어가기 전에 연출할 틈이 있다', /\}, 880\);/.test(cli));
   // 말풍선 꼬리는 말한 사람 쪽을 봐야 한다
   ok('상대 말풍선 꼬리는 위로', /\.tv-say:not\(\.me\) \.bub::after \{ bottom:100%/.test(htm));
   ok('내 말풍선 꼬리는 아래로', /\.tv-say\.me \.bub::after \{ top:100%/.test(htm));
@@ -418,10 +426,17 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
      !/socket\.on\('tv_clock'[\s\S]{0,700}tvRender\(/.test(cli));
 
   // 소리 — 2인전이 쓰는 이름을 같은 뜻으로
-  const names = ['flip', 'card', 'place', 'select', 'back', 'reveal', 'deal', 'tick', 'hourglass', 'setwin', 'defeat'];
+  const names = ['flip', 'card', 'place', 'back', 'reveal', 'deal', 'tick', 'hourglass', 'setwin', 'defeat'];
   for (const n of names) ok(`소리 ${n} 를 쓴다`, new RegExp(`tvSfx\\('${n}'\\)`).test(cli));
   ok('없는 소리를 부르지 않는다', !/tvSfx\('lose'\)/.test(cli) && !/playSound\('lose'\)/.test(cli));
   ok('초읽기는 겹쳐 울리지 않는다', /Date\.now\(\) - tvTickAt > 900/.test(cli));
+  // 칩은 진짜 칩 소리로
+  ok('칩 소리 파일이 있다', require('fs').existsSync(require('path').join(__dirname, '..', 'public/chips.mp3')));
+  ok('칩 소리를 불러 둔다', /loadSample\('chips', '\/chips\.mp3/.test(cli));
+  ok('값을 부르면 칩이 울린다', /tvSfx\('chip'\)/.test(cli));
+  ok('은행으로 쓸릴 때도 울린다', /tvSfx\('chips'\)/.test(cli));
+  ok('두 소리 다 대체음이 있다', /playSample\('chips', \.5, 1\.35\)\) \{ tone/.test(cli)
+     && /playSample\('chips', \.85, 0\.95\)\) \{ tone/.test(cli));
   ok('시간패도 이유를 말해 준다', /endBy === 'time' \? '시간 초과'/.test(cli));
   // 클로즈에서 가려지는 것은 출품 카드다 — 값은 보여준다
   ok('낼 값을 화면에 쓴다', /const cost = v\.lot\.takeCost;/.test(cli));
@@ -433,7 +448,7 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   ok('끝난 판은 안 넘긴다', /if \(g\.over\) \{ tvFinish\(roomId\); return; \}/.test(srv));
   // 낙찰 카드는 이긴 쪽 필드로 간다 — 경매대에 남지 않는다
   ok('경매대를 비운다', /경매대는 비운다/.test(cli));
-  ok('날아간 뒤 더미에 얹는다', /tvFlying = \[\];/.test(cli) && /tvPile\(box, cards, hideIds\)/.test(cli));
+  ok('날아간 뒤 더미에 얹는다', /tvFlying = tvFlying\.filter/.test(cli) && /tvPile\(box, cards, landingIds\)/.test(cli));
   // 칩은 가운데에서 오른쪽 은행으로만 흐른다
   ok('은행 자리가 있다', /id="tv-bank"/.test(htm) && /#tv-bank \{ position:absolute; left:calc\(50% \+ 176px\)/.test(htm));
   ok('칩은 경매대에서 은행으로', /const from = document\.getElementById\('tv-mat'\);[\s\S]{0,120}getElementById\('tv-bank'\)/.test(cli));
@@ -518,8 +533,8 @@ console.log('\n㉒ 모드가 달라도 내 것은 그대로 — 스킨·설명�
   // 설명서는 지금 모드부터
   ok('지금 모드를 안다', /function currentMode\(\)/.test(cli) && /c\.contains\('twelve'\)\) return 'twelve'/.test(cli));
   ok('설명 버튼이 그 탭을 연다', /rulesTab\(currentMode\(\)\)/.test(cli));
-  ok('처음 들어오면 먼저 펴 준다', /function rulesFirstTime/.test(cli)
-     && /rulesFirstTime\('twelve'\)/.test(cli) && /rulesFirstTime\(isItemMode \? 'item' : '2'\)/.test(cli));
+  // 설명서는 눌렀을 때만 뜬다 — 판이 시작될 때 저절로 뜨면 방해만 된다
+  ok('저절로 뜨지 않는다', !/rulesFirstTime/.test(cli));
 
   // 오른쪽 끝 패가 옆줄에 가리지 않게
   ok('세로줄 빈자리는 손가락을 통과시킨다', /#tv-oppbar, #tv-mebar \{ pointer-events:none; \}/.test(htm)
