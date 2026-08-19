@@ -296,8 +296,11 @@ function viewFor(g, me) {
     chips: { me: g.chips[me], opp: g.chips[you] },
     lot: l ? {
       center: l.center,
-      // 클로즈는 출품 카드를 결과 전까지 가린다(클래식과 같은 결)
-      offered: (l.type === 'close' && !reveal && me !== g.auctioneer) ? null : l.offered,
+      // 출품 카드는 상대에게 곧바로 보이지 않는다.
+      // 방식을 고르기 전(type === null)에도 가려야 한다 — 안 가리면 클로즈를
+      // 고르는 순간 이미 본 카드를 다시 덮는 꼴이라, 가린 의미가 없다.
+      // 오픈으로 정해지면 그때 열린다. 클로즈는 결과가 날 때까지 덮어 둔다.
+      offered: (me !== g.auctioneer && !reveal && l.type !== 'open') ? null : l.offered,
       hasOffer: !!l.offered,
       type: l.type,
       turnToAct: l.turnToAct,

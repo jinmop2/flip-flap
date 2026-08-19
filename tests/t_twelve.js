@@ -120,6 +120,16 @@ console.log('\n⑦ 클로즈에서 진행자가 부른 값은 안 보인다');
   const v2 = T.viewFor(g, 2);
   ok('상대에게 진행자 배팅이 안 나간다', v2.lot.oppBet === null && v2.lot.closeBetKnown === null);
   ok('출품 카드도 가려진다', v2.lot.offered === null && v2.lot.hasOffer === true);
+  // 방식을 고르기 전에도 가려야 한다 — 안 가리면 클로즈를 고르는 순간
+  // 이미 본 카드를 다시 덮는 꼴이라 가린 의미가 없다
+  {
+    const w = T.createGame({ rnd: rng(71) });
+    T.draw(w, 1); T.offer(w, 1, w.hands[1][0].id);
+    ok('고르기 전에는 상대에게 안 보인다', T.viewFor(w, 2).lot.offered === null && T.viewFor(w, 2).lot.hasOffer === true);
+    ok('진행자는 자기 카드를 본다', T.viewFor(w, 1).lot.offered !== null);
+    T.chooseType(w, 1, 'open');
+    ok('오픈으로 정하면 그때 열린다', T.viewFor(w, 2).lot.offered !== null);
+  }
   // 가려지는 것은 값이 아니라 출품 카드다 — 하나 더 얹어 사는 규칙이니 값은 알 수밖에 없다
   ok('낼 값은 알려준다', v2.lot.takeCost === 9, String(v2.lot.takeCost));
   ok('살 수 있는지도 알려준다', v2.lot.canTake === true);

@@ -5613,7 +5613,7 @@ function tvReact(prev, v) {
   // 뒤집으면 flip, 내려놓으면 place, 부르면 select, 정산은 reveal.
   if (v.centerLeft < prev.centerLeft) tvSfx('flip');
   if (v.lot && !prev.lot) tvSfx('card');
-  if (v.lot && prev.lot && v.lot.offered && !prev.lot.offered) tvSfx('place');
+  if (v.lot && prev.lot && v.lot.hasOffer && !prev.lot.hasOffer) tvSfx('place');
 
   // 1) 누가 얼마를 불렀나 (오픈)
   if (v.lot && prev.lot && v.lot.type === 'open') {
@@ -5749,8 +5749,8 @@ function tvRender(v) {
   if (v.lot) {
     c.appendChild(makeCard(v.lot.center));
     if (v.lot.offered) o.appendChild(makeCard(v.lot.offered));
-    else if (v.lot.hasOffer) o.appendChild(v.auctioneer === v.me ? makeMyBack() : makeOppBack());   // 클로즈 — 가려져 있다
-    $('tv-offerLbl').textContent = (v.lot.type === 'close' && !v.lot.offered) ? '출품 (비공개)' : '출품 카드';
+    else if (v.lot.hasOffer) o.appendChild(v.auctioneer === v.me ? makeMyBack() : makeOppBack());   // 아직 안 열린 출품 카드
+    $('tv-offerLbl').textContent = (v.lot.hasOffer && !v.lot.offered) ? '출품 (비공개)' : '출품 카드';
     $('tv-typeBadge').textContent = v.lot.type === 'open' ? '오픈 경매'
       : v.lot.type === 'close' ? '클로즈 경매' : '';
     // 2인전 경매대와 같은 알약 — 오픈은 초록, 클로즈는 보라
