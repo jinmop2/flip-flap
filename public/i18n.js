@@ -35,7 +35,6 @@
     '다음 턴': 'Next turn',
     '상대가 부르는 중…': 'They are bidding…',
     '상대가 살지 고르는 중…': 'They are deciding whether to buy…',
-    '짝수 개를 부르세요 (상대는 얼마인지 몰라요)': 'Bid an even number (they cannot see it)',
     '칩이 모자라요 — 물러서야 해요': 'Not enough chips — you must fold',
     '칩이 2개 이상 있어야 해요': 'You need at least 2 chips',
     '출품 (비공개)': 'Offered (hidden)',

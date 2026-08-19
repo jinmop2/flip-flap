@@ -44,10 +44,13 @@ console.log('\n② 탭은 상자 밖에 있다');
 
 console.log('\n③ 기본은 2인용');
 {
-  ok('게임방법 버튼은 2인용을 연다', /rulesTab\('2'\)/.test(cli));
+  ok('로비에서는 2인용을 연다', /return '2';\s*\n\}/.test(cli));
   ok('2인용이 기본값', /let rulesCur = '2'/.test(cli));
+  // 어느 판에 앉아 있느냐로 탭을 고른다 — 트웰브를 하다 눌렀는데 클래식이 뜨면 소용없다
   ok('판을 보고 알맞은 탭으로 연다',
-     /classList\.contains\('quad4'\)[\s\S]{0,120}rulesTab\(document\.body\.classList\.contains\('q-n3'\) \? '3' : '4'\)/.test(cli));
+     /function currentMode\(\)[\s\S]{0,400}contains\('twelve'\)\) return 'twelve'/.test(cli)
+     && /contains\('quad4'\)\) return c\.contains\('q-n3'\) \? '3' : '4'/.test(cli)
+     && /rulesTab\(currentMode\(\)\)/.test(cli));
   ok('한 번에 하나만 열린다', /mid === id \? 'flex' : 'none'/.test(cli));
   ok('켜진 탭을 칠한다', /classList\.toggle\('on', b\.dataset\.rt === name\)/.test(cli));
 }

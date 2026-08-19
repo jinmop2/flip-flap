@@ -206,7 +206,7 @@ ok('메뉴바 자리만큼 창 아래를 비운다', /body:not\(\.ingame\):not\(
 {
   const tabs = ['missionModal', 'shopModal', 'friendsModal', 'clanModal', 'lbModal', 'gachaModal'];
   ok('탭 창이 화면을 통째로 쓴다',
-     /#missionModal, #friendsModal, #clanModal, #gachaModal \{[\s\S]{0,120}padding:0 0 var\(--tabgap/.test(htm)
+     /#missionModal, #friendsModal, #clanModal, #gachaModal,\s*\n\s*#soloModal, #multiModal \{[\s\S]{0,120}padding:0 0 var\(--tabgap/.test(htm)
      && /#shopModal \{ padding:0 0 var\(--tabgap/.test(htm)
      && /#lbModal \{ padding:0 0 var\(--tabgap/.test(htm));
   ok('메뉴바 자리는 로비에서만 비운다',

@@ -1797,7 +1797,9 @@ io.on('connection', (socket) => {
     let ok = false;
     switch (data.act) {
       case 'draw':     ok = twelve.draw(g, me); break;
-      case 'offer':    ok = twelve.offer(g, me, data.cardId); break;
+      // 아직 방식을 안 골랐으면 출품 카드를 다시 고를 수 있다
+      case 'offer':    ok = g.phase === 'choose' ? twelve.reoffer(g, me, data.cardId)
+                                                 : twelve.offer(g, me, data.cardId); break;
       case 'choose':   ok = twelve.chooseType(g, me, data.type); break;
       case 'raise':    ok = twelve.raise(g, me, data.amount); break;
       case 'fold':     ok = twelve.fold(g, me); break;

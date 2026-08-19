@@ -3817,12 +3817,29 @@ function rulesClose() {
   }
 }
 // 판을 보고 알맞은 탭으로 연다 — 다인전 화면에서 2인전 설명이 뜨면 더 헷갈린다
+// 지금 앉아 있는 판이 어느 모드인가 — 설명서는 늘 이 탭부터 연다.
+// 트웰브를 하다 설명을 눌렀는데 클래식 규칙이 뜨면 아무 소용이 없다.
+function currentMode() {
+  const c = document.body.classList;
+  if (c.contains('twelve')) return 'twelve';
+  if (c.contains('quad4')) return c.contains('q-n3') ? '3' : '4';
+  if (c.contains('mini-on')) return 'mini';
+  if (c.contains('item-mode')) return 'item';
+  return '2';
+}
 function toggleRules(show) {
   if (!show) return rulesClose();
-  if (document.body.classList.contains('quad4')) {
-    return rulesTab(document.body.classList.contains('q-n3') ? '3' : '4');
-  }
-  rulesTab('2');
+  rulesTab(currentMode());
+}
+// 그 모드에 처음 들어왔으면 설명서를 먼저 펴 준다. 한 번 본 뒤로는 안 뜬다.
+function rulesFirstTime(mode) {
+  try {
+    const key = 'ff_rules_seen';
+    const seen = JSON.parse(localStorage.getItem(key) || '{}');
+    if (seen[mode]) return;
+    seen[mode] = 1; localStorage.setItem(key, JSON.stringify(seen));
+    setTimeout(() => rulesTab(mode), 400);
+  } catch (_) {}
 }
 function toggleRules4(show) { show ? rulesTab(document.body.classList.contains('q-n3') ? '3' : '4') : rulesClose(); }
 window.toggleRulesItem = function (show) { show ? rulesTab('item') : rulesClose(); };
@@ -4431,6 +4448,7 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spe
   isSpec = !!spectate;
   isItemMode = !!itemMode;
   document.body.classList.toggle('item-mode', isItemMode);   // 아이템전 전용 톤
+  rulesFirstTime(isItemMode ? 'item' : '2');   // 그 모드 첫 판이면 설명서를 먼저 편다
   gameNicks = nicks || null;
   gameProfiles = profiles || null;
   if (roomId && !isSpec) saveSession(roomId);   // 관전은 재접속 세션 저장 안 함
@@ -4789,7 +4807,7 @@ const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 't
 const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal', face_obsidian: 'cf-obsidian', face_hanji: 'cf-hanji', face_shard: 'cf-shard', face_hwatu: 'cf-hwatu' };
 function applyMySkins() {
   // 경기장이 여럿이다(2인전·미니게임). 하나만 칠하면 미니게임만 맨 테이블이 된다.
-  for (const id of ['game', 'mini']) {
+  for (const id of ['game', 'mini', 'tv']) {
     const g = document.getElementById(id); if (!g) continue;
     // 벗길 목록을 손으로 적으면 새 스킨을 넣을 때마다 빠뜨린다 —
     // 실제로 파편 테이블·앞면이 여기서 누락돼 갈아입어도 예전 스킨이 남았다.
@@ -5424,6 +5442,8 @@ function tvMoveEmote(into) {
 function tvOpen() {
   document.body.classList.add('twelve');
   tvMoveEmote('tv-emoteSlot');
+  try { applyMySkins(); } catch (_) {}   // 장착한 테이블·카드앞면은 어느 모드에서나 그대로
+  rulesFirstTime('twelve');
   document.getElementById('tv-over').classList.remove('show');
   try { startBGM('game'); } catch (_) {}
 }
@@ -5446,11 +5466,13 @@ window.tvAgain = function () {
   if (tvBot) { socket.emit('leave_room'); setTimeout(() => socket.emit('tv_solo', { pid: PID, nick: getNick(), diff: tvDiff }), 150); }
   else tvQuit();
 };
-window.tvRules = function (show) { if (show && typeof rulesTab === 'function') { toggleRules(true); rulesTab('twelve'); } };
+window.tvRules = function (show) { if (show) toggleRules(true); };
 const tvAct = (act, extra) => socket.emit('tv_act', Object.assign({ act }, extra || {}));
 
 socket.on('tv_begin', (d) => {
   tvMe = d.me; tvBot = !!d.vsBot; tvPrev = null;
+  // 카드백 스킨은 이 두 값을 보고 붙는다 — 안 넣어 두면 트웰브만 맨 뒷면이 된다
+  gameProfiles = d.profiles || null; myIndex = d.me;
   tvOpen();
   // 내 프로필이 안 보이면 누구 자리인지가 안 읽힌다 — 클래식과 같은 카드를 쓴다
   const pr = d.profiles || [];
@@ -5642,7 +5664,7 @@ function tvRender(v) {
   if (v.lot) {
     c.appendChild(makeCard(v.lot.center));
     if (v.lot.offered) o.appendChild(makeCard(v.lot.offered));
-    else if (v.lot.hasOffer) o.appendChild(makeCard(null));   // 클로즈 — 가려져 있다
+    else if (v.lot.hasOffer) o.appendChild(v.auctioneer === v.me ? makeMyBack() : makeOppBack());   // 클로즈 — 가려져 있다
     $('tv-offerLbl').textContent = (v.lot.type === 'close' && !v.lot.offered) ? '출품 (비공개)' : '출품 카드';
     $('tv-typeBadge').textContent = v.lot.type === 'open' ? '오픈 경매'
       : v.lot.type === 'close' ? '클로즈 경매' : '';
@@ -5663,7 +5685,9 @@ function tvRender(v) {
   }
 
   const mh = $('tv-myHand'); mh.innerHTML = '';
-  const canOffer = v.phase === 'offer' && v.auctioneer === v.me;
+  // 방식을 고르기 전이면 출품 카드를 다시 고를 수 있다 — 아직 아무것도
+  // 걸지 않았는데 한 번 눌렀다고 못 무르면 그건 그냥 오작동이다.
+  const canOffer = (v.phase === 'offer' || v.phase === 'choose') && v.auctioneer === v.me;
   [...v.myHand].sort((a, b) => a.kind - b.kind || a.grade - b.grade).forEach((card) => {
     const el = makeCard(card, canOffer ? { selectable: true, tapOnSlot: true,
       onClick: (cc) => tvAct('offer', { cardId: cc.id }) } : {});
@@ -5675,7 +5699,7 @@ function tvRender(v) {
   const oh = $('tv-oppHand'); oh.innerHTML = '';
   for (let i = 0; i < v.oppHandLen; i++) {
     const slot = document.createElement('div'); slot.className = 'fan-slot';
-    slot.appendChild(makeCard(null)); oh.appendChild(slot);
+    slot.appendChild(makeOppBack()); oh.appendChild(slot);
   }
   if (typeof fanRow === 'function') fanRow(oh, true);
   // 방금 낙찰된 카드는 날아가는 동안 더미에서 빼 둔다 — 안 그러면 카드가
@@ -5756,17 +5780,18 @@ function tvActions(v) {
     if (mine) {
       if (!myTurn) { st.textContent = '상대가 살지 고르는 중…'; return; }
       const hi = v.chips.me - (v.chips.me % 2);
-      st.textContent = '짝수 개를 부르세요 (상대는 얼마인지 몰라요)';
+      st.textContent = '짝수 개를 부르세요 (상대는 무엇인지 모른 채 삽니다)';
       const amt = tvAmount(box, 2, hi, 2, 2);
       btn('부르기', () => tvAct('closeBet', { amount: amt.get() }));
       return;
     }
     if (!myTurn) { st.textContent = '상대가 부르는 중…'; return; }
-    // 얼마인지는 끝내 안 보여준다. 값을 보여주면 "부른 값 + 1" 에서
-    // 상대가 얼마를 걸었는지가 그대로 드러난다 — 클로즈가 클로즈가 아니게 된다.
-    st.textContent = '얼마인지 모른 채 골라요 — 하나 더 얹어 살까요?';
-    const b = btn('사기', () => tvAct('take'));
-    if (v.chips.me <= 0) { b.disabled = true; b.title = '칩이 없어요'; }
+    // 낼 값은 알려준다 — 하나를 더 얹어 사는 것이 규칙이니 값은 알 수밖에 없다.
+    // 가려지는 것은 값이 아니라 출품 카드다.
+    const cost = v.lot.takeCost;
+    st.textContent = `${cost} 을 내고 살까요? (무엇을 사는지는 안 보여요)`;
+    const b = btn(`${cost} 내고 사기`, () => tvAct('take'));
+    if (v.lot.canTake === false) { b.disabled = true; b.title = '칩이 모자라요'; }
     btn('안 사기', () => tvAct('decline'), true);
     return;
   }

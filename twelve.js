@@ -124,6 +124,19 @@ function offer(g, who, cardId) {
   return true;
 }
 
+// 2-1) 아직 방식을 안 골랐으면 출품 카드를 바꿀 수 있다.
+// 값을 건 것도, 상대가 본 것도 없다 — 무를 수 없을 이유가 없다.
+function reoffer(g, who, cardId) {
+  if (g.over || g.phase !== 'choose' || who !== g.auctioneer || !g.lot) return false;
+  const h = g.hands[who];
+  const i = h.findIndex((c) => String(c.id) === String(cardId));
+  if (i < 0) return false;
+  const back = g.lot.offered;
+  g.lot.offered = h.splice(i, 1)[0];
+  if (back) h.push(back);
+  return true;
+}
+
 // 3) 경매 방식
 // 클로즈는 짝수를 불러야 하므로 최소 2개가 필요하다. 칩이 1개뿐인 진행자가
 // 클로즈를 고르면 부를 수 있는 값이 없어 경매가 멈춘다 — 그때는 오픈만 고른다.
@@ -192,13 +205,15 @@ function closeBet(g, who, n) {
   return true;
 }
 // 상대가 산다 — 부른 값 + 1.
-// 얼마인지는 끝까지 모른 채 결정한다. 그게 이 경매의 전부다.
-// 그래서 가진 칩보다 비쌀 수도 있다 — 그때는 가진 것을 전부 낸다(정산에서 깎인다).
+// 얼마를 걸었는지는 알려준다(하나를 더 얹어야 하니 알 수밖에 없다).
+// 가려지는 것은 값이 아니라 출품 카드다 — 무엇을 사는지 모르고 값만 아는 것,
+// 그게 클로즈다.
 function closeTake(g, who) {
   if (g.over || g.phase !== 'close' || !g.lot || g.lot.turnToAct !== who) return false;
   if (who === g.auctioneer || !g.lot.closeBet) return false;
-  if (g.chips[who] <= 0) return false;
-  g.lot.bets[who] = g.lot.closeBet + 1;
+  const need = g.lot.closeBet + 1;
+  if (g.chips[who] < need) return false;
+  g.lot.bets[who] = need;
   settle(g, who);
   return true;
 }
@@ -291,9 +306,10 @@ function viewFor(g, me) {
       oppBet: l.type === 'open' ? (l.bets[you] || 0) : null,
       closeBetKnown: l.type === 'close' && me === g.auctioneer ? l.closeBet : null,
       minRaise: (g.phase === 'bid' && l.turnToAct === me) ? minRaise(g, me) : null,
-      // 살지 말지 고를 수는 있어도, 얼마인지는 안 알려준다.
-      // 값을 알려주면 "부른 값 + 1" 에서 부른 값이 그대로 드러난다.
-      canTake: (g.phase === 'close' && l.turnToAct === me && me !== g.auctioneer && g.chips[me] > 0),
+      // 살 값은 알려준다 — 하나를 더 얹어 사는 것이 규칙이니 값은 알 수밖에 없다.
+      takeCost: (g.phase === 'close' && l.turnToAct === me && me !== g.auctioneer) ? l.closeBet + 1 : null,
+      canTake: (g.phase === 'close' && l.turnToAct === me && me !== g.auctioneer
+                && g.chips[me] >= l.closeBet + 1),
       canClose: g.phase === 'choose' && me === g.auctioneer ? canChoose(g, 'close') : null,
     } : null,
     last: g.last,
@@ -476,19 +492,6 @@ function scoreIf(g, me, iGet, myPay, opPay, cards, left, lots) {
     g.chips[me] - myPay, g.chips[you] - opPay, left, lots);
 }
 
-// 상대가 클로즈 물건을 살 것인가. 상대 눈에는 공개 카드 한 장만 보인다 —
-// 그 한 장이 상대에게 값진지로 가늠한다. (상대 손패는 안 본다)
-function oppWouldTake(g, me) {
-  const you = other(me);
-  const seen = [g.lot.center].filter(Boolean);
-  const left = unseenCounts(g, me, seen);
-  const before = setDist(g.acq[you], left);
-  const after = setDist(g.acq[you].concat(seen), left);
-  if (after === 0) return true;                       // 사면 이기는 물건
-  if (before - after >= 1) return true;               // 한 걸음 당겨진다
-  return partial(g.acq[you].concat(seen), left) - partial(g.acq[you], left) > 0.18;
-}
-
 // 이 판에서 더 낼 수 있는 상한.
 // 칩을 0 까지 쓰면, 그 경매에서 세트를 못 냈을 때 그대로 진다. 그래서
 // "먹으면 이기는 수" 가 아닌 한 마지막 한 칩은 남긴다 — 이 한 줄이 승률을 가른다.
@@ -573,15 +576,18 @@ function aiAct(g, me, rnd = Math.random, level = 'hard') {
         const you = other(me);
         const cards = [g.lot.center, g.lot.offered].filter(Boolean);
         const left = unseenCounts(g, me, cards), lots = lotsLeft(g);
-        const willTake = oppWouldTake(g, me);
+        // 상대는 값을 보고 고른다. 상대 상한보다 비싸게 부르면 안 사고,
+        // 그러면 내가 그 값을 전액 문다. 그 갈림까지 셈에 넣어 고른다.
+        const opCeil = oppCeiling(g, you);
         let best = -Infinity, bet = 2;
-        for (let b = 2; b <= Math.min(cap, g.chips[me]); b += 2) {
-          const sc = willTake
+        for (let b = 2; b <= Math.min(cap, g.chips[you] - 1, g.chips[me]); b += 2) {
+          const takes = (b + 1) <= opCeil;
+          const sc = takes
             ? scoreIf(g, me, false, Math.floor(b / 2), Math.min(b + 1, g.chips[you]), cards, left, lots)
             : scoreIf(g, me, true, b, 0, cards, left, lots);
           if (sc > best) { best = sc; bet = b; }
         }
-        return { act: 'closeBet', amount: bet };
+        return { act: 'closeBet', amount: Math.max(2, bet) };
       }
       // 상대는 값을 모른 채 고른다. 그러니 값의 크기는 "내가 얼마에 가져오느냐"
       // 가 아니라 "상대가 사면 얼마나 뜯기느냐" 를 정한다.
@@ -596,16 +602,13 @@ function aiAct(g, me, rnd = Math.random, level = 'hard') {
       if (v > g.chips[me]) v = g.chips[me] - (g.chips[me] % 2);
       return { act: 'closeBet', amount: Math.max(2, v) };
     }
-    // 사는 쪽 — 얼마인지 모른다. 값이 아니라 "이 물건이 나에게 값진가" 로 고른다.
+    // 사는 쪽 — 낼 값은 안다. 모르는 것은 출품 카드다.
+    // 그래서 "보이는 공개 카드 + 안 보이는 한 장" 의 값어치와 낼 값을 견준다.
+    const cost = g.lot.closeBet + 1;
+    if (g.chips[me] < cost) return { act: 'decline' };
     if (a.mustWin || a.mustDeny) return { act: 'take' };
     const cap = ceilingFor(g, me, P, a, rnd);
-    // 진행자는 자기 상한 언저리를 부른다. 그 어림값보다 이 물건이 값져야 산다.
-    // 전문가는 한 걸음 더 본다 — 내가 탐낼 물건이면 진행자도 그걸 알고 크게 걸어
-    // 나를 말리려 든다. 그래서 탐나 보일수록 비싸게 잡는다.
-    let guess = Math.max(3, Math.round(g.chips[A] * 0.35));
-    if (P.reason && oppWouldTake(g, A)) guess = Math.max(guess, Math.round(g.chips[A] * 0.5) + 1);
-    if (cap >= guess && g.chips[me] > guess) return { act: 'take' };
-    return { act: 'decline' };
+    return cap >= cost ? { act: 'take' } : { act: 'decline' };
   }
   return null;
 }
@@ -637,7 +640,7 @@ function chooseFallback(g, me) {
 
 module.exports = {
   SPEC, START_CHIPS, HAND, CENTER,
-  createGame, draw, offer, chooseType,
+  createGame, draw, offer, reoffer, chooseType,
   canChoose, canRaise, minRaise, maxRaise, raise, fold,
   canCloseBet, closeBet, closeTake, closeDecline,
   settle, nextTurn, viewFor,

@@ -120,9 +120,9 @@ console.log('\n⑦ 클로즈에서 진행자가 부른 값은 안 보인다');
   const v2 = T.viewFor(g, 2);
   ok('상대에게 진행자 배팅이 안 나간다', v2.lot.oppBet === null && v2.lot.closeBetKnown === null);
   ok('출품 카드도 가려진다', v2.lot.offered === null && v2.lot.hasOffer === true);
-  // 값을 알려주면 "부른 값 + 1" 에서 부른 값이 그대로 드러난다 — 어디에도 안 싣는다
-  ok('낼 값도 안 알려준다', v2.lot.takeCost === undefined && !JSON.stringify(v2).includes('"9"'));
-  ok('살 수 있다는 것만 알려준다', v2.lot.canTake === true);
+  // 가려지는 것은 값이 아니라 출품 카드다 — 하나 더 얹어 사는 규칙이니 값은 알 수밖에 없다
+  ok('낼 값은 알려준다', v2.lot.takeCost === 9, String(v2.lot.takeCost));
+  ok('살 수 있는지도 알려준다', v2.lot.canTake === true);
   ok('진행자에겐 살 자리가 없다', T.viewFor(g, 1).lot.canTake === false);
   const v1 = T.viewFor(g, 1);
   ok('진행자는 자기 값을 안다', v1.lot.closeBetKnown === 8);
@@ -423,9 +423,9 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   ok('없는 소리를 부르지 않는다', !/tvSfx\('lose'\)/.test(cli) && !/playSound\('lose'\)/.test(cli));
   ok('초읽기는 겹쳐 울리지 않는다', /Date\.now\(\) - tvTickAt > 900/.test(cli));
   ok('시간패도 이유를 말해 준다', /endBy === 'time' \? '시간 초과'/.test(cli));
-  // 클로즈는 정말로 안 보인다 — 화면에도 값이 없다
-  ok('화면이 클로즈 값을 안 쓴다', !/takeCost/.test(cli));
-  ok('모른 채 고르라고 말한다', /얼마인지 모른 채 골라요/.test(cli));
+  // 클로즈에서 가려지는 것은 출품 카드다 — 값은 보여준다
+  ok('낼 값을 화면에 쓴다', /const cost = v\.lot\.takeCost;/.test(cli));
+  ok('무엇을 사는지는 모른다고 말한다', /무엇을 사는지는 안 보여요/.test(cli));
   // 정산은 저절로 넘어간다
   ok('다음 턴 버튼이 없다', !/btn\('다음 턴'/.test(cli));
   ok('서버가 알아서 넘긴다', /g\.phase === 'settled'\) \{\s*\n\s*clearTimeout\(room\.tvNext\)/.test(srv));
@@ -501,6 +501,50 @@ console.log('\n㉑ AI — 세 급이 정말로 다른가');
     ok('보통이 쉬움을 이긴다', he >= 0.62, (he * 100).toFixed(1) + '%');
     ok('전문가가 쉬움을 크게 이긴다', ee >= 0.68, (ee * 100).toFixed(1) + '%');
   }
+}
+
+console.log('\n㉒ 모드가 달라도 내 것은 그대로 — 스킨·설명서·손패');
+{
+  const fs = require('fs'), path = require('path');
+  const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const htm = read('public/index.html'), cli = read('public/client.js'), srv = read('server.js');
+  // 장착한 것은 어느 판에서나
+  ok('트웰브 판도 스킨을 칠한다', /for \(const id of \['game', 'mini', 'tv'\]\)/.test(cli)
+     && /applyMySkins\(\); \} catch \(_\) \{\}   \/\/ 장착한/.test(cli));
+  ok('테이블 스킨 선택자에 트웰브가 있다', (htm.match(/#tv\.tbl-/g) || []).length >= 9);
+  ok('카드백도 붙는다', /gameProfiles = d\.profiles \|\| null; myIndex = d\.me;/.test(cli)
+     && /slot\.appendChild\(makeOppBack\(\)\)/.test(cli));
+
+  // 설명서는 지금 모드부터
+  ok('지금 모드를 안다', /function currentMode\(\)/.test(cli) && /c\.contains\('twelve'\)\) return 'twelve'/.test(cli));
+  ok('설명 버튼이 그 탭을 연다', /rulesTab\(currentMode\(\)\)/.test(cli));
+  ok('처음 들어오면 먼저 펴 준다', /function rulesFirstTime/.test(cli)
+     && /rulesFirstTime\('twelve'\)/.test(cli) && /rulesFirstTime\(isItemMode \? 'item' : '2'\)/.test(cli));
+
+  // 오른쪽 끝 패가 옆줄에 가리지 않게
+  ok('세로줄 빈자리는 손가락을 통과시킨다', /#tv-oppbar, #tv-mebar \{ pointer-events:none; \}/.test(htm)
+     && /#tv-oppbar > \*, #tv-mebar > \* \{ pointer-events:auto; \}/.test(htm));
+  ok('2인전도 같이 고쳤다', /#oppbar, #mebar \{ pointer-events:none; \}/.test(htm));
+
+  // 방식을 고르기 전에는 출품 카드를 무를 수 있다
+  {
+    const g = T.createGame({ rnd: rng(51) });
+    T.draw(g, 1);
+    const first = g.hands[1][0].id, second = g.hands[1][1].id;
+    T.offer(g, 1, first);
+    ok('한 번 낸 뒤에도 바꿀 수 있다', T.reoffer(g, 1, second) === true && g.lot.offered.id === second);
+    ok('바꾼 카드는 손패로 돌아온다', g.hands[1].some((c) => c.id === first) && g.hands[1].length === 5);
+    T.chooseType(g, 1, 'open');
+    ok('방식을 고른 뒤엔 못 바꾼다', T.reoffer(g, 1, first) === false);
+    ok('상대는 못 바꾼다', T.reoffer(T.createGame({ rnd: rng(52) }), 2, 1) === false);
+  }
+  ok('서버가 무르기를 받는다', /g\.phase === 'choose' \? twelve\.reoffer/.test(srv));
+  ok('화면도 고를 수 있게 연다', /v\.phase === 'offer' \|\| v\.phase === 'choose'/.test(cli));
+
+  // 모드 고르는 창은 한눈에
+  ok('솔로·멀티 창이 전체화면', /#soloModal, #multiModal \{/.test(htm)
+     && /#soloModal \.lb-box, #multiModal \.lb-box \{[\s\S]{0,120}height:100%/.test(htm));
+  ok('닫기 버튼 대신 × 만 쓴다', !/style="margin-top:12px" onclick="closeModePanels\(\)">닫기/.test(htm));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
