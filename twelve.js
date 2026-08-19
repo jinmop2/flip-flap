@@ -191,13 +191,14 @@ function closeBet(g, who, n) {
   g.lot.turnToAct = other(who);
   return true;
 }
-// 상대가 산다 — 부른 값 + 1
+// 상대가 산다 — 부른 값 + 1.
+// 얼마인지는 끝까지 모른 채 결정한다. 그게 이 경매의 전부다.
+// 그래서 가진 칩보다 비쌀 수도 있다 — 그때는 가진 것을 전부 낸다(정산에서 깎인다).
 function closeTake(g, who) {
   if (g.over || g.phase !== 'close' || !g.lot || g.lot.turnToAct !== who) return false;
   if (who === g.auctioneer || !g.lot.closeBet) return false;
-  const need = g.lot.closeBet + 1;
-  if (g.chips[who] < need) return false;
-  g.lot.bets[who] = need;
+  if (g.chips[who] <= 0) return false;
+  g.lot.bets[who] = g.lot.closeBet + 1;
   settle(g, who);
   return true;
 }
@@ -290,7 +291,9 @@ function viewFor(g, me) {
       oppBet: l.type === 'open' ? (l.bets[you] || 0) : null,
       closeBetKnown: l.type === 'close' && me === g.auctioneer ? l.closeBet : null,
       minRaise: (g.phase === 'bid' && l.turnToAct === me) ? minRaise(g, me) : null,
-      takeCost: (g.phase === 'close' && l.turnToAct === me && me !== g.auctioneer) ? l.closeBet + 1 : null,
+      // 살지 말지 고를 수는 있어도, 얼마인지는 안 알려준다.
+      // 값을 알려주면 "부른 값 + 1" 에서 부른 값이 그대로 드러난다.
+      canTake: (g.phase === 'close' && l.turnToAct === me && me !== g.auctioneer && g.chips[me] > 0),
       canClose: g.phase === 'choose' && me === g.auctioneer ? canChoose(g, 'close') : null,
     } : null,
     last: g.last,
@@ -384,10 +387,13 @@ function aiAct(g, me, rnd = Math.random) {
       if (v > g.chips[me]) v = g.chips[me] - (g.chips[me] % 2);
       return { act: 'closeBet', amount: Math.max(2, v) };
     }
-    // 사는 쪽 — 부르는 값을 모르지만 "얼마를 내야 하는지" 는 안다
-    const cost = g.lot.closeBet + 1;
+    // 사는 쪽 — 얼마인지 모른다. 그래서 "이 물건이 나에게 값진가" 와
+    // "진행자가 대충 얼마쯤 걸었겠는가" 만으로 고른다.
+    // 진행자는 자기 상한 언저리를 부르므로, 상대의 남은 칩에서 어림잡는다.
     const cap = ceilingFor(g, me);
-    if (cost <= cap && g.chips[me] >= cost) return { act: 'take' };
+    if (cap === g.chips[me] && lotWorth(g, me) === Infinity) return { act: 'take' };  // 승부수
+    const guess = Math.max(3, Math.min(g.chips[A], Math.round(g.chips[A] * 0.35)));
+    if (cap >= guess && g.chips[me] > guess) return { act: 'take' };
     return { act: 'decline' };
   }
   return null;

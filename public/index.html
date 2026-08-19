@@ -4002,6 +4002,15 @@
     .tv-say .bub.go { animation:tvSayOut .28s ease-in forwards; }
     @keyframes tvSayOut { to { opacity:0; transform:scale(.85) } }
 
+    /* 은행 — 경매대 오른쪽. 칩은 늘 가운데에서 이쪽으로만 흐른다. */
+    #tv-bank { position:absolute; left:calc(50% + 176px); top:50%; transform:translateY(-50%);
+      width:64px; display:flex; flex-direction:column; align-items:center; gap:3px; z-index:3;
+      font-size:.66rem; color:rgba(255,255,255,.5); font-weight:700; }
+    #tv-bank .chip { margin-bottom:-9px; }
+    #tv-bank span { margin-top:12px; }
+    #tv-bank.pop { animation:tvBankPop .4s ease; }
+    @keyframes tvBankPop { 40% { transform:translateY(-50%) scale(1.18); } }
+
     #tv-fx { position:absolute; inset:0; pointer-events:none; z-index:9; }
     .tv-fly { position:absolute; transition:transform .62s cubic-bezier(.4,.05,.3,1), opacity .3s; }
     .tv-flychip { position:absolute; width:17px; height:17px;
@@ -4016,6 +4025,7 @@
       #tv-mat { width:auto; max-width:224px; min-width:200px; min-height:200px; padding:10px; gap:8px; }
       #tv-mat .a-card { width:58px; height:81px; }
       #tv-deck { left:8px; width:50px; }
+      #tv-bank { left:auto; right:8px; width:50px; font-size:.6rem; }
       #tv-deckStack { width:50px; height:70px; }
       #tv-deckStack .card { width:50px; height:70px; }
       #tv-turn { font-size:.62rem; }
@@ -5111,9 +5121,10 @@
          한 명이 물러설 때까지 계속 올릴 수 있습니다.</p>
 
       <h3><span data-ico="🙈"></span> 클로즈 경매</h3>
-      <p>진행자가 <b>짝수 개</b>를 딱 한 번 부릅니다. 얼마인지는 상대에게 안 보여요
-         (출품 카드도 가려집니다). 상대는 <b>거기에 하나를 더 얹어</b> 사거나, 안 삽니다.
+      <p>진행자가 <b>짝수 개</b>를 딱 한 번 부릅니다. 얼마인지는 상대에게 <b>끝까지 안 보입니다</b>
+         (출품 카드도 가려집니다). 상대는 <b>얼마인지 모른 채</b> 거기에 하나를 더 얹어 사거나, 안 삽니다.
          <b>안 사면 진행자가 가져갑니다.</b></p>
+      <p style="color:#8a7a80;font-size:.78rem">모르고 샀는데 가진 칩보다 비싸면 가진 것을 전부 냅니다 — 그래서 칩이 0이 돼요.</p>
       <p style="color:#8a7a80;font-size:.78rem">칩이 2개보다 적으면 클로즈를 고를 수 없어요 — 부를 짝수가 없으니까요.</p>
 
       <h3><span data-ico="🏦"></span> 정산 — 여기가 핵심</h3>
@@ -5566,6 +5577,8 @@
         <span class="tv-bet opp"><b id="tv-oppBet">–</b> 상대</span>
       </div>
     </div>
+    <!-- 은행 — 낸 칩이 모이는 곳. 오른쪽에 두어 흐름이 한 방향으로 읽힌다. -->
+    <div id="tv-bank"><i class="chip dark"></i><i class="chip light"></i><span>은행</span></div>
     <div id="tv-status">–</div>
     <div id="tv-actions"></div>
   </div>

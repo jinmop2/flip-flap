@@ -5405,6 +5405,7 @@ window.addEventListener('appinstalled', () => {
 // 규칙은 서버(twelve.js)가 전부 쥔다. 여기서는 받은 상태를 그리고, 누른 것을
 // 그대로 보낸다 — 값이나 승패를 화면에서 계산하지 않는다.
 let tvView = null, tvMe = 0, tvBot = false, tvPrev = null;
+let tvFlying = [];   // 지금 필드로 날아가는 중인 카드 id
 
 function tvOpen() {
   document.body.classList.add('twelve');
@@ -5504,15 +5505,18 @@ function tvFlyTo(node, from, to, cls) {
   setTimeout(() => { node.style.opacity = '0'; }, 480);
   setTimeout(() => node.remove(), 780);
 }
-// 칩 몇 개를 은행(가운데)으로 날린다
-function tvFlyChips(fromEl, n, mine) {
-  const mat = document.getElementById('tv-mat');
+// 칩은 판 가운데에서 오른쪽 은행으로 모인다.
+// 낸 칩은 상대에게 가는 게 아니라 은행으로 사라진다 — 그래서 한 방향이다.
+function tvFlyChips(n, mine) {
+  const from = document.getElementById('tv-mat');
+  const bank = document.getElementById('tv-bank');
   const many = Math.min(n, 6);
   for (let i = 0; i < many; i++) {
     const c = document.createElement('i');
     c.className = 'chip ' + (mine ? 'light' : 'dark');
-    setTimeout(() => tvFlyTo(c, fromEl, mat, 'tv-flychip'), i * 70);
+    setTimeout(() => tvFlyTo(c, from, bank, 'tv-flychip'), i * 70);
   }
+  if (n > 0) { const b = document.getElementById('tv-bank'); if (b) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); } }
 }
 
 const tvSfx = (n) => { try { playSound(n); } catch (_) {} };
@@ -5556,25 +5560,32 @@ function tvReact(prev, v) {
       tvSfx('reveal');
     }
     // 칩이 은행으로
-    const myEl = document.getElementById('tv-myChips'), opEl = document.getElementById('tv-oppChips');
     const myPay = iWon ? l.wPay : l.lPay, opPay = iWon ? l.lPay : l.wPay;
-    if (myPay > 0) tvFlyChips(myEl, myPay, true);
-    if (opPay > 0) setTimeout(() => tvFlyChips(opEl, opPay, false), 180);
+    if (myPay > 0) tvFlyChips(myPay, true);
+    if (opPay > 0) setTimeout(() => tvFlyChips(opPay, false), 180);
     // 카드가 이긴 쪽으로
     const dest = document.getElementById(iWon ? 'tv-myAcq' : 'tv-oppAcq');
+    tvFlying = (l.prize || []).map((c) => c.id);
     setTimeout(() => {
       for (const card of (l.prize || [])) {
         const el = makeCard(card);
         el.style.width = '70px'; el.style.height = '98px';
         tvFlyTo(el, document.getElementById('tv-mat'), dest);
       }
-      try { playSound('place'); } catch (_) {}
+      tvSfx('place');
     }, 320);
+    // 다 날아가면 더미에 얹어 준다 — 이제부터 그 카드는 그 사람 필드에 산다
+    setTimeout(() => {
+      tvFlying = [];
+      if (tvView) { tvPile(document.getElementById('tv-myAcq'), tvView.myAcq);
+                    tvPile(document.getElementById('tv-oppAcq'), tvView.oppAcq); }
+    }, 1050);
   }
 }
 
-function tvPile(box, cards) {
+function tvPile(box, cards, hideIds) {
   box.innerHTML = '';
+  if (hideIds && hideIds.length) cards = cards.filter((c) => !hideIds.includes(c.id));
   const byKind = {};
   for (const c of cards) (byKind[c.kind] = byKind[c.kind] || []).push(c);
   for (const k of Object.keys(byKind)) {
@@ -5623,11 +5634,8 @@ function tvRender(v) {
     $('tv-myBet').textContent = v.lot.myBet;
     $('tv-oppBet').textContent = v.lot.oppBet === null ? '?' : v.lot.oppBet;
   } else if (v.phase === 'settled' && v.last) {
-    // 정산 중에는 경매품을 그대로 둔다 — 카드가 어디로 가는지 보여야 하니까.
-    // (날아가는 연출이 끝나면 다음 턴에서 비워진다)
-    const p = v.last.prize || [];
-    if (p[0]) c.appendChild(makeCard(p[0]));
-    if (p[1]) o.appendChild(makeCard(p[1]));
+    // 경매대는 비운다 — 카드는 이긴 쪽 앞으로 날아가 거기 남는다.
+    // (날아가는 연출은 tvReact 가 경매대 자리에서 띄운다)
     $('tv-typeBadge').className = 'type-badge ' + (v.last.winner === v.me ? 'open' : 'closed');
     $('tv-typeBadge').textContent = v.last.winner === v.me ? '내가 낙찰' : '상대가 낙찰';
     $('tv-myBet').textContent = v.last.winner === v.me ? v.last.wBet : v.last.lBet;
@@ -5653,7 +5661,12 @@ function tvRender(v) {
     slot.appendChild(makeCard(null)); oh.appendChild(slot);
   }
   if (typeof fanRow === 'function') fanRow(oh, true);
-  tvPile($('tv-myAcq'), v.myAcq); tvPile($('tv-oppAcq'), v.oppAcq);
+  // 방금 낙찰된 카드는 날아가는 동안 더미에서 빼 둔다 — 안 그러면 카드가
+  // 두 장으로 보인다(하나는 날고, 하나는 이미 도착해 있고).
+  const flying = tvFlying.length ? tvFlying : null;
+  const iWonLast = v.last && v.last.winner === v.me;
+  tvPile($('tv-myAcq'), v.myAcq, flying && iWonLast ? flying : null);
+  tvPile($('tv-oppAcq'), v.oppAcq, flying && !iWonLast ? flying : null);
   tvActions(v);
 }
 
@@ -5732,10 +5745,11 @@ function tvActions(v) {
       return;
     }
     if (!myTurn) { st.textContent = '상대가 부르는 중…'; return; }
-    const cost = v.lot.takeCost;
-    st.textContent = `${cost} 을 내고 살까요? (상대가 얼마 걸었는지는 몰라요)`;
-    const b = btn(`${cost} 내고 사기`, () => tvAct('take'));
-    if (v.chips.me < cost) { b.disabled = true; b.title = '칩이 모자라요'; }
+    // 얼마인지는 끝내 안 보여준다. 값을 보여주면 "부른 값 + 1" 에서
+    // 상대가 얼마를 걸었는지가 그대로 드러난다 — 클로즈가 클로즈가 아니게 된다.
+    st.textContent = '얼마인지 모른 채 골라요 — 하나 더 얹어 살까요?';
+    const b = btn('사기', () => tvAct('take'));
+    if (v.chips.me <= 0) { b.disabled = true; b.title = '칩이 없어요'; }
     btn('안 사기', () => tvAct('decline'), true);
     return;
   }
@@ -5746,9 +5760,7 @@ function tvActions(v) {
       const mine = iWon ? l.wPay : l.lPay, theirs = iWon ? l.lPay : l.wPay;
       st.innerHTML = `${iWon ? '내가' : '상대가'} 가져갔어요 · 나 <b>-${mine}</b> · 상대 <b>-${theirs}</b>`;
     } else st.textContent = '정산 중…';
-    // 날아가는 연출이 끝난 뒤에 누를 수 있게 한다 — 바로 눌러 넘기면 안 보인다
-    const b = btn('다음 턴', () => tvAct('next'));
-    b.disabled = true;
-    setTimeout(() => { b.disabled = false; }, 1100);
+    // 다음 턴은 서버가 알아서 넘긴다. 볼 것은 이미 다 보여줬는데
+    // 매번 버튼을 한 번 더 누르게 하면 그것대로 흐름이 끊긴다.
   }
 }

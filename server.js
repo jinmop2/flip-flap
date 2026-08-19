@@ -1687,7 +1687,19 @@ io.on('connection', (socket) => {
     const room = rooms[roomId]; const g = room && room.tv;
     if (!g) return;
     room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('tv_state', twelve.viewFor(g, i + 1)); });
-    if (g.over) tvFinish(roomId);
+    if (g.over) { tvFinish(roomId); return; }
+    // 정산은 저절로 넘어간다. 보여줄 것(칩이 은행으로, 카드가 필드로)은 이미
+    // 다 보여준 뒤라, 여기서 버튼을 한 번 더 누르게 하면 흐름만 끊긴다.
+    if (g.phase === 'settled') {
+      clearTimeout(room.tvNext);
+      room.tvNext = setTimeout(() => {
+        const r = rooms[roomId], gg = r && r.tv;
+        if (!gg || gg.over || gg.phase !== 'settled') return;
+        twelve.nextTurn(gg);
+        tvPush(roomId);
+        if (r.cpuIndex !== undefined) tvBot(roomId);
+      }, 2600);
+    }
   }
   // AI 자리를 둘 수 있는 만큼 둔다. 사람이 둘 차례가 오면 멈춘다.
   function tvBot(roomId) {
@@ -1704,6 +1716,7 @@ io.on('connection', (socket) => {
     const room = rooms[roomId]; const g = room && room.tv;
     if (!g || room.tvDone) return;
     room.tvDone = true;
+    clearTimeout(room.tvNext);
     room.players.forEach((sid, i) => {
       if (!sid) return;
       const me = i + 1;

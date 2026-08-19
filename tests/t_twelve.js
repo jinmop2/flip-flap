@@ -120,7 +120,10 @@ console.log('\n⑦ 클로즈에서 진행자가 부른 값은 안 보인다');
   const v2 = T.viewFor(g, 2);
   ok('상대에게 진행자 배팅이 안 나간다', v2.lot.oppBet === null && v2.lot.closeBetKnown === null);
   ok('출품 카드도 가려진다', v2.lot.offered === null && v2.lot.hasOffer === true);
-  ok('사는 값만 알려준다', v2.lot.takeCost === 9, String(v2.lot.takeCost));
+  // 값을 알려주면 "부른 값 + 1" 에서 부른 값이 그대로 드러난다 — 어디에도 안 싣는다
+  ok('낼 값도 안 알려준다', v2.lot.takeCost === undefined && !JSON.stringify(v2).includes('"9"'));
+  ok('살 수 있다는 것만 알려준다', v2.lot.canTake === true);
+  ok('진행자에겐 살 자리가 없다', T.viewFor(g, 1).lot.canTake === false);
   const v1 = T.viewFor(g, 1);
   ok('진행자는 자기 값을 안다', v1.lot.closeBetKnown === 8);
 }
@@ -352,8 +355,8 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('상대가 물러선 것도 보인다', /물러설게요/.test(cli) && /안 살래요/.test(cli));
   ok('칩이 은행으로 날아간다', /function tvFlyChips/.test(cli));
   ok('카드가 이긴 쪽으로 날아간다', /tvFlyTo\(el, document\.getElementById\('tv-mat'\), dest\)/.test(cli));
-  ok('정산 중에도 경매품이 보인다', /정산 중에는 경매품을 그대로 둔다/.test(cli));
-  ok('연출이 끝나기 전엔 못 넘긴다', /b\.disabled = true;[\s\S]{0,120}1100/.test(cli));
+  ok('경매품은 경매대에 안 남는다', !/정산 중에는 경매품을 그대로 둔다/.test(cli));
+  ok('넘어가기 전에 연출할 틈이 있다', /\}, 1050\);/.test(cli));
   ok('AI 가 정산을 대신 넘기지 않는다', /if \(g\.phase === 'settled'\) return null;/.test(tw));
   ok('AI 가 뜸을 들인다', /\(g\.phase === 'bid' \|\| g\.phase === 'close'\) \? 950 : 700/.test(read('server.js')));
   ok('내 프로필이 보인다', /id="tv-myProfile"/.test(htm) && /renderGameProfile\('tv-myProfile'/.test(cli));
@@ -395,6 +398,21 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   ok('없는 소리를 부르지 않는다', !/tvSfx\('lose'\)/.test(cli) && !/playSound\('lose'\)/.test(cli));
   ok('초읽기는 겹쳐 울리지 않는다', /Date\.now\(\) - tvTickAt > 900/.test(cli));
   ok('시간패도 이유를 말해 준다', /endBy === 'time' \? '시간 초과'/.test(cli));
+  // 클로즈는 정말로 안 보인다 — 화면에도 값이 없다
+  ok('화면이 클로즈 값을 안 쓴다', !/takeCost/.test(cli));
+  ok('모른 채 고르라고 말한다', /얼마인지 모른 채 골라요/.test(cli));
+  // 정산은 저절로 넘어간다
+  ok('다음 턴 버튼이 없다', !/btn\('다음 턴'/.test(cli));
+  ok('서버가 알아서 넘긴다', /g\.phase === 'settled'\) \{\s*\n\s*clearTimeout\(room\.tvNext\)/.test(srv));
+  ok('넘기기 전에 연출할 틈을 준다', /\}, 2600\);/.test(srv));
+  ok('끝난 판은 안 넘긴다', /if \(g\.over\) \{ tvFinish\(roomId\); return; \}/.test(srv));
+  // 낙찰 카드는 이긴 쪽 필드로 간다 — 경매대에 남지 않는다
+  ok('경매대를 비운다', /경매대는 비운다/.test(cli));
+  ok('날아간 뒤 더미에 얹는다', /tvFlying = \[\];/.test(cli) && /tvPile\(box, cards, hideIds\)/.test(cli));
+  // 칩은 가운데에서 오른쪽 은행으로만 흐른다
+  ok('은행 자리가 있다', /id="tv-bank"/.test(htm) && /#tv-bank \{ position:absolute; left:calc\(50% \+ 176px\)/.test(htm));
+  ok('칩은 경매대에서 은행으로', /const from = document\.getElementById\('tv-mat'\);[\s\S]{0,120}getElementById\('tv-bank'\)/.test(cli));
+  ok('칩이 프로필로 날지 않는다', !/tvFlyChips\(myEl/.test(cli));
   ok('설명서가 시간을 알린다', /제한 시간 5분/.test(htm));
 }
 
