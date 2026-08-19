@@ -75,6 +75,7 @@ function createGame(opt = {}) {
     hands: { 1: deck.slice(CENTER, CENTER + HAND), 2: deck.slice(CENTER + HAND, CENTER + HAND * 2) },
     acq: { 1: [], 2: [] },
     chips: { 1: START_CHIPS, 2: START_CHIPS },
+    time: { 1: 300, 2: 300 },              // 체스 시계 — 클래식과 같은 각 5분
     bank: 0,                               // 은행이 거둔 칩 (합이 맞는지 보는 눈금)
     turn: 1,
     auctioneer: opt.first === 2 ? 2 : 1,
@@ -87,6 +88,20 @@ function createGame(opt = {}) {
 }
 
 const other = (p) => (p === 1 ? 2 : 1);
+
+// 지금 누가 두어야 하는가 — 시계는 이 사람의 것만 줄어든다.
+// 정산 화면은 둘 다 보는 자리라 아무 시계도 안 간다.
+function activePlayer(g) {
+  if (!g || g.over) return null;
+  if (g.phase === 'draw' || g.phase === 'offer' || g.phase === 'choose') return g.auctioneer;
+  if (g.phase === 'bid' || g.phase === 'close') return g.lot ? g.lot.turnToAct : null;
+  return null;
+}
+// 시간을 다 쓰면 진다
+function timeout(g, who) {
+  if (g.over) return false;
+  return finish(g, other(who), 'time');
+}
 
 // 1) 중앙덱 한 장 공개
 function draw(g, who) {
@@ -258,6 +273,7 @@ function viewFor(g, me) {
   return {
     mode: 'twelve', me, turn: g.turn, phase: g.phase, auctioneer: g.auctioneer,
     over: g.over, winner: g.winner, endBy: g.endBy || null,
+    time: g.time, active: activePlayer(g),
     centerLeft: g.center.length,
     myHand: g.hands[me], oppHandLen: g.hands[you].length,
     myAcq: g.acq[me], oppAcq: g.acq[you],
@@ -408,6 +424,6 @@ module.exports = {
   canChoose, canRaise, minRaise, maxRaise, raise, fold,
   canCloseBet, closeBet, closeTake, closeDecline,
   settle, nextTurn, viewFor,
-  completedKind, needLeft, byProgress, initDeck,
+  completedKind, needLeft, byProgress, initDeck, activePlayer, timeout,
   aiAct, applyAi, lotWorth,
 };

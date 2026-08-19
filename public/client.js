@@ -3335,6 +3335,7 @@ socket.on('mini_state', (v) => {
     document.body.classList.add('ingame');   // 화면 스크롤 잠금 — 본 게임과 같다
     applyMySkins();                          // 내 테이블·카드 스킨을 미니게임에도
     try { startBGM('game'); } catch (_) {}
+  tvSfx('deal');
   }
   miniHideOver();                            // 다음 판이 오면 결과를 걷는다
   miniPaint(v);
@@ -5441,6 +5442,21 @@ socket.on('tv_begin', (d) => {
     renderGameProfile('tv-myProfile', myP || myAccount || { nick: getNick(), guest: true }, true);
   } catch (_) {}
 });
+// 시계 — 서버가 1초마다 숫자만 보낸다. 판을 다시 그리지 않으니 화면이 안 흔들린다.
+let tvTickAt = 0;
+function tvFmt(t) { const m = Math.floor(t / 60), s2 = t % 60; return m + ':' + (s2 < 10 ? '0' : '') + s2; }
+socket.on('tv_clock', ({ time, active, me }) => {
+  const mine = time[me], opp = time[me === 1 ? 2 : 1];
+  const mEl = document.getElementById('tv-myTimer'), oEl = document.getElementById('tv-oppTimer');
+  if (!mEl || !oEl) return;
+  mEl.textContent = tvFmt(mine); oEl.textContent = tvFmt(opp);
+  mEl.classList.toggle('active', active === me); oEl.classList.toggle('active', active === (me === 1 ? 2 : 1));
+  mEl.classList.toggle('low', mine <= 30); oEl.classList.toggle('low', opp <= 30);
+  // 내 차례에 10초 아래로 내려가면 초읽기 소리 — 2인전과 같다
+  if (active === me && mine <= 10 && mine > 0 && Date.now() - tvTickAt > 900) { tvTickAt = Date.now(); tvSfx('tick'); }
+});
+socket.on('tv_warn', ({ player }) => { if (player === tvMe) tvSfx('hourglass'); });
+
 socket.on('tv_state', (v) => {
   tvReact(tvPrev, v);      // 바뀐 대목을 말풍선·움직임으로 먼저 알린다
   tvPrev = v; tvView = v;
@@ -5450,9 +5466,10 @@ socket.on('tv_over', ({ win, endBy, view }) => {
   if (view) { tvView = view; tvRender(view); }
   document.getElementById('tv-otitle').textContent = win ? '승리!' : '패배';
   document.getElementById('tv-owhy').textContent =
-    endBy === 'set' ? '세트 완성' : endBy === 'chips' ? '칩이 떨어졌어요' : '덱 소진 — 세트에 더 가까운 쪽';
+    endBy === 'set' ? '세트 완성' : endBy === 'chips' ? '칩이 떨어졌어요'
+      : endBy === 'time' ? '시간 초과' : '덱 소진 — 세트에 더 가까운 쪽';
   setTimeout(() => document.getElementById('tv-over').classList.add('show'), 500);
-  try { playSound(win ? 'setwin' : 'lose'); } catch (_) {}
+  if (win) tvSfx('setwin'); else tvSfx('defeat');
 });
 
 
@@ -5498,14 +5515,22 @@ function tvFlyChips(fromEl, n, mine) {
   }
 }
 
+const tvSfx = (n) => { try { playSound(n); } catch (_) {} };
+
 function tvReact(prev, v) {
   if (!prev || !v) return;
   const meSide = 'me', oppSide = 'opp';
 
+  // 소리는 2인전에서 쓰던 것을 같은 뜻으로 쓴다 —
+  // 뒤집으면 flip, 내려놓으면 place, 부르면 select, 정산은 reveal.
+  if (v.centerLeft < prev.centerLeft) tvSfx('flip');
+  if (v.lot && !prev.lot) tvSfx('card');
+  if (v.lot && prev.lot && v.lot.offered && !prev.lot.offered) tvSfx('place');
+
   // 1) 누가 얼마를 불렀나 (오픈)
   if (v.lot && prev.lot && v.lot.type === 'open') {
-    if ((v.lot.myBet || 0) > (prev.lot.myBet || 0)) tvSay(meSide, tvChipHtml(v.lot.myBet, true));
-    if (v.lot.oppBet !== null && (v.lot.oppBet || 0) > (prev.lot.oppBet || 0)) tvSay(oppSide, tvChipHtml(v.lot.oppBet, false));
+    if ((v.lot.myBet || 0) > (prev.lot.myBet || 0)) { tvSay(meSide, tvChipHtml(v.lot.myBet, true)); tvSfx('select'); }
+    if (v.lot.oppBet !== null && (v.lot.oppBet || 0) > (prev.lot.oppBet || 0)) { tvSay(oppSide, tvChipHtml(v.lot.oppBet, false)); tvSfx('select'); }
   }
   // 클로즈 — 진행자가 불렀다(값은 안 보인다)
   if (v.lot && prev.lot && v.lot.type === 'close' && v.lot.turnToAct !== prev.lot.turnToAct) {
@@ -5513,6 +5538,7 @@ function tvReact(prev, v) {
     if (bidder === v.auctioneer) {
       if (bidder === v.me) tvSay(meSide, tvChipHtml(v.lot.closeBetKnown, true));
       else tvSay(oppSide, '<b>?</b> 걸었어요');
+      tvSfx('select');
     }
   }
 
@@ -5524,8 +5550,10 @@ function tvReact(prev, v) {
       const folderIsMe = l.folded === v.me;
       const word = l.type === 'close' ? '안 살래요' : '물러설게요';
       tvSay(folderIsMe ? meSide : oppSide, word, 'fold');
+      tvSfx('back');
     } else if (l.type === 'close') {
       tvSay(iWon ? meSide : oppSide, tvChipHtml(iWon ? l.wBet : l.lBet, iWon) + ' 살게요');
+      tvSfx('reveal');
     }
     // 칩이 은행으로
     const myEl = document.getElementById('tv-myChips'), opEl = document.getElementById('tv-oppChips');
@@ -5590,6 +5618,8 @@ function tvRender(v) {
     $('tv-offerLbl').textContent = (v.lot.type === 'close' && !v.lot.offered) ? '출품 (비공개)' : '출품 카드';
     $('tv-typeBadge').textContent = v.lot.type === 'open' ? '오픈 경매'
       : v.lot.type === 'close' ? '클로즈 경매' : '';
+    // 2인전 경매대와 같은 알약 — 오픈은 초록, 클로즈는 보라
+    $('tv-typeBadge').className = 'type-badge ' + (v.lot.type === 'close' ? 'closed' : 'open');
     $('tv-myBet').textContent = v.lot.myBet;
     $('tv-oppBet').textContent = v.lot.oppBet === null ? '?' : v.lot.oppBet;
   } else if (v.phase === 'settled' && v.last) {
@@ -5598,11 +5628,12 @@ function tvRender(v) {
     const p = v.last.prize || [];
     if (p[0]) c.appendChild(makeCard(p[0]));
     if (p[1]) o.appendChild(makeCard(p[1]));
+    $('tv-typeBadge').className = 'type-badge ' + (v.last.winner === v.me ? 'open' : 'closed');
     $('tv-typeBadge').textContent = v.last.winner === v.me ? '내가 낙찰' : '상대가 낙찰';
     $('tv-myBet').textContent = v.last.winner === v.me ? v.last.wBet : v.last.lBet;
     $('tv-oppBet').textContent = v.last.winner === v.me ? v.last.lBet : v.last.wBet;
   } else {
-    $('tv-typeBadge').textContent = '';
+    $('tv-typeBadge').textContent = ''; $('tv-typeBadge').className = 'type-badge';
     $('tv-myBet').textContent = '0'; $('tv-oppBet').textContent = '\u2013';
   }
 

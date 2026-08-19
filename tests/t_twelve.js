@@ -315,7 +315,7 @@ console.log('\n⑰ 서버·화면에 제대로 물렸는가');
   ok('RP 는 안 건드린다', /noRank: true,\s*\/\/ 트웰브는 RP 미반영/.test(srv));
   ok('방 모드로도 열린다', /room\.mode === 'twelve'\) \{ tvStart/.test(srv));
   ok('빠른 입장에 있다', /'classic', 'item', 'quad', 'twelve'/.test(srv));
-  ok('화면이 있다', /id="tv"/.test(htm) && /body\.twelve #tv \{ display:grid/.test(htm));
+  ok('화면이 있다', /id="tv"/.test(htm) && /body\.twelve #tv \{ display:flex/.test(htm));
   ok('클라이언트가 상태를 받는다', /socket\.on\('tv_state'/.test(cli) && /function tvRender/.test(cli));
   ok('클라이언트는 셈을 하지 않는다', !/tvView[\s\S]{0,200}Math\.floor\(.*\/ 2\)/.test(cli));
   ok('설명서 탭이 있다', /data-rt="twelve"/.test(htm) && /id="rulesTwelveModal"/.test(htm));
@@ -336,10 +336,10 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('클로즈는 짝수만 나온다', /tvAmount\(box, 2, hi, 2, 2\)/.test(cli));
   ok('숫자 입력칸의 작은 화살표는 안 쓴다', !/inp\.type = 'number'/.test(cli));
   // 단계가 바뀌어도 판이 안 밀리게 — 칸마다 높이를 못 박았는가
-  ok('문구 칸 높이 고정', /#tv-status \{[\s\S]{0,200}height:34px/.test(htm));
+  ok('문구 칸 높이 고정', /#tv-status \{[\s\S]{0,300}height:32px/.test(htm));
   ok('버튼 칸 높이 고정', /#tv-actions \{[\s\S]{0,140}height:56px/.test(htm));
-  ok('카드 자리 고정', /\.tv-slot > div:last-child \{ width:70px; height:98px/.test(htm));
-  ok('격자로 세 칸을 잡는다', /body\.twelve #tv \{ display:grid/.test(htm) && /grid-template-rows:auto 1fr auto auto auto/.test(htm));
+  ok('카드 자리 고정', /#tv-mat \.a-card \{ width:70px; height:98px/.test(htm));
+  ok('2인전과 같은 줄 구성', /id="tv-oppZone"/.test(htm) && /id="tv-centerZone"/.test(htm) && /id="tv-myZone"/.test(htm));
   ok('덱은 띄워 붙여 경매대를 안 민다', /#tv-deck \{ position:absolute/.test(htm));
 }
 
@@ -357,10 +357,45 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('AI 가 정산을 대신 넘기지 않는다', /if \(g\.phase === 'settled'\) return null;/.test(tw));
   ok('AI 가 뜸을 들인다', /\(g\.phase === 'bid' \|\| g\.phase === 'close'\) \? 950 : 700/.test(read('server.js')));
   ok('내 프로필이 보인다', /id="tv-myProfile"/.test(htm) && /renderGameProfile\('tv-myProfile'/.test(cli));
-  ok('프로필이 칩을 안 덮는다', /#tv \.game-pcard \{ position:static/.test(htm));
-  ok('판이 화면을 채운다', /#tv \{[\s\S]{0,400}position:fixed; inset:0/.test(htm)
-     && !/grid-template-rows:auto 1fr auto auto auto;\s*\n\s*position:relative/.test(htm));
-  ok('상대 줄이 버튼을 피한다', /#tv \.tv-side\.opp \{ padding-top:56px/.test(htm));
+  ok('프로필이 칩을 안 덮는다', /#tv-oppbar > \*, #tv-mebar > \* \{ position:static/.test(htm));
+  ok('판이 화면을 채운다', /#tv \{[\s\S]{0,400}position:fixed; inset:0/.test(htm));
+  ok('상대 줄이 버튼을 피한다', /#tv-oppZone \{ padding-top:72px/.test(htm));
+}
+
+console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
+{
+  const fs = require('fs'), path = require('path');
+  const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const htm = read('public/index.html'), cli = read('public/client.js'), srv = read('server.js');
+  // 겉모습 — 같은 펠트, 같은 컨트롤, 같은 프로필·시계 자리
+  ok('2인전과 같은 펠트', /#tv \{[\s\S]{0,600}var\(--felt\)/.test(htm));
+  ok('같은 컨트롤 버튼', /id="tv-controls"[\s\S]{0,900}class="ctrl-btn"/.test(htm));
+  ok('테이블 로고가 있다', /id="tableLogoTv"/.test(htm));
+  ok('시계가 화면에 있다', /id="tv-myTimer"/.test(htm) && /id="tv-oppTimer"/.test(htm)
+     && /class="timer pc-timer"/.test(htm));
+
+  // 시계 — 규칙은 모듈이, 눈금은 서버가
+  const tw = read('twelve.js');
+  ok('각 5분으로 시작', /time: \{ 1: 300, 2: 300 \}/.test(tw));
+  ok('차례인 사람을 안다', /function activePlayer\(g\)/.test(tw) && /activePlayer,/.test(tw));
+  ok('시간을 다 쓰면 진다', /function timeout\(g, who\)[\s\S]{0,140}finish\(g, other\(who\), 'time'\)/.test(tw));
+  ok('정산 화면에선 안 줄어든다', /if \(g\.phase === 'bid' \|\| g\.phase === 'close'\) return g\.lot \? g\.lot\.turnToAct : null;\s*\n\s*return null;/.test(tw));
+  ok('서버가 1초마다 깎는다', /function tvClock\(roomId\)/.test(srv) && /}, 1000\);/.test(srv));
+  ok('한 판당 하나의 눈금', /if \(!io\._tvClock\)/.test(srv));
+  ok('60초에 알린다', /g\.time\[ap\] === 60[\s\S]{0,120}'tv_warn'/.test(srv));
+  ok('0이면 그 자리에서 끝', /twelve\.timeout\(g, ap\); tvPush/.test(srv));
+  ok('숫자만 따로 보낸다', /'tv_clock', \{ time: g\.time/.test(srv));
+  ok('클라이언트가 시계를 그린다', /socket\.on\('tv_clock'/.test(cli) && /tvFmt/.test(cli));
+  ok('시계 갱신이 판을 다시 그리지 않는다',
+     !/socket\.on\('tv_clock'[\s\S]{0,700}tvRender\(/.test(cli));
+
+  // 소리 — 2인전이 쓰는 이름을 같은 뜻으로
+  const names = ['flip', 'card', 'place', 'select', 'back', 'reveal', 'deal', 'tick', 'hourglass', 'setwin', 'defeat'];
+  for (const n of names) ok(`소리 ${n} 를 쓴다`, new RegExp(`tvSfx\\('${n}'\\)`).test(cli));
+  ok('없는 소리를 부르지 않는다', !/tvSfx\('lose'\)/.test(cli) && !/playSound\('lose'\)/.test(cli));
+  ok('초읽기는 겹쳐 울리지 않는다', /Date\.now\(\) - tvTickAt > 900/.test(cli));
+  ok('시간패도 이유를 말해 준다', /endBy === 'time' \? '시간 초과'/.test(cli));
+  ok('설명서가 시간을 알린다', /제한 시간 5분/.test(htm));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

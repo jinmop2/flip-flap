@@ -1723,6 +1723,25 @@ io.on('connection', (socket) => {
     });
     setTimeout(() => { const r = rooms[roomId]; if (r && r.tv && r.tv.over) { delete rooms[roomId]; broadcastRooms(); } }, 60000);
   }
+  // 시계 — 클래식과 같은 결로 1초마다. 자기 차례인 사람 것만 줄어든다.
+  function tvClock(roomId) {
+    const room = rooms[roomId]; const g = room && room.tv;
+    if (!g || g.over || room.tvDone) return;
+    const ap = twelve.activePlayer(g);
+    if (ap) {
+      g.time[ap] = Math.max(0, g.time[ap] - 1);
+      if (g.time[ap] === 60) room.players.forEach((sid) => { if (sid) io.to(sid).emit('tv_warn', { player: ap }); });
+      if (g.time[ap] <= 0) { twelve.timeout(g, ap); tvPush(roomId); return; }
+    }
+    // 숫자만 따로 보내 판 전체를 다시 그리지 않게 한다
+    room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('tv_clock', { time: g.time, active: ap, me: i + 1 }); });
+  }
+  if (!io._tvClock) {
+    io._tvClock = setInterval(() => {
+      for (const id in rooms) if (rooms[id] && rooms[id].tv) tvClock(id);
+    }, 1000);
+  }
+
   function tvStart(roomId) {
     const room = rooms[roomId]; if (!room) return;
     room.tv = twelve.createGame({ first: 1 });
