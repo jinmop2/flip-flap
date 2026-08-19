@@ -5486,7 +5486,7 @@ function tvSay(side, text, kind) {
   b.innerHTML = text;
   box.appendChild(b);
   clearTimeout(box._t);
-  box._t = setTimeout(() => { b.classList.add('go'); setTimeout(() => { if (b.parentElement === box) box.innerHTML = ''; }, 300); }, 2200);
+  box._t = setTimeout(() => { b.classList.add('go'); setTimeout(() => { if (b.parentElement === box) box.innerHTML = ''; }, 300); }, 3400);
 }
 const tvChipHtml = (n, mine) => `<i class="chip ${mine ? 'light' : 'dark'}"></i>${n}`;
 
@@ -5502,8 +5502,8 @@ function tvFlyTo(node, from, to, cls) {
   const dx = (t.left + t.width / 2) - (f.left + f.width / 2);
   const dy = (t.top + t.height / 2) - (f.top + f.height / 2);
   requestAnimationFrame(() => { node.style.transform = `translate(${dx}px, ${dy}px) scale(.85)`; });
-  setTimeout(() => { node.style.opacity = '0'; }, 480);
-  setTimeout(() => node.remove(), 780);
+  setTimeout(() => { node.style.opacity = '0'; }, 700);
+  setTimeout(() => node.remove(), 1080);
 }
 // 칩은 판 가운데에서 오른쪽 은행으로 모인다.
 // 낸 칩은 상대에게 가는 게 아니라 은행으로 사라진다 — 그래서 한 방향이다.
@@ -5514,7 +5514,7 @@ function tvFlyChips(n, mine) {
   for (let i = 0; i < many; i++) {
     const c = document.createElement('i');
     c.className = 'chip ' + (mine ? 'light' : 'dark');
-    setTimeout(() => tvFlyTo(c, from, bank, 'tv-flychip'), i * 70);
+    setTimeout(() => tvFlyTo(c, from, bank, 'tv-flychip'), i * 110);
   }
   if (n > 0) { const b = document.getElementById('tv-bank'); if (b) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); } }
 }
@@ -5573,13 +5573,13 @@ function tvReact(prev, v) {
         tvFlyTo(el, document.getElementById('tv-mat'), dest);
       }
       tvSfx('place');
-    }, 320);
+    }, 600);
     // 다 날아가면 더미에 얹어 준다 — 이제부터 그 카드는 그 사람 필드에 산다
     setTimeout(() => {
       tvFlying = [];
       if (tvView) { tvPile(document.getElementById('tv-myAcq'), tvView.myAcq);
                     tvPile(document.getElementById('tv-oppAcq'), tvView.oppAcq); }
-    }, 1050);
+    }, 1700);
   }
 }
 

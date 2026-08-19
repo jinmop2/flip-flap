@@ -1698,7 +1698,7 @@ io.on('connection', (socket) => {
         twelve.nextTurn(gg);
         tvPush(roomId);
         if (r.cpuIndex !== undefined) tvBot(roomId);
-      }, 2600);
+      }, 4200);
     }
   }
   // AI 자리를 둘 수 있는 만큼 둔다. 사람이 둘 차례가 오면 멈춘다.
@@ -1709,7 +1709,7 @@ io.on('connection', (socket) => {
     const acted = twelve.applyAi(g, me);
     tvPush(roomId);
     // 사람이 따라올 만한 뜸. 값을 부르는 대목은 더 길게 — 그게 이 모드의 승부처다.
-    const wait = (g.phase === 'bid' || g.phase === 'close') ? 950 : 700;
+    const wait = (g.phase === 'bid' || g.phase === 'close') ? 1500 : 1100;
     if (acted && !g.over) setTimeout(() => tvBot(roomId), wait);
   }
   function tvFinish(roomId) {

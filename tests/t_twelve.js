@@ -356,9 +356,13 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('칩이 은행으로 날아간다', /function tvFlyChips/.test(cli));
   ok('카드가 이긴 쪽으로 날아간다', /tvFlyTo\(el, document\.getElementById\('tv-mat'\), dest\)/.test(cli));
   ok('경매품은 경매대에 안 남는다', !/정산 중에는 경매품을 그대로 둔다/.test(cli));
-  ok('넘어가기 전에 연출할 틈이 있다', /\}, 1050\);/.test(cli));
+  ok('넘어가기 전에 연출할 틈이 있다', /\}, 1700\);/.test(cli));
+  // 말풍선 꼬리는 말한 사람 쪽을 봐야 한다
+  ok('상대 말풍선 꼬리는 위로', /\.tv-say:not\(\.me\) \.bub::after \{ bottom:100%/.test(htm));
+  ok('내 말풍선 꼬리는 아래로', /\.tv-say\.me \.bub::after \{ top:100%/.test(htm));
+  ok('말풍선이 읽을 만큼 머문다', /\}, 300\); \}, 3400\);/.test(cli));
   ok('AI 가 정산을 대신 넘기지 않는다', /if \(g\.phase === 'settled'\) return null;/.test(tw));
-  ok('AI 가 뜸을 들인다', /\(g\.phase === 'bid' \|\| g\.phase === 'close'\) \? 950 : 700/.test(read('server.js')));
+  ok('AI 가 뜸을 들인다', /\(g\.phase === 'bid' \|\| g\.phase === 'close'\) \? 1500 : 1100/.test(read('server.js')));
   ok('내 프로필이 보인다', /id="tv-myProfile"/.test(htm) && /renderGameProfile\('tv-myProfile'/.test(cli));
   ok('프로필이 칩을 안 덮는다', /#tv-oppbar > \*, #tv-mebar > \* \{ position:static/.test(htm));
   ok('판이 화면을 채운다', /#tv \{[\s\S]{0,400}position:fixed; inset:0/.test(htm));
@@ -404,7 +408,7 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   // 정산은 저절로 넘어간다
   ok('다음 턴 버튼이 없다', !/btn\('다음 턴'/.test(cli));
   ok('서버가 알아서 넘긴다', /g\.phase === 'settled'\) \{\s*\n\s*clearTimeout\(room\.tvNext\)/.test(srv));
-  ok('넘기기 전에 연출할 틈을 준다', /\}, 2600\);/.test(srv));
+  ok('넘기기 전에 연출할 틈을 준다', /\}, 4200\);/.test(srv));
   ok('끝난 판은 안 넘긴다', /if \(g\.over\) \{ tvFinish\(roomId\); return; \}/.test(srv));
   // 낙찰 카드는 이긴 쪽 필드로 간다 — 경매대에 남지 않는다
   ok('경매대를 비운다', /경매대는 비운다/.test(cli));

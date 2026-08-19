@@ -3993,11 +3993,13 @@
       box-shadow:0 3px 10px rgba(0,0,0,.45); display:inline-flex; align-items:center; gap:5px;
       animation:tvSay .3s cubic-bezier(.34,1.5,.64,1); }
     .tv-say .bub::after { content:''; position:absolute; left:50%; margin-left:-6px; border:6px solid transparent; }
-    .tv-say:not(.me) .bub::after { top:100%; border-top-color:#e0b45c; }
-    .tv-say.me .bub::after { bottom:100%; border-bottom-color:#ffe9a8; }
+    /* 상대 말풍선은 상대 카드 아래에 있으니 꼬리가 위(상대 쪽)를 봐야 하고,
+       내 말풍선은 내 카드 위에 있으니 꼬리가 아래(나)를 봐야 한다. */
+    .tv-say:not(.me) .bub::after { bottom:100%; border-bottom-color:#ffe9a8; }
+    .tv-say.me .bub::after { top:100%; border-top-color:#e0b45c; }
     .tv-say .bub.fold { background:linear-gradient(180deg,#5a4a3a,#3a2c1e); color:#e8dcc8; border-color:#7a6a58; }
-    .tv-say:not(.me) .bub.fold::after { border-top-color:#3a2c1e; }
-    .tv-say.me .bub.fold::after { border-bottom-color:#5a4a3a; }
+    .tv-say:not(.me) .bub.fold::after { border-bottom-color:#5a4a3a; }
+    .tv-say.me .bub.fold::after { border-top-color:#3a2c1e; }
     @keyframes tvSay { from { opacity:0; transform:scale(.7) translateY(6px) } to { opacity:1; transform:none } }
     .tv-say .bub.go { animation:tvSayOut .28s ease-in forwards; }
     @keyframes tvSayOut { to { opacity:0; transform:scale(.85) } }
@@ -4012,9 +4014,9 @@
     @keyframes tvBankPop { 40% { transform:translateY(-50%) scale(1.18); } }
 
     #tv-fx { position:absolute; inset:0; pointer-events:none; z-index:9; }
-    .tv-fly { position:absolute; transition:transform .62s cubic-bezier(.4,.05,.3,1), opacity .3s; }
+    .tv-fly { position:absolute; transition:transform .85s cubic-bezier(.4,.05,.3,1), opacity .35s; }
     .tv-flychip { position:absolute; width:17px; height:17px;
-      transition:transform .5s cubic-bezier(.5,0,.4,1), opacity .25s; }
+      transition:transform .7s cubic-bezier(.5,0,.4,1), opacity .3s; }
 
     @media (max-width:600px) {
       #tv { padding:10px 12px calc(8px + var(--safe-b)); }
