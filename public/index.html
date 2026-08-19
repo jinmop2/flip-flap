@@ -694,6 +694,24 @@
        깔면 아무것도 안 감싸는 네모 테두리 하나가 떠 있는 것처럼 보인다. */
     #gcPaneExch #gcShop { background:none; border-radius:0; padding:6px 2px; }
     .gc-hint { align-self:center; font-size:.76rem; color:#8a7a80; }
+    /* 스크롤 막대 — 기본값은 어두운 판 위에 하얀 네모 하나가 그려진 것처럼
+       보인다. 교환소처럼 안쪽에 또 스크롤이 생기는 자리에서 특히 그렇다.
+       얇게, 판 색으로. */
+    .gc-stage, .lb-box, .lb-list, .gc-pane, .soc-list, .rules-wrap {
+      scrollbar-width:thin; scrollbar-color:rgba(185,141,52,.45) transparent;
+    }
+    .gc-stage::-webkit-scrollbar, .lb-box::-webkit-scrollbar, .lb-list::-webkit-scrollbar,
+    .gc-pane::-webkit-scrollbar, .soc-list::-webkit-scrollbar, .rules-wrap::-webkit-scrollbar {
+      width:6px; height:6px; background:transparent;
+    }
+    .gc-stage::-webkit-scrollbar-thumb, .lb-box::-webkit-scrollbar-thumb,
+    .lb-list::-webkit-scrollbar-thumb, .gc-pane::-webkit-scrollbar-thumb,
+    .soc-list::-webkit-scrollbar-thumb, .rules-wrap::-webkit-scrollbar-thumb {
+      background:rgba(185,141,52,.45); border-radius:99px;
+    }
+    .gc-stage::-webkit-scrollbar-track, .lb-box::-webkit-scrollbar-track,
+    .lb-list::-webkit-scrollbar-track, .gc-pane::-webkit-scrollbar-track,
+    .soc-list::-webkit-scrollbar-track, .rules-wrap::-webkit-scrollbar-track { background:transparent; }
     /* ── 뽑기 결과 카드 ─────────────────────────────────────
        뒷면으로 깔린 뒤 한 장씩 뒤집힌다. 등급은 뒤집히는 순간에 드러난다 —
        예전엔 결과가 이미 확정된 채로 그냥 나타나서 아무 긴장이 없었다. */

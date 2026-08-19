@@ -61,5 +61,21 @@ a.byToken(t2).coins = 10;
 ok('잔액 부족 거부', !!a.buyItem(t2, 'back_crystal').error);
 ok('잔액 안 깎임', a.byToken(t2).coins === 10);
 
+// 염색약을 이어서 살 때 연출이 끊기지 않는가
+{
+  const fs2 = require('fs'), path2 = require('path');
+  const c = fs2.readFileSync(path2.join(__dirname, '..', 'public/client.js'), 'utf8');
+  const h = fs2.readFileSync(path2.join(__dirname, '..', 'public/index.html'), 'utf8');
+  // 창은 하나뿐이라, 앞 판의 타이머가 살아 있으면 다음 판을 도중에 닫아 버린다
+  ok('앞 연출의 타이머를 걷어낸다', /function dyeStop\(\)[\s\S]{0,120}clearInterval\(dyeSpin\)[\s\S]{0,60}clearTimeout\(dyeHide\)/.test(c));
+  ok('새로 시작할 때 먼저 걷어낸다', /function dyeRoll\(result\) \{\s*\n\s*dyeStop\(\);/.test(c));
+  ok('닫기 타이머도 손잡이로 잡아 둔다', /dyeHide = setTimeout/.test(c));
+  ok('눌러서 건너뛸 수 있다', /ov\.onclick = \(\) => \{ dyeStop\(\);/.test(c));
+  // 어두운 판 위의 기본 스크롤 막대가 하얀 네모처럼 보였다
+  ok('스크롤 막대를 판 색으로', /scrollbar-color:rgba\(185,141,52,\.45\) transparent/.test(h)
+     && /::-webkit-scrollbar-thumb[\s\S]{0,200}background:rgba\(185,141,52,\.45\)/.test(h));
+  ok('교환소에도 걸린다', /\.gc-stage, \.lb-box, \.lb-list, \.gc-pane/.test(h));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

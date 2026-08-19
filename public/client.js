@@ -2116,12 +2116,19 @@ async function buyShopItem(itemId) {
   if (r.error) { msg.textContent = '⚠️ ' + r.error; return; }
   msg.textContent = '';
   myAccount = r.profile; renderAccount(); refreshEmotes();
-  if (r.dye) { renderShop(); dyeRoll(r.dye); }   // 염색약은 뽑기 연출
+  if (r.dye) { renderShop(); dyeRoll(r.dye); }   // 염색약은 뽑기 연출 (앞 연출은 dyeRoll 이 접는다)
   else { renderShop(); msg.textContent = '✅ 구매 완료!'; playSound && playSound('setwin'); }
 }
 // 염색약 뽑기 연출 — 색이 촤르륵 지나가다 결과에 멈춤
+//
+// 여러 번 이어 사면 중간중간 끊겼다. 창은 하나뿐인데 살 때마다 새 타이머가
+// 붙어서, 앞 판의 "이제 닫아라" 타이머가 다음 판이 돌아가는 도중에 터졌기
+// 때문이다. 새로 시작할 때 앞의 타이머를 반드시 걷어낸다.
 const DYE_KEYS = ['red','orange','lime','green','cyan','blue','purple','pink','gold','rainbow'];
+let dyeSpin = null, dyeHide = null;
+function dyeStop() { clearInterval(dyeSpin); clearTimeout(dyeHide); dyeSpin = null; dyeHide = null; }
 function dyeRoll(result) {
+  dyeStop();
   let ov = document.getElementById('dyeRoll');
   if (!ov) { ov = document.createElement('div'); ov.id = 'dyeRoll'; document.body.appendChild(ov); }
   const rare = result === 'gold' || result === 'rainbow';
@@ -2133,20 +2140,21 @@ function dyeRoll(result) {
   ov.classList.add('show');
   const name = document.getElementById('dyeName'), sub = document.getElementById('dyeSub');
   let i = 0, ticks = 26 + Math.floor(Math.random() * 6);
-  const spin = setInterval(() => {
+  const spin = dyeSpin = setInterval(() => {
     const k = DYE_KEYS[i % DYE_KEYS.length]; i++;
     name.className = 'nc-' + k; name.textContent = DYE_NAMES[k] || k;
     playSound && playSound('flip');
     if (i >= ticks) {
-      clearInterval(spin);
+      clearInterval(spin); dyeSpin = null;
       name.className = 'nc-' + result; name.textContent = DYE_NAMES[result] || result;
       sub.innerHTML = rare ? '🎉 <b style="color:#ffd94a">대박!</b> 희귀 색이에요!' : '닉네임에 바로 적용됐어요!';
       if (rare) { name.classList.add('dye-pop'); playSound && playSound('victory'); }
       else playSound && playSound('setwin');
-      setTimeout(() => ov.classList.remove('show'), rare ? 2600 : 1700);
+      dyeHide = setTimeout(() => { ov.classList.remove('show'); dyeStop(); }, rare ? 2600 : 1700);
     }
   }, 70);
-  ov.onclick = () => { clearInterval(spin); ov.classList.remove('show'); };
+  // 눌러서 건너뛰기 — 이어서 살 때는 이게 제일 빠르다
+  ov.onclick = () => { dyeStop(); ov.classList.remove('show'); };
 }
 async function equipBack(itemId, isOn, kind) {
   const r = await apiPost('/api/equip', { token: localStorage.getItem('ff_auth'), itemId: isOn ? null : itemId, kind: kind || 'cardback' });
