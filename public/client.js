@@ -2201,7 +2201,13 @@ const NAV_ACTIONS = {
   // 설정은 원래 게임 안에서만 열렸다. 언어를 바꾸려고 판을 시작해야 했다.
   settings: () => { document.body.classList.add('lobby-settings'); toggleSettings(true); },
 };
+// 홈은 "무조건 홈" 이어야 한다. 탭 창만 닫고 모드 고르는 창이나 설명서가
+// 남아 있으면, 홈을 눌렀는데 홈이 아닌 셈이다.
 function closeAllNavModals() {
+  try { closeModePanels(); } catch (_) {}
+  try { rulesClose(); } catch (_) {}
+  try { closeMyInfo(); } catch (_) {}
+  try { closePlate(); } catch (_) {}
   try { closeGacha(); } catch (_) {}
   try { closeLb(); } catch (_) {}
   try { closeMissions(); } catch (_) {}

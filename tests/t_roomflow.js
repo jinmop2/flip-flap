@@ -199,7 +199,10 @@ ok('설정 누름이 프로필로 안 퍼진다', /id="setBtn"[^>]*event\.stopPr
 ok('메뉴바가 로비 창들 위에 있다', /#navBar \{[\s\S]{0,140}z-index:50/.test(htm));
 ok('켜진 탭은 금색 판', /\.nav-item\.active::before \{[\s\S]{0,160}rgba\(200,160,0,\.15\)/.test(htm));
 ok('탭을 옮기면 열린 창을 닫는다', /function navGo[\s\S]{0,200}closeAllNavModals\(\)/.test(cli));
-ok('랭킹 창도 같이 닫는다', /function closeAllNavModals[\s\S]{0,120}closeLb\(\)/.test(cli));
+ok('랭킹 창도 같이 닫는다', /function closeAllNavModals[\s\S]{0,300}closeLb\(\)/.test(cli));
+// 홈은 무조건 홈 — 모드 고르는 창과 설명서도 같이 닫는다
+ok('홈이면 모드 창·설명서도 닫는다',
+   /function closeAllNavModals[\s\S]{0,200}closeModePanels\(\)[\s\S]{0,120}rulesClose\(\)/.test(cli));
 ok('메뉴바 자리만큼 창 아래를 비운다', /body:not\(\.ingame\):not\(\.quad4\) \.lb-modal \{ padding-bottom/.test(htm));
 
 // 탭 화면은 모두 전체화면 · 큰 닫기 버튼 없음
