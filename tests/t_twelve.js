@@ -346,7 +346,11 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('칩은 검·흰 카지노 칩', /\.chip\.dark \{[\s\S]{0,160}conic-gradient/.test(htm) && /\.chip\.light \{[\s\S]{0,160}conic-gradient/.test(htm));
   // 가진 칩은 숫자만이 아니라 쌓아서 보여 준다
   ok('칩을 쌓아 보여준다', /function tvStack\(box, n, mine\)/.test(cli) && /\.cs-stack \{ position:relative/.test(htm));
-  ok('숫자도 같이 있다', /querySelector\('b'\)\.textContent = v\.chips\.me/.test(cli));
+  ok('숫자도 같이 있다', /querySelector\('b'\)\.textContent = myHeld/.test(cli));
+  // 건 칩은 이미 손을 떠난 것으로 보여야 얼마를 더 지를 수 있는지가 눈에 맞는다
+  ok('건 만큼 먼저 줄어든다', /const myHeld = v\.chips\.me - \(v\.lot \? \(v\.lot\.myBet \|\| 0\) : 0\)/.test(cli));
+  ok('안 낸 만큼은 돌아온다', /function tvBackChips\(n, mine\)/.test(cli)
+     && /tvBackChips\(myBet - myPay, true\)/.test(cli));
   ok('통째로 갈아 끼우지 않는다', !/tv-myChips'\)\.innerHTML =/.test(cli));
   ok('줄어든 칩은 덜어 내는 게 보인다', /el\.classList\.add\('gone'\)/.test(cli) && /@keyframes csGone/.test(htm));
   ok('값을 부르면 칩이 판돈으로 간다', /function tvBetChips\(n, mine\)/.test(cli)
@@ -412,7 +416,7 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('낮은 화면에서는 빈 칸을 접는다', /@media \(max-height:720px\) \{[\s\S]{0,120}#tv-centerZone::before \{ display:none/.test(htm));
   ok('경매대가 줄어들 수 있다', /#tv-mat \{[\s\S]{0,600}min-height:0; position:relative; z-index:2; flex-shrink:1/.test(htm));
   ok('AI 가 정산을 대신 넘기지 않는다', /if \(g\.phase === 'settled'\) return null;/.test(tw));
-  ok('AI 가 뜸을 들인다', /\(g\.phase === 'bid' \|\| g\.phase === 'close'\) \? 1500 : 1100/.test(read('server.js')));
+  ok('AI 가 뜸을 들인다', /\(g\.phase === 'bid' \|\| g\.phase === 'close'\) \? 2200 : 1500/.test(read('server.js')));
   ok('내 프로필이 보인다', /id="tv-myProfile"/.test(htm) && /renderGameProfile\('tv-myProfile'/.test(cli));
   ok('프로필이 칩을 안 덮는다', /#tv-oppbar > \*, #tv-mebar > \* \{ position:static/.test(htm));
   ok('판이 화면을 채운다', /#tv \{[\s\S]{0,400}position:fixed; inset:0/.test(htm));
@@ -588,6 +592,34 @@ console.log('\n㉒ 모드가 달라도 내 것은 그대로 — 스킨·설명�
   ok('솔로·멀티 창이 전체화면', /#soloModal, #multiModal \{/.test(htm)
      && /#soloModal \.lb-box, #multiModal \.lb-box \{[\s\S]{0,120}height:100%/.test(htm));
   ok('닫기 버튼 대신 × 만 쓴다', !/style="margin-top:12px" onclick="closeModePanels\(\)">닫기/.test(htm));
+}
+
+console.log('\n㉓ 그냥 물러설 수는 없다 · 나가기는 한 번 묻는다 · 등급 숫자는 안 쓴다');
+{
+  const fs = require('fs'), path = require('path');
+  const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const htm = read('public/index.html'), cli = read('public/client.js');
+  // 아무도 안 건 판에서 빠지면 경매가 아니라 그냥 넘겨 주는 것이다
+  {
+    const g = T.createGame({ rnd: rng(61) });
+    T.draw(g, 1); T.offer(g, 1, g.hands[1][0].id); T.chooseType(g, 1, 'open');
+    ok('먼저 부르는 사람은 못 물러선다', T.canFold(g, 1) === false && T.fold(g, 1) === false);
+    ok('최소 1 은 걸 수 있다', T.raise(g, 1, 1) === true);
+    ok('받은 사람은 물러설 수 있다', T.canFold(g, 2) === true);
+    ok('물러서면 상대가 가져간다', T.fold(g, 2) === true && g.last.winner === 1);
+  }
+  // AI 도 못 물러서는 자리에서는 최소로 건다
+  {
+    const g = T.createGame({ rnd: rng(62) });
+    g.acq[1] = [{ kind: 6, grade: 1, id: 601 }];
+    T.draw(g, 1); T.offer(g, 1, g.hands[1][0].id); T.chooseType(g, 1, 'open');
+    const a = T.aiAct(g, 1, () => 0.99, 'easy');
+    ok('AI 는 그 자리에서 안 빠진다', a && a.act !== 'fold', a && a.act);
+  }
+  ok('화면도 물러서기를 감춘다', /if \(v\.lot\.canFold\) btn\('물러서기'/.test(cli));
+  ok('먼저 부르는 자리임을 알려준다', /먼저 부르는 자리예요/.test(cli));
+  ok('나가기 전에 한 번 묻는다', /askConfirm\(\{ icon: '🚪', title: '판을 나갈까요\?'/.test(cli));
+  ok('등급 숫자는 안 쓴다', /#tv \.card \.c-rank \{ display:none; \}/.test(htm));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

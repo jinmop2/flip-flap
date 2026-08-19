@@ -1710,7 +1710,7 @@ io.on('connection', (socket) => {
     const acted = twelve.applyAi(g, me, Math.random, room.difficulty || 'hard');
     tvPush(roomId);
     // 사람이 따라올 만한 뜸. 값을 부르는 대목은 더 길게 — 그게 이 모드의 승부처다.
-    const wait = (g.phase === 'bid' || g.phase === 'close') ? 1500 : 1100;
+    const wait = (g.phase === 'bid' || g.phase === 'close') ? 2200 : 1500;
     if (acted && !g.over) setTimeout(() => tvBot(roomId), wait);
   }
   function tvFinish(roomId) {

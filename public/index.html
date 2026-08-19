@@ -4139,6 +4139,10 @@
     #tv-bank.pop { animation:tvBankPop .4s ease; }
     @keyframes tvBankPop { 40% { transform:scale(1.18); } }
 
+    /* 트웰브는 등급(작은 숫자)을 안 쓴다 — 종류만 맞추면 되는 규칙이라
+       작은 숫자는 읽을 것만 늘린다. */
+    #tv .card .c-rank { display:none; }
+
     #tv-fx { position:absolute; inset:0; pointer-events:none; z-index:9; }
     /* 건너가는 칩 한 장 — 판 위의 칩과 같은 위에서 본 모습 */
     .tv-tossed { position:absolute; width:18px; height:18px; will-change:transform;
@@ -5291,6 +5295,8 @@
       <h3><span data-ico="👁"></span> 오픈 경매</h3>
       <p>값을 <b>서로 보이며</b> 번갈아 올립니다. 앞사람보다 많이 부르거나 물러서요.
          한 명이 물러설 때까지 계속 올릴 수 있습니다.</p>
+      <p style="color:#8a7a80;font-size:.78rem">먼저 부르는 사람은 <b>그냥 물러설 수 없어요</b> — 최소 1개는 걸어야 합니다.
+         아무도 안 건 채로 빠지면 경매가 아니라 그냥 넘겨 주는 것이니까요.</p>
 
       <h3><span data-ico="🙈"></span> 클로즈 경매</h3>
       <p>진행자가 <b>짝수 개</b>를 딱 한 번 부릅니다. 값은 상대에게 보이지만

@@ -180,9 +180,16 @@ function raise(g, who, amount) {
   g.lot.turnToAct = other(who);
   return true;
 }
+// 물러설 수 있는가 — 상대가 이미 값을 부른 뒤에만 물러설 수 있다.
+// 아무도 안 건 판에서 그냥 빠지면 경매가 아니라 그냥 넘겨 주는 것이다.
+// 그래서 먼저 부르는 사람은 반드시 1 이상을 건다.
+function canFold(g, who) {
+  if (g.over || g.phase !== 'bid' || !g.lot || g.lot.turnToAct !== who) return false;
+  return (g.lot.bets[other(who)] || 0) > 0;
+}
 // 물러선다 — 상대가 낙찰
 function fold(g, who) {
-  if (g.over || g.phase !== 'bid' || !g.lot || g.lot.turnToAct !== who) return false;
+  if (!canFold(g, who)) return false;
   g.lot.folded = who;
   settle(g, other(who));
   return true;
@@ -309,6 +316,7 @@ function viewFor(g, me) {
       oppBet: l.type === 'open' ? (l.bets[you] || 0) : null,
       closeBetKnown: l.type === 'close' && me === g.auctioneer ? l.closeBet : null,
       minRaise: (g.phase === 'bid' && l.turnToAct === me) ? minRaise(g, me) : null,
+      canFold: g.phase === 'bid' && l.turnToAct === me ? canFold(g, me) : false,
       // 살 값은 알려준다 — 하나를 더 얹어 사는 것이 규칙이니 값은 알 수밖에 없다.
       takeCost: (g.phase === 'close' && l.turnToAct === me && me !== g.auctioneer) ? l.closeBet + 1 : null,
       canTake: (g.phase === 'close' && l.turnToAct === me && me !== g.auctioneer
@@ -560,8 +568,9 @@ function aiAct(g, me, rnd = Math.random, level = 'hard') {
     const a = apprise(g, me, P);
     const cap = ceilingFor(g, me, P, a, rnd);
     const lo = minRaise(g, me);
-    if (!canRaise(g, me) || lo > cap || cap <= 0) return { act: 'fold' };
-    if (P.foldy && !a.mustWin && !a.mustDeny && rnd() < P.foldy) return { act: 'fold' };
+    // 먼저 부르는 자리라 물러설 수 없으면, 가장 싸게 한 칩만 건다
+    if (!canRaise(g, me) || lo > cap || cap <= 0) return canFold(g, me) ? { act: 'fold' } : { act: 'raise', amount: lo };
+    if (P.foldy && !a.mustWin && !a.mustDeny && rnd() < P.foldy && canFold(g, me)) return { act: 'fold' };
     // 상한 안에서는 조금씩 올린다. 한 번에 상한까지 지르면 읽히기도 쉽고,
     // 상대가 물러설 자리도 안 준다.
     if (P.minimal) return { act: 'raise', amount: lo };   // 값을 올려 주는 건 결국 내 지갑이다
@@ -644,7 +653,7 @@ function chooseFallback(g, me) {
 module.exports = {
   SPEC, START_CHIPS, HAND, CENTER,
   createGame, draw, offer, reoffer, chooseType,
-  canChoose, canRaise, minRaise, maxRaise, raise, fold,
+  canChoose, canRaise, minRaise, maxRaise, raise, fold, canFold,
   canCloseBet, closeBet, closeTake, closeDecline,
   settle, nextTurn, viewFor,
   completedKind, needLeft, byProgress, initDeck, activePlayer, timeout,

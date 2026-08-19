@@ -5495,6 +5495,15 @@ window.tvSolo = function (diff) {
   socket.emit('tv_solo', { pid: PID, nick: getNick(), diff: tvDiff });
 };
 window.tvQuit = function () {
+  // 한 번 묻는다 — 판을 나가면 그대로 지는 것이라 실수로 눌리면 안 된다
+  if (tvView && !tvView.over) {
+    askConfirm({ icon: '🚪', title: '판을 나갈까요?', desc: '지금 나가면 이 판은 집니다.',
+                 yes: '나가기', no: '계속하기' }, () => tvQuitNow());
+    return;
+  }
+  tvQuitNow();
+};
+function tvQuitNow() {
   document.body.classList.remove('twelve');
   tvMoveEmote('mebar');
   document.getElementById('tv-over').classList.remove('show');
@@ -5671,6 +5680,14 @@ function tvBetChips(n, mine) {
   for (let i = 0; i < many; i++) tvTossChip(from, pot, mine, i * 80);
 }
 
+// 걸었지만 안 낸 칩은 제자리로 돌아온다.
+function tvBackChips(n, mine) {
+  const pot = document.getElementById(mine ? 'tv-potMe' : 'tv-potOpp');
+  const home = document.getElementById(mine ? 'tv-myChips' : 'tv-oppChips');
+  const many = Math.min(Math.max(n, 1), 5);
+  for (let i = 0; i < many; i++) tvTossChip(pot, home, mine, i * 80);
+}
+
 // 정산 — 걸어 둔 더미가 은행으로 쓸려 간다.
 function tvFlyChips(n, mine) {
   const from = document.getElementById(mine ? 'tv-potMe' : 'tv-potOpp');
@@ -5732,8 +5749,12 @@ function tvReact(prev, v) {
     }
     // 칩이 은행으로
     const myPay = iWon ? l.wPay : l.lPay, opPay = iWon ? l.lPay : l.wPay;
+    const myBet = iWon ? l.wBet : l.lBet, opBet = iWon ? l.lBet : l.wBet;
     if (myPay > 0) tvFlyChips(myPay, true);
     if (opPay > 0) setTimeout(() => tvFlyChips(opPay, false), 180);
+    // 걸었지만 안 낸 만큼은 제자리로 — 진 쪽은 절반만 내므로 나머지가 돌아온다
+    if (myBet - myPay > 0) setTimeout(() => tvBackChips(myBet - myPay, true), 420);
+    if (opBet - opPay > 0) setTimeout(() => tvBackChips(opBet - opPay, false), 560);
     // 카드가 이긴 쪽으로
     const dest = document.getElementById(iWon ? 'tv-myAcq' : 'tv-oppAcq');
     tvFlying = (l.prize || []).map((c) => c.id);
@@ -5809,11 +5830,15 @@ function tvFlyDone(id) {
 function tvRender(v) {
   const $ = (id) => document.getElementById(id);
   $('tv-turn').textContent = `턴 ${v.turn}`;
+  // 건 칩은 이미 내 손을 떠난 것으로 보여 준다. 얼마를 더 지를 수 있는지가
+  // 그래야 눈에 맞는다 — 실제 정산은 판이 끝날 때 하고, 안 낸 만큼은 돌아온다.
+  const myHeld = v.chips.me - (v.lot ? (v.lot.myBet || 0) : 0);
+  const opHeld = v.chips.opp - (v.lot && v.lot.oppBet !== null ? (v.lot.oppBet || 0) : 0);
   // 쌓인 칩은 다시 만들지 않는다 — 통째로 갈아 끼우면 덜어 내는 모습이 안 보인다
-  $('tv-myChips').querySelector('b').textContent = v.chips.me;
-  $('tv-oppChips').querySelector('b').textContent = v.chips.opp;
-  tvStack($('tv-myChips').querySelector('.cs-stack'), v.chips.me, true);
-  tvStack($('tv-oppChips').querySelector('.cs-stack'), v.chips.opp, false);
+  $('tv-myChips').querySelector('b').textContent = myHeld;
+  $('tv-oppChips').querySelector('b').textContent = opHeld;
+  tvStack($('tv-myChips').querySelector('.cs-stack'), myHeld, true);
+  tvStack($('tv-oppChips').querySelector('.cs-stack'), opHeld, false);
   $('tv-deckLeft').textContent = v.centerLeft;
 
   // 덱 — 남은 장수만큼 겹쳐 쌓고, 뽑을 수 있을 때만 눌린다
@@ -5945,10 +5970,12 @@ function tvActions(v) {
     if (!myTurn) { st.textContent = '상대가 부르는 중…'; return; }
     const lo = v.lot.minRaise, hi = v.chips.me;
     if (lo > hi) { st.textContent = '칩이 모자라요 — 물러서야 해요'; btn('물러서기', () => tvAct('fold'), true); return; }
-    st.textContent = `내 차례 — ${lo} 이상 부르거나 물러서요`;
+    // 아무도 안 건 판에서는 물러설 수 없다 — 먼저 부르는 사람은 1 이상을 건다
+    st.textContent = v.lot.canFold ? `내 차례 — ${lo} 이상 부르거나 물러서요`
+                                   : `먼저 부르는 자리예요 — ${lo} 이상 거세요`;
     const amt = tvAmount(box, lo, hi, 1, lo);
     btn('부르기', () => tvAct('raise', { amount: amt.get() }));
-    btn('물러서기', () => tvAct('fold'), true);
+    if (v.lot.canFold) btn('물러서기', () => tvAct('fold'), true);
     return;
   }
   if (v.phase === 'close') {
