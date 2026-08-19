@@ -4006,7 +4006,7 @@
     /* 경매대 아래에만 문구·버튼 칸이 있으니, 가운데를 맞추면 경매대는 그
        높이의 절반만큼 위로 밀린다. 위에 같은 크기의 빈 칸을 두어 경매대가
        진짜 한가운데에 오게 한다 — 덱과 은행도 여기 높이에 맞춰 서 있다. */
-    #tv-centerZone::before { content:''; height:98px; flex-shrink:0; }
+    #tv-centerZone::before { content:''; height:min(98px, 9vh); flex-shrink:0; }
     #tv-myZone { display:flex; flex-direction:column; align-items:center;
       justify-content:flex-end; padding-bottom:calc(40px + var(--safe-b)); }
 
@@ -4029,9 +4029,17 @@
       background:radial-gradient(ellipse at 50% 40%, rgba(0,0,0,.32) 0%, rgba(0,0,0,.14) 70%, rgba(0,0,0,.05) 100%);
       border:1.5px dashed rgba(200,160,0,.3);
       box-shadow:inset 0 0 24px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,215,120,.08);
-      width:288px; min-height:236px; position:relative; z-index:2;
+      width:288px; min-height:0; position:relative; z-index:2; flex-shrink:1;
     }
-    #tv-mat .a-card { width:70px; height:98px; display:flex; align-items:center; justify-content:center; }
+    /* 카드 크기를 화면 높이에도 매어 둔다. 낮은 화면(갤럭시 세로 등)에서
+       경매대가 안 줄어들면 그만큼이 아래 칸(문구·버튼·내 필드)을 밀어내
+       서로 겹쳐 보인다. */
+    #tv-mat .a-card { width:70px; height:min(98px, 15vh); display:flex; align-items:center; justify-content:center; }
+    /* 2인전 경매대는 이 줄의 높이를 118px 로 못 박아 두었다. 트웰브는 카드가
+       화면에 맞춰 줄어드니 그 못이 오히려 걸린다 — 줄 높이가 안 줄면 내용이
+       위로 삐져나와 종류 딱지(오픈/클로즈)를 덮는다. 여기서는 내용에 맡긴다. */
+    #tv-mat .auction-row { height:auto; }
+    #tv-mat .a-card .card { width:100%; height:100%; }
     .tv-bets { display:flex; gap:14px; font-size:.68rem; color:#c8a86a; height:20px; align-items:center; }
     .tv-bet b { font-size:1rem; font-weight:900; color:#fff; margin-right:3px; }
     .tv-bet.me b { color:#ffe9a8; }
@@ -4106,6 +4114,26 @@
     .tv-landing { visibility:hidden; }
     .tv-flychip { position:absolute; width:17px; height:17px;
       transition:transform .7s cubic-bezier(.5,0,.4,1), opacity .3s; }
+
+    /* 낮은 화면(세로 640 언저리 — 갤럭시 등) — 칸을 한 벌 더 줄여 겹치지 않게 */
+    @media (max-height:720px) {
+      body.twelve #tv-centerZone::before { display:none; }
+      #tv-centerZone { gap:6px; }
+      #tv-mat { padding:8px 10px; gap:6px; }
+      #tv-oppZone { padding-top:calc(56px + var(--safe-t)); }
+      #tv-myZone { padding-bottom:calc(24px + var(--safe-b)); }
+      .tv-say { height:22px; }
+      .tv-bets { height:16px; font-size:.62rem; }
+      #tv-status { height:28px; font-size:.78rem; padding:0 12px; }
+      #tv-actions { height:46px; gap:6px; }
+      #tv .tv-btn { padding:8px 13px; font-size:.78rem; }
+      .tv-step { width:38px; height:38px; font-size:1.25rem; }
+      .tv-amt .tv-num { min-width:48px; height:38px; font-size:1.15rem; }
+      #tv .pile { height:38px; }
+      #tv .pile .card { width:34px; height:48px; }
+      #tv-deckStack { height:64px; }
+      #tv-deckStack .card { height:64px; }
+    }
 
     @media (max-width:600px) {
       #tv { padding:10px 12px calc(8px + var(--safe-b)); }

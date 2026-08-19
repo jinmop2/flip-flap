@@ -351,7 +351,8 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   // 단계가 바뀌어도 판이 안 밀리게 — 칸마다 높이를 못 박았는가
   ok('문구 칸 높이 고정', /#tv-status \{[\s\S]{0,300}height:32px/.test(htm));
   ok('버튼 칸 높이 고정', /#tv-actions \{[\s\S]{0,140}height:56px/.test(htm));
-  ok('카드 자리 고정', /#tv-mat \.a-card \{ width:70px; height:98px/.test(htm));
+  // 높이는 화면에 매어 둔다 — 낮은 화면에서 안 줄면 아래 칸을 밀어낸다
+  ok('카드 자리 고정', /#tv-mat \.a-card \{ width:70px; height:min\(98px, 15vh\)/.test(htm));
   ok('2인전과 같은 줄 구성', /id="tv-oppZone"/.test(htm) && /id="tv-centerZone"/.test(htm) && /id="tv-myZone"/.test(htm));
   ok('덱은 띄워 붙여 경매대를 안 민다', /#tv-deck \{ position:absolute/.test(htm));
 }
@@ -397,7 +398,9 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   // 컨트롤이 노치에 안 가리게 — 좁은 화면에서도 안전 여백을 지킨다
   ok('좁은 화면에서도 노치를 피한다', /#tv-controls \{ top:calc\(8px \+ var\(--safe-t\)\)/.test(htm));
   // 경매대가 화면 한가운데 오게 — 아래 칸만큼 위에도 빈 칸을 둔다
-  ok('경매대가 가운데로 내려온다', /#tv-centerZone::before \{ content:''; height:98px/.test(htm));
+  ok('경매대가 가운데로 내려온다', /#tv-centerZone::before \{ content:''; height:min\(98px, 9vh\)/.test(htm));
+  ok('낮은 화면에서는 빈 칸을 접는다', /@media \(max-height:720px\) \{[\s\S]{0,120}#tv-centerZone::before \{ display:none/.test(htm));
+  ok('경매대가 줄어들 수 있다', /#tv-mat \{[\s\S]{0,600}min-height:0; position:relative; z-index:2; flex-shrink:1/.test(htm));
   ok('AI 가 정산을 대신 넘기지 않는다', /if \(g\.phase === 'settled'\) return null;/.test(tw));
   ok('AI 가 뜸을 들인다', /\(g\.phase === 'bid' \|\| g\.phase === 'close'\) \? 1500 : 1100/.test(read('server.js')));
   ok('내 프로필이 보인다', /id="tv-myProfile"/.test(htm) && /renderGameProfile\('tv-myProfile'/.test(cli));
