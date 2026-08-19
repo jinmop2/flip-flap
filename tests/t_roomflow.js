@@ -317,5 +317,11 @@ ok('탭 이동이 덮개를 거친다', /function navGo\(key\)[\s\S]{0,200}veil\
 ok('새 화면을 그린 뒤에 걷는다', /requestAnimationFrame\(\(\) => requestAnimationFrame\(/.test(cli));
 ok('넘어가는 중에 또 눌러도 안 엉킨다', /if \(veilBusy\) \{ fn\(\); return; \}/.test(cli));
 
+// 창 제목의 × 가 바로 아래 큰 버튼과 손가락 자리를 다투지 않게
+ok('× 가 제목 줄 안에 선다', /#soloModal \.lb-title \.close-x, #multiModal \.lb-title \.close-x \{[\s\S]{0,120}margin-left:auto/.test(htm));
+ok('제목 줄이 한 줄을 차지한다', /#soloModal \.lb-title, #multiModal \.lb-title \{[\s\S]{0,140}width:100%; min-height:48px/.test(htm));
+// 이름이 겹치는 랭킹 줄 규칙이 창 제목까지 줄여 버렸다 — 그래서 × 가 제자리를 잃었다
+ok('랭킹 줄 규칙은 랭킹 줄에만', /@media \(max-width:420px\) \{ \.lb-row \.lb-title \{ max-width:30%/.test(htm));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
