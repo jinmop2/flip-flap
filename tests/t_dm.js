@@ -142,5 +142,23 @@ console.log('\n⑧ 인게임 채팅 화면');
   ok('로그인하면 안 읽음을 가져온다', /gcRefreshUnread\(\);\s*\/\/ 안 읽은/.test(cli));
 }
 
+// 인게임 채팅이 안 눌리던 것 — 이름이 겹친 CSS
+// 뽑기 카드의 뒷면도 .gc-back, 채팅의 '목록으로'도 .gc-back 이었다.
+// 뽑기 쪽 장식(::after, inset:7px)이 position:static 인 채팅 버튼에 붙어
+// 채팅 창 전체를 덮었고, 입력칸·보내기 탭이 전부 그 버튼으로 들어갔다.
+{
+  const fs2 = require('fs'), path2 = require('path');
+  const htm = fs2.readFileSync(path2.join(__dirname, '..', 'public/index.html'), 'utf8');
+  ok('뽑기 뒷면 규칙은 카드 안으로 좁혔다',
+     /\.gc-item \.gc-back \{ background:linear-gradient/.test(htm)
+     && /\.gc-item \.gc-back::after \{ content:''; position:absolute; inset:7px/.test(htm));
+  // 채팅 쪽 .gc-back 규칙은 남아도 된다 — 덮는 장식이 없어야 한다는 뜻이다
+  ok('맨 이름으로 덮는 장식이 없다', !/\n\s*\.gc-back::after \{/.test(htm));
+  ok('채팅 버튼은 자기 자리만 차지한다',
+     /\n\s*\.gc-back \{ flex-shrink:0;[^}]*\}/.test(htm)
+     && !/\n\s*\.gc-back \{[^}]*position:absolute/.test(htm));
+  ok('채팅 목록 버튼은 그대로', /class="gc-back" onclick="gameChatBack\(\)"/.test(htm));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
