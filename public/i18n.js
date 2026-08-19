@@ -19,8 +19,7 @@
   const EN = {
 
     // ── TWELVE ──
-    'TWELVE — AI와 대전': 'TWELVE — vs AI',
-    '칩 20개로 시작 · 세트를 먼저 완성하면 승리': 'Start with 20 chips · first to a set wins',
+    'AI는 쉬움·보통·전문가 세 급이에요. 전문가는 남은 카드를 세고,\n         칩을 0까지 쓰지 않으며, 클로즈로 상대 칩을 말리는 수까지 씁니다.': 'The AI comes in three grades. Expert counts the unseen cards, never spends its last chip, and uses closed auctions to drain yours.',
     '카드가 아니라 칩으로 값을 부르는 경매예요': 'An auction where you bid chips, not cards',
     '덱을 눌러 카드를 뒤집으세요': 'Tap the deck to flip a card',
     '상대가 카드를 뒤집는 중…': 'They are flipping a card…',

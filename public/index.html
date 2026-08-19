@@ -177,6 +177,7 @@
     .mm-tile .mt-sub { font-size:.6rem; color:#a89880; text-align:center; line-height:1.35; }
     /* 아이템전은 보라, 다인전은 청록 — 판이 다르다는 걸 색으로 먼저 알린다 */
     .mm-tile.t-item { background:linear-gradient(180deg,#3a2358,#241040); border-color:#8b6ad8; }
+    .mm-tile.t-twelve { background:linear-gradient(180deg,#173a55,#0d2233); border-color:#6ac0f0; }
     .mm-tile.t-item .mt-name { color:#e2d4ff; }
     .mm-tile.t-quad { background:linear-gradient(180deg,#123a30,#0c2620); border-color:#4a9a7a; }
     .mm-tile.t-quad .mt-name { color:#c8f0dc; }
@@ -3918,7 +3919,7 @@
       background:rgba(0,0,0,.4); border:1px solid rgba(200,160,0,.35); border-radius:99px; padding:2px 11px 2px 5px; }
 
     /* 존 — 2인전과 같은 배치 */
-    #tv-oppZone { padding-top:72px; display:flex; flex-direction:column; align-items:center; }
+    #tv-oppZone { padding-top:calc(84px + var(--safe-t)); display:flex; flex-direction:column; align-items:center; }
     #tv-centerZone { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
       gap:10px; width:100%; position:relative; }
     /* 경매대 아래에만 문구·버튼 칸이 있으니, 가운데를 맞추면 경매대는 그
@@ -4027,7 +4028,7 @@
       #tv-controls { top:calc(8px + var(--safe-t)); left:10px; gap:6px; }
       #tv-oppbar { top:calc(4px + var(--safe-t)); right:10px; gap:4px; }
       #tv-mebar { bottom:calc(10px + var(--safe-b)); right:10px; gap:5px; }
-      #tv-oppZone { padding-top:56px; }
+      #tv-oppZone { padding-top:calc(70px + var(--safe-t)); }
       #tv-mat { width:auto; max-width:224px; min-width:200px; min-height:200px; padding:10px; gap:8px; }
       #tv-mat .a-card { width:58px; height:81px; }
       #tv-deck { left:8px; width:50px; }
@@ -4309,13 +4310,23 @@
 
     <div class="mm-sec"><b>TWELVE</b><span class="mc-tag">신규</span><i></i></div>
     <p class="mm-hint">카드가 아니라 칩으로 값을 부르는 경매예요</p>
-    <button class="mm-hero" style="background:linear-gradient(135deg,#1c4a6b 0%,#2d7ab0 45%,#0d2a44 100%);border-color:#6ac0f0" onclick="tvSolo()">
-      <span class="hh-ico">🔵</span>
-      <span class="hh-txt">
-        <span class="hh-name">TWELVE — AI와 대전</span>
-        <span class="hh-sub">칩 20개로 시작 · 세트를 먼저 완성하면 승리</span>
-      </span>
-    </button>
+    <div class="mm-tiles c3">
+      <button class="mm-tile t-twelve" onclick="tvSolo('easy')">
+        <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
+        <span class="mt-name">쉬움</span>
+        <span class="mt-sub">🪙 5</span>
+      </button>
+      <button class="mm-tile t-twelve" onclick="tvSolo('hard')">
+        <span class="mt-ico">★★<span style="opacity:.28">★</span></span>
+        <span class="mt-name">보통</span>
+        <span class="mt-sub">🪙 15</span>
+      </button>
+      <button class="mm-tile t-twelve d-expert" onclick="tvSolo('expert')">
+        <span class="mt-ico">👑</span>
+        <span class="mt-name">전문가</span>
+        <span class="mt-sub">🪙 40</span>
+      </button>
+    </div>
 
     <div class="mm-sec"><b>다인전</b><span class="mc-tag beta">3·4인</span><i></i></div>
     <div class="mm-tiles c2">
@@ -5150,6 +5161,8 @@
         <li>덱이 다 떨어지면 <b>세트에 더 가까운 쪽</b>이 이깁니다</li>
         <li>2인전과 같이 <b>제한 시간 5분</b>씩 — 내 차례에만 줄어들고, 다 쓰면 집니다</li>
       </ul>
+      <p style="color:#8a7a80;font-size:.78rem">AI는 쉬움·보통·전문가 세 급이에요. 전문가는 남은 카드를 세고,
+         칩을 0까지 쓰지 않으며, 클로즈로 상대 칩을 말리는 수까지 씁니다.</p>
       <p style="color:#8a7a80;font-size:.78rem">랭킹(RP)에는 반영되지 않아요. 코인과 경험치만 들어옵니다.</p>
     </div>
   </div>

@@ -2657,6 +2657,11 @@ function renderGameProfile(elId, p) {
     const bot = (typeof AI_AVATAR !== 'undefined') ? AI_AVATAR : '🤖';
     body.innerHTML = `<span class="gp-rank gp-art">${bot}</span><span class="gp-nick">AI</span>`;
     if (stats) stats.innerHTML = `컴퓨터`;
+  } else if (p.cpuDiff) {
+    // TWELVE 의 AI — 누구와 두는지, 어느 급인지가 한눈에 보여야 한다
+    const bot = (typeof AI_AVATAR !== 'undefined') ? AI_AVATAR : '🤖';
+    body.innerHTML = `<span class="gp-rank gp-art">${bot}</span><span class="gp-nick">${esc(p.nick)}</span>`;
+    if (stats) stats.innerHTML = `컴퓨터 · ${esc(p.cpuDiff)}`;
   } else if (p.guest) {
     body.innerHTML = `<span class="gp-rank">👤</span><span class="gp-nick">${esc(p.nick)}</span>`;
     if (stats) stats.innerHTML = `게스트 (기록 없음)`;
@@ -5407,6 +5412,7 @@ window.addEventListener('appinstalled', () => {
 // 그대로 보낸다 — 값이나 승패를 화면에서 계산하지 않는다.
 let tvView = null, tvMe = 0, tvBot = false, tvPrev = null;
 let tvFlying = [];   // 지금 필드로 날아가는 중인 카드 id
+let tvDiff = 'hard';  // 마지막으로 고른 AI 난이도 (한 판 더 에서 그대로 쓴다)
 
 // 이모트 버튼은 2인전 것 하나뿐이다. 두 벌 만들면 쿨타임·차단 설정이
 // 따로 놀기 시작한다 — 그래서 판이 열릴 때 자리만 옮긴다.
@@ -5421,10 +5427,11 @@ function tvOpen() {
   document.getElementById('tv-over').classList.remove('show');
   try { startBGM('game'); } catch (_) {}
 }
-window.tvSolo = function () {
+window.tvSolo = function (diff) {
   closeModePanels();
   tvBot = true;
-  socket.emit('tv_solo', { pid: PID, nick: getNick() });
+  tvDiff = ['easy', 'hard', 'expert'].includes(diff) ? diff : 'hard';
+  socket.emit('tv_solo', { pid: PID, nick: getNick(), diff: tvDiff });
 };
 window.tvQuit = function () {
   document.body.classList.remove('twelve');
@@ -5436,7 +5443,7 @@ window.tvQuit = function () {
 window.tvAgain = function () {
   document.getElementById('tv-over').classList.remove('show');
   // 혼자 하기는 그 자리에서 다시. 온라인은 상대를 다시 잡아야 하므로 로비로.
-  if (tvBot) { socket.emit('leave_room'); setTimeout(() => socket.emit('tv_solo', { pid: PID, nick: getNick() }), 150); }
+  if (tvBot) { socket.emit('leave_room'); setTimeout(() => socket.emit('tv_solo', { pid: PID, nick: getNick(), diff: tvDiff }), 150); }
   else tvQuit();
 };
 window.tvRules = function (show) { if (show && typeof rulesTab === 'function') { toggleRules(true); rulesTab('twelve'); } };

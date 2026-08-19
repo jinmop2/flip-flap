@@ -290,17 +290,17 @@ console.log('\n⑯ AI 가 승부수를 알아본다');
   g.acq[1] = [{ kind: 2, grade: 1, id: 201 }];
   g.center.unshift({ kind: 2, grade: 2, id: 202 });
   T.draw(g, 1); T.offer(g, 1, g.hands[1][0].id);
-  ok('세트를 완성시키는 경매품은 값이 무한', T.lotWorth(g, 1) === Infinity);
+  ok('세트를 완성시키는 경매품은 값이 무한', T.apprise(g, 1, T.LEVELS.expert).mustWin === true);
   // 상대가 완성 직전이면 막는 것도 무한
   const h = T.createGame({ rnd: rng(78) });
   h.acq[2] = [{ kind: 2, grade: 1, id: 201 }];
   h.center.unshift({ kind: 2, grade: 2, id: 202 });
   T.draw(h, 1); T.offer(h, 1, h.hands[1][0].id);
-  ok('상대 완성을 막는 것도 무한', T.lotWorth(h, 1) === Infinity);
+  ok('상대 완성을 막는 것도 무한', T.apprise(h, 1, T.LEVELS.expert).mustDeny === true);
   // 아무 쓸모 없는 자리는 값이 작다
   const k = T.createGame({ rnd: rng(79) });
   T.draw(k, 1); T.offer(k, 1, k.hands[1][0].id);
-  const w = T.lotWorth(k, 1);
+  const w = T.apprise(k, 1, T.LEVELS.expert).worth;
   ok('보통 자리는 가진 칩보다 싸다', w !== Infinity && w <= k.chips[1], String(w));
 }
 
@@ -322,7 +322,7 @@ console.log('\n⑰ 서버·화면에 제대로 물렸는가');
   ok('클라이언트가 상태를 받는다', /socket\.on\('tv_state'/.test(cli) && /function tvRender/.test(cli));
   ok('클라이언트는 셈을 하지 않는다', !/tvView[\s\S]{0,200}Math\.floor\(.*\/ 2\)/.test(cli));
   ok('설명서 탭이 있다', /data-rt="twelve"/.test(htm) && /id="rulesTwelveModal"/.test(htm));
-  ok('솔로·빠른입장 입구', /onclick="tvSolo\(\)"/.test(htm) && /quickJoin\('twelve'\)/.test(htm));
+  ok('솔로·빠른입장 입구', /onclick="tvSolo\('hard'\)"/.test(htm) && /quickJoin\('twelve'\)/.test(htm));
 }
 
 console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
@@ -385,7 +385,9 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('내 프로필이 보인다', /id="tv-myProfile"/.test(htm) && /renderGameProfile\('tv-myProfile'/.test(cli));
   ok('프로필이 칩을 안 덮는다', /#tv-oppbar > \*, #tv-mebar > \* \{ position:static/.test(htm));
   ok('판이 화면을 채운다', /#tv \{[\s\S]{0,400}position:fixed; inset:0/.test(htm));
-  ok('상대 줄이 버튼을 피한다', /#tv-oppZone \{ padding-top:72px/.test(htm));
+  // 상대 손패가 좌측 상단 버튼·노치에 가리지 않아야 한다
+  ok('상대 줄이 버튼을 피한다', /#tv-oppZone \{ padding-top:calc\(84px \+ var\(--safe-t\)\)/.test(htm));
+  ok('좁은 화면에서도 피한다', /#tv-oppZone \{ padding-top:calc\(70px \+ var\(--safe-t\)\); \}/.test(htm));
 }
 
 console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
@@ -437,6 +439,68 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   ok('칩은 경매대에서 은행으로', /const from = document\.getElementById\('tv-mat'\);[\s\S]{0,120}getElementById\('tv-bank'\)/.test(cli));
   ok('칩이 프로필로 날지 않는다', !/tvFlyChips\(myEl/.test(cli));
   ok('설명서가 시간을 알린다', /제한 시간 5분/.test(htm));
+}
+
+console.log('\n㉑ AI — 세 급이 정말로 다른가');
+{
+  const fs = require('fs'), path = require('path');
+  const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const htm = read('public/index.html'), cli = read('public/client.js'), srv = read('server.js');
+  ok('세 급이 있다', !!(T.LEVELS.easy && T.LEVELS.hard && T.LEVELS.expert));
+  ok('전문가만 판을 견주어 본다', T.LEVELS.expert.reason === true && !T.LEVELS.hard.reason && !T.LEVELS.easy.reason);
+  ok('쉬움은 칩을 함부로 쓴다', T.LEVELS.easy.safe === false && T.LEVELS.hard.safe === true);
+  ok('고른 급이 서버까지 간다', /\['easy', 'hard', 'expert'\]\.includes\(diff\)/.test(srv)
+     && /applyAi\(g, me, Math\.random, room\.difficulty \|\| 'hard'\)/.test(srv));
+  ok('화면에 세 버튼이 있다', /tvSolo\('easy'\)/.test(htm) && /tvSolo\('hard'\)/.test(htm) && /tvSolo\('expert'\)/.test(htm));
+  ok('한 판 더도 같은 급으로', /diff: tvDiff/.test(cli));
+  ok('어느 급인지 보여준다', /cpuDiff/.test(cli) && /cpuDiff: label/.test(srv));
+
+  // 칩을 0 까지 쓰면 진다 — 세트를 못 내는 수라면 마지막 한 칩은 남겨야 한다
+  {
+    const g = T.createGame({ rnd: rng(41) });
+    g.chips[1] = 5;
+    T.draw(g, 1); T.offer(g, 1, g.hands[1][0].id); T.chooseType(g, 1, 'open');
+    const cap5 = T.LEVELS.expert.safe ? 4 : 5;
+    ok('마지막 한 칩은 남긴다', cap5 === 4);
+  }
+  // 상대 손패는 어떤 급도 안 본다
+  {
+    const g = T.createGame({ rnd: rng(42) });
+    T.draw(g, 1); T.offer(g, 1, g.hands[1][0].id); T.chooseType(g, 1, 'open');
+    const before = JSON.stringify(g.hands[2]);
+    const snap = JSON.stringify(g);
+    for (const lv of ['easy', 'hard', 'expert']) {
+      const h = JSON.parse(snap);
+      const a1 = T.aiAct(h, 1, () => 0.5, lv);
+      h.hands[2] = [];                       // 상대 손패를 지워도 같은 수가 나와야 한다
+      const a2 = T.aiAct(h, 1, () => 0.5, lv);
+      ok(`${lv} 는 상대 손패를 안 본다`, JSON.stringify(a1) === JSON.stringify(a2));
+    }
+    ok('상대 손패를 건드리지 않는다', JSON.stringify(g.hands[2]) === before);
+  }
+  // 자가대전 — 급이 높을수록 이겨야 한다
+  {
+    const duel = (l1, l2, n, seed0) => {
+      let w1 = 0, w2 = 0;
+      for (let i = 0; i < n; i++) {
+        const rnd = rng(seed0 + i * 7919);
+        const g = T.createGame({ rnd, first: i % 2 ? 2 : 1 });
+        let guard = 0;
+        while (!g.over && guard++ < 3000) {
+          if (g.phase === 'settled') { T.nextTurn(g); continue; }
+          const who = T.activePlayer(g); if (!who) break;
+          if (!T.applyAi(g, who, rnd, who === 1 ? l1 : l2)) break;
+        }
+        if (g.over) (g.winner === 1 ? w1++ : w2++);
+      }
+      return w1 / (w1 + w2);
+    };
+    const both = (a, b) => (duel(a, b, 200, 101) + (1 - duel(b, a, 200, 404))) / 2;
+    const eh = both('expert', 'hard'), he = both('hard', 'easy'), ee = both('expert', 'easy');
+    ok('전문가가 보통을 이긴다', eh >= 0.60, (eh * 100).toFixed(1) + '%');
+    ok('보통이 쉬움을 이긴다', he >= 0.62, (he * 100).toFixed(1) + '%');
+    ok('전문가가 쉬움을 크게 이긴다', ee >= 0.68, (ee * 100).toFixed(1) + '%');
+  }
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

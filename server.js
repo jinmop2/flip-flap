@@ -1706,7 +1706,7 @@ io.on('connection', (socket) => {
     const room = rooms[roomId]; const g = room && room.tv;
     if (!g || g.over || room.cpuIndex === undefined) return;
     const me = room.cpuIndex + 1;
-    const acted = twelve.applyAi(g, me);
+    const acted = twelve.applyAi(g, me, Math.random, room.difficulty || 'hard');
     tvPush(roomId);
     // 사람이 따라올 만한 뜸. 값을 부르는 대목은 더 길게 — 그게 이 모드의 승부처다.
     const wait = (g.phase === 'bid' || g.phase === 'close') ? 1500 : 1100;
@@ -1768,7 +1768,9 @@ io.on('connection', (socket) => {
   }
 
   // 혼자 하기 (AI 와)
-  socket.on('tv_solo', ({ pid, nick } = {}) => {
+  socket.on('tv_solo', ({ pid, nick, diff } = {}) => {
+    const level = ['easy', 'hard', 'expert'].includes(diff) ? diff : 'hard';
+    const label = level === 'easy' ? '쉬움' : level === 'expert' ? '전문가' : '보통';
     if (socket.roomId && rooms[socket.roomId]) return;
     if (Object.keys(rooms).length >= MAX_ROOMS) return socket.emit('error', '서버가 혼잡해요.');
     leaveOldRoom();
@@ -1776,8 +1778,8 @@ io.on('connection', (socket) => {
     const roomId = makeRoomId();
     rooms[roomId] = {
       players: [socket.id, null], pids: [pid || null, null], nicks: [prof.nick, 'TWELVE AI'],
-      profiles: [prof, { nick: 'TWELVE AI', guest: true }], tokens: [socket.token || null, null],
-      name: 'TWELVE', game: null, vsBot: true, difficulty: 'hard',
+      profiles: [prof, { nick: 'TWELVE AI', guest: true, cpuDiff: label }], tokens: [socket.token || null, null],
+      name: 'TWELVE', game: null, vsBot: true, difficulty: level,
       secret: false, password: '', mode: 'twelve', cpuIndex: 1,
     };
     socket.leave('lobby');

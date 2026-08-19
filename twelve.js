@@ -303,54 +303,236 @@ function viewFor(g, me) {
 
 // ── AI ────────────────────────────────────────────────────────────────────
 // 이 모드는 "언제 물러설지" 가 전부다. 이긴 쪽은 전액, 진 쪽도 절반을 낸다 —
-// 그래서 값어치보다 높게 부르면 이겨도 손해고, 끝까지 따라가다 지면 두 번 손해다.
-// 그래서 AI 는 먼저 이 경매품이 나에게 몇 칩짜리인지를 셈하고, 그 선을 넘지 않는다.
+// 값어치보다 높게 부르면 이겨도 손해고, 끝까지 따라가다 지면 두 번 손해다.
+//
+// 그래서 AI 는 네 가지를 본다.
+//   1) 이 경매품이 내 세트를 몇 걸음 당기는가 (남은 카드로 정말 채울 수 있는 줄만)
+//   2) 상대의 세트를 몇 걸음 막는가
+//   3) 덱이 얼마 안 남았는가 — 막바지엔 한 판이 곧 승패다
+//   4) 칩을 0 까지 쓰면 지는가 — 세트를 완성하는 수가 아니면 마지막 한 칩은 남긴다
+//
+// 상대 손패는 절대 보지 않는다. 세는 것은 내 손패·양쪽 앞 카드·공개된 경매품뿐,
+// 사람이 앉아서 셀 수 있는 것과 같다.
 
-// 경매품이 나에게 얼마나 값진가 — 칩 단위로 환산한다.
-// 세트를 완성시키거나 상대의 완성을 막는 수는 값을 매기지 않는다(무조건 간다).
-function lotWorth(g, me) {
-  const you = me === 1 ? 2 : 1;
-  const cards = [g.lot.center, g.lot.offered].filter(Boolean);
-  const myAfter = needLeft(g.acq[me].concat(cards));
-  const opAfter = needLeft(g.acq[you].concat(cards));
-  if (myAfter === 0) return Infinity;        // 이걸 먹으면 내가 이긴다
-  if (opAfter === 0) return Infinity;        // 뺏기면 상대가 이긴다 — 막아야 한다
-  const gain = needLeft(g.acq[me]) - myAfter;    // 내가 몇 걸음 다가가나
-  const deny = needLeft(g.acq[you]) - opAfter;   // 상대를 몇 걸음 막나
-  // 남은 칩이 적을수록 한 칩이 무겁다. 그래서 값도 가진 칩에 비례해 잡는다.
-  const scale = Math.max(2, g.chips[me]) / 10;
-  return Math.max(1, Math.round((gain * 3.2 + deny * 1.8) * scale));
+const TOTAL = {};
+for (const [k, c] of SPEC) TOTAL[k] = c;
+
+// 난이도 — 같은 뼈대에 다른 눈을 붙인다.
+//   쉬움  : 상대를 막을 줄 모르고, 값을 헛본다. 칩도 함부로 쓴다.
+//   보통  : 값은 제대로 보되 막바지 계산과 심리전은 없다.
+//   전문가: 막바지 승부, 칩 관리, 클로즈로 상대 칩을 말리는 수까지 쓴다.
+const LEVELS = {
+  easy:   { gain: 2.6, deny: 0.2, late: 1.0, noise: 0.85, foldy: 0.34, safe: false, drain: false, count: false, scale: 7, sloppy: true },
+  hard:   { gain: 3.4, deny: 1.7, late: 1.25, noise: 0.16, foldy: 0.05, safe: true,  drain: false, count: true,  scale: 10 },
+  expert: { gain: 3.6, deny: 2.6, late: 1.9, noise: 0.04, foldy: 0,    safe: true,  drain: true,  count: true,  scale: 11, reason: true, minimal: true },
+};
+const levelOf = (name) => LEVELS[Object.prototype.hasOwnProperty.call(LEVELS, name) ? name : 'hard'];
+
+// 내가 셀 수 있는 카드만으로 "아직 안 나온 장수" 를 센다.
+// (= 상대 손패 + 남은 중앙덱. 어느 쪽인지는 모르지만 총량은 알 수 있다)
+function unseenCounts(g, me, extra) {
+  const left = {};
+  for (const [k, c] of SPEC) left[k] = c;
+  const take = (arr) => { for (const c of arr) if (c) left[c.kind]--; };
+  take(g.hands[me]); take(g.acq[1]); take(g.acq[2]); take(extra || []);
+  return left;
 }
 
-// 이 판에서 내가 더 낼 수 있는 상한
-function ceilingFor(g, me) {
-  const w = lotWorth(g, me);
-  if (w === Infinity) return g.chips[me];        // 승부수 — 다 건다
-  return Math.max(1, Math.min(g.chips[me], w));
+// 세트까지 남은 장수 — 남은 카드로 정말 채울 수 있는 줄만 센다.
+// 2짜리는 세상에 두 장뿐이라, 한 장이 상대 앞에 깔리면 그 줄은 이미 죽은 줄이다.
+function setDist(acq, left) {
+  const n = {};
+  for (const c of acq) n[c.kind] = (n[c.kind] || 0) + 1;
+  let best = Infinity;
+  for (const [k] of SPEC) {
+    const need = k - (n[k] || 0);
+    if (need <= 0) return 0;
+    if (left && (left[k] || 0) < need) continue;   // 못 채우는 줄은 안 센다
+    if (need < best) best = need;
+  }
+  return best === Infinity ? 99 : best;
+}
+
+// 지금 내가 볼 자격이 있는 경매품. 클로즈에서 사는 쪽은 출품 카드를 못 본다 —
+// AI 라고 몰래 보면 그건 규칙이 아니라 속임수다.
+function lotCardsFor(g, me) {
+  const l = g.lot; if (!l) return [];
+  const blind = l.type === 'close' && me !== g.auctioneer;
+  return blind ? [l.center].filter(Boolean) : [l.center, l.offered].filter(Boolean);
+}
+
+// 이 경매품이 나에게 몇 칩짜리인가.
+// { worth, mustWin, mustDeny } — mustWin 은 먹으면 이기는 수, mustDeny 는 뺏기면 지는 수.
+function apprise(g, me, P) {
+  const you = other(me);
+  const cards = lotCardsFor(g, me);
+  const left = P.count ? unseenCounts(g, me, cards) : null;
+  const myNow = setDist(g.acq[me], left);
+  const myAfter = setDist(g.acq[me].concat(cards), left);
+  const opNow = setDist(g.acq[you], left);
+  const opAfter = setDist(g.acq[you].concat(cards), left);
+  if (myAfter === 0) return { worth: Infinity, mustWin: true, mustDeny: false, opAfter, opNow };
+  if (opAfter === 0) return { worth: Infinity, mustWin: false, mustDeny: true, opAfter, opNow };
+
+  const gain = Math.max(0, myNow - myAfter);
+  const deny = Math.max(0, opNow - opAfter);
+  let v = gain * P.gain + deny * P.deny;
+  // 덱이 얼마 안 남으면 한 판의 무게가 커진다. 그리고 마지막엔 세트가 아니라
+  // "누가 더 가까운가" 로 갈리므로, 뒤지고 있으면 더 매달려야 한다.
+  const lots = Math.max(1, g.center.length);
+  if (lots <= 3) {
+    v *= P.late;
+    if (myNow > opNow) v *= 1.35;          // 지고 있다 — 여기서 안 붙으면 진다
+    else if (myNow < opNow) v *= 0.8;      // 앞서 있다 — 칩을 아끼는 편이 낫다
+  }
+  v *= Math.max(2, g.chips[me]) / P.scale;
+  return { worth: Math.max(1, v), mustWin: false, mustDeny: false, opAfter, opNow };
+}
+
+// ── 전문가의 눈 — 값을 어림하는 대신 판을 견주어 본다 ────────────────────
+// "이 물건이 몇 칩짜리냐" 는 결국 감이다. 대신 전문가는 두 갈래를 실제로
+// 놓아 보고 견준다 — 이 값에 사서 남는 판과, 물러서고 상대에게 준 판.
+// 그러면 승부수·저지·칩 관리·막바지 계산이 따로 놀지 않고 한 셈에서 나온다.
+const WIN = 1e6;
+let STEP = 1.5;        // 세트까지 한 걸음 ≈ 칩 1.5개어치 (자가대전으로 맞춘 값)
+let CHIPW = 1.0;       // 칩 하나의 무게
+let PART = 9;          // 아직 한 걸음이 안 된 진행분의 무게
+// 저울 눈금 조정 — 자가대전으로 맞춰 보기 위한 문 (게임 중에는 안 쓴다)
+function setTune(t) { if (t.STEP != null) STEP = t.STEP; if (t.CHIPW != null) CHIPW = t.CHIPW; if (t.PART != null) PART = t.PART; }
+
+// 남은 경매 수 — 중앙덱이 마르거나 진행자 손패가 비면 거기서 끝난다
+function lotsLeft(g) { return Math.max(0, g.center.length); }
+
+// 줄마다 얼마나 모였는가 — 가장 가까운 줄 말고도 조금씩은 값이 있다.
+// 이걸 안 세면 "지금 당장 한 걸음 못 당기는 카드" 는 전부 공짜로 넘겨 주게 된다.
+function partial(acq, left) {
+  const n = {};
+  for (const c of acq) n[c.kind] = (n[c.kind] || 0) + 1;
+  let sum = 0;
+  for (const [k] of SPEC) {
+    const cnt = n[k] || 0;
+    if (cnt >= k) return 1;
+    if (left && (left[k] || 0) < k - cnt) continue;   // 죽은 줄은 안 센다
+    sum += (cnt / k) * (cnt / k);
+  }
+  return sum;
+}
+
+// 이 판이 나에게 얼마나 좋은가. 칩 단위로 잰다.
+function positionScore(myAcq, opAcq, myChips, opChips, left, lots) {
+  const md = setDist(myAcq, left), od = setDist(opAcq, left);
+  if (md === 0) return WIN;
+  if (od === 0) return -WIN;
+  // 칩이 0 이 되면 그 자리에서 진다 — 세트를 못 낸 채로는 한 칩이 목숨이다
+  if (myChips <= 0) return -WIN;
+  if (opChips <= 0) return WIN;
+  // 덱이 마르면 세트가 아니라 "누가 더 가까운가" 로 갈린다
+  if (lots <= 0) {
+    if (md !== od) return md < od ? WIN : -WIN;
+    return (myAcq.length - opAcq.length) * STEP;
+  }
+  return (od - md) * STEP
+       + (partial(myAcq, left) - partial(opAcq, left)) * PART
+       + (myChips - opChips) * CHIPW;
+}
+
+// 이 값에 사면 남는 판 / 물러서면 남는 판 — 둘을 견주어 상한을 찾는다
+function reasonedCeiling(g, me, cap) {
+  const you = other(me);
+  const cards = lotCardsFor(g, me);
+  const left = unseenCounts(g, me, cards);
+  const lots = lotsLeft(g);
+  const myBet = g.lot.bets[me] || 0, opBet = g.lot.bets[you] || 0;
+  // 물러서면: 이미 부른 값의 절반을 내고, 물건은 상대에게 간다
+  const foldScore = positionScore(
+    g.acq[me], g.acq[you].concat(cards),
+    g.chips[me] - Math.floor(myBet / 2), g.chips[you] - Math.min(opBet, g.chips[you]),
+    left, lots);
+  let best = 0;
+  for (let n = 1; n <= cap; n++) {
+    const winScore = positionScore(
+      g.acq[me].concat(cards), g.acq[you],
+      g.chips[me] - n, g.chips[you] - Math.floor(opBet / 2),
+      left, lots);
+    if (winScore >= foldScore) best = n;
+  }
+  return best;
+}
+
+// 상대는 이 물건에 얼마까지 낼까 — 공개된 것(상대 앞 카드·칩)만으로 같은 셈을
+// 해 본다. 상대 손패는 안 보므로 어림이지만, 오픈 경매에서 어느 쪽이 이길지를
+// 가늠하는 데는 이만한 게 없다.
+function oppCeiling(g, you) {
+  const cap = Math.max(1, g.chips[you] - 1);
+  return reasonedCeiling(g, you, cap);
+}
+
+// 판 하나를 놓아 보고 점수만 돌려주는 셈틀 (전문가 전용)
+function scoreIf(g, me, iGet, myPay, opPay, cards, left, lots) {
+  const you = other(me);
+  return positionScore(
+    iGet ? g.acq[me].concat(cards) : g.acq[me],
+    iGet ? g.acq[you] : g.acq[you].concat(cards),
+    g.chips[me] - myPay, g.chips[you] - opPay, left, lots);
+}
+
+// 상대가 클로즈 물건을 살 것인가. 상대 눈에는 공개 카드 한 장만 보인다 —
+// 그 한 장이 상대에게 값진지로 가늠한다. (상대 손패는 안 본다)
+function oppWouldTake(g, me) {
+  const you = other(me);
+  const seen = [g.lot.center].filter(Boolean);
+  const left = unseenCounts(g, me, seen);
+  const before = setDist(g.acq[you], left);
+  const after = setDist(g.acq[you].concat(seen), left);
+  if (after === 0) return true;                       // 사면 이기는 물건
+  if (before - after >= 1) return true;               // 한 걸음 당겨진다
+  return partial(g.acq[you].concat(seen), left) - partial(g.acq[you], left) > 0.18;
+}
+
+// 이 판에서 더 낼 수 있는 상한.
+// 칩을 0 까지 쓰면, 그 경매에서 세트를 못 냈을 때 그대로 진다. 그래서
+// "먹으면 이기는 수" 가 아닌 한 마지막 한 칩은 남긴다 — 이 한 줄이 승률을 가른다.
+function capFor(g, me, P, a) {
+  const chips = g.chips[me];
+  if (a.mustWin) return chips;
+  return P.safe ? Math.max(1, chips - 1) : chips;
+}
+function ceilingFor(g, me, P, a, rnd) {
+  a = a || apprise(g, me, P);
+  const cap = capFor(g, me, P, a);
+  if (P.reason && g.lot) return Math.max(0, Math.min(cap, reasonedCeiling(g, me, cap)));
+  if (a.worth === Infinity) return cap;
+  let w = a.worth;
+  if (P.noise && rnd) w *= 1 + (rnd() * 2 - 1) * P.noise;   // 쉬움은 값을 헛본다
+  return Math.max(1, Math.min(cap, Math.round(w)));
 }
 
 // AI 가 지금 할 일 하나. 서버가 이걸 받아 그대로 둔다.
 // { act:'draw' } | { act:'offer', cardId } | { act:'choose', type }
 // | { act:'raise', amount } | { act:'fold' } | { act:'closeBet', amount }
 // | { act:'take' } | { act:'decline' } | { act:'next' }
-function aiAct(g, me, rnd = Math.random) {
+function aiAct(g, me, rnd = Math.random, level = 'hard') {
+  const P = levelOf(level);
   if (g.over) return null;
   const A = g.auctioneer;
-  // 정산은 AI 가 넘기지 않는다. 넘겨 버리면 누가 무엇을 가져갔는지 볼 새도 없이
-  // 다음 턴이 시작된다 — "확확 바뀐다" 의 정체가 이것이었다. 넘기는 건 사람 몫.
+  // 정산은 AI 가 넘기지 않는다 — 넘기는 건 서버(사람이 볼 시간)의 몫이다.
   if (g.phase === 'settled') return null;
   if (g.phase === 'draw') return me === A ? { act: 'draw' } : null;
 
   if (g.phase === 'offer') {
     if (me !== A) return null;
-    // 내 세트에 가장 덜 쓸모없는 카드를 내놓는다. 상대 세트를 채워 줄 카드는 피한다.
-    const you = me === 1 ? 2 : 1;
+    const you = other(me);
     const hand = g.hands[me];
+    const left = P.count ? unseenCounts(g, me, [g.lot && g.lot.center]) : null;
+    const myNow = setDist(g.acq[me], left), opNow = setDist(g.acq[you], left);
     let best = hand[0], bestScore = Infinity;
     for (const c of hand) {
-      const mineLoss = needLeft(g.acq[me]) - needLeft(g.acq[me].concat([c]));   // 나에게 쓸모
-      const oppHelp = needLeft(g.acq[you]) - needLeft(g.acq[you].concat([c]));  // 상대에게 쓸모
-      const score = mineLoss * 2 + oppHelp * 3;   // 낮을수록 내놓기 좋다
+      const mineLoss = myNow - setDist(g.acq[me].concat([c]), left);      // 나에게 쓸모
+      const oppHelp = opNow - setDist(g.acq[you].concat([c]), left);      // 상대에게 쓸모
+      // 상대 세트를 끝내 주는 카드는 아예 내놓지 않는다 — 경매에서 지면 그대로 패배다.
+      const fatal = P.count && setDist(g.acq[you].concat([c, g.lot && g.lot.center].filter(Boolean)), left) === 0;
+      let score = mineLoss * 2 + oppHelp * 3 + (fatal ? 100 : 0);
+      if (P.sloppy) score = mineLoss * 2 + rnd() * 3;   // 쉬움은 상대 사정을 잘 안 본다
       if (score < bestScore) { bestScore = score; best = c; }
     }
     return { act: 'offer', cardId: best.id };
@@ -358,41 +540,70 @@ function aiAct(g, me, rnd = Math.random) {
 
   if (g.phase === 'choose') {
     if (me !== A) return null;
-    const worth = lotWorth(g, me);
-    // 꼭 갖고 싶으면 클로즈로 조용히 가져간다(출품 카드도 가려진다).
-    // 별로면 오픈으로 열어 두고, 상대가 비싸게 부르면 물러선다.
-    const wantClose = canChoose(g, 'close') && (worth === Infinity || worth >= 4) && rnd() < 0.72;
+    const a = apprise(g, me, P);
+    // 뺏기면 지는 물건은 절대 클로즈로 안 낸다. 상대는 값을 모른 채 사 버릴 수
+    // 있고, 그러면 그 자리에서 판이 끝난다. 열어 놓고 끝까지 붙는 게 낫다.
+    if (a.mustDeny) return { act: 'choose', type: 'open' };
+    if (!canChoose(g, 'close')) return { act: 'choose', type: 'open' };
+    const wantClose = (a.mustWin || a.worth >= 4) && rnd() < 0.72;
     return { act: 'choose', type: wantClose ? 'close' : 'open' };
   }
 
   if (g.phase === 'bid') {
     if (g.lot.turnToAct !== me) return null;
-    const cap = ceilingFor(g, me);
+    const a = apprise(g, me, P);
+    const cap = ceilingFor(g, me, P, a, rnd);
     const lo = minRaise(g, me);
-    if (lo > cap || !canRaise(g, me)) return { act: 'fold' };
+    if (!canRaise(g, me) || lo > cap || cap <= 0) return { act: 'fold' };
+    if (P.foldy && !a.mustWin && !a.mustDeny && rnd() < P.foldy) return { act: 'fold' };
     // 상한 안에서는 조금씩 올린다. 한 번에 상한까지 지르면 읽히기도 쉽고,
     // 상대가 물러설 자리도 안 준다.
+    if (P.minimal) return { act: 'raise', amount: lo };   // 값을 올려 주는 건 결국 내 지갑이다
     const step = 1 + Math.floor(rnd() * 2);
     return { act: 'raise', amount: Math.min(cap, lo + (rnd() < 0.55 ? 0 : step)) };
   }
 
   if (g.phase === 'close') {
     if (g.lot.turnToAct !== me) return null;
+    const a = apprise(g, me, P);
     if (me === A) {
-      // 값어치만큼 부르되 짝수로. 너무 크게 부르면 상대가 안 사도 내가 전액 낸다.
-      const cap = ceilingFor(g, me);
-      let v = Math.max(2, Math.min(cap, g.chips[me]));
+      const cap = capFor(g, me, P, a);
+      if (P.reason) {
+        // 방식을 고를 때 이미 가장 좋은 액수를 찾아 두었다 — 같은 셈을 다시 한다.
+        const you = other(me);
+        const cards = [g.lot.center, g.lot.offered].filter(Boolean);
+        const left = unseenCounts(g, me, cards), lots = lotsLeft(g);
+        const willTake = oppWouldTake(g, me);
+        let best = -Infinity, bet = 2;
+        for (let b = 2; b <= Math.min(cap, g.chips[me]); b += 2) {
+          const sc = willTake
+            ? scoreIf(g, me, false, Math.floor(b / 2), Math.min(b + 1, g.chips[you]), cards, left, lots)
+            : scoreIf(g, me, true, b, 0, cards, left, lots);
+          if (sc > best) { best = sc; bet = b; }
+        }
+        return { act: 'closeBet', amount: bet };
+      }
+      // 상대는 값을 모른 채 고른다. 그러니 값의 크기는 "내가 얼마에 가져오느냐"
+      // 가 아니라 "상대가 사면 얼마나 뜯기느냐" 를 정한다.
+      //   · 상대가 탐낼 물건이면 크게 불러 둔다 — 사 가면 그만큼 칩이 마른다.
+      //   · 상대가 안 볼 물건이면 최소로 불러 싸게 가져온다.
+      const opWants = (a.opNow - a.opAfter) >= 1 || a.opAfter <= 1;
+      let v = 2;
+      if (P.drain && opWants) v = Math.max(2, Math.min(cap, Math.round(g.chips[other(me)] * 0.45)));
+      else if (!P.drain) v = Math.max(2, Math.min(cap, Math.round(ceilingFor(g, me, P, a, rnd))));
       if (v % 2) v -= 1;
       if (v < 2) v = 2;
       if (v > g.chips[me]) v = g.chips[me] - (g.chips[me] % 2);
       return { act: 'closeBet', amount: Math.max(2, v) };
     }
-    // 사는 쪽 — 얼마인지 모른다. 그래서 "이 물건이 나에게 값진가" 와
-    // "진행자가 대충 얼마쯤 걸었겠는가" 만으로 고른다.
-    // 진행자는 자기 상한 언저리를 부르므로, 상대의 남은 칩에서 어림잡는다.
-    const cap = ceilingFor(g, me);
-    if (cap === g.chips[me] && lotWorth(g, me) === Infinity) return { act: 'take' };  // 승부수
-    const guess = Math.max(3, Math.min(g.chips[A], Math.round(g.chips[A] * 0.35)));
+    // 사는 쪽 — 얼마인지 모른다. 값이 아니라 "이 물건이 나에게 값진가" 로 고른다.
+    if (a.mustWin || a.mustDeny) return { act: 'take' };
+    const cap = ceilingFor(g, me, P, a, rnd);
+    // 진행자는 자기 상한 언저리를 부른다. 그 어림값보다 이 물건이 값져야 산다.
+    // 전문가는 한 걸음 더 본다 — 내가 탐낼 물건이면 진행자도 그걸 알고 크게 걸어
+    // 나를 말리려 든다. 그래서 탐나 보일수록 비싸게 잡는다.
+    let guess = Math.max(3, Math.round(g.chips[A] * 0.35));
+    if (P.reason && oppWouldTake(g, A)) guess = Math.max(guess, Math.round(g.chips[A] * 0.5) + 1);
     if (cap >= guess && g.chips[me] > guess) return { act: 'take' };
     return { act: 'decline' };
   }
@@ -400,8 +611,8 @@ function aiAct(g, me, rnd = Math.random) {
 }
 
 // AI 의 한 수를 실제로 둔다 (서버가 쓰는 입구)
-function applyAi(g, me, rnd = Math.random) {
-  const a = aiAct(g, me, rnd);
+function applyAi(g, me, rnd = Math.random, level = 'hard') {
+  const a = aiAct(g, me, rnd, level);
   if (!a) return null;
   switch (a.act) {
     case 'draw':     draw(g, me); break;
@@ -431,5 +642,6 @@ module.exports = {
   canCloseBet, closeBet, closeTake, closeDecline,
   settle, nextTurn, viewFor,
   completedKind, needLeft, byProgress, initDeck, activePlayer, timeout,
-  aiAct, applyAi, lotWorth,
+  LEVELS, setDist, unseenCounts, apprise, positionScore, reasonedCeiling, setTune,
+  aiAct, applyAi,
 };
