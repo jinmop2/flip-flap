@@ -2781,7 +2781,10 @@ function renderRoomList(list) {
       item.appendChild(b);
     } else {
       const lock = r.secret ? '<span class="rl-lock">🔒</span>' : '';
-      item.innerHTML = `<div class="rl-info"><div class="rl-name">${lock}${esc(r.name)}</div><div class="rl-host">👤 ${esc(r.host)}</div></div>`;
+      // 모드가 넷이 됐다 — 들어가기 전에 무슨 판인지는 보여야 한다
+      const mode = r.mode && r.mode !== 'classic'
+        ? `<span class="rl-mode m-${esc(r.mode)}">${esc(MODE_NAME[r.mode] || r.mode)}</span>` : '';
+      item.innerHTML = `<div class="rl-info"><div class="rl-name">${lock}${esc(r.name)}${mode}</div><div class="rl-host">👤 ${esc(r.host)}</div></div>`;
       const b = document.createElement('button'); b.className = 'btn btn-gold rl-join'; b.textContent = '참가';
       b.onclick = () => joinRoomById(r.id, r.secret);
       item.appendChild(b);
@@ -4326,7 +4329,7 @@ socket.on('room_kicked', () => {
   setTimeout(() => cancelWait(), 500);
 });
 
-const MODE_NAME = { classic: '클래식', item: '아이템전' };
+const MODE_NAME = { classic: '클래식', item: '아이템전', twelve: 'TWELVE', quad: '다인전' };
 
 let sharedCode = '';
 socket.on('room_created', ({ roomId, name }) => {

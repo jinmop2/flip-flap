@@ -256,7 +256,8 @@ ok('안 읽은 수를 대화 버튼에 보여준다', /대화\$\{\s*gcUnread\[f\
 // 시상대 메달·급수·칭호 자리 · 상위 100명 · 아래 탭 알림
 ok('1·2·3 은 금·은·동 메달', /rankIco\(\['🥇', '🥈', '🥉'\]\[p\.no - 1\]\)/.test(cli) && /pod-medal/.test(htm));
 ok('숫자 원판은 뺐다', !/pod-no/.test(cli) && !/\.pod-no \{/.test(htm));
-ok('급수를 보여준다', /pod-grade[^>]*>\$\{rankIco\(p\.rankIcon\)\} \$\{esc\(p\.rank\)\}/.test(cli));
+// 급수는 글자만 — 아이콘을 붙이면 아래 등수 메달과 겹쳐 메달이 둘로 보인다
+ok('급수를 보여준다', /pod-grade[^>]*>\$\{esc\(p\.rank\)\}<\/div>/.test(cli));
 ok('칭호는 닉네임 바로 밑', /pod-nick[\s\S]{0,120}pod-title/.test(cli));
 ok('칭호는 가운데', /\.pod-title \{[^}]*justify-content:center/.test(htm));
 ok('랭킹은 100명까지', /topPlayers\(100\)/.test(srv) && /function topPlayers\(limit = 100\)/.test(read('accounts.js')));
@@ -297,6 +298,17 @@ ok('거기서는 가입 신청을 안 받는다', !/clanPaneBrowse[\s\S]{0,900}c
   ok('관전 인원에 한도가 있다', /r\.specs\.length >= 10/.test(s4));
 }
 ok('안 쓰는 배경음 원본은 뺐다', !fs.existsSync(path.join(__dirname, '..', 'public', 'bgm.mp3')));
+
+// 방 만들기에도 TWELVE 가 있어야 한다 — 모드가 넷이 됐다
+ok('대기실에 TWELVE 칸', /data-m="twelve" onclick="roomMode\('twelve'\)"/.test(htm));
+ok('넷이라 두 줄로 편다', /\.wc-modes \{ display:grid; grid-template-columns:1fr 1fr/.test(htm));
+ok('서버가 twelve 를 받는다', /\['item', 'classic', 'quad', 'twelve'\]\.includes\(mode\)/.test(srv)
+   && /room\.mode === 'twelve'\) \{ tvStart/.test(srv));
+ok('모드 이름표가 넷 다 있다', /MODE_NAME = \{ classic: '클래식', item: '아이템전', twelve: 'TWELVE', quad: '다인전' \}/.test(cli));
+// 목록에서도 무슨 판인지 보인다
+ok('방 목록이 모드를 함께 보낸다', /mode: r\.mode \|\| 'classic'/.test(srv));
+ok('목록에 모드 딱지를 붙인다', /rl-mode m-\$\{esc\(r\.mode\)\}/.test(cli) && /\.rl-mode \{/.test(htm));
+ok('클래식에는 안 붙인다', /r\.mode !== 'classic'/.test(cli));
 
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
