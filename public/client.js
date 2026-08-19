@@ -5570,6 +5570,32 @@ function tvSay(side, text, kind) {
 }
 const tvChipHtml = (n, mine) => `<i class="chip ${mine ? 'light' : 'dark'}"></i>${n}`;
 
+// 가진 칩을 쌓아 그린다. 한 장이 두 개를 뜻하게 눌러 쌓아 20개도 자리를 안 넘긴다.
+// 숫자만 있으면 "얼마 남았나" 를 매번 읽어야 하지만, 쌓여 있으면 눈에 바로 들어온다.
+const CS_MAX = 8, CS_STEP = 4.2;
+function tvStack(box, n, mine) {
+  if (!box) return;
+  const want = Math.max(0, Math.min(CS_MAX, Math.ceil(n / 2.5)));
+  const have = box.querySelectorAll('.chip:not(.gone)').length;
+  if (want === have) return;
+  if (want < have) {
+    // 줄어든 만큼 위에서부터 덜어 낸다 — 사라지는 게 보여야 낸 값이 실감 난다
+    const all = [...box.querySelectorAll('.chip:not(.gone)')];
+    for (const el of all.slice(want)) {
+      el.classList.add('gone');
+      setTimeout(() => el.remove(), 340);
+    }
+    return;
+  }
+  for (let i = have; i < want; i++) {
+    const c = document.createElement('i');
+    c.className = 'chip ' + (mine ? 'light' : 'dark');
+    c.style.bottom = (i * CS_STEP) + 'px';
+    c.style.zIndex = String(i);
+    box.appendChild(c);
+  }
+}
+
 // 한 요소에서 다른 요소로 날려 보낸다
 function tvFlyTo(node, from, to, cls) {
   const fx = document.getElementById('tv-fx'); if (!fx || !from || !to) return;
@@ -5585,6 +5611,19 @@ function tvFlyTo(node, from, to, cls) {
   setTimeout(() => { node.style.opacity = '0'; }, 700);
   setTimeout(() => node.remove(), 1080);
 }
+// 값을 부르면 내 자리에서 판돈(경매대)으로 칩이 간다.
+// 아직 은행에 낸 것은 아니다 — 정산 때 판돈이 은행으로 쓸려 간다.
+function tvBetChips(n, mine) {
+  const from = document.getElementById(mine ? 'tv-myChips' : 'tv-oppChips');
+  const mat = document.getElementById('tv-mat');
+  const many = Math.max(1, Math.min(n, 5));
+  for (let i = 0; i < many; i++) {
+    const c = document.createElement('i');
+    c.className = 'chip ' + (mine ? 'light' : 'dark');
+    setTimeout(() => tvFlyTo(c, from, mat, 'tv-flychip'), i * 90);
+  }
+}
+
 // 칩은 판 가운데에서 오른쪽 은행으로 모인다.
 // 낸 칩은 상대에게 가는 게 아니라 은행으로 사라진다 — 그래서 한 방향이다.
 function tvFlyChips(n, mine) {
@@ -5617,8 +5656,14 @@ function tvReact(prev, v) {
 
   // 1) 누가 얼마를 불렀나 (오픈)
   if (v.lot && prev.lot && v.lot.type === 'open') {
-    if ((v.lot.myBet || 0) > (prev.lot.myBet || 0)) { tvSay(meSide, tvChipHtml(v.lot.myBet, true)); tvSfx('chip'); }
-    if (v.lot.oppBet !== null && (v.lot.oppBet || 0) > (prev.lot.oppBet || 0)) { tvSay(oppSide, tvChipHtml(v.lot.oppBet, false)); tvSfx('chip'); }
+    if ((v.lot.myBet || 0) > (prev.lot.myBet || 0)) {
+      tvSay(meSide, tvChipHtml(v.lot.myBet, true)); tvSfx('chip');
+      tvBetChips(v.lot.myBet - (prev.lot.myBet || 0), true);
+    }
+    if (v.lot.oppBet !== null && (v.lot.oppBet || 0) > (prev.lot.oppBet || 0)) {
+      tvSay(oppSide, tvChipHtml(v.lot.oppBet, false)); tvSfx('chip');
+      tvBetChips(v.lot.oppBet - (prev.lot.oppBet || 0), false);
+    }
   }
   // 클로즈 — 진행자가 불렀다(값은 안 보인다)
   if (v.lot && prev.lot && v.lot.type === 'close' && v.lot.turnToAct !== prev.lot.turnToAct) {
@@ -5627,6 +5672,7 @@ function tvReact(prev, v) {
       if (bidder === v.me) tvSay(meSide, tvChipHtml(v.lot.closeBetKnown, true));
       else tvSay(oppSide, '<b>?</b> 걸었어요');
       tvSfx('chip');
+      tvBetChips(3, bidder === v.me);   // 클로즈는 액수가 안 보이니 몇 개만 상징으로
     }
   }
 
@@ -5722,8 +5768,11 @@ function tvFlyDone(id) {
 function tvRender(v) {
   const $ = (id) => document.getElementById(id);
   $('tv-turn').textContent = `턴 ${v.turn}`;
-  $('tv-myChips').innerHTML = `<i class="chip light"></i><b>${v.chips.me}</b>`;
-  $('tv-oppChips').innerHTML = `<i class="chip dark"></i><b>${v.chips.opp}</b>`;
+  // 쌓인 칩은 다시 만들지 않는다 — 통째로 갈아 끼우면 덜어 내는 모습이 안 보인다
+  $('tv-myChips').querySelector('b').textContent = v.chips.me;
+  $('tv-oppChips').querySelector('b').textContent = v.chips.opp;
+  tvStack($('tv-myChips').querySelector('.cs-stack'), v.chips.me, true);
+  tvStack($('tv-oppChips').querySelector('.cs-stack'), v.chips.opp, false);
   $('tv-deckLeft').textContent = v.centerLeft;
 
   // 덱 — 남은 장수만큼 겹쳐 쌓고, 뽑을 수 있을 때만 눌린다

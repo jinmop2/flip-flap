@@ -344,7 +344,14 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('같은 일을 하는 버튼을 겹쳐 두지 않는다', !/btn\('카드 뒤집기'/.test(cli));
   ok('뽑을 수 있을 때만 눌리는 티', /deck\.classList\.toggle\('on', canDraw\)/.test(cli) && /#tv-deck\.on/.test(htm));
   ok('칩은 검·흰 카지노 칩', /\.chip\.dark \{[\s\S]{0,160}conic-gradient/.test(htm) && /\.chip\.light \{[\s\S]{0,160}conic-gradient/.test(htm));
-  ok('칩 그림을 숫자와 같이 쓴다', /<i class="chip light"><\/i><b>\$\{v\.chips\.me\}<\/b>/.test(cli));
+  // 가진 칩은 숫자만이 아니라 쌓아서 보여 준다
+  ok('칩을 쌓아 보여준다', /function tvStack\(box, n, mine\)/.test(cli) && /\.cs-stack \{ position:relative/.test(htm));
+  ok('숫자도 같이 있다', /querySelector\('b'\)\.textContent = v\.chips\.me/.test(cli));
+  ok('통째로 갈아 끼우지 않는다', !/tv-myChips'\)\.innerHTML =/.test(cli));
+  ok('줄어든 칩은 덜어 내는 게 보인다', /el\.classList\.add\('gone'\)/.test(cli) && /@keyframes csGone/.test(htm));
+  ok('값을 부르면 칩이 판돈으로 간다', /function tvBetChips\(n, mine\)/.test(cli)
+     && /tvBetChips\(v\.lot\.myBet - \(prev\.lot\.myBet \|\| 0\), true\)/.test(cli));
+  ok('판돈은 정산 때 은행으로 간다', /function tvFlyChips\(n, mine\)[\s\S]{0,140}getElementById\('tv-mat'\)/.test(cli));
   ok('액수는 큰 버튼으로 고른다', /function tvAmount/.test(cli) && /\.tv-step \{[\s\S]{0,80}width:46px; height:46px/.test(htm));
   ok('클로즈는 짝수만 나온다', /tvAmount\(box, 2, hi, 2, 2\)/.test(cli));
   ok('숫자 입력칸의 작은 화살표는 안 쓴다', !/inp\.type = 'number'/.test(cli));

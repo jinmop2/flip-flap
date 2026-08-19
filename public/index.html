@@ -3995,9 +3995,27 @@
     .chip.light { background:conic-gradient(#f2f2f2 0 12.5%, #1a1a1a 0 25%, #f2f2f2 0 37.5%, #1a1a1a 0 50%,
                                 #f2f2f2 0 62.5%, #1a1a1a 0 75%, #f2f2f2 0 87.5%, #1a1a1a 0); }
     .chip.light::after { background:#f2f2f2; box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.45); }
-    .tv-chips { display:inline-flex; align-items:center; gap:6px;
+    .tv-chips { display:inline-flex; align-items:flex-end; gap:7px;
       font-family:'Fredoka'; font-size:.86rem; font-weight:900; color:#f0e2c8;
-      background:rgba(0,0,0,.4); border:1px solid rgba(200,160,0,.35); border-radius:99px; padding:2px 11px 2px 5px; }
+      background:rgba(0,0,0,.4); border:1px solid rgba(200,160,0,.35);
+      border-radius:14px; padding:5px 11px 5px 7px; }
+    /* 가진 칩은 숫자만이 아니라 쌓아서 보여 준다 — 몇 개 남았는지가 눈으로
+       읽혀야 "이번엔 못 지르겠다" 는 판단이 손에 붙는다.
+       한 장이 두 개를 뜻하도록 눌러 쌓아, 20개도 자리를 안 넘긴다. */
+    .cs-stack { position:relative; width:20px; height:38px; flex-shrink:0; }
+    /* 위에서 본 동그란 칩(판 위의 그것)을 그대로 세워 쌓으면 나사처럼 보인다.
+       쌓인 칩은 옆에서 보는 것이니, 옆모습으로 따로 그린다 — 가운데 띠가
+       칩의 가장자리 무늬다. */
+    .cs-stack .chip { position:absolute; left:0; width:20px; height:6px; border-radius:3px;
+      box-shadow:0 1px 1px rgba(0,0,0,.55); }
+    .cs-stack .chip::after { display:none; }
+    .cs-stack .chip.dark {
+      background:linear-gradient(180deg,#3a3a3a 0 38%, #efefef 38% 62%, #141414 62%); }
+    .cs-stack .chip.light {
+      background:linear-gradient(180deg,#f7f7f7 0 38%, #2a2a2a 38% 62%, #d8d8d8 62%); }
+    .cs-stack .chip.gone { animation:csGone .32s ease-in forwards; }
+    @keyframes csGone { to { transform:translate(-26px,-26px) scaleX(.6); opacity:0; } }
+    .tv-chips b { line-height:1; padding-bottom:1px; }
 
     /* 존 — 2인전과 같은 배치 */
     #tv-oppZone { padding-top:calc(84px + var(--safe-t)); display:flex; flex-direction:column; align-items:center; }
@@ -5677,14 +5695,14 @@
   <div id="tv-oppbar">
     <div class="game-pcard" id="tv-oppProfile" onclick="toggleStats(this)"><div class="pc-body"></div><div class="pc-stats"></div></div>
     <div class="timer pc-timer" id="tv-oppTimer">5:00</div>
-    <div class="tv-chips" id="tv-oppChips"><i class="chip dark"></i><b>20</b></div>
+    <div class="tv-chips" id="tv-oppChips"><span class="cs-stack"></span><b>20</b></div>
   </div>
   <!-- 오른쪽 아래: 내 시계 · 프로필 · 칩 -->
   <div id="tv-mebar">
     <!-- 이모트는 2인전에서 쓰던 그 조각을 그대로 옮겨 온다(tvOpen 참고).
          같은 버튼이 두 벌 있으면 안 읽힌 알림·쿨타임이 따로 놀기 시작한다. -->
     <div id="tv-emoteSlot"></div>
-    <div class="tv-chips" id="tv-myChips"><i class="chip light"></i><b>20</b></div>
+    <div class="tv-chips" id="tv-myChips"><span class="cs-stack"></span><b>20</b></div>
     <div class="timer pc-timer" id="tv-myTimer">5:00</div>
     <div class="game-pcard" id="tv-myProfile" onclick="toggleStats(this)"><div class="pc-body"></div><div class="pc-stats"></div></div>
   </div>
