@@ -2882,7 +2882,7 @@ function setBgmVolume(v, ramp = 0.2) {
 // 곡이 둘이다 — 로비는 라운지 곡, 판에 들어가면 원래 곡.
 // 어느 곡이 돌고 있는지 들고 있어야 "같은 곡이면 그대로 두기" 를 할 수 있다.
 // (판을 오갈 때마다 처음부터 다시 틀면 뚝뚝 끊긴다)
-const BGM_SRC = { lobby: '/lobby.m4a?v=1', game: '/bgm.m4a?v=3' };
+const BGM_SRC = { lobby: '/lobby.m4a?v=2', game: '/bgm.m4a?v=3' };
 let bgmTrack = null;
 function startBGM(track = 'game') {
   if (bgmOn && bgmTrack === track) return;      // 같은 곡이 이미 돌고 있다
