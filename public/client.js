@@ -822,6 +822,11 @@ async function renderLeaderboard(r) {
     const myNick = myAccount && myAccount.nick;
     list.innerHTML = '';
 
+    // 시즌 표시 — 달이 바뀌면 단·ACE 가 한 단계 내려간다. 말없이 내려가면
+    // 유저는 자기가 진 줄 안다.
+    const sEl = document.getElementById('lbSeason');
+    if (sEl && r.season) sEl.textContent = `시즌 ${r.season.no}`;
+
     // ── 1·2·3등 시상대 ────────────────────────────────────────────
     // 목록 첫 세 줄로만 보여 주면 1등이 그저 맨 윗줄일 뿐이다.
     // 2등 왼쪽 · 1등 가운데(높게) · 3등 오른쪽으로 세워 한눈에 보이게 한다.

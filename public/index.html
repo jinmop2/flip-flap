@@ -3178,6 +3178,9 @@
        2등 왼쪽 · 1등 가운데(높고 크게) · 3등 오른쪽. 아래에서 위로 자란
        받침 위에 얼굴이 올라앉은 모양이라, 받침을 flex-end 로 바닥에 맞춘다. */
     #lbPodium { flex-shrink:0; }
+    /* 시즌 — 달이 바뀌면 단·ACE 가 한 단계 내려간다. 그 사실을 알 자리. */
+    .lb-season { flex-shrink:0; text-align:center; font-size:.68rem; font-weight:800;
+      color:#c8a86a; letter-spacing:1px; margin:-2px 0 4px; }
     .lb-podium { display:flex; align-items:flex-end; justify-content:center; gap:6px;
       padding:2px 2px 8px; }
     .pod { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; }
@@ -4622,6 +4625,7 @@
 <div class="lb-modal" id="lbModal" onclick="if(event.target===this)closeLb()">
   <div class="lb-box rank-box">
     <div class="lb-title"><span data-ico="🏆"></span> 랭킹 <span class="close-x" onclick="closeLb()">×</span></div>
+    <div id="lbSeason" class="lb-season"></div>
     <div id="lbPodium"></div>
     <div id="lbList"></div>
   </div>

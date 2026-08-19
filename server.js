@@ -28,6 +28,10 @@ app.use((req, res, next) => {
 
 // 통계 대시보드 — Render 환경변수 STATS_KEY 필요 (예: /stats?key=내키)
 app.get('/stats', rateLimit(20), (req, res) => {   // 키 무차별 대입 방지
+  // 주소에 키가 실린 화면이다. 리퍼러로 남의 사이트에 넘어가거나 캐시에
+  // 남으면 그 키가 그대로 새 나간다.
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cache-Control', 'no-store');
   const KEY = process.env.STATS_KEY;
   if (!KEY) return res.status(403).send('Render 환경변수에 STATS_KEY를 설정한 뒤 /stats?key=<키>로 접속하세요.');
   if (req.query.key !== KEY) return res.status(403).send('잘못된 키입니다.');
@@ -110,6 +114,27 @@ function adminOk(req, res) {
   if (!req.body || req.body.key !== KEY) { res.status(403).json({ error: '잘못된 키입니다.' }); return false; }
   return true;
 }
+// 백업 — 코인·전적·클랜은 한 번 날아가면 되돌릴 수 없다.
+// 하루 한 번 저절로 뜨고, 관리자는 아무 때나 떠서 바깥에 보관할 수 있다.
+app.post('/api/admin/backup-now', rateLimit(6), async (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json(await accounts.saveSnapshot());
+});
+app.post('/api/admin/backup-list', rateLimit(20), async (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json(await accounts.snapshotList());
+});
+// 지금 상태를 통째로 내려받는다 (바깥 보관용)
+app.post('/api/admin/backup-dump', rateLimit(6), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.setHeader('Content-Disposition', 'attachment; filename="flipflap-backup.json"');
+  res.json(accounts.snapshot());
+});
+app.post('/api/admin/season', rateLimit(20), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json({ ok: true, ...accounts.seasonState(), applied: accounts.checkSeason() });
+});
+
 app.post('/api/admin/coupon-new', rateLimit(20), (req, res) => {
   if (!adminOk(req, res)) return;
   const { count, coins, maxUses, days, memo, minLevel, title } = req.body || {};
@@ -447,6 +472,8 @@ app.post('/api/chat-report', rateLimit(20), (req, res) => {
 });
 // 운영자 확인용 신고 목록 — 통계와 같은 키로 보호
 app.get('/reports', rateLimit(20), (req, res) => {
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cache-Control', 'no-store');
   if (!process.env.STATS_KEY || req.query.key !== process.env.STATS_KEY) return res.status(404).send('Not found');
   res.json(accounts.reportList(100));
 });
@@ -459,7 +486,10 @@ app.post('/api/refer', rateLimit(10), (req, res) => { const { token, ref } = req
 app.post('/api/titles',   rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.titleList(token)); });
 app.post('/api/equip-title', rateLimit(30), (req, res) => { const { token, titleId } = req.body || {}; res.json(accounts.equipTitle(token, titleId || null)); });
 app.post('/api/myrank', rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json({ ok: true, me: accounts.myRank(token) }); });
-app.get('/api/leaderboard', rateLimit(60), (req, res) => res.json({ ok: true, players: accounts.topPlayers(100) }));
+// 시즌도 같이 내려준다 — 소프트 리셋이 도는데 화면에 아무 표시가 없으면
+// 유저는 등급이 왜 내려갔는지 모른다.
+app.get('/api/leaderboard', rateLimit(60), (req, res) =>
+  res.json({ ok: true, players: accounts.topPlayers(100), season: accounts.seasonState() }));
 // ── 상점 ──
 app.get('/api/shop', rateLimit(60), (req, res) => res.json({ ok: true, items: accounts.shopList() }));
 app.post('/api/buy',   rateLimit(30), (req, res) => { const { token, itemId } = req.body || {}; res.json(accounts.buyItem(token, itemId)); });
@@ -1420,6 +1450,20 @@ function startBotMatch(entry) {
 
 // ── 소켓 ───────────────────────────────────────────────────
 
+// 이벤트마다 최소 간격(ms). 사람이 손으로 누르는 속도로는 절대 안 걸리고,
+// 스크립트로 몰아치는 것만 걸린다.
+const SOCKET_GAP = {
+  // 방·매칭 — 하나 만드는 데 방 목록 방송까지 딸려 온다
+  create_room: 1500, quick_join: 1200, quick_match: 1200, join_room: 800,
+  tv_solo: 1200, mini_sit: 1000, mini_quick: 1200, tour_join: 1000,
+  room_start: 800, room_mode: 300, room_kick: 500, rematch: 800,
+  challenge_friend: 1000, spec_challenge: 1000, challenge_accept: 800, spectate: 800,
+  // 판 안의 수 — 사람이 누르는 간격보다 훨씬 짧게 잡아 둔다
+  tv_act: 150, submit_bid: 200, use_item: 300, pick_card: 150,
+  draw_card: 200, offer_card: 200, choose_auction: 200, mini_act: 150,
+  auth: 500, enter_lobby: 400,
+};
+
 io.on('connection', (socket) => {
   // IP당 연결 수 제한 (DoS 방지)
   const ip = (socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || 'x').split(',')[0].trim();
@@ -1437,11 +1481,22 @@ io.on('connection', (socket) => {
   }
   socket.emit('online', io.engine.clientsCount); broadcastOnline();
 
-  // 소켓 이벤트 rate limit (초당 30건 초과 시 드롭 — 스팸/브루트포스 방지)
+  // 소켓 이벤트 rate limit.
+  //   ① 전체 초당 30건 — 브루트포스·스팸을 막는 큰 그물
+  //   ② 무거운 일에는 따로 간격 — 방을 만들고 매칭을 걸고 판을 여는 것들은
+  //      한 번에 하나면 충분하다. 큰 그물만으로는 초당 30번 방을 만들 수 있다.
+  // 넘친 것은 조용히 버린다. 오류를 돌려주면 그것대로 응답을 만들어 주는 셈이다.
   socket.use((packet, next) => {
     const now = Date.now();
     if (!socket._rl || now - socket._rl.ts > 1000) socket._rl = { ts: now, c: 0 };
     if (++socket._rl.c > 30) return;   // 초과분은 조용히 드롭
+    const ev = packet && packet[0];
+    const gap = SOCKET_GAP[ev];
+    if (gap) {
+      socket._gaps = socket._gaps || {};
+      if (now - (socket._gaps[ev] || 0) < gap) return;
+      socket._gaps[ev] = now;
+    }
     next();
   });
 
@@ -2694,6 +2749,23 @@ tourEnsureLobby();   // 서버가 뜨면 다음 회차 접수를 연다
 
 const PORT = process.env.PORT || 3000;
 const server = http.listen(PORT, () => console.log(`http://localhost:${PORT}`));
+
+// ── 시즌과 백업 ────────────────────────────────────────────────────────────
+// 둘 다 "언제 재시작해도 한 번은 돈다" 를 노린다. 자정에 딱 맞추려 들면
+// 그 순간에 서버가 안 떠 있을 때 영영 안 돈다.
+const HOUR = 3600 * 1000;
+function seasonTick() {
+  try { accounts.checkSeason(); } catch (e) { console.error('시즌 확인 실패:', e.message); }
+}
+async function backupTick() {
+  try {
+    const out = await accounts.saveSnapshot();
+    if (out && out.error) console.error('백업 실패:', out.error);
+  } catch (e) { console.error('백업 실패:', e.message); }
+}
+setTimeout(() => { seasonTick(); backupTick(); }, 20000);   // DB 로드가 끝난 뒤
+setInterval(seasonTick, HOUR);
+setInterval(backupTick, 24 * HOUR);
 
 // 배포/재시작(SIGTERM) 시 새 연결 차단 후 정리 — 진행 중 저장은 이미 즉시 persist됨
 process.on('SIGTERM', () => { console.log('SIGTERM 수신 — 종료 중'); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 5000); });

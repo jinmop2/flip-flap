@@ -88,6 +88,10 @@ async function loadFromDB() {
       const meta = await pool.query("SELECT data FROM ff_meta WHERE k = 'reports'");
       db.reports = (meta.rows[0] && meta.rows[0].data) || [];
     } catch (_) { db.reports = []; }
+    try {
+      const sm = await pool.query("SELECT data FROM ff_meta WHERE k = 'season'");
+      db.season = (sm.rows[0] && sm.rows[0].data) || null;
+    } catch (_) { db.season = null; }
     rebuildIndex();
     dbReady = true; dbLastError = null;
     console.log('계정 ' + rows.length + '개, 클랜 ' + clanRows.length + '개, 쿠폰 ' + cpnRows.length + '개 DB에서 로드됨');
@@ -113,6 +117,76 @@ function saveFile() {
     catch (e) { console.error('accounts save fail:', e.message); }
   }, 300);
 }
+// ff_meta 에 통째로 보관하는 것들 (시즌 표시·백업 스냅샷 등)
+function persistMeta(key, data) {
+  if (pool && dbReady) {
+    pool.query('INSERT INTO ff_meta(k, data) VALUES($1, $2) ON CONFLICT(k) DO UPDATE SET data = excluded.data',
+      [key, JSON.stringify(data)]).catch(e => console.error('메타 저장 실패(' + key + '):', e.message));
+  } else saveFile();
+}
+async function readMeta(key) {
+  if (!(pool && dbReady)) return db['meta_' + key] || null;
+  try {
+    const r = await pool.query('SELECT data FROM ff_meta WHERE k = $1', [key]);
+    return (r.rows[0] && r.rows[0].data) || null;
+  } catch (_) { return null; }
+}
+
+// ── 백업 ──────────────────────────────────────────────────────────────────
+// 코인·전적·클랜은 한 번 날아가면 되돌릴 방법이 없다. 하루 한 번 통째로 떠서
+// ff_meta 에 넣어 두고(같은 DB라 DB 자체가 죽으면 소용없다), 관리자가 받아
+// 바깥에 보관할 수 있게 통로를 연다.
+function snapshot() {
+  return {
+    at: new Date().toISOString(),
+    users: db.users || {}, clans: db.clans || {}, coupons: db.coupons || {},
+    season: db.season || null,
+    counts: { users: Object.keys(db.users || {}).length, clans: Object.keys(db.clans || {}).length },
+  };
+}
+const SNAP_KEEP = 7;                     // 최근 7일치만 둔다
+function snapKey(d = new Date()) {
+  const kst = new Date(d.getTime() + 9 * 3600 * 1000);
+  return 'snap:' + kst.toISOString().slice(0, 10);
+}
+async function saveSnapshot() {
+  const key = snapKey();
+  const snap = snapshot();
+  if (pool && dbReady) {
+    try {
+      await pool.query('INSERT INTO ff_meta(k, data) VALUES($1, $2) ON CONFLICT(k) DO UPDATE SET data = excluded.data',
+        [key, JSON.stringify(snap)]);
+      // 오래된 것 정리 — 무한히 쌓이면 DB만 무거워진다
+      const { rows } = await pool.query("SELECT k FROM ff_meta WHERE k LIKE 'snap:%' ORDER BY k DESC");
+      for (const r of rows.slice(SNAP_KEEP)) await pool.query('DELETE FROM ff_meta WHERE k = $1', [r.k]);
+      console.log(`[백업] ${key} 저장 (계정 ${snap.counts.users}개, 클랜 ${snap.counts.clans}개)`);
+      return { ok: true, key, counts: snap.counts };
+    } catch (e) { return { error: e.message }; }
+  }
+  // 파일 모드 — data/backup 아래에 날짜별로 떨군다
+  try {
+    const dir = path.join(path.dirname(FILE), 'backup');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, key.replace('snap:', '') + '.json'), JSON.stringify(snap));
+    const olds = fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort().reverse().slice(SNAP_KEEP);
+    for (const f of olds) fs.unlinkSync(path.join(dir, f));
+    return { ok: true, key, counts: snap.counts, file: true };
+  } catch (e) { return { error: e.message }; }
+}
+async function snapshotList() {
+  if (pool && dbReady) {
+    try {
+      const { rows } = await pool.query("SELECT k, data->>'at' AS at, data->'counts' AS counts FROM ff_meta WHERE k LIKE 'snap:%' ORDER BY k DESC");
+      return { ok: true, list: rows };
+    } catch (e) { return { error: e.message }; }
+  }
+  try {
+    const dir = path.join(path.dirname(FILE), 'backup');
+    if (!fs.existsSync(dir)) return { ok: true, list: [] };
+    return { ok: true, list: fs.readdirSync(dir).filter(f => f.endsWith('.json')).sort().reverse().map(f => ({ k: 'snap:' + f.replace('.json', '') })) };
+  } catch (e) { return { error: e.message }; }
+}
+
 // 신고 기록 저장 — 유저 단위가 아니라 통째로 보관한다
 function persistReports() {
   if (pool && dbReady) {
@@ -375,6 +449,38 @@ function seasonReset() {
   }
   return { moved };
 }
+// ── 시즌은 언제 바뀌는가 ──────────────────────────────────────────────────
+// 달이 바뀌면 새 시즌. 한국 시간 기준이다 — 서버가 어디에 있든 유저가 보는
+// 달과 같아야 한다. seasonReset() 은 만들어만 두고 아무도 안 불러서, 시즌이
+// 영영 안 바뀌고 있었다.
+function seasonKey(now = new Date()) {
+  const kst = new Date(now.getTime() + 9 * 3600 * 1000);   // UTC+9
+  return kst.getUTCFullYear() + '-' + String(kst.getUTCMonth() + 1).padStart(2, '0');
+}
+// 첫 시즌을 1로 놓고 몇 번째인지 센다 (화면에 "시즌 3" 처럼 쓴다)
+const SEASON_EPOCH = '2025-08';
+function seasonNo(key = seasonKey()) {
+  const [y1, m1] = SEASON_EPOCH.split('-').map(Number);
+  const [y2, m2] = key.split('-').map(Number);
+  return Math.max(1, (y2 - y1) * 12 + (m2 - m1) + 1);
+}
+function seasonState() {
+  const key = seasonKey();
+  return { key, no: seasonNo(key), current: db.season && db.season.key };
+}
+// 달이 바뀌었으면 소프트 리셋을 돌린다. 서버가 뜰 때와 한 시간마다 확인한다 —
+// 정확히 자정에 도는 것보다, 언제 재시작해도 한 번은 도는 편이 안전하다.
+function checkSeason() {
+  const key = seasonKey();
+  if (db.season && db.season.key === key) return null;
+  const first = !db.season;                    // 처음이면 리셋 없이 표시만 남긴다
+  const out = first ? { moved: 0 } : seasonReset();
+  db.season = { key, no: seasonNo(key), startedAt: Date.now(), lastMoved: out.moved };
+  persistMeta('season', db.season);
+  console.log(`[시즌] ${key} 시작 (시즌 ${db.season.no}) — ${first ? '첫 기록' : out.moved + '명 하향'}`);
+  return { key, no: db.season.no, moved: out.moved, first };
+}
+
 // 지금까지 가장 높이 올라간 등급 id
 function bestRankOf(u) {
   const now = u.isAce ? 'ACE' : (u.rank || '10K');
@@ -2690,6 +2796,7 @@ module.exports = {
   // 급수/단/ACE
   RANKS, ACE_CAPACITY, RP_CONFIG, PROMO, rankOf, displayRankOf, rankInfoOf,
   calcRpDelta, refreshRankState, startPromo, promoResult, refreshAce, seasonReset,
+  seasonKey, seasonNo, seasonState, checkSeason, snapshot, saveSnapshot, snapshotList,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   gachaInfo, rollGacha, exchangeShard, GACHA_TIER, TIER_OF, SHARD_ONLY, bonusOf,
   missionList, claimMission, titleList, dmList, dmSend, dmUnread,
