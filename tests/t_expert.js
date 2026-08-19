@@ -230,5 +230,25 @@ console.log('\n⑪ 치팅하지 않는가');
   ok('공개된 장수만 안다', /oppHandLen/.test(src));
 }
 
+// ── 아이템전 전문가 ────────────────────────────────────────────────────────
+// 아이템이 승부 규칙을 바꾸는데 AI 가 그걸 안 보고 두면, 갖고 싶을 때마다
+// 강한 카드를 내고 그대로 진다. 실제로 그렇게 지고 있었다.
+{
+  const fs2 = require('fs'), path2 = require('path');
+  const srv = fs2.readFileSync(path2.join(__dirname, '..', 'server.js'), 'utf8');
+  ok('뒤집힌 판을 아는 배팅이 있다', /function decideBidReverse\(hand, prize, myAcq, oppAcq, visOpp, deckLeft\)/.test(srv));
+  ok('뒤집혔으면 그 셈을 쓴다', /if \(g\.itemMode && g\.fx && g\.fx\.reverse\) \{\s*\n\s*bid = decideBidReverse/.test(srv));
+  ok('뒤집힘에서는 약한 카드로 이긴다', /const byWeak = \[\.\.\.hand\]\.sort\(\(a, b\) => strength\(b\) - strength\(a\)\)/.test(srv));
+  ok('보이는 상대 배팅보다 약하게 낸다', /hand\.filter\(c => strength\(c\) > strength\(visOpp\)\)/.test(srv));
+
+  // 아이템 고르기 — 전문가는 판을 본다
+  ok('전문가는 아이템을 아끼지 않는다', /expert: 1 \}/.test(srv));
+  ok('상대가 리치면 도둑고양이가 최고', /opDist <= 1 \? 12/.test(srv));
+  ok('내가 리치면 복사기가 최고', /myDist <= 1 \? 12/.test(srv));
+  ok('쓸모없는 경매품은 주사위로 갈아 버린다', /wantPrize < 0\.3 \? 7/.test(srv));
+  ok('강한 손패로는 역전을 안 건다', /strength\(myBest\) >= 500 \? 8 : strength\(myBest\) >= 300 \? 4 : -1/.test(srv));
+  ok('재경매는 값진 판에만', /if \(want < 0\.35 && g\.centerDeck\.length > 4\) return;/.test(srv));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

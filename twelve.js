@@ -559,6 +559,29 @@ function aiAct(g, me, rnd = Math.random, level = 'hard') {
     // 있고, 그러면 그 자리에서 판이 끝난다. 열어 놓고 끝까지 붙는 게 낫다.
     if (a.mustDeny) return { act: 'choose', type: 'open' };
     if (!canChoose(g, 'close')) return { act: 'choose', type: 'open' };
+    if (P.reason) {
+      // 두 갈래를 실제로 놓아 보고 고른다.
+      //   오픈  — 상한이 높은 쪽이 낮은 쪽 상한 + 1 에 가져간다.
+      //   클로즈 — 상대는 값을 보고 고르므로, 상한보다 비싸면 안 사고 내가 전액을 문다.
+      // 이제 사는 쪽이 값을 알기 때문에 이 갈림을 셈할 수 있다(예전엔 못 했다).
+      const you = other(me);
+      const cards = [g.lot.center, g.lot.offered].filter(Boolean);
+      const left = unseenCounts(g, me, cards), lots = lotsLeft(g);
+      const cap = capFor(g, me, P, a);
+      const myCeil = ceilingFor(g, me, P, a, rnd), opCeil = oppCeiling(g, you);
+      const openScore = myCeil > opCeil
+        ? scoreIf(g, me, true, Math.min(opCeil + 1, g.chips[me]), Math.floor(opCeil / 2), cards, left, lots)
+        : scoreIf(g, me, false, Math.floor(myCeil / 2), Math.min(myCeil + 1, g.chips[you]), cards, left, lots);
+      let bestClose = -Infinity;
+      for (let b = 2; b <= Math.min(cap, g.chips[me]); b += 2) {
+        const takes = (b + 1) <= opCeil && g.chips[you] >= b + 1;
+        const sc = takes
+          ? scoreIf(g, me, false, Math.floor(b / 2), Math.min(b + 1, g.chips[you]), cards, left, lots)
+          : scoreIf(g, me, true, b, 0, cards, left, lots);
+        if (sc > bestClose) bestClose = sc;
+      }
+      return { act: 'choose', type: bestClose > openScore ? 'close' : 'open' };
+    }
     const wantClose = (a.mustWin || a.worth >= 4) && rnd() < 0.72;
     return { act: 'choose', type: wantClose ? 'close' : 'open' };
   }
@@ -619,7 +642,10 @@ function aiAct(g, me, rnd = Math.random, level = 'hard') {
     const cost = g.lot.closeBet + 1;
     if (g.chips[me] < cost) return { act: 'decline' };
     if (a.mustWin || a.mustDeny) return { act: 'take' };
-    const cap = ceilingFor(g, me, P, a, rnd);
+    // 보이는 것은 공개 카드 한 장뿐이라 값을 낮게 잡게 된다. 안 보이는 한 장에도
+    // 값이 있으니 그만큼 여유를 둔다 (전문가만 — 이 어림이 곧 실력이다).
+    // 안 보이는 한 장 몫으로 3 개어치 여유를 둔다 (자가대전으로 맞춘 값).
+    const cap = ceilingFor(g, me, P, a, rnd) + (P.reason ? 3 : 0);
     return cap >= cost ? { act: 'take' } : { act: 'decline' };
   }
   return null;

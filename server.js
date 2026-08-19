@@ -837,9 +837,34 @@ function decideBidX(hand, prize, myAcq, oppAcq, visOpp, deckLeft) {
   return byStrong[byStrong.length - 1];
 }
 
+// 뒤집힌 판(아이템 '역전')에서는 약한 카드가 이긴다.
+// 이걸 안 보고 두면 AI 는 갖고 싶을 때마다 강한 카드를 내고 그대로 진다 —
+// 아이템전 전문가가 실제로 이렇게 지고 있었다. 승부가 뒤집혔으면 고르는
+// 방향도 뒤집는다.
+function decideBidReverse(hand, prize, myAcq, oppAcq, visOpp, deckLeft) {
+  const target = feasibleTarget(myAcq, oppAcq);
+  let val = Math.max(wantValue(prize, myAcq, target), denyValue(prize, oppAcq));
+  const behind = myAcq.length <= oppAcq.length;
+  const late = (deckLeft ?? 12) <= 5;
+  if (behind || late) val = Math.max(val, late ? 0.5 : 0.42);
+  // 뒤집힌 판에서 "이기는 카드" 는 약한 카드 = strength 가 큰 카드
+  const byWeak = [...hand].sort((a, b) => strength(b) - strength(a));
+  if (visOpp) {
+    const winners = hand.filter(c => strength(c) > strength(visOpp))
+                        .sort((a, b) => strength(a) - strength(b));   // 이기는 것 중 가장 강한 것 = 가장 덜 아까운 것
+    if (val >= 0.3 && winners.length) return winners[0];
+    // 포기할 판이면 뒤집힘에서 지는 카드(=강한 카드)를 흘려보내고 약한 카드를 아낀다
+    return byWeak[byWeak.length - 1];
+  }
+  if (val >= 0.8) return byWeak[0];
+  if (val >= 0.55) return byWeak[Math.min(1, byWeak.length - 1)];
+  if (val >= 0.3) return byWeak[Math.floor(byWeak.length / 2)];
+  return byWeak[byWeak.length - 1];
+}
+
 // ── AI 아이템 사용 ─────────────────────────────────────────
 // 상황에 맞는 아이템만 고르고, 난이도가 낮을수록 덜 쓴다(캐주얼 모드라 과하면 짜증).
-const AI_USE_RATE = { easy: 0.35, normal: 0.55, hard: 0.7, expert: 0.85 };
+const AI_USE_RATE = { easy: 0.35, normal: 0.55, hard: 0.7, expert: 1 };
 
 function cpuPickItem(g, me, room) {
   const held = (g.items[me] || []).filter(id => !items.canUse(g, me, id));
@@ -849,20 +874,54 @@ function cpuPickItem(g, me, room) {
   const opAcq = opp === 1 ? g.p1Acquired : g.p2Acquired;
   const behind = items.isBehind(g, me);
 
+  // 전문가는 "지금 이 판에서 이 아이템이 무엇을 바꾸는가" 를 본다.
+  // 예전 표는 상황을 거의 안 봤다 — 리치인 상대에게 도둑고양이를 아끼고,
+  // 이길 판에 역전을 걸어 스스로 지는 일이 있었다.
+  const expert = room.difficulty === 'expert';
+  // 세트까지 몇 걸음인가 (작을수록 가깝다)
+  const distOf = (acq) => {
+    const cnt = {};
+    for (const c of acq) cnt[c.kind] = (cnt[c.kind] || 0) + 1;
+    let best = 99;
+    for (const k of [2, 3, 4, 6]) best = Math.min(best, k - (cnt[k] || 0));
+    return best;
+  };
+  const myDist = distOf(myAcq), opDist = distOf(opAcq);
+  const prize = g.auction ? [g.auction.centerCard, g.auction._offeredCard].filter(Boolean) : [];
+  const myHand = me === 1 ? g.p1Hand : g.p2Hand;
+  // 이번 경매를 이길 만한가 — 뒤집힘까지 셈에 넣는다
+  const rev = !!(g.fx && g.fx.reverse);
+  const myBest = myHand.length
+    ? [...myHand].sort((a, b) => (rev ? strength(b) - strength(a) : strength(a) - strength(b)))[0] : null;
+  const wantPrize = prize.length ? Math.max(
+    wantValue(prize, myAcq, feasibleTarget(myAcq, opAcq)), denyValue(prize, opAcq)) : 0.4;
+
   // 상황 점수 — 높은 것 하나를 고른다
   const score = id => {
     switch (id) {
       case 'tyrant':     return g.auctioneer !== me ? 9 : -1;          // 진행권은 언제나 이득
-      case 'steal':      return opAcq.length >= 2 ? (behind ? 10 : 5) : -1;
-      case 'copy':       return myAcq.length >= 2 ? 8 : -1;
-      case 'dice':       return g.centerDeck.length >= 2 ? (behind ? 6 : 2) : -1;
+      // 도둑고양이 — 상대가 리치일 때가 최고. 그 한 장이 승부다.
+      case 'steal':      return opAcq.length < 1 ? -1
+                              : expert ? (opDist <= 1 ? 12 : behind ? 10 : opAcq.length >= 2 ? 6 : 3)
+                              : (opAcq.length >= 2 ? (behind ? 10 : 5) : -1);
+      // 복사기 — 내가 리치일 때 그 자리에서 세트가 된다
+      case 'copy':       return myAcq.length < 1 ? -1
+                              : expert ? (myDist <= 1 ? 12 : myAcq.length >= 2 ? 8 : 4)
+                              : (myAcq.length >= 2 ? 8 : -1);
+      // 주사위 — 이 경매품이 나에게 쓸모없을 때 판을 갈아 버린다
+      case 'dice':       return g.centerDeck.length < 2 ? -1
+                              : expert ? (wantPrize < 0.3 ? 7 : behind ? 5 : 1)
+                              : (behind ? 6 : 2);
       // 부적 — 이번 턴에만 산다. 상대가 전설을 들고 있으면 값어치가 크다.
       case 'ward':       return (g.items[opp] || []).some(x => ['steal', 'tyrant', 'copy', 'dice'].includes(x)) ? 7 : 3;
-      case 'flip':       return 5;                                     // 약한 손패일수록 좋지만 단순화
+      // 역전 — 내 손패가 약할 때만. 강한 손패로 걸면 스스로 진다.
+      case 'flip':       if (!expert) return 5;
+                         if (!myBest || g.phase === 'draw') return 2;
+                         return strength(myBest) >= 500 ? 8 : strength(myBest) >= 300 ? 4 : -1;
       case 'discount':   return 5;
-      case 'smoke':      return g.phase !== 'draw' ? 4 : -1;
+      case 'smoke':      return g.phase !== 'draw' ? (expert && wantPrize >= 0.55 ? 6 : 4) : -1;
       case 'pickpocket': return 4;
-      case 'magnify':    return 3;
+      case 'magnify':    return expert ? (g.phase === 'bidding' ? 5 : 2) : 3;
       case 'swap':       return g.centerDeck.length ? 2 : -1;
       case 'hourglass':  return 1;
       default:           return 0;
@@ -910,7 +969,16 @@ function cpuMaybeRedo(roomId) {
   const p1W = g.fx.reverse ? strength(g.auction.p1Bid) > strength(g.auction.p2Bid)
                            : aBeatsB(g.auction.p1Bid, g.auction.p2Bid);
   if ((p1W ? 1 : 2) === me) return;                 // 이긴 경매는 다시 하지 않는다
-  if (Math.random() > 0.75) return;
+  // 전문가는 값진 판을 놓쳤을 때 반드시 다시 한다. 아무 판에나 쓰면 정작
+  // 승부처에서 손에 없다 — 값어치를 보고 고른다.
+  if (room.difficulty === 'expert') {
+    const myAcq = me === 1 ? g.p1Acquired : g.p2Acquired;
+    const opAcq = me === 1 ? g.p2Acquired : g.p1Acquired;
+    const prize = [g.auction.centerCard, g.auction._offeredCard].filter(Boolean);
+    const want = prize.length
+      ? Math.max(wantValue(prize, myAcq, feasibleTarget(myAcq, opAcq)), denyValue(prize, opAcq)) : 0;
+    if (want < 0.35 && g.centerDeck.length > 4) return;
+  } else if (Math.random() > 0.75) return;
   const out = items.use(g, me, 'redo');
   if (out.error) return;
   g.settleSeq = (g.settleSeq || 0) + 1;             // 이전 경매의 공개·정산 타이머 무효화
@@ -1006,7 +1074,10 @@ function maybeCpuAct(roomId) {
       // 클로즈 후공이면 진행자 배팅 카드가 보임 → 최소 승리 배팅
       const visOpp = (!isAuctioneer && g.auction.auctionType === 'closed')
         ? (g.auctioneer === 1 ? g.auction.p1Bid : g.auction.p2Bid) : null;
-      if (room.difficulty === 'expert') {
+      // 뒤집힌 판은 승부 규칙 자체가 달라 다른 셈이 필요하다 (난이도 공통)
+      if (g.itemMode && g.fx && g.fx.reverse) {
+        bid = decideBidReverse(hand, prize, acq, opp, visOpp, g.centerDeck.length);
+      } else if (room.difficulty === 'expert') {
         // 치팅 방지: 클로즈 후공이면 출품 카드를 모름
         const offered = (isAuctioneer || g.auction.auctionType === 'open') ? g.auction._offeredCard : null;
         bid = expert3.bidV3({

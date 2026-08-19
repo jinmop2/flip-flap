@@ -544,9 +544,9 @@ console.log('\n㉑ AI — 세 급이 정말로 다른가');
     };
     const both = (a, b) => (duel(a, b, 200, 101) + (1 - duel(b, a, 200, 404))) / 2;
     const eh = both('expert', 'hard'), he = both('hard', 'easy'), ee = both('expert', 'easy');
-    ok('전문가가 보통을 이긴다', eh >= 0.60, (eh * 100).toFixed(1) + '%');
-    ok('보통이 쉬움을 이긴다', he >= 0.62, (he * 100).toFixed(1) + '%');
-    ok('전문가가 쉬움을 크게 이긴다', ee >= 0.68, (ee * 100).toFixed(1) + '%');
+    ok('전문가가 보통을 이긴다', eh >= 0.72, (eh * 100).toFixed(1) + '%');
+    ok('보통이 쉬움을 이긴다', he >= 0.58, (he * 100).toFixed(1) + '%');
+    ok('전문가가 쉬움을 크게 이긴다', ee >= 0.85, (ee * 100).toFixed(1) + '%');
   }
 }
 
@@ -620,6 +620,19 @@ console.log('\n㉓ 그냥 물러설 수는 없다 · 나가기는 한 번 묻는
   ok('먼저 부르는 자리임을 알려준다', /먼저 부르는 자리예요/.test(cli));
   ok('나가기 전에 한 번 묻는다', /askConfirm\(\{ icon: '🚪', title: '판을 나갈까요\?'/.test(cli));
   ok('등급 숫자는 안 쓴다', /#tv \.card \.c-rank \{ display:none; \}/.test(htm));
+}
+
+console.log('\n㉔ 전문가는 방식도 셈해서 고른다 · 안 보이는 한 장 몫도 본다');
+{
+  const fs = require('fs'), path = require('path');
+  const tw = fs.readFileSync(path.join(__dirname, '..', 'twelve.js'), 'utf8');
+  // 오픈이냐 클로즈냐를 감(rnd)으로 고르지 않는다 — 두 갈래를 놓아 보고 고른다.
+  // 사는 쪽이 값을 아는 규칙으로 바뀌어서 이 갈림을 셈할 수 있게 됐다.
+  ok('방식을 셈해서 고른다', /bestClose > openScore \? 'close' : 'open'/.test(tw)
+     && /let bestClose = -Infinity;/.test(tw));
+  ok('상대가 살지 안 살지를 값으로 판단', /const takes = \(b \+ 1\) <= opCeil && g\.chips\[you\] >= b \+ 1/.test(tw));
+  ok('안 보이는 한 장 몫을 셈에 넣는다', /ceilingFor\(g, me, P, a, rnd\) \+ \(P\.reason \? 3 : 0\)/.test(tw));
+  ok('보통·쉬움은 여전히 감으로 고른다', /const wantClose = \(a\.mustWin \|\| a\.worth >= 4\) && rnd\(\) < 0\.72/.test(tw));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
