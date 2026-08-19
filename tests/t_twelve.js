@@ -361,6 +361,25 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('상대 말풍선 꼬리는 위로', /\.tv-say:not\(\.me\) \.bub::after \{ bottom:100%/.test(htm));
   ok('내 말풍선 꼬리는 아래로', /\.tv-say\.me \.bub::after \{ top:100%/.test(htm));
   ok('말풍선이 읽을 만큼 머문다', /\}, 300\); \}, 3400\);/.test(cli));
+
+  // 2인전에 있는 것은 여기도 있어야 한다 — 채팅·설정·이모트
+  const ctrl = htm.slice(htm.indexOf('id="tv-controls"'), htm.indexOf('id="tv-oppbar"'));
+  ok('채팅 버튼이 있다', /toggleGameChat\(\)/.test(ctrl));
+  ok('설정 버튼이 있다', /toggleSettings\(\)/.test(ctrl));
+  ok('설명 버튼이 있다', /tvRules\(true\)/.test(ctrl));
+  ok('나가기 버튼이 있다', /tvQuit\(\)/.test(ctrl));
+  ok('안 읽은 채팅 표시도 뜬다', /id="chatDotTv"/.test(htm) && /'chatDot', 'chatDot4', 'chatDotTv'/.test(cli));
+  ok('이모트 자리가 있다', /id="tv-emoteSlot"/.test(htm));
+  ok('이모트는 두 벌 만들지 않는다', /function tvMoveEmote/.test(cli)
+     && (htm.match(/id="emoteBtn"/g) || []).length === 1);
+  ok('판을 열 때 이모트를 옮긴다', /tvMoveEmote\('tv-emoteSlot'\)/.test(cli));
+  ok('나갈 때 제자리로', /tvMoveEmote\('mebar'\)/.test(cli));
+  ok('상대 이모트가 상대 쪽에 뜬다', /tv \? 'tv-oppProfile' : 'oppProfile'/.test(cli));
+
+  // 컨트롤이 노치에 안 가리게 — 좁은 화면에서도 안전 여백을 지킨다
+  ok('좁은 화면에서도 노치를 피한다', /#tv-controls \{ top:calc\(8px \+ var\(--safe-t\)\)/.test(htm));
+  // 경매대가 화면 한가운데 오게 — 아래 칸만큼 위에도 빈 칸을 둔다
+  ok('경매대가 가운데로 내려온다', /#tv-centerZone::before \{ content:''; height:98px/.test(htm));
   ok('AI 가 정산을 대신 넘기지 않는다', /if \(g\.phase === 'settled'\) return null;/.test(tw));
   ok('AI 가 뜸을 들인다', /\(g\.phase === 'bid' \|\| g\.phase === 'close'\) \? 1500 : 1100/.test(read('server.js')));
   ok('내 프로필이 보인다', /id="tv-myProfile"/.test(htm) && /renderGameProfile\('tv-myProfile'/.test(cli));

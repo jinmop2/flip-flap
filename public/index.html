@@ -3921,6 +3921,10 @@
     #tv-oppZone { padding-top:72px; display:flex; flex-direction:column; align-items:center; }
     #tv-centerZone { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
       gap:10px; width:100%; position:relative; }
+    /* 경매대 아래에만 문구·버튼 칸이 있으니, 가운데를 맞추면 경매대는 그
+       높이의 절반만큼 위로 밀린다. 위에 같은 크기의 빈 칸을 두어 경매대가
+       진짜 한가운데에 오게 한다 — 덱과 은행도 여기 높이에 맞춰 서 있다. */
+    #tv-centerZone::before { content:''; height:98px; flex-shrink:0; }
     #tv-myZone { display:flex; flex-direction:column; align-items:center;
       justify-content:flex-end; padding-bottom:calc(40px + var(--safe-b)); }
 
@@ -4020,7 +4024,7 @@
 
     @media (max-width:600px) {
       #tv { padding:10px 12px calc(8px + var(--safe-b)); }
-      #tv-controls { top:8px; left:10px; gap:6px; }
+      #tv-controls { top:calc(8px + var(--safe-t)); left:10px; gap:6px; }
       #tv-oppbar { top:calc(4px + var(--safe-t)); right:10px; gap:4px; }
       #tv-mebar { bottom:calc(10px + var(--safe-b)); right:10px; gap:5px; }
       #tv-oppZone { padding-top:56px; }
@@ -4033,6 +4037,7 @@
       #tv-turn { font-size:.62rem; }
       #tableLogoTv .tl { font-size:3.2rem; letter-spacing:5px; }
       #tv-actions { height:52px; }
+      #tv-centerZone::before { height:90px; }
     }
 
     #tv-over { display:none; position:fixed; inset:0; z-index:40; background:rgba(4,10,18,.9);
@@ -5534,6 +5539,7 @@
 
   <div id="tv-controls">
     <div class="ctrl-btn" title="게임 나가기" onclick="tvQuit()"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span><span class="cl">나가기</span></div>
+    <div class="ctrl-btn" title="친구·클랜 채팅" onclick="toggleGameChat()"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg></span><span class="cl">채팅</span><i class="ctrl-dot" id="chatDotTv" style="display:none"></i></div>
     <div class="ctrl-btn" title="게임 설명" onclick="tvRules(true)"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span><span class="cl">설명</span></div>
     <div class="ctrl-btn" title="설정" onclick="toggleSettings()"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="cl">설정</span></div>
   </div>
@@ -5546,6 +5552,9 @@
   </div>
   <!-- 오른쪽 아래: 내 시계 · 프로필 · 칩 -->
   <div id="tv-mebar">
+    <!-- 이모트는 2인전에서 쓰던 그 조각을 그대로 옮겨 온다(tvOpen 참고).
+         같은 버튼이 두 벌 있으면 안 읽힌 알림·쿨타임이 따로 놀기 시작한다. -->
+    <div id="tv-emoteSlot"></div>
     <div class="tv-chips" id="tv-myChips"><i class="chip light"></i><b>20</b></div>
     <div class="timer pc-timer" id="tv-myTimer">5:00</div>
     <div class="game-pcard" id="tv-myProfile" onclick="toggleStats(this)"><div class="pc-body"></div><div class="pc-stats"></div></div>

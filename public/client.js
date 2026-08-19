@@ -3733,7 +3733,7 @@ async function gcRefreshUnread() {
 let gcClanUnread = 0;
 function gcPaintDot() {
   const on = Object.keys(gcUnread).length > 0 || gcClanUnread > 0;
-  for (const id of ['chatDot', 'chatDot4']) {
+  for (const id of ['chatDot', 'chatDot4', 'chatDotTv']) {
     const d = document.getElementById(id); if (d) d.style.display = on ? '' : 'none';
   }
   // 로비에 있을 때도 보여야 한다 — 판 안의 채팅 버튼은 로비에서 안 보인다
@@ -3903,9 +3903,10 @@ function showEmote(emoji, side) {
   if (emoji === '🫖') b.classList.add('em-teabag');
   let x = window.innerWidth / 2, y = side === 'me' ? window.innerHeight - 160 : 120;
   // 내 이모티콘은 이모트 버튼 바로 위에서 뜸 (중앙 X). 상대 것은 상대 손패 근처
+  const tv = document.body.classList.contains('twelve');
   const anchor = side === 'me'
     ? document.getElementById('emoteBtn')
-    : document.getElementById('oppProfile');   // 상대 것도 프로필 쪽 사이드에 (중앙 X)
+    : document.getElementById(tv ? 'tv-oppProfile' : 'oppProfile');   // 상대 것도 프로필 쪽 사이드에 (중앙 X)
   if (anchor) {
     const r = anchor.getBoundingClientRect();
     if (r.width) { x = r.left + r.width / 2; y = side === 'me' ? r.top - 44 : r.bottom + 8; }
@@ -5407,8 +5408,16 @@ window.addEventListener('appinstalled', () => {
 let tvView = null, tvMe = 0, tvBot = false, tvPrev = null;
 let tvFlying = [];   // 지금 필드로 날아가는 중인 카드 id
 
+// 이모트 버튼은 2인전 것 하나뿐이다. 두 벌 만들면 쿨타임·차단 설정이
+// 따로 놀기 시작한다 — 그래서 판이 열릴 때 자리만 옮긴다.
+function tvMoveEmote(into) {
+  const wrap = document.getElementById('emoteWrap');
+  const slot = document.getElementById(into);
+  if (wrap && slot && wrap.parentElement !== slot) slot.appendChild(wrap);
+}
 function tvOpen() {
   document.body.classList.add('twelve');
+  tvMoveEmote('tv-emoteSlot');
   document.getElementById('tv-over').classList.remove('show');
   try { startBGM('game'); } catch (_) {}
 }
@@ -5419,6 +5428,7 @@ window.tvSolo = function () {
 };
 window.tvQuit = function () {
   document.body.classList.remove('twelve');
+  tvMoveEmote('mebar');
   document.getElementById('tv-over').classList.remove('show');
   tvView = null;
   clearSession(); fastReload();
