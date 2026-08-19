@@ -295,6 +295,15 @@ function faceOf(p) {
   if (a) return `<span class="ava-art">${a}</span>`;
   return rankIco(p.rankIcon);
 }
+// 시상대 전용 얼굴. 여기서는 급수 아이콘으로 되돌리지 않는다 —
+// 급수는 바로 밑 줄에, 등수 메달은 그 밑에 이미 있어서, 아바타 자리까지
+// 급수 아이콘이 들어가면 메달이 둘로 보인다(동메달 급수가 특히 그랬다).
+function podFace(p) {
+  if (!p) return '';
+  const a = (typeof avatarArt === 'function') && avatarArt(p.avatar);
+  if (a) return `<span class="ava-art">${a}</span>`;
+  return `<span class="pod-letter">${esc((p.nick || '?').slice(0, 1).toUpperCase())}</span>`;
+}
 
 
 // ── 꾸미기 효과 발동 ────────────────────────────────────────────────────────
@@ -823,11 +832,11 @@ async function renderLeaderboard(r) {
       const order = [top[1], top[0], top[2]].filter(Boolean);
       podBox.innerHTML = order.length ? `<div class="lb-podium">${order.map((p) => `
         <div class="pod pod-${p.no}${myNick && p.nick === myNick ? ' me' : ''}">
-          <div class="pod-ava" style="color:${p.rankColor}">${faceOf(p)}</div>
+          <div class="pod-ava" style="color:${p.rankColor}">${podFace(p)}</div>
           <div class="pod-stand">
             <div class="pod-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</div>
             <div class="pod-title">${titleTag(p.titleInfo) || ''}</div>
-            <div class="pod-grade" style="color:${p.rankColor}">${rankIco(p.rankIcon)} ${esc(p.rank)}</div>
+            <div class="pod-grade" style="color:${p.rankColor}">${esc(p.rank)}</div>
             <div class="pod-rp">${p.rp} RP</div>
             <div class="pod-medal">${rankIco(['🥇', '🥈', '🥉'][p.no - 1])}</div>
           </div>

@@ -316,5 +316,17 @@ console.log('\n⑪ 예전 계정 이관');
   ok('RP 로 직접 판단한다', /\(u\.rp \|\| 0\) >= next\.min/.test(accSrc));
 }
 
+// 메달은 한 자리에만 — 시상대에 메달이 둘로 보이던 것을 막는다
+{
+  const fs = require('fs'), path = require('path');
+  const cli2 = fs.readFileSync(path.join(__dirname, '..', 'public/client.js'), 'utf8');
+  const htm2 = fs.readFileSync(path.join(__dirname, '..', 'public/index.html'), 'utf8');
+  ok('시상대 얼굴은 급수 아이콘으로 안 돌아간다', /function podFace/.test(cli2)
+     && /class="pod-ava"[^>]*>\$\{podFace\(p\)\}/.test(cli2));
+  ok('아바타가 없으면 첫 글자', /pod-letter/.test(cli2) && /\.pod-letter \{/.test(htm2));
+  ok('급수는 글자만', !/class="pod-grade"[^>]*>\$\{rankIco/.test(cli2));
+  ok('등수 메달은 그대로', /class="pod-medal">\$\{rankIco\(\['🥇', '🥈', '🥉'\]/.test(cli2));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

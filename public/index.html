@@ -3143,6 +3143,10 @@
       border:2px solid rgba(200,160,0,.5); box-shadow:0 4px 14px rgba(0,0,0,.55);
     }
     .pod-ava .ava-art { width:100%; height:100%; vertical-align:0; }
+    /* 아바타를 안 끼운 사람은 닉네임 첫 글자로 — 급수 아이콘을 넣으면
+       바로 밑의 급수·등수 메달과 겹쳐 메달이 둘로 보인다 */
+    .pod-letter { font-family:'Fredoka'; font-size:1.5rem; font-weight:900; color:#f0dcb0; }
+    .pod-1 .pod-letter { font-size:1.9rem; }
     .pod-nick {
       font-size:.76rem; font-weight:800; color:#f5e6c0; z-index:2;
       max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
@@ -3159,7 +3163,8 @@
     /* 등수는 숫자 원판 대신 메달 — 금·은·동이 한눈에 읽힌다 */
     .pod-medal { font-size:1.5rem; line-height:1; display:flex; align-items:center; justify-content:center; }
     .pod-medal svg, .pod-medal .rank-art svg, .pod-medal .g-ico svg { width:1.5rem; height:1.5rem; display:block; }
-    /* 급수 — 색은 등급 색을 따라간다 */
+    /* 급수 — 글자만. 아이콘을 붙이면 낮은 급수의 동메달 아이콘이 아래 등수
+       메달과 겹쳐 보여, 메달이 둘인 것처럼 읽힌다. 색이 곧 등급이다. */
     .pod-grade { font-size:.66rem; font-weight:800; display:flex; align-items:center; justify-content:center; gap:3px; white-space:nowrap; }
     .pod-grade svg, .pod-grade .rank-art svg, .pod-grade .g-ico svg { width:.8em; height:.8em; display:block; }
     /* 칭호는 닉네임 바로 밑, 가운데 */
