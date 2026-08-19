@@ -2233,13 +2233,35 @@ function closeAllNavModals() {
   try { closeClan(); } catch (_) {}
   try { toggleSettings(false); document.body.classList.remove('lobby-settings'); } catch (_) {}
 }
+// 한 번 덮었다 걷는다. 창이 통째로 갈리는 순간을 가려 주면 같은 전환도
+// 툭 끊기지 않고 이어진 동작으로 읽힌다. 덮은 동안은 손가락도 막아
+// 두 번 눌려 엉키는 일이 없다.
+let veilBusy = false;
+function veil(fn) {
+  const v = document.getElementById('fadeVeil');
+  if (!v) { fn(); return; }
+  if (veilBusy) { fn(); return; }            // 이미 넘어가는 중이면 그냥 처리
+  veilBusy = true;
+  v.classList.add('on');
+  setTimeout(() => {
+    try { fn(); } finally {
+      // 새 화면이 한 번 그려진 뒤에 걷는다 — 걷고 나서 그리면 다시 깜빡인다
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        v.classList.remove('on');
+        setTimeout(() => { veilBusy = false; }, 170);
+      }));
+    }
+  }, 165);
+}
 function navGo(key) {
   const act = Object.prototype.hasOwnProperty.call(NAV_ACTIONS, key) ? NAV_ACTIONS[key] : null;
   if (!act) return;
-  if (key !== 'home') closeAllNavModals();   // 탭끼리 겹쳐 열리지 않게
-  act();
-  navSync(key);
-  navSeen(key);                              // 보고 나면 그 탭의 빨간 표는 끈다
+  veil(() => {
+    if (key !== 'home') closeAllNavModals();   // 탭끼리 겹쳐 열리지 않게
+    act();
+    navSync(key);
+    navSeen(key);                              // 보고 나면 그 탭의 빨간 표는 끈다
+  });
 }
 // 어떤 탭이 켜져 있는지 표시. 모달을 ESC·닫기로 끄면 다시 '홈'으로 돌아온다.
 function navSync(key) {
@@ -2893,7 +2915,7 @@ function setBgmVolume(v, ramp = 0.2) {
 // 곡이 둘이다 — 로비는 라운지 곡, 판에 들어가면 원래 곡.
 // 어느 곡이 돌고 있는지 들고 있어야 "같은 곡이면 그대로 두기" 를 할 수 있다.
 // (판을 오갈 때마다 처음부터 다시 틀면 뚝뚝 끊긴다)
-const BGM_SRC = { lobby: '/lobby.m4a?v=2', game: '/bgm.m4a?v=3' };
+const BGM_SRC = { lobby: '/lobby.m4a?v=3', game: '/bgm.m4a?v=3' };
 let bgmTrack = null;
 function startBGM(track = 'game') {
   if (bgmOn && bgmTrack === track) return;      // 같은 곡이 이미 돌고 있다

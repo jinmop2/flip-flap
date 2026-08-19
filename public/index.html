@@ -694,6 +694,15 @@
        깔면 아무것도 안 감싸는 네모 테두리 하나가 떠 있는 것처럼 보인다. */
     #gcPaneExch #gcShop { background:none; border-radius:0; padding:6px 2px; }
     .gc-hint { align-self:center; font-size:.76rem; color:#8a7a80; }
+    /* 탭을 옮길 때 잠깐 어두워졌다 밝아진다.
+       창이 통째로 갈리는 순간을 그냥 보여 주면 화면이 툭 끊긴 것처럼 보인다.
+       한 번 덮었다 걷는 것만으로 같은 전환이 이어진 동작으로 읽힌다. */
+    #fadeVeil {
+      position:fixed; inset:0; z-index:80; background:#0a0206;
+      opacity:0; pointer-events:none; transition:opacity .16s ease;
+    }
+    #fadeVeil.on { opacity:1; pointer-events:auto; }
+
     /* 스크롤 막대 — 기본값은 어두운 판 위에 하얀 네모 하나가 그려진 것처럼
        보인다. 교환소처럼 안쪽에 또 스크롤이 생기는 자리에서 특히 그렇다.
        얇게, 판 색으로. */
@@ -4589,6 +4598,8 @@
     </div>
   </div>
 </div>
+
+<div id="fadeVeil"></div>
 
 <div id="game">
   <div id="tableLogo">

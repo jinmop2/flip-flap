@@ -137,9 +137,12 @@ console.log('\n⑩ 배경음악 — 로비와 판이 다른 곡');
   ok('곡이 둘이다', /const BGM_SRC = \{ lobby: '\/lobby\.m4a[^']*', game: '\/bgm\.m4a[^']*' \}/.test(cli));
   ok('두 파일이 다 있다',
      fs2.existsSync(src + '/public/lobby.m4a') && fs2.existsSync(src + '/public/bgm.m4a'));
-  // 로비 곡은 모바일에서 받는 것이라 가벼워야 한다
+  // 로비 곡은 모바일에서 받는 것이라 가벼워야 한다.
+  // 지금 곡은 5분 24초짜리 라운지 곡이라 1MB 로는 안 들어간다 — 대신 64kbps
+  // 로 눌러 담았다(라운지 음색이라 이 대역에서 티가 잘 안 난다). 3MB 를
+  // 넘어가면 그때는 곡을 자르든 대역을 더 낮추든 손을 봐야 한다.
   const kb = Math.round(fs2.statSync(src + '/public/lobby.m4a').size / 1024);
-  ok('로비 곡이 1MB 아래', kb < 1024, kb + 'KB');
+  ok('로비 곡이 3MB 아래', kb < 3072, kb + 'KB');
   ok('로비에 들어오면 로비 곡', /function hideTitle\(\)[\s\S]{0,160}lobbyBGM\(\)/.test(cli));
   ok('판에 들어가면 판 곡', /startBGM\('game'\)/.test(cli));
   ok('다인전도 판 곡', /startBGM\('game'\)/.test(c4));

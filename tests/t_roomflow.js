@@ -310,5 +310,12 @@ ok('방 목록이 모드를 함께 보낸다', /mode: r\.mode \|\| 'classic'/.te
 ok('목록에 모드 딱지를 붙인다', /rl-mode m-\$\{esc\(r\.mode\)\}/.test(cli) && /\.rl-mode \{/.test(htm));
 ok('클래식에는 안 붙인다', /r\.mode !== 'classic'/.test(cli));
 
+// 탭을 옮길 때 한 번 덮었다 걷는다 — 창이 통째로 갈리는 순간을 가려 준다
+ok('덮개가 있다', /id="fadeVeil"/.test(htm) && /#fadeVeil \{[\s\S]{0,160}opacity:0; pointer-events:none/.test(htm));
+ok('덮은 동안은 손가락도 막는다', /#fadeVeil\.on \{ opacity:1; pointer-events:auto; \}/.test(htm));
+ok('탭 이동이 덮개를 거친다', /function navGo\(key\)[\s\S]{0,200}veil\(\(\) => \{/.test(cli));
+ok('새 화면을 그린 뒤에 걷는다', /requestAnimationFrame\(\(\) => requestAnimationFrame\(/.test(cli));
+ok('넘어가는 중에 또 눌러도 안 엉킨다', /if \(veilBusy\) \{ fn\(\); return; \}/.test(cli));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
