@@ -2248,10 +2248,10 @@ function veil(fn) {
       // 새 화면이 한 번 그려진 뒤에 걷는다 — 걷고 나서 그리면 다시 깜빡인다
       requestAnimationFrame(() => requestAnimationFrame(() => {
         v.classList.remove('on');
-        setTimeout(() => { veilBusy = false; }, 170);
+        setTimeout(() => { veilBusy = false; }, 90);
       }));
     }
-  }, 165);
+  }, 85);
 }
 function navGo(key) {
   const act = Object.prototype.hasOwnProperty.call(NAV_ACTIONS, key) ? NAV_ACTIONS[key] : null;

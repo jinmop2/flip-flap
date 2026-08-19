@@ -313,6 +313,8 @@ ok('클래식에는 안 붙인다', /r\.mode !== 'classic'/.test(cli));
 // 탭을 옮길 때 한 번 덮었다 걷는다 — 창이 통째로 갈리는 순간을 가려 준다
 ok('덮개가 있다', /id="fadeVeil"/.test(htm) && /#fadeVeil \{[\s\S]{0,160}opacity:0; pointer-events:none/.test(htm));
 ok('덮은 동안은 손가락도 막는다', /#fadeVeil\.on \{ opacity:1; pointer-events:auto; \}/.test(htm));
+// 가리는 것이 목적이지 뜸을 들이는 게 아니다 — 눈에 안 걸릴 만큼만 짧게
+ok('덮개는 아주 짧다', /transition:opacity \.08s linear/.test(htm) && /\}, 85\);/.test(cli));
 ok('탭 이동이 덮개를 거친다', /function navGo\(key\)[\s\S]{0,200}veil\(\(\) => \{/.test(cli));
 ok('새 화면을 그린 뒤에 걷는다', /requestAnimationFrame\(\(\) => requestAnimationFrame\(/.test(cli));
 ok('넘어가는 중에 또 눌러도 안 엉킨다', /if \(veilBusy\) \{ fn\(\); return; \}/.test(cli));
