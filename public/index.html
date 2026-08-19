@@ -4058,10 +4058,6 @@
        위로 삐져나와 종류 딱지(오픈/클로즈)를 덮는다. 여기서는 내용에 맡긴다. */
     #tv-mat .auction-row { height:auto; }
     #tv-mat .a-card .card { width:100%; height:100%; }
-    .tv-bets { display:flex; gap:14px; font-size:.68rem; color:#c8a86a; height:20px; align-items:center; }
-    .tv-bet b { font-size:1rem; font-weight:900; color:#fff; margin-right:3px; }
-    .tv-bet.me b { color:#ffe9a8; }
-    .tv-bet.opp b { color:#8fd8ff; }
 
     /* 안내 문구 — 2인전 statusBar 와 같은 알약. 높이를 못 박아 판이 안 밀린다. */
     #tv-status {
@@ -4116,16 +4112,37 @@
     .tv-say .bub.go { animation:tvSayOut .28s ease-in forwards; }
     @keyframes tvSayOut { to { opacity:0; transform:scale(.85) } }
 
-    /* 은행 — 경매대 오른쪽. 칩은 늘 가운데에서 이쪽으로만 흐른다. */
-    #tv-bank { position:absolute; left:calc(50% + 176px); top:50%; transform:translateY(-50%);
-      width:64px; display:flex; flex-direction:column; align-items:center; gap:3px; z-index:3;
+    /* 오른쪽 레일 — 위에서부터 상대 배팅 · 은행 · 내 배팅.
+       칩은 늘 위아래(각자 자리)에서 가운데(은행)로만 흐른다. */
+    #tv-rail { position:absolute; left:calc(50% + 168px); top:50%; transform:translateY(-50%);
+      width:76px; display:flex; flex-direction:column; align-items:center; gap:10px; z-index:3; }
+    .tv-pot { display:flex; flex-direction:column; align-items:center; gap:1px;
+      font-family:'Fredoka'; font-weight:900; color:#f0e2c8; min-height:52px; justify-content:flex-end; }
+    .tv-pot.opp { justify-content:flex-start; }
+    .tv-pot b { font-size:.9rem; line-height:1; }
+    .tv-pot small { font-size:.58rem; font-weight:700; color:rgba(255,255,255,.45); }
+    .tv-pot.me b { color:#ffe9a8; }
+    .tv-pot.opp b { color:#8fd8ff; }
+    /* 건 칩 더미 — 가진 칩과 같은 옆모습으로 쌓는다 */
+    .pot-stack { position:relative; width:22px; height:30px; display:block; }
+    .pot-stack .chip { position:absolute; left:0; width:22px; height:6px; border-radius:3px;
+      box-shadow:0 1px 1px rgba(0,0,0,.55); }
+    .pot-stack .chip::after { display:none; }
+    .pot-stack .chip.dark { background:linear-gradient(180deg,#3a3a3a 0 38%, #efefef 38% 62%, #141414 62%); }
+    .pot-stack .chip.light { background:linear-gradient(180deg,#f7f7f7 0 38%, #2a2a2a 38% 62%, #d8d8d8 62%); }
+    .tv-pot.hide { visibility:hidden; }
+
+    #tv-bank { width:64px; display:flex; flex-direction:column; align-items:center; gap:3px;
       font-size:.66rem; color:rgba(255,255,255,.5); font-weight:700; }
     #tv-bank .chip { margin-bottom:-9px; }
     #tv-bank span { margin-top:12px; }
     #tv-bank.pop { animation:tvBankPop .4s ease; }
-    @keyframes tvBankPop { 40% { transform:translateY(-50%) scale(1.18); } }
+    @keyframes tvBankPop { 40% { transform:scale(1.18); } }
 
     #tv-fx { position:absolute; inset:0; pointer-events:none; z-index:9; }
+    /* 건너가는 칩 한 장 — 판 위의 칩과 같은 위에서 본 모습 */
+    .tv-tossed { position:absolute; width:18px; height:18px; will-change:transform;
+      box-shadow:0 3px 6px rgba(0,0,0,.55); }
     /* 날아가는 카드 — 도중에 흐려지면 "끊긴" 것처럼 보인다. 끝까지 또렷하게
        가서 제 자리에 앉고, 그 순간 자리의 카드가 켜진다. */
     .tv-fly { position:absolute; transition:transform .85s cubic-bezier(.33,.02,.25,1); z-index:2; }
@@ -4141,7 +4158,6 @@
       #tv-oppZone { padding-top:calc(56px + var(--safe-t)); }
       #tv-myZone { padding-bottom:calc(24px + var(--safe-b)); }
       .tv-say { height:22px; }
-      .tv-bets { height:16px; font-size:.62rem; }
       #tv-status { height:28px; font-size:.78rem; padding:0 12px; }
       #tv-actions { height:46px; gap:6px; }
       #tv .tv-btn { padding:8px 13px; font-size:.78rem; }
@@ -4162,7 +4178,10 @@
       #tv-mat { width:auto; max-width:224px; min-width:200px; min-height:200px; padding:10px; gap:8px; }
       #tv-mat .a-card { width:58px; height:81px; }
       #tv-deck { left:8px; width:50px; }
-      #tv-bank { left:auto; right:8px; width:50px; font-size:.6rem; }
+      #tv-rail { left:auto; right:6px; width:56px; gap:6px; }
+      #tv-bank { width:50px; font-size:.6rem; }
+      .tv-pot { min-height:44px; }
+      .pot-stack { height:24px; }
       #tv-deckStack { width:50px; height:70px; }
       #tv-deckStack .card { width:50px; height:70px; }
       #tv-turn { font-size:.62rem; }
@@ -5730,13 +5749,15 @@
         <span class="vs-tag">+</span>
         <div class="a-slot"><div class="a-label" id="tv-offerLbl">출품 카드</div><div id="tv-offer" class="a-card"></div></div>
       </div>
-      <div class="tv-bets">
-        <span class="tv-bet me"><b id="tv-myBet">0</b> 내 배팅</span>
-        <span class="tv-bet opp"><b id="tv-oppBet">–</b> 상대</span>
-      </div>
     </div>
-    <!-- 은행 — 낸 칩이 모이는 곳. 오른쪽에 두어 흐름이 한 방향으로 읽힌다. -->
-    <div id="tv-bank"><i class="chip dark"></i><i class="chip light"></i><span>은행</span></div>
+    <!-- 오른쪽 레일 — 상대가 건 칩 · 은행 · 내가 건 칩.
+         숫자만 있으면 얼마가 오갔는지 읽어야 하지만, 쌓여 있으면 보인다.
+         은행을 가운데 두어 흐름(내 자리 → 내 배팅 → 은행)이 한 방향으로 읽힌다. -->
+    <div id="tv-rail">
+      <div class="tv-pot opp" id="tv-potOpp"><span class="pot-stack"></span><b>0</b><small>상대</small></div>
+      <div id="tv-bank"><i class="chip dark"></i><i class="chip light"></i><span>은행</span></div>
+      <div class="tv-pot me" id="tv-potMe"><span class="pot-stack"></span><b>0</b><small>내 배팅</small></div>
+    </div>
     <div id="tv-status">–</div>
     <div id="tv-actions"></div>
   </div>

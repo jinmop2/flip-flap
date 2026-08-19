@@ -351,7 +351,10 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('줄어든 칩은 덜어 내는 게 보인다', /el\.classList\.add\('gone'\)/.test(cli) && /@keyframes csGone/.test(htm));
   ok('값을 부르면 칩이 판돈으로 간다', /function tvBetChips\(n, mine\)/.test(cli)
      && /tvBetChips\(v\.lot\.myBet - \(prev\.lot\.myBet \|\| 0\), true\)/.test(cli));
-  ok('판돈은 정산 때 은행으로 간다', /function tvFlyChips\(n, mine\)[\s\S]{0,140}getElementById\('tv-mat'\)/.test(cli));
+  ok('판돈은 정산 때 은행으로 간다', /function tvFlyChips\(n, mine\)[\s\S]{0,200}'tv-potMe' : 'tv-potOpp'[\s\S]{0,120}getElementById\('tv-bank'\)/.test(cli));
+  ok('건 칩이 레일에 쌓인다', /function tvPot\(box, n, mine, unknown\)/.test(cli)
+     && /tvPot\(\$\('tv-potMe'\), v\.lot\.myBet, true, false\)/.test(cli));
+  ok('클로즈에서 상대 값은 물음표', /oppHidden \? 0 : \(v\.lot\.oppBet \|\| 0\), false, oppHidden/.test(cli));
   ok('액수는 큰 버튼으로 고른다', /function tvAmount/.test(cli) && /\.tv-step \{[\s\S]{0,80}width:46px; height:46px/.test(htm));
   ok('클로즈는 짝수만 나온다', /tvAmount\(box, 2, hi, 2, 2\)/.test(cli));
   ok('숫자 입력칸의 작은 화살표는 안 쓴다', !/inp\.type = 'number'/.test(cli));
@@ -470,8 +473,13 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   ok('경매대를 비운다', /경매대는 비운다/.test(cli));
   ok('날아간 뒤 더미에 얹는다', /tvFlying = tvFlying\.filter/.test(cli) && /tvPile\(box, cards, landingIds\)/.test(cli));
   // 칩은 가운데에서 오른쪽 은행으로만 흐른다
-  ok('은행 자리가 있다', /id="tv-bank"/.test(htm) && /#tv-bank \{ position:absolute; left:calc\(50% \+ 176px\)/.test(htm));
-  ok('칩은 경매대에서 은행으로', /const from = document\.getElementById\('tv-mat'\);[\s\S]{0,120}getElementById\('tv-bank'\)/.test(cli));
+  // 오른쪽 레일 — 위에서부터 상대 배팅 · 은행 · 내 배팅
+  ok('은행 자리가 있다', /id="tv-bank"/.test(htm) && /#tv-rail \{ position:absolute; left:calc\(50% \+ 168px\)/.test(htm));
+  ok('레일이 셋을 세로로 세운다', /id="tv-potOpp"[\s\S]{0,200}id="tv-bank"[\s\S]{0,200}id="tv-potMe"/.test(htm));
+  // 곧게 가로지르면 미끄러지는 것처럼 보인다 — 살짝 떠올랐다 내려앉게
+  ok('칩이 떠서 건너간다', /function tvTossChip\(fromEl, toEl, mine, delay\)/.test(cli)
+     && /translate\(\$\{dx \* 0\.5\}px, \$\{dy \* 0\.5 - lift\}px\)/.test(cli));
+  ok('내 자리에서 내 더미로 간다', /const pot = document\.getElementById\(mine \? 'tv-potMe' : 'tv-potOpp'\)/.test(cli));
   ok('칩이 프로필로 날지 않는다', !/tvFlyChips\(myEl/.test(cli));
   ok('설명서가 시간을 알린다', /제한 시간 5분/.test(htm));
 }

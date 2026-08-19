@@ -5596,6 +5596,32 @@ function tvStack(box, n, mine) {
   }
 }
 
+// 오른쪽 레일의 배팅 더미. 얼마를 걸었는지가 숫자만이 아니라 높이로 보인다.
+// 값을 모르는 클로즈에서는 물음표와 함께 몇 장만 상징으로 쌓는다.
+const POT_MAX = 8, POT_STEP = 3.4;
+function tvPot(box, n, mine, unknown) {
+  if (!box) return;
+  const st = box.querySelector('.pot-stack');
+  const num = box.querySelector('b');
+  const show = n > 0 || unknown;
+  box.classList.toggle('hide', !show);
+  num.textContent = unknown ? '?' : String(n);
+  const want = unknown ? 3 : Math.max(0, Math.min(POT_MAX, Math.ceil(n / 1.5)));
+  const have = st.querySelectorAll('.chip').length;
+  if (want === have) return;
+  if (want < have) {
+    for (const el of [...st.querySelectorAll('.chip')].slice(want)) el.remove();
+    return;
+  }
+  for (let i = have; i < want; i++) {
+    const c = document.createElement('i');
+    c.className = 'chip ' + (mine ? 'light' : 'dark');
+    c.style.bottom = (i * POT_STEP) + 'px';
+    c.style.zIndex = String(i);
+    st.appendChild(c);
+  }
+}
+
 // 한 요소에서 다른 요소로 날려 보낸다
 function tvFlyTo(node, from, to, cls) {
   const fx = document.getElementById('tv-fx'); if (!fx || !from || !to) return;
@@ -5611,34 +5637,49 @@ function tvFlyTo(node, from, to, cls) {
   setTimeout(() => { node.style.opacity = '0'; }, 700);
   setTimeout(() => node.remove(), 1080);
 }
-// 값을 부르면 내 자리에서 판돈(경매대)으로 칩이 간다.
-// 아직 은행에 낸 것은 아니다 — 정산 때 판돈이 은행으로 쓸려 간다.
-function tvBetChips(n, mine) {
-  const from = document.getElementById(mine ? 'tv-myChips' : 'tv-oppChips');
-  const mat = document.getElementById('tv-mat');
-  const many = Math.max(1, Math.min(n, 5));
-  for (let i = 0; i < many; i++) {
-    const c = document.createElement('i');
-    c.className = 'chip ' + (mine ? 'light' : 'dark');
-    setTimeout(() => tvFlyTo(c, from, mat, 'tv-flychip'), i * 90);
-  }
+// 칩 하나를 이쪽에서 저쪽으로. 곧게 가로지르면 미끄러지는 것처럼 보여서,
+// 살짝 떠올랐다 내려앉게 한다 — 손으로 밀어 준 것처럼 읽힌다.
+function tvTossChip(fromEl, toEl, mine, delay) {
+  const fx = document.getElementById('tv-fx');
+  if (!fx || !fromEl || !toEl) return;
+  const f = fromEl.getBoundingClientRect(), t = toEl.getBoundingClientRect();
+  const host = fx.getBoundingClientRect();
+  if (!f.width || !t.width) return;
+  const c = document.createElement('i');
+  c.className = 'chip ' + (mine ? 'light' : 'dark') + ' tv-tossed';
+  c.style.left = (f.left - host.left + f.width / 2 - 9) + 'px';
+  c.style.top = (f.top - host.top + f.height / 2 - 9) + 'px';
+  fx.appendChild(c);
+  const dx = (t.left + t.width / 2) - (f.left + f.width / 2);
+  const dy = (t.top + t.height / 2) - (f.top + f.height / 2);
+  const lift = Math.min(38, 16 + Math.abs(dx) * 0.12);
+  const anim = c.animate([
+    { transform: 'translate(0,0) scale(.9)', opacity: 1 },
+    { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - lift}px) scale(1.15)`, opacity: 1, offset: 0.55 },
+    { transform: `translate(${dx}px, ${dy}px) scale(.85)`, opacity: 1 },
+  ], { duration: 480, delay: delay || 0, easing: 'cubic-bezier(.35,.02,.25,1)', fill: 'both' });
+  anim.onfinish = () => c.remove();
+  setTimeout(() => c.remove(), (delay || 0) + 700);
 }
 
-// 칩은 판 가운데에서 오른쪽 은행으로 모인다.
-// 낸 칩은 상대에게 가는 게 아니라 은행으로 사라진다 — 그래서 한 방향이다.
+// 값을 부르면 내 자리에서 내 배팅 더미(오른쪽 레일)로 칩이 간다.
+// 아직 은행에 낸 것은 아니다 — 정산 때 그 더미가 은행으로 쓸려 간다.
+function tvBetChips(n, mine) {
+  const from = document.getElementById(mine ? 'tv-myChips' : 'tv-oppChips');
+  const pot = document.getElementById(mine ? 'tv-potMe' : 'tv-potOpp');
+  const many = Math.max(1, Math.min(n, 5));
+  for (let i = 0; i < many; i++) tvTossChip(from, pot, mine, i * 80);
+}
+
+// 정산 — 걸어 둔 더미가 은행으로 쓸려 간다.
 function tvFlyChips(n, mine) {
-  const from = document.getElementById('tv-mat');
+  const from = document.getElementById(mine ? 'tv-potMe' : 'tv-potOpp');
   const bank = document.getElementById('tv-bank');
-  const many = Math.min(n, 6);
-  for (let i = 0; i < many; i++) {
-    const c = document.createElement('i');
-    c.className = 'chip ' + (mine ? 'light' : 'dark');
-    setTimeout(() => tvFlyTo(c, from, bank, 'tv-flychip'), i * 110);
-  }
+  const many = Math.min(Math.max(n, 1), 6);
+  for (let i = 0; i < many; i++) tvTossChip(from, bank, mine, i * 90);
   if (n > 0) {
     tvSfx('chips');   // 칩이 은행으로 쓸려 가는 소리
-    const b = document.getElementById('tv-bank');
-    if (b) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+    if (bank) { bank.classList.remove('pop'); void bank.offsetWidth; bank.classList.add('pop'); }
   }
 }
 
@@ -5804,18 +5845,22 @@ function tvRender(v) {
       : v.lot.type === 'close' ? '클로즈 경매' : '';
     // 2인전 경매대와 같은 알약 — 오픈은 초록, 클로즈는 보라
     $('tv-typeBadge').className = 'type-badge ' + (v.lot.type === 'close' ? 'closed' : 'open');
-    $('tv-myBet').textContent = v.lot.myBet;
-    $('tv-oppBet').textContent = v.lot.oppBet === null ? '?' : v.lot.oppBet;
+    // 오른쪽 레일 — 건 만큼 쌓인다. 클로즈에서 상대 값은 모르니 물음표.
+    const oppHidden = v.lot.oppBet === null && v.lot.type === 'close' && v.auctioneer !== v.me;
+    tvPot($('tv-potMe'), v.lot.myBet, true, false);
+    tvPot($('tv-potOpp'), oppHidden ? 0 : (v.lot.oppBet || 0), false, oppHidden);
   } else if (v.phase === 'settled' && v.last) {
     // 경매대는 비운다 — 카드는 이긴 쪽 앞으로 날아가 거기 남는다.
     // (날아가는 연출은 tvReact 가 경매대 자리에서 띄운다)
     $('tv-typeBadge').className = 'type-badge ' + (v.last.winner === v.me ? 'open' : 'closed');
     $('tv-typeBadge').textContent = v.last.winner === v.me ? '내가 낙찰' : '상대가 낙찰';
-    $('tv-myBet').textContent = v.last.winner === v.me ? v.last.wBet : v.last.lBet;
-    $('tv-oppBet').textContent = v.last.winner === v.me ? v.last.lBet : v.last.wBet;
+    // 정산 화면에서는 실제로 낸 값만큼만 남긴다 — 곧 은행으로 쓸려 간다
+    const iWon = v.last.winner === v.me;
+    tvPot($('tv-potMe'), iWon ? v.last.wPay : v.last.lPay, true, false);
+    tvPot($('tv-potOpp'), iWon ? v.last.lPay : v.last.wPay, false, false);
   } else {
     $('tv-typeBadge').textContent = ''; $('tv-typeBadge').className = 'type-badge';
-    $('tv-myBet').textContent = '0'; $('tv-oppBet').textContent = '\u2013';
+    tvPot($('tv-potMe'), 0, true, false); tvPot($('tv-potOpp'), 0, false, false);
   }
 
   const mh = $('tv-myHand'); mh.innerHTML = '';
