@@ -155,5 +155,19 @@ console.log('\n⑩ 배경음악 — 로비와 판이 다른 곡');
   ok('효과음도 막는다', /playSample[\s\S]{0,90}if \(keepOtherAudio\) return true;/.test(cli));
 }
 
+console.log('\n⑪ 접속하는 첫 순간 — 로비가 스쳐 보이지 않게');
+{
+  // 본문이 다 그려진 뒤 자바스크립트로 가리면 이미 한 프레임 늦다.
+  // 문서를 읽기 시작하는 순간(머리글)에 표시를 걸어야 한다.
+  const head = html.slice(0, html.indexOf('<body'));
+  ok('머리글에서 표시를 건다', /classList\.add\('booting'\)/.test(head));
+  ok('내부 이동이면 안 건다', /if \(!sessionStorage\.getItem\('ff_skipsplash'\)\) document\.documentElement\.classList\.add\('booting'\)/.test(head));
+  ok('가리는 규칙이 있다', /html\.booting #lobby, html\.booting #title, html\.booting #profileBar,\s*\n\s*html\.booting #navBar, html\.booting #game, html\.booting #tv \{ visibility:hidden; \}/.test(html));
+  ok('로고가 걷힐 때 같이 밝아진다', /document\.documentElement\.classList\.remove\('booting'\);\s*\n\s*s\.classList\.add\('hide'\)/.test(cli));
+  ok('건너뛴 경우엔 곧바로 보여 준다', /s\.style\.display = 'none';\s*\n\s*document\.documentElement\.classList\.remove\('booting'\)/.test(cli));
+  // 로고가 안 걷히는 사고가 나도 화면은 보여야 한다
+  ok('8초 뒤에는 무조건 보여 준다', /setTimeout\(\(\) => document\.documentElement\.classList\.remove\('booting'\), 8000\)/.test(cli));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

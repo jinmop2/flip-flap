@@ -107,7 +107,10 @@ if (sessionStorage.getItem('ff_skipsplash')) {
   sessionStorage.removeItem('ff_skipsplash');
   splashHidden = true;
   const s = document.getElementById('splash'); if (s) s.style.display = 'none';
+  document.documentElement.classList.remove('booting');   // 건너뛴 경우엔 곧바로 보여 준다
 }
+// 무슨 일이 있어도 8초 뒤에는 화면이 보여야 한다 (로고가 안 걷히는 사고 대비)
+setTimeout(() => document.documentElement.classList.remove('booting'), 8000);
 // 내부 이동(나가기 등)·게스트·로그인 세션이면 타이틀 화면을 처음부터 숨김 (깜빡임 방지)
 if (sessionStorage.getItem('ff_guest') || localStorage.getItem('ff_auth')) {
   const t = document.getElementById('title'); if (t) { t.classList.add('hide'); t.style.display = 'none'; }
@@ -116,7 +119,12 @@ function hideSplash() {
   if (splashHidden) return; splashHidden = true;
   const s = document.getElementById('splash'); if (!s) return;
   const wait = Math.max(0, SPLASH_MIN - (Date.now() - SPLASH_START));
-  setTimeout(() => { s.classList.add('hide'); setTimeout(() => { s.style.display = 'none'; }, 260); }, wait);   // 페이드 후 완전 제거 — 숨은 무한 스피너 정지
+  setTimeout(() => {
+    // 로고가 걷히기 시작할 때 아래 것들을 다시 보이게 한다 — 같이 밝아진다
+    document.documentElement.classList.remove('booting');
+    s.classList.add('hide');
+    setTimeout(() => { s.style.display = 'none'; }, 260);
+  }, wait);   // 페이드 후 완전 제거 — 숨은 무한 스피너 정지
 }
 setTimeout(hideSplash, 8000);
 // 내부 이동용 새로고침 (스플래시 없이)
