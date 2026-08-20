@@ -3012,7 +3012,11 @@ function yieldToOtherAudio() {
 let guideOff = localStorage.getItem('ff_guide') === 'off';
 function applySettings() {   // 저장된 상태를 화면·오디오에 반영
   setBgmVolume(bgmOff ? 0 : BGM_VOL);
-  const sb = document.getElementById('statusBar'); if (sb) sb.style.display = guideOff ? 'none' : '';
+  // 안내 문구는 모드마다 다른 칸에 뜬다. 2인전 것만 끄면 트웰브에서는
+  // 껐는데도 그대로 남아 있다 — 판마다 있는 안내 칸을 다 같이 끈다.
+  for (const id of ['statusBar', 'tv-status']) {
+    const sb = document.getElementById(id); if (sb) sb.style.display = guideOff ? 'none' : '';
+  }
   const set = (id, on) => { const t = document.getElementById(id); if (t) t.classList.toggle('on', on); };
   set('togBgm', !bgmOff); set('togSfx', !sfxOff); set('togGuide', !guideOff);
   const cur = (window.FF && FF.lang()) || 'ko';

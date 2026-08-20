@@ -426,6 +426,9 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('경매대가 줄어들 수 있다', /#tv-mat \{[\s\S]{0,600}min-height:0; position:relative; z-index:2; flex-shrink:1/.test(htm));
   ok('AI 가 정산을 대신 넘기지 않는다', /if \(g\.phase === 'settled'\) return null;/.test(tw));
   ok('AI 가 뜸을 들인다', /\(g\.phase === 'bid' \|\| g\.phase === 'close'\) \? 2200 : 1500/.test(read('server.js')));
+  // 내가 두자마자 받아치면 정신이 없다 — 사람 수 뒤에도 한 번 쉰다
+  ok('사람이 둔 뒤에도 쉰다', /const pause = \(g\.phase === 'bid' \|\| g\.phase === 'close'\) \? 1400 : 900;/.test(read('server.js'))
+     && /room2\.tvThink = setTimeout\(\(\) => tvBot\(roomId\), pause\)/.test(read('server.js')));
   ok('내 프로필이 보인다', /id="tv-myProfile"/.test(htm) && /renderGameProfile\('tv-myProfile'/.test(cli));
   ok('프로필이 칩을 안 덮는다', /#tv-oppbar > \*, #tv-mebar > \* \{ position:static/.test(htm));
   ok('판이 화면을 채운다', /#tv \{[\s\S]{0,400}position:fixed; inset:0/.test(htm));
@@ -628,7 +631,11 @@ console.log('\n㉓ 그냥 물러설 수는 없다 · 나가기는 한 번 묻는
   ok('화면도 물러서기를 감춘다', /if \(v\.lot\.canFold\) btn\('물러서기'/.test(cli));
   ok('먼저 부르는 자리임을 알려준다', /먼저 부르는 자리예요/.test(cli));
   ok('나가기 전에 한 번 묻는다', /askConfirm\(\{ icon: '🚪', title: '판을 나갈까요\?'/.test(cli));
-  ok('등급 숫자는 안 쓴다', /#tv \.card \.c-rank \{ display:none; \}/.test(htm));
+  // 등급도, 2-1 의 왕관도, 6-10 의 칼도 트웰브에는 없는 이야기다
+  ok('등급 숫자는 안 쓴다', /#tv \.card \.c-top \{ display:none; \}/.test(htm));
+  ok('큰 숫자가 카드 한가운데', /#tv \.card \.c-num \{ flex:1; display:flex; align-items:center; justify-content:center/.test(htm));
+  ok('더미도 고르게 겹친다', /#tv \.pile-group \.card \{ margin-left:-14px; \}/.test(htm));
+  ok('가이드 끄기가 트웰브에도 먹힌다', /for \(const id of \['statusBar', 'tv-status'\]\)/.test(cli));
 }
 
 console.log('\n㉔ 전문가는 방식도 셈해서 고른다 · 안 보이는 한 장 몫도 본다');

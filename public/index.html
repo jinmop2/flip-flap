@@ -4160,9 +4160,18 @@
     #tv-bank.pop { animation:tvBankPop .4s ease; }
     @keyframes tvBankPop { 40% { transform:scale(1.18); } }
 
-    /* 트웰브는 등급(작은 숫자)을 안 쓴다 — 종류만 맞추면 되는 규칙이라
-       작은 숫자는 읽을 것만 늘린다. */
-    #tv .card .c-rank { display:none; }
+    /* 트웰브는 등급을 안 쓴다 — 종류(큰 숫자)만 맞추면 되는 규칙이다.
+       그래서 작은 숫자도, 2-1 의 왕관도, 6-10 의 칼도 필요 없다.
+       (졸개의 배신은 2인전 규칙이라 트웰브에는 아예 없는 이야기다)
+       윗줄을 통째로 지우고 큰 숫자를 카드 한가운데에 놓는다. */
+    #tv .card .c-top { display:none; }
+    #tv .card .c-num { flex:1; display:flex; align-items:center; justify-content:center;
+      padding:0; line-height:1; }
+    /* 더미도 마찬가지 — 등급 배지를 내보이려고 겹쳐 두던 폭이 필요 없어졌다.
+       고르게 겹쳐야 숫자가 삐뚤어 보이지 않는다. */
+    #tv .pile-group .card { margin-left:-14px; }
+    #tv .pile-group .card:first-child { margin-left:0; }
+    #tv .pile-group .card .c-num { font-size:1.7rem; padding:0; }
 
     #tv-fx { position:absolute; inset:0; pointer-events:none; z-index:9; }
     /* 건너가는 칩 한 장 — 판 위의 칩과 같은 위에서 본 모습 */

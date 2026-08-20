@@ -1844,6 +1844,7 @@ io.on('connection', (socket) => {
     if (!g || room.tvDone) return;
     room.tvDone = true;
     clearTimeout(room.tvNext);
+    clearTimeout(room.tvThink);
     room.players.forEach((sid, i) => {
       if (!sid) return;
       const me = i + 1;
@@ -1938,7 +1939,14 @@ io.on('connection', (socket) => {
     }
     if (!ok) return tvPush(roomId);      // 안 먹힌 행동 — 화면만 다시 맞춘다
     tvPush(roomId);
-    tvBot(roomId);
+    // 내가 두자마자 AI 가 받아치면 정신이 없다. 사람이 방금 둔 수를 한 번
+    // 보고 넘어갈 만큼은 기다린다 — 값을 부르는 대목은 더 길게.
+    const room2 = rooms[roomId];
+    if (room2 && room2.cpuIndex !== undefined) {
+      clearTimeout(room2.tvThink);
+      const pause = (g.phase === 'bid' || g.phase === 'close') ? 1400 : 900;
+      room2.tvThink = setTimeout(() => tvBot(roomId), pause);
+    }
   });
 
 
