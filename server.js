@@ -2197,6 +2197,29 @@ io.on('connection', (socket) => {
   });
 
   // 게임 나가기 — 진행 중이면 나간 사람 몰수패 (상대에게만 몰수승 전송)
+  // 판을 버리고 나갔다. 여태 사람끼리 붙은 판만 몰수패로 남기고 AI전은
+  // 아무 기록도 안 남겼다 — 지고 있으면 나가 버리면 그만이었다는 뜻이다.
+  // 트웰브도 따로 처리하지 않아 그냥 사라졌다.
+  function abandonIfLive(roomId, slot) {
+    const room = rooms[roomId];
+    if (!room || slot < 0) return false;
+    if (room.tutorial) return false;              // 튜토리얼은 전적에 안 남긴다
+    const winner = slot === 0 ? 2 : 1;
+    if (room.tv && !room.tv.over && !room.tvDone) {
+      room.tv.over = true; room.tv.winner = winner; room.tv.endBy = 'leave';
+      tvFinish(roomId);                            // 보상·전적을 남긴다
+      return true;
+    }
+    if (room.game && room.game.phase !== 'game_over') {
+      room.game.phase = 'game_over';
+      endClock(room);
+      finishStats(room, winner, true);
+      room.players.forEach((s2, i) => { if (s2 && i !== slot) io.to(s2).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
+      return true;
+    }
+    return false;
+  }
+
   socket.on('leave_room', () => {
     const roomId = socket.roomId;
     const room = roomId && rooms[roomId];
@@ -2212,11 +2235,9 @@ io.on('connection', (socket) => {
     endClock(room);
     const slot = room.players.indexOf(socket.id);
     const g = room.game;
-    if (g && g.phase !== 'game_over' && !room.vsBot && slot !== -1) {
-      const winner = slot === 0 ? 2 : 1;
-      g.phase = 'game_over';
-      finishStats(room, winner, true);
-      room.players.forEach((s, i) => { if (s && i !== slot) io.to(s).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
+    // AI 전이든 사람끼리든, 돌아가던 판을 버리고 나가면 진 것으로 남는다
+    if (slot !== -1 && abandonIfLive(roomId, slot)) {
+      // 처리 끝 — 아래 대기실 정리로는 안 내려간다
     } else if (!g && room.hostStart) {
       // 아직 시작 안 한 대기실 — 방을 지우지 않고 자리만 비운다.
       // 예전엔 한 명만 나가도 방이 통째로 사라져서 들락날락을 못 했다.
@@ -2264,8 +2285,11 @@ io.on('connection', (socket) => {
     const slot = room.players.indexOf(socket.id);
     if (slot === -1) return;   // 이미 교체된 옛 소켓 → 무시 (양쪽 오알림 방지)
     room.players[slot] = null;
-    // 게임 종료 상태거나 둘 다 끊김 → 즉시 정리
+    // 게임 종료 상태거나 둘 다 끊김 → 즉시 정리.
+    // 다만 돌아가던 판이었으면 지우기 전에 결과를 남긴다 — AI 전은 상대가
+    // 없으니 여기로 곧장 떨어져 여태 아무 기록도 안 남았다.
     if (!room.game || room.game.phase === 'game_over' || (!room.players[0] && !room.players[1])) {
+      abandonIfLive(roomId, slot);
       if (room.graceTimer) { clearInterval(room.graceTimer); room.graceTimer = null; }
       endClock(room); delete rooms[roomId]; broadcastRooms(); return;
     }

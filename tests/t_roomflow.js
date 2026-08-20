@@ -335,5 +335,16 @@ ok('대기실에서 로고를 접는다', /body\.waiting #lobby \.logo, body\.wa
 ok('대기실 표시를 건다', (cli.match(/classList\.add\('waiting'\)/g) || []).length === 2);
 ok('낮은 화면에서는 카드도 줄인다', /@media \(max-height:700px\) \{[\s\S]{0,200}#waitCard \{ gap:8px/.test(htm));
 
+// 판을 버리고 나가면 진 것으로 남아야 한다.
+// 여태 사람끼리 붙은 판만 몰수패로 남기고 AI전·트웰브는 아무 기록도 안 남겼다 —
+// 지고 있으면 나가 버리면 그만이었다.
+ok('나가기·끊김을 한 곳에서 다룬다', /function abandonIfLive\(roomId, slot\)/.test(srv));
+ok('AI전도 남긴다', !/if \(g && g\.phase !== 'game_over' && !room\.vsBot && slot !== -1\)/.test(srv));
+ok('나가기에서 부른다', /if \(slot !== -1 && abandonIfLive\(roomId, slot\)\)/.test(srv));
+ok('끊겨서 방이 지워지기 전에도 부른다',
+   /abandonIfLive\(roomId, slot\);\s*\n\s*if \(room\.graceTimer\)/.test(srv));
+ok('트웰브도 남긴다', /room\.tv && !room\.tv\.over && !room\.tvDone[\s\S]{0,200}tvFinish\(roomId\)/.test(srv));
+ok('튜토리얼은 전적에 안 남긴다', /if \(room\.tutorial\) return false;/.test(srv));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
