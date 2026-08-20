@@ -4338,6 +4338,7 @@ socket.on('room_lobby', (r) => {
   document.querySelectorAll('.lb-modal.show').forEach((m) => m.classList.remove('show'));
   document.getElementById('lobbyMain').style.display = 'none';
   document.getElementById('waitCard').style.display = 'flex';
+  document.body.classList.add('waiting');   // 대기실 — 큰 로고를 접고 화면에 맞춘다
   roomIsHost = !!r.host;
   roomReady = !!r.ready;
   if (r.mode) {
@@ -4405,6 +4406,7 @@ socket.on('room_created', ({ roomId, name }) => {
   closeCreate();
   document.getElementById('lobbyMain').style.display = 'none';
   document.getElementById('waitCard').style.display = 'flex';
+  document.body.classList.add('waiting');   // 대기실 — 큰 로고를 접고 화면에 맞춘다
   document.getElementById('waitCode').textContent = roomId;
   document.getElementById('waitRoomName').textContent = name || '내 방';
   // 친구에게 도전장을 보내려던 참이면 방 코드가 나온 지금 전송

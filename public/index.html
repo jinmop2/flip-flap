@@ -73,7 +73,11 @@
     img, svg { -webkit-user-drag:none; user-drag:none; }
     /* 게임 중 화면 스크롤 잠금. 다인전(quad4)이 빠져 있어서 3·4인전만 화면이
        움직였다 — 판이 열려 있는 동안은 어느 판이든 안 움직여야 한다. */
-    body.ingame, body.quad4 { position:fixed; inset:0; width:100%; overflow:hidden; }
+    /* 페이지 자체는 어느 화면에서도 안 움직인다.
+       로비가 통째로 스크롤되면 판 밖에서 화면이 출렁이고, 주소창이 들락날락해
+       바닥에 붙인 메뉴바가 같이 흔들린다. 넘치는 것은 로비 안에서만 흐른다. */
+    body { position:fixed; inset:0; width:100%; overflow:hidden; }
+    #lobby { max-height:100%; overflow-y:auto; overscroll-behavior:contain; }
     body {
       font-family:'Fredoka',system-ui,sans-serif;
       background:#180509;
@@ -94,6 +98,17 @@
 
     /* ─── 로비 ─── */
     #lobby { display:flex; flex-direction:column; align-items:center; gap:22px; }
+    /* 대기실에서는 큰 로고가 자리만 먹는다 — 접고 카드에 자리를 준다 */
+    body.waiting #lobby .logo, body.waiting .logo-actions { display:none; }
+    body.waiting #lobby { justify-content:center; }
+    /* 낮은 화면에서는 대기 카드도 한 벌 줄여 한 화면에 담는다 */
+    @media (max-height:700px) {
+      body.waiting #lobby { padding-top:calc(70px + var(--safe-t)); padding-bottom:calc(62px + var(--safe-b)); }
+      #waitCard { gap:8px; padding:14px 18px; }
+      #waitCard .wc-seat { padding:7px 4px; }
+      #waitCard .wc-modes { margin:0; }
+      #waitCard .wc-mode { padding:6px 4px; }
+    }
     .logo { text-align:center; line-height:.9; }
     .logo h1, .logo .flap {
       font-family:'Bangers',cursive; font-size:4.4rem; letter-spacing:5px;

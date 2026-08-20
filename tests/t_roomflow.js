@@ -162,7 +162,8 @@ ok('넓은 화면 규칙은 직계에만', /rank-box > \.lb-title/.test(htm) && 
 ok('방장이 내보낼 수 있다', /socket\.on\('room_kick'/.test(srv) && /window\.roomKick/.test(cli));
 ok('방장만 · 자기는 못 내보낸다', /socket\.playerIndex !== 0\) return;[\s\S]{0,200}i <= 0/.test(srv));
 ok('쫓겨나면 알려준다', /room_kicked/.test(srv) && /room_kicked/.test(cli));
-ok('다인전도 화면이 안 움직인다', /body\.ingame, body\.quad4 \{[^}]*position:fixed/.test(htm));
+// 이제는 판 안이든 밖이든 화면 자체가 안 움직인다 (body 에 통째로 걸었다)
+ok('다인전도 화면이 안 움직인다', /body \{ position:fixed; inset:0; width:100%; overflow:hidden; \}/.test(htm));
 ok('밀린 화면을 되돌린다', /function pinViewport/.test(cli) && /visualViewport\.addEventListener\('scroll', pinViewport\)/.test(cli));
 
 // 배팅 차례가 아닐 때 이유가 보이는가 · 세로 고정
@@ -324,6 +325,15 @@ ok('× 가 제목 줄 안에 선다', /#soloModal \.lb-title \.close-x, #multiMo
 ok('제목 줄이 한 줄을 차지한다', /#soloModal \.lb-title, #multiModal \.lb-title \{[\s\S]{0,140}width:100%; min-height:48px/.test(htm));
 // 이름이 겹치는 랭킹 줄 규칙이 창 제목까지 줄여 버렸다 — 그래서 × 가 제자리를 잃었다
 ok('랭킹 줄 규칙은 랭킹 줄에만', /@media \(max-width:420px\) \{ \.lb-row \.lb-title \{ max-width:30%/.test(htm));
+
+// 화면이 통째로 스크롤되면 안 된다.
+// 로비가 출렁이면 주소창이 들락날락하고, 바닥에 붙인 메뉴바가 같이 흔들린다.
+ok('페이지 자체는 안 움직인다', /body \{ position:fixed; inset:0; width:100%; overflow:hidden; \}/.test(htm));
+ok('넘치면 로비 안에서만 흐른다', /#lobby \{ max-height:100%; overflow-y:auto; overscroll-behavior:contain; \}/.test(htm));
+// 대기실에서는 큰 로고가 자리만 먹는다
+ok('대기실에서 로고를 접는다', /body\.waiting #lobby \.logo, body\.waiting \.logo-actions \{ display:none; \}/.test(htm));
+ok('대기실 표시를 건다', (cli.match(/classList\.add\('waiting'\)/g) || []).length === 2);
+ok('낮은 화면에서는 카드도 줄인다', /@media \(max-height:700px\) \{[\s\S]{0,200}#waitCard \{ gap:8px/.test(htm));
 
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
