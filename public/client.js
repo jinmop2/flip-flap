@@ -5481,6 +5481,7 @@ window.addEventListener('appinstalled', () => {
 // 그대로 보낸다 — 값이나 승패를 화면에서 계산하지 않는다.
 let tvView = null, tvMe = 0, tvBot = false, tvPrev = null;
 let tvFlying = [];   // 지금 필드로 날아가는 중인 카드 id
+let tvJustDrew = false;   // 이번 그리기가 '방금 뒤집은' 순간인가
 let tvDiff = 'hard';  // 마지막으로 고른 AI 난이도 (한 판 더 에서 그대로 쓴다)
 
 // 이모트 버튼은 2인전 것 하나뿐이다. 두 벌 만들면 쿨타임·차단 설정이
@@ -5557,9 +5558,13 @@ socket.on('tv_clock', ({ time, active, me }) => {
 socket.on('tv_warn', ({ player }) => { if (player === tvMe) tvSfx('hourglass'); });
 
 socket.on('tv_state', (v) => {
+  // 방금 뒤집은 카드인지는 "직전 상태" 를 봐야 안다. tvPrev 를 갈아 끼운 뒤에
+  // 보면 이미 새 상태라 늘 아니라고 나온다 — 여기서 미리 적어 둔다.
+  tvJustDrew = !!(tvPrev && !tvPrev.lot && v.lot);
   tvReact(tvPrev, v);      // 바뀐 대목을 말풍선·움직임으로 먼저 알린다
   tvPrev = v; tvView = v;
   tvRender(v);
+  tvJustDrew = false;
 });
 socket.on('tv_over', ({ win, endBy, view }) => {
   if (view) { tvView = view; tvRender(view); }
@@ -5799,14 +5804,14 @@ function tvReact(prev, v) {
       tvBetChips(v.lot.oppBet - (prev.lot.oppBet || 0), false);
     }
   }
-  // 클로즈 — 진행자가 불렀다(값은 안 보인다)
+  // 클로즈 — 진행자가 불렀다. 값은 서로 보인다(가려지는 건 출품 카드다).
   if (v.lot && prev.lot && v.lot.type === 'close' && v.lot.turnToAct !== prev.lot.turnToAct) {
     const bidder = prev.lot.turnToAct;
     if (bidder === v.auctioneer) {
-      if (bidder === v.me) tvSay(meSide, tvChipHtml(v.lot.closeBetKnown, true));
-      else tvSay(oppSide, '<b>?</b> 걸었어요');
+      const amt = bidder === v.me ? v.lot.closeBetKnown : v.lot.oppBet;
+      tvSay(bidder === v.me ? meSide : oppSide, tvChipHtml(amt, bidder === v.me));
       tvSfx('chip');
-      tvBetChips(3, bidder === v.me);   // 클로즈는 액수가 안 보이니 몇 개만 상징으로
+      tvBetChips(amt || 2, bidder === v.me);
     }
   }
 
@@ -5831,23 +5836,14 @@ function tvReact(prev, v) {
     // 걸었지만 안 낸 만큼은 제자리로 — 진 쪽은 절반만 내므로 나머지가 돌아온다
     if (myBet - myPay > 0) setTimeout(() => tvBackChips(myBet - myPay, true), 420);
     if (opBet - opPay > 0) setTimeout(() => tvBackChips(opBet - opPay, false), 560);
-    // 카드가 이긴 쪽으로
-    const dest = document.getElementById(iWon ? 'tv-myAcq' : 'tv-oppAcq');
+    // 카드가 이긴 쪽으로. 경매대에 놓여 있던 그 카드가 그대로 떠오른다 —
+    // 지웠다가 잠시 뒤 띄우면 한 번 사라졌다 나타나 보인다(그게 어색했다).
+    // 판이 다시 그려진 다음 프레임에 곧바로 띄운다.
     tvFlying = (l.prize || []).map((c) => c.id);
-    setTimeout(() => {
-      for (const card of (l.prize || [])) {
-        const el = makeCard(card);
-        el.style.width = '70px'; el.style.height = '98px';
-        tvFlyTo(el, document.getElementById('tv-mat'), dest);
-      }
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      tvLand(l.prize || [], iWon);
       tvSfx('place');
-    }, 600);
-    // 다 날아가면 더미에 얹어 준다 — 이제부터 그 카드는 그 사람 필드에 산다
-    setTimeout(() => {
-      tvFlying = [];
-      if (tvView) { tvPile(document.getElementById('tv-myAcq'), tvView.myAcq);
-                    tvPile(document.getElementById('tv-oppAcq'), tvView.oppAcq); }
-    }, 1700);
+    }));
   }
 }
 
@@ -5870,24 +5866,50 @@ function tvPile(box, cards, landingIds) {
   }
 }
 
-// 경매대에서 더미의 제 자리까지 — 크기까지 맞춰 내려앉는다
+// 덱에서 뽑아 경매대에 놓는 모습.
+// 그냥 나타나면 "뽑았다" 는 느낌이 없다 — 덱 자리에서 뒷면으로 출발해
+// 날아오면서 앞면으로 뒤집힌다.
+function tvDealt(cardEl, deckEl) {
+  if (!cardEl || !deckEl) return;
+  const t = cardEl.getBoundingClientRect(), f = deckEl.getBoundingClientRect();
+  if (!t.width || !f.width) return;
+  const dx = (f.left + f.width / 2) - (t.left + t.width / 2);
+  const dy = (f.top + f.height / 2) - (t.top + t.height / 2);
+  cardEl.animate([
+    { transform: `translate(${dx}px, ${dy}px) rotateY(180deg) scale(.85)`, opacity: .9 },
+    { transform: `translate(${dx * 0.35}px, ${dy * 0.35 - 10}px) rotateY(96deg) scale(1.04)`, opacity: 1, offset: 0.5 },
+    { transform: 'translate(0,0) rotateY(0deg) scale(1)', opacity: 1 },
+  ], { duration: 520, easing: 'cubic-bezier(.3,.05,.25,1)' });
+  // 덱도 한 장 떠나 보낸 티를 낸다
+  const st = document.getElementById('tv-deckStack');
+  if (st) st.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-5px)' }, { transform: 'translateY(0)' }],
+                     { duration: 320, easing: 'ease-out' });
+}
+
+// 경매대에 놓인 그 카드가 그대로 떠올라 더미의 제 자리로 간다.
+// 지우고 새로 띄우면 한 박자 비어 어색하다 — 있던 자리에서 출발한다.
 function tvLand(prize, iWon) {
-  const fx = document.getElementById('tv-fx'), mat = document.getElementById('tv-mat');
+  const fx = document.getElementById('tv-fx');
   const dest = document.getElementById(iWon ? 'tv-myAcq' : 'tv-oppAcq');
-  if (!fx || !mat || !dest) { tvFlying = []; return; }
-  const host = fx.getBoundingClientRect(), from = mat.getBoundingClientRect();
+  if (!fx || !dest) { tvFlying = []; return; }
+  const host = fx.getBoundingClientRect();
   const W = 70, H = 98;
   prize.forEach((card, i) => {
     const seat = dest.querySelector(`[data-cid="${card.id}"]`);
+    const stay = document.querySelector(`#tv-mat [data-cid="${card.id}"]`);
     if (!seat) { tvFlyDone(card.id); return; }
     const t = seat.getBoundingClientRect();
+    // 지금 화면에 있는 그 카드의 자리에서 출발한다
+    const from = stay ? stay.getBoundingClientRect()
+                      : document.getElementById('tv-mat').getBoundingClientRect();
+    if (stay) stay.style.visibility = 'hidden';     // 원본은 같은 순간 자리만 남기고 숨는다
     const el = makeCard(card);
     el.classList.add('tv-fly');
     el.style.width = W + 'px'; el.style.height = H + 'px';
-    el.style.left = (from.left - host.left + from.width / 2 - W / 2 + (i ? 26 : -26)) + 'px';
+    el.style.left = (from.left - host.left + from.width / 2 - W / 2) + 'px';
     el.style.top = (from.top - host.top + from.height / 2 - H / 2) + 'px';
     fx.appendChild(el);
-    const dx = (t.left + t.width / 2) - (from.left + from.width / 2) - (i ? 26 : -26);
+    const dx = (t.left + t.width / 2) - (from.left + from.width / 2);
     const dy = (t.top + t.height / 2) - (from.top + from.height / 2);
     const sc = t.width / W;
     requestAnimationFrame(() => { el.style.transform = `translate(${dx}px, ${dy}px) scale(${sc})`; });
@@ -5938,7 +5960,9 @@ function tvRender(v) {
   const c = $('tv-center'), o = $('tv-offer');
   c.innerHTML = ''; o.innerHTML = '';
   if (v.lot) {
-    c.appendChild(makeCard(v.lot.center));
+    const cc = makeCard(v.lot.center);
+    c.appendChild(cc);
+    if (tvJustDrew) tvDealt(cc, $('tv-deck'));    // 덱에서 뽑혀 나오는 모습
     if (v.lot.offered) o.appendChild(makeCard(v.lot.offered));
     else if (v.lot.hasOffer) o.appendChild(v.auctioneer === v.me ? makeMyBack() : makeOppBack());   // 아직 안 열린 출품 카드
     $('tv-offerLbl').textContent = (v.lot.hasOffer && !v.lot.offered) ? '출품 (비공개)' : '출품 카드';
@@ -5946,14 +5970,17 @@ function tvRender(v) {
       : v.lot.type === 'close' ? '클로즈 경매' : '';
     // 2인전 경매대와 같은 알약 — 오픈은 초록, 클로즈는 보라
     $('tv-typeBadge').className = 'type-badge ' + (v.lot.type === 'close' ? 'closed' : 'open');
-    // 오른쪽 레일 — 건 만큼 쌓인다. 클로즈에서 상대 값은 모르니 물음표.
-    const oppHidden = v.lot.oppBet === null && v.lot.type === 'close' && v.auctioneer !== v.me;
+    // 오른쪽 레일 — 건 만큼 쌓인다. 값은 클로즈에서도 서로 보인다.
     tvPot($('tv-potMe'), v.lot.myBet, true, false);
-    tvPot($('tv-potOpp'), oppHidden ? 0 : (v.lot.oppBet || 0), false, oppHidden);
+    tvPot($('tv-potOpp'), v.lot.oppBet || 0, false, false);
     $('tv-potMe').classList.remove('passed'); $('tv-potOpp').classList.remove('passed');
   } else if (v.phase === 'settled' && v.last) {
-    // 경매대는 비운다 — 카드는 이긴 쪽 앞으로 날아가 거기 남는다.
-    // (날아가는 연출은 tvReact 가 경매대 자리에서 띄운다)
+    // 경매품은 그 자리에 그대로 둔다. 없앴다가 잠시 뒤 날아오르게 하면
+    // 카드가 한 번 사라졌다 다시 나타나 보인다 — 그 빈 순간이 어색했다.
+    // tvLand 가 이 카드를 그대로 집어 들고 날아간다.
+    const pz = v.last.prize || [];
+    if (pz[0]) { const e0 = makeCard(pz[0]); e0.dataset.cid = String(pz[0].id); c.appendChild(e0); }
+    if (pz[1]) { const e1 = makeCard(pz[1]); e1.dataset.cid = String(pz[1].id); o.appendChild(e1); }
     $('tv-typeBadge').className = 'type-badge ' + (v.last.winner === v.me ? 'open' : 'closed');
     $('tv-typeBadge').textContent = v.last.winner === v.me ? '내가 낙찰' : '상대가 낙찰';
     // 정산 화면에서는 실제로 낸 값만큼만 남긴다 — 곧 은행으로 쓸려 간다

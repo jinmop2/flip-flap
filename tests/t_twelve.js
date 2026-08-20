@@ -118,7 +118,9 @@ console.log('\n⑦ 클로즈에서 진행자가 부른 값은 안 보인다');
   T.draw(g, 1); T.offer(g, 1, g.hands[1][0].id); T.chooseType(g, 1, 'close');
   T.closeBet(g, 1, 8);
   const v2 = T.viewFor(g, 2);
-  ok('상대에게 진행자 배팅이 안 나간다', v2.lot.oppBet === null && v2.lot.closeBetKnown === null);
+  // 값은 양쪽 다 본다 — "부른 값 + 1" 로 사는 규칙이라 알 수밖에 없다.
+  // 가려지는 것은 값이 아니라 출품 카드다.
+  ok('진행자가 부른 값은 보인다', v2.lot.oppBet === 8, String(v2.lot.oppBet));
   ok('출품 카드도 가려진다', v2.lot.offered === null && v2.lot.hasOffer === true);
   // 방식을 고르기 전에도 가려야 한다 — 안 가리면 클로즈를 고르는 순간
   // 이미 본 카드를 다시 덮는 꼴이라 가린 의미가 없다
@@ -358,7 +360,7 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('판돈은 정산 때 은행으로 간다', /function tvFlyChips\(n, mine\)[\s\S]{0,200}'tv-potMe' : 'tv-potOpp'[\s\S]{0,120}getElementById\('tv-bank'\)/.test(cli));
   ok('건 칩이 레일에 쌓인다', /function tvPot\(box, n, mine, unknown\)/.test(cli)
      && /tvPot\(\$\('tv-potMe'\), v\.lot\.myBet, true, false\)/.test(cli));
-  ok('클로즈에서 상대 값은 물음표', /oppHidden \? 0 : \(v\.lot\.oppBet \|\| 0\), false, oppHidden/.test(cli));
+  ok('클로즈에서도 건 값이 보인다', /tvPot\(\$\('tv-potOpp'\), v\.lot\.oppBet \|\| 0, false, false\)/.test(cli));
   // 물러선 것은 말풍선으로 잠깐 스치고 만다 — 건 칩 위에 도장으로 남긴다
   ok('포기하면 건 칩 위에 PASS', /class="pot-pass">PASS</.test(htm)
      && /\.tv-pot\.passed \.pot-pass \{ display:block; \}/.test(htm));
@@ -498,7 +500,16 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   ok('넘기기 전에 연출할 틈을 준다', /\}, 4200\);/.test(srv));
   ok('끝난 판은 안 넘긴다', /if \(g\.over\) \{ tvFinish\(roomId\); return; \}/.test(srv));
   // 낙찰 카드는 이긴 쪽 필드로 간다 — 경매대에 남지 않는다
-  ok('경매대를 비운다', /경매대는 비운다/.test(cli));
+  // 경매품을 지웠다가 잠시 뒤 날아오르게 하면 한 번 사라졌다 나타나 보인다.
+  // 있던 그 카드가 그대로 떠올라야 한다.
+  // 덱에서 뽑는 모습 — 그냥 나타나면 "뽑았다" 는 느낌이 없다
+  ok('덱에서 뒤집히며 나온다', /function tvDealt\(cardEl, deckEl\)/.test(cli)
+     && /rotateY\(180deg\)/.test(cli) && /if \(tvJustDrew\) tvDealt\(cc, \$\('tv-deck'\)\)/.test(cli));
+  // 직전 상태를 갈아 끼운 뒤에 보면 늘 "아니다" 가 나온다 — 미리 적어 둬야 한다
+  ok('뽑은 순간을 미리 적어 둔다', /tvJustDrew = !!\(tvPrev && !tvPrev\.lot && v\.lot\);/.test(cli));
+  ok('있던 카드가 그대로 떠오른다', /const stay = document\.querySelector\(`#tv-mat \[data-cid="\$\{card\.id\}"\]`\)/.test(cli)
+     && /if \(stay\) stay\.style\.visibility = 'hidden'/.test(cli));
+  ok('기다리지 않고 곧바로 띄운다', /requestAnimationFrame\(\(\) => requestAnimationFrame\(\(\) => \{\s*\n\s*tvLand\(l\.prize/.test(cli));
   ok('날아간 뒤 더미에 얹는다', /tvFlying = tvFlying\.filter/.test(cli) && /tvPile\(box, cards, landingIds\)/.test(cli));
   // 칩은 가운데에서 오른쪽 은행으로만 흐른다
   // 오른쪽 레일 — 위에서부터 상대 배팅 · 은행 · 내 배팅

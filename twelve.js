@@ -312,8 +312,10 @@ function viewFor(g, me) {
       type: l.type,
       turnToAct: l.turnToAct,
       myBet: l.bets[me] || 0,
-      // 오픈은 서로 값이 보인다. 클로즈는 진행자가 부른 값을 안 보여준다.
-      oppBet: l.type === 'open' ? (l.bets[you] || 0) : null,
+      // 값은 양쪽 다 보인다. 클로즈에서 가려지는 것은 값이 아니라 출품 카드다 —
+      // 어차피 "부른 값 + 1" 로 사는 규칙이라 값은 알 수밖에 없다.
+      // (진행자가 아직 안 불렀으면 0 이므로 저절로 안 보인다)
+      oppBet: l.bets[you] || 0,
       closeBetKnown: l.type === 'close' && me === g.auctioneer ? l.closeBet : null,
       minRaise: (g.phase === 'bid' && l.turnToAct === me) ? minRaise(g, me) : null,
       canFold: g.phase === 'bid' && l.turnToAct === me ? canFold(g, me) : false,
