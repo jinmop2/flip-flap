@@ -3717,6 +3717,11 @@
 
     /* 게임오버 */
     #gameOver { display:none; position:fixed; inset:0; background:rgba(8,2,5,.88); flex-direction:column; align-items:center; justify-content:center; z-index:20; animation:fadeIn .4s; }
+    /* 트웰브 판은 z-index 30 이라 결과창이 그 아래 깔린다 — 위로 올린다 */
+    body.twelve #gameOver { z-index:41; }
+    body.twelve #screenFx { z-index:40; }
+    /* 결과창의 한 줄 요약 (남은 칩·턴) */
+    .go-line { font-size:.82rem; color:#c8a86a; }
     @keyframes fadeIn { from{opacity:0} to{opacity:1} }
     /* 화면 전체 승패/낙찰 이펙트 */
     #screenFx { position:fixed; inset:0; z-index:19; pointer-events:none; opacity:0; }
@@ -4224,15 +4229,6 @@
       #tv-centerZone::before { height:90px; }
     }
 
-    #tv-over { display:none; position:fixed; inset:0; z-index:40; background:rgba(4,10,18,.9);
-      align-items:center; justify-content:center; }
-    body.twelve #tv-over.show { display:flex; }
-    .tv-obox { background:linear-gradient(180deg,#1c3a52,#0d1e2c); border:1.5px solid #4aa8dd;
-      border-radius:18px; padding:26px 24px; text-align:center; width:290px; }
-    #tv-otitle { font-family:'Bangers',cursive; font-size:2.4rem; color:#8fd8ff; letter-spacing:2px; }
-    #tv-owhy { font-size:.8rem; color:#a8c8e0; margin-top:4px; }
-    #tv-orewards { font-size:.86rem; color:#ffd94a; font-weight:800; margin-top:8px; min-height:20px; }
-    .tv-obtns { display:flex; gap:8px; margin-top:14px; }
     .tv-obtns .btn { flex:1; }
     @media (max-height:700px) {
       #tv .tv-side.opp { padding-top:48px; }
@@ -5810,18 +5806,6 @@
 </div>
 
 <!-- 결과 -->
-<div id="tv-over">
-  <div class="tv-obox">
-    <div id="tv-otitle">승리!</div>
-    <div id="tv-owhy"></div>
-    <div id="tv-orewards"></div>
-    <div class="tv-obtns">
-      <button class="btn btn-gold" onclick="tvAgain()">한 판 더</button>
-      <button class="btn btn-outline" onclick="tvQuit()">나가기</button>
-    </div>
-  </div>
-</div>
-
 <div id="game4">
   <!-- 좌측 상단 조작 — 2인전과 같은 자리, 같은 모양 -->
   <div id="q-controls">

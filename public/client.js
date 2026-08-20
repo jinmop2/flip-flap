@@ -5492,9 +5492,9 @@ function tvMoveEmote(into) {
 }
 function tvOpen() {
   document.body.classList.add('twelve');
+  const go = document.getElementById('gameOver'); if (go) go.style.display = 'none';
   tvMoveEmote('tv-emoteSlot');
   try { applyMySkins(); } catch (_) {}   // 장착한 테이블·카드앞면은 어느 모드에서나 그대로
-  document.getElementById('tv-over').classList.remove('show');
   try { startBGM('game'); } catch (_) {}
 }
 window.tvSolo = function (diff) {
@@ -5515,12 +5515,12 @@ window.tvQuit = function () {
 function tvQuitNow() {
   document.body.classList.remove('twelve');
   tvMoveEmote('mebar');
-  document.getElementById('tv-over').classList.remove('show');
+  const go = document.getElementById('gameOver'); if (go) go.style.display = 'none';
   tvView = null;
   clearSession(); fastReload();
 };
 window.tvAgain = function () {
-  document.getElementById('tv-over').classList.remove('show');
+  const go = document.getElementById('gameOver'); if (go) go.style.display = 'none';
   // 혼자 하기는 그 자리에서 다시. 온라인은 상대를 다시 잡아야 하므로 로비로.
   if (tvBot) { socket.emit('leave_room'); setTimeout(() => socket.emit('tv_solo', { pid: PID, nick: getNick(), diff: tvDiff }), 150); }
   else tvQuit();
@@ -5563,14 +5563,78 @@ socket.on('tv_state', (v) => {
 });
 socket.on('tv_over', ({ win, endBy, view }) => {
   if (view) { tvView = view; tvRender(view); }
-  document.getElementById('tv-otitle').textContent = win ? '승리!' : '패배';
-  document.getElementById('tv-owhy').textContent =
-    endBy === 'set' ? '세트 완성' : endBy === 'chips' ? '칩이 떨어졌어요'
-      : endBy === 'time' ? '시간 초과' : '덱 소진 — 세트에 더 가까운 쪽';
-  setTimeout(() => document.getElementById('tv-over').classList.add('show'), 500);
-  if (win) tvSfx('setwin'); else tvSfx('defeat');
+  tvShowOver(win, endBy);
 });
 
+// 결과창은 2인전 것을 그대로 쓴다. 따로 만든 상자는 같은 승리인데도
+// 다른 판처럼 보였다 — 보상 타일도, 완성한 세트를 보여 주는 자리도 없었다.
+function tvShowOver(win, endBy) {
+  const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
+  const why = endBy === 'set' ? null
+    : endBy === 'chips' ? (win ? '상대의 칩이 떨어졌어요!' : '칩이 다 떨어졌어요...')
+    : endBy === 'time' ? (win ? '상대 시간 초과!' : '시간 초과...')
+    : (win ? '덱 소진 — 세트에 더 가까웠어요!' : '덱 소진 — 상대가 세트에 더 가까웠어요.');
+  let delay = 500;
+  if (win) {
+    title.textContent = '🏆 승리!'; title.style.color = '#ffd94a';
+    title.style.textShadow = '0 0 24px rgba(255,215,80,.45)';
+    desc.textContent = why || (tvSetKind(true) ? `${tvSetKind(true)}짜리 세트 완성!` : '세트 완성!');
+    playSound('victory');
+    if (endBy === 'set') { celebrateSet('tv-myAcq', tvSetKind(true)); playSound('setwin'); delay = 1400; }
+    screenFx('win');
+  } else {
+    title.textContent = '패배...'; title.style.color = '#9a8a90'; title.style.textShadow = 'none';
+    desc.textContent = why || (tvSetKind(false) ? `상대가 ${tvSetKind(false)}짜리 세트를 완성했어요.`
+                                                 : '상대가 세트를 완성했어요.');
+    playSound('defeat');
+    screenFx('lose');
+    if (endBy === 'set') { celebrateSet('tv-oppAcq', tvSetKind(false)); delay = 1400; }
+  }
+  tvOverStats(win, endBy);
+  // 버튼은 트웰브 것으로 갈아 끼운다 (2인전 재대결 통로와 다르다)
+  const rb = document.getElementById('rematchBtn');
+  if (rb) { rb.style.display = ''; rb.disabled = false; rb.style.opacity = '1'; rb.onclick = () => tvAgain(); }
+  const btns = document.getElementById('goBtns');
+  if (btns) {
+    const lobby = [...btns.querySelectorAll('button')].find((b) => b !== rb);
+    if (lobby) { lobby.style.display = ''; lobby.onclick = () => tvQuitNow(); }
+  }
+  const chal = document.querySelector('#goBox .btn-kakao');
+  if (chal) chal.style.display = 'none';        // 트웰브는 도전장 통로가 없다
+  const back = document.getElementById('tourBackBtn'); if (back) back.style.display = 'none';
+  setTimeout(() => { document.getElementById('gameOver').style.display = 'flex'; showRewards(); }, delay);
+}
+// 완성한 세트의 종류 (없으면 0)
+function tvSetKind(mine) {
+  const acq = (tvView && (mine ? tvView.myAcq : tvView.oppAcq)) || [];
+  const n = {};
+  for (const c of acq) n[c.kind] = (n[c.kind] || 0) + 1;
+  for (const k of [2, 3, 4, 6]) if ((n[k] || 0) >= k) return k;
+  return 0;
+}
+// 결과창 가운데 — 완성한 세트 카드와 남은 칩
+function tvOverStats(win, endBy) {
+  const box = document.getElementById('goStats');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!tvView) return;
+  const kind = endBy === 'set' ? tvSetKind(win) : 0;
+  if (kind) {
+    const acq = (win ? tvView.myAcq : tvView.oppAcq) || [];
+    const row = document.createElement('div'); row.className = 'go-set';
+    acq.filter((c) => c.kind === kind).forEach((c) => {
+      const el = makeCard(c); el.style.width = '38px'; el.style.height = '53px';
+      row.appendChild(el);
+    });
+    box.appendChild(row);
+  }
+  const line = document.createElement('div');
+  line.className = 'go-line';
+  line.innerHTML = `남은 칩 <b style="color:#ffe9a8">${tvView.chips.me}</b>`
+    + ` · 상대 <b style="color:#8fd8ff">${tvView.chips.opp}</b>`
+    + ` · 턴 <b>${tvView.turn}</b>`;
+  box.appendChild(line);
+}
 
 // ── 무슨 일이 있었는지 보여 주기 ─────────────────────────────────────────
 // 숫자만 조용히 바뀌면 판이 "확확" 넘어간 것처럼 느껴진다. 누가 얼마를 불렀고,

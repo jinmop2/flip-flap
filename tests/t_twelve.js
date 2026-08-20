@@ -465,8 +465,11 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
      !/socket\.on\('tv_clock'[\s\S]{0,700}tvRender\(/.test(cli));
 
   // 소리 — 2인전이 쓰는 이름을 같은 뜻으로
-  const names = ['flip', 'card', 'place', 'back', 'reveal', 'deal', 'tick', 'hourglass', 'setwin', 'defeat'];
+  const names = ['flip', 'card', 'place', 'back', 'reveal', 'deal', 'tick', 'hourglass'];
   for (const n of names) ok(`소리 ${n} 를 쓴다`, new RegExp(`tvSfx\\('${n}'\\)`).test(cli));
+  // 판이 끝날 때는 2인전 결과창을 그대로 쓰므로 그쪽 소리(victory·setwin·defeat)를 낸다
+  ok('끝나면 2인전과 같은 소리', /playSound\('victory'\)/.test(cli) && /playSound\('setwin'\)/.test(cli)
+     && /playSound\('defeat'\)/.test(cli));
   ok('없는 소리를 부르지 않는다', !/tvSfx\('lose'\)/.test(cli) && !/playSound\('lose'\)/.test(cli));
   ok('초읽기는 겹쳐 울리지 않는다', /Date\.now\(\) - tvTickAt > 900/.test(cli));
   // 칩은 진짜 칩 소리로
@@ -476,7 +479,16 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   ok('은행으로 쓸릴 때도 울린다', /tvSfx\('chips'\)/.test(cli));
   ok('두 소리 다 대체음이 있다', /playSample\('chips', \.5, 1\.35\)\) \{ tone/.test(cli)
      && /playSample\('chips', \.85, 0\.95\)\) \{ tone/.test(cli));
-  ok('시간패도 이유를 말해 준다', /endBy === 'time' \? '시간 초과'/.test(cli));
+  ok('시간패도 이유를 말해 준다', /endBy === 'time' \? \(win \? '상대 시간 초과!' : '시간 초과\.\.\.'\)/.test(cli));
+  // 결과창은 2인전 것을 그대로 쓴다 — 따로 만든 상자는 같은 승리도 다른 판처럼 보였다
+  ok('따로 만든 결과 상자는 없앴다', !/tv-over/.test(cli) && !/tv-obox/.test(htm));
+  ok('2인전 결과창을 쓴다', /function tvShowOver\(win, endBy\)/.test(cli)
+     && /getElementById\('gameOver'\)\.style\.display = 'flex'; showRewards\(\)/.test(cli));
+  ok('판 위로 올라온다', /body\.twelve #gameOver \{ z-index:41; \}/.test(htm));
+  ok('버튼은 트웰브 것으로 갈아 끼운다', /rb\.onclick = \(\) => tvAgain\(\)/.test(cli)
+     && /lobby\.onclick = \(\) => tvQuitNow\(\)/.test(cli));
+  ok('완성한 세트를 보여준다', /function tvOverStats\(win, endBy\)/.test(cli) && /celebrateSet\('tv-myAcq'/.test(cli));
+  ok('보상 타일도 나온다', /showRewards\(\)/.test(cli));
   // 클로즈에서 가려지는 것은 출품 카드다 — 값은 보여준다
   ok('낼 값을 화면에 쓴다', /const cost = v\.lot\.takeCost;/.test(cli));
   ok('무엇을 사는지는 모른다고 말한다', /무엇을 사는지는 안 보여요/.test(cli));
