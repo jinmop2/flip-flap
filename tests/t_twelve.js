@@ -553,9 +553,9 @@ console.log('\n㉑ AI — 세 급이 정말로 다른가');
     };
     const both = (a, b) => (duel(a, b, 200, 101) + (1 - duel(b, a, 200, 404))) / 2;
     const eh = both('expert', 'hard'), he = both('hard', 'easy'), ee = both('expert', 'easy');
-    ok('전문가가 보통을 이긴다', eh >= 0.72, (eh * 100).toFixed(1) + '%');
+    ok('전문가가 보통을 이긴다', eh >= 0.78, (eh * 100).toFixed(1) + '%');
     ok('보통이 쉬움을 이긴다', he >= 0.58, (he * 100).toFixed(1) + '%');
-    ok('전문가가 쉬움을 크게 이긴다', ee >= 0.85, (ee * 100).toFixed(1) + '%');
+    ok('전문가가 쉬움을 크게 이긴다', ee >= 0.90, (ee * 100).toFixed(1) + '%');
   }
 }
 
@@ -642,6 +642,58 @@ console.log('\n㉔ 전문가는 방식도 셈해서 고른다 · 안 보이는 �
   ok('상대가 살지 안 살지를 값으로 판단', /const takes = \(b \+ 1\) <= opCeil && g\.chips\[you\] >= b \+ 1/.test(tw));
   ok('안 보이는 한 장 몫을 셈에 넣는다', /ceilingFor\(g, me, P, a, rnd\) \+ \(P\.reason \? 3 : 0\)/.test(tw));
   ok('보통·쉬움은 여전히 감으로 고른다', /const wantClose = \(a\.mustWin \|\| a\.worth >= 4\) && rnd\(\) < 0\.72/.test(tw));
+}
+
+console.log('\n㉕ 전문가는 끝까지 두어 보고 정한다 (몬테카를로)');
+{
+  // 저울은 사람이 손으로 매긴 값이다. 진짜로 알고 싶은 건 "이 값에 사면
+  // 이 판을 이기는가" 하나뿐이라, 안 보이는 것을 상상해 채워 끝까지 둬 본다.
+  ok('전문가만 두어 본다', T.LEVELS.expert.mc === 16 && !T.LEVELS.hard.mc && !T.LEVELS.easy.mc);
+
+  const g = T.createGame({ rnd: rng(81) });
+  T.draw(g, 1); T.offer(g, 1, g.hands[1][0].id); T.chooseType(g, 1, 'open');
+  const w = T.imagine(g, 1, rng(82));
+  ok('상상한 판도 카드가 24장', (() => {
+    const ids = new Set();
+    for (const c of [...w.center, ...w.hands[1], ...w.hands[2], ...w.acq[1], ...w.acq[2]]) ids.add(c.id);
+    if (w.lot) { if (w.lot.center) ids.add(w.lot.center.id); if (w.lot.offered) ids.add(w.lot.offered.id); }
+    return ids.size === 24;
+  })());
+  ok('내 손패는 그대로 둔다',
+     JSON.stringify(w.hands[1].map(c => c.id).sort()) === JSON.stringify(g.hands[1].map(c => c.id).sort()));
+  ok('상대 손패는 장수만 맞춘다', w.hands[2].length === g.hands[2].length);
+  ok('내가 아는 것은 안 흔든다', w.chips[1] === g.chips[1] && w.chips[2] === g.chips[2] && w.turn === g.turn);
+
+  // 상상한 판을 끝까지 두면 반드시 끝난다 (교착이 없다)
+  const done = T.playout(JSON.parse(JSON.stringify(w)), 1, 1, 2, rng(83), 'hard');
+  ok('끝까지 두면 승패가 난다', done === 0 || done === 1, String(done));
+
+  // 몬테카를로가 들어와도 상대 손패는 안 본다
+  {
+    const h = T.createGame({ rnd: rng(84) });
+    T.draw(h, 1); T.offer(h, 1, h.hands[1][0].id); T.chooseType(h, 1, 'open');
+    const snap = JSON.stringify(h);
+    const a1 = T.aiAct(JSON.parse(snap), 1, () => 0.5, 'expert');
+    const h2 = JSON.parse(snap); h2.hands[2] = [];
+    const a2 = T.aiAct(h2, 1, () => 0.5, 'expert');
+    ok('상대 손패를 지워도 같은 수', JSON.stringify(a1) === JSON.stringify(a2));
+  }
+
+  // 한 수에 오래 걸리면 판이 멈춘 것처럼 보인다 — 서버가 주는 뜸(1.5~2.2초) 안에 끝나야 한다
+  {
+    const rnd2 = rng(85); let worst = 0;
+    for (let i = 0; i < 6; i++) {
+      const k = T.createGame({ rnd: rnd2 }); let guard = 0;
+      while (!k.over && guard++ < 400) {
+        if (k.phase === 'settled') { T.nextTurn(k); continue; }
+        const who = T.activePlayer(k); if (!who) break;
+        const t0 = Date.now();
+        if (!T.applyAi(k, who, rnd2, who === 1 ? 'expert' : 'hard')) break;
+        if (who === 1) worst = Math.max(worst, Date.now() - t0);
+      }
+    }
+    ok('한 수가 200ms 안에 끝난다', worst < 200, worst + 'ms');
+  }
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

@@ -351,7 +351,7 @@ for (const [k, c] of SPEC) TOTAL[k] = c;
 const LEVELS = {
   easy:   { gain: 2.6, deny: 0.2, late: 1.0, noise: 0.85, foldy: 0.34, safe: false, drain: false, count: false, scale: 7, sloppy: true },
   hard:   { gain: 3.4, deny: 1.7, late: 1.25, noise: 0.16, foldy: 0.05, safe: true,  drain: false, count: true,  scale: 10 },
-  expert: { gain: 3.6, deny: 2.6, late: 1.9, noise: 0.04, foldy: 0,    safe: true,  drain: true,  count: true,  scale: 11, reason: true, minimal: true },
+  expert: { gain: 3.6, deny: 2.6, late: 1.9, noise: 0.04, foldy: 0,    safe: true,  drain: true,  count: true,  scale: 11, reason: true, minimal: true, mc: 16 },
 };
 const levelOf = (name) => LEVELS[Object.prototype.hasOwnProperty.call(LEVELS, name) ? name : 'hard'];
 
@@ -521,6 +521,100 @@ function ceilingFor(g, me, P, a, rnd) {
   return Math.max(1, Math.min(cap, Math.round(w)));
 }
 
+// ── 끝까지 두어 보기 (몬테카를로) ─────────────────────────────────────────
+// 저울(positionScore)은 결국 사람이 손으로 매긴 값이다. 진짜로 알고 싶은 것은
+// "이 값에 사면 이 판을 이기는가" 하나뿐이다 — 그러면 두어 보면 된다.
+//
+// 안 보이는 것(상대 손패·남은 덱)은 내가 셀 수 있는 범위에서 무작위로 채운다.
+// 한 판이 아니라 여러 판을 채워 두어 보고 이긴 비율을 본다. 클래식 전문가가
+// 쓰는 방법과 같다.
+
+// 내가 못 보는 카드들을 그러모아 섞는다
+function hiddenPool(g, me) {
+  const seen = new Set();
+  const mark = (arr) => { for (const c of arr || []) if (c) seen.add(c.id); };
+  mark(g.hands[me]); mark(g.acq[1]); mark(g.acq[2]);
+  if (g.lot) { if (g.lot.center) seen.add(g.lot.center.id); if (g.lot.offered) seen.add(g.lot.offered.id); }
+  const pool = [];
+  for (const [kind, count] of SPEC)
+    for (let gr = 1; gr <= count; gr++) {
+      const id = kind * 100 + gr;
+      if (!seen.has(id)) pool.push({ kind, grade: gr, id });
+    }
+  return pool;
+}
+// 내 눈으로 본 판 하나를 "있을 법한 판" 하나로 채운다
+function imagine(g, me, rnd) {
+  const you = other(me);
+  const pool = hiddenPool(g, me);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const h = {};
+  h[me] = g.hands[me].map((c) => ({ ...c }));
+  h[you] = pool.splice(0, g.hands[you].length);
+  const g2 = {
+    mode: 'twelve', center: pool, hands: h,
+    acq: { 1: g.acq[1].map((c) => ({ ...c })), 2: g.acq[2].map((c) => ({ ...c })) },
+    chips: { 1: g.chips[1], 2: g.chips[2] },
+    time: { 1: g.time[1], 2: g.time[2] },
+    bank: g.bank, turn: g.turn, auctioneer: g.auctioneer,
+    phase: g.phase, lot: null, winner: null, over: false, last: null,
+  };
+  if (g.lot) {
+    g2.lot = { center: g.lot.center && { ...g.lot.center },
+               offered: g.lot.offered ? { ...g.lot.offered } : (g.lot.hasOffer === false ? null : null),
+               type: g.lot.type, bets: { 1: g.lot.bets[1], 2: g.lot.bets[2] },
+               turnToAct: g.lot.turnToAct, closeBet: g.lot.closeBet, folded: null };
+    // 클로즈에서 안 보이는 출품 카드는 상상한 덱에서 한 장 빌려 온다
+    if (!g2.lot.offered) g2.lot.offered = g2.center.shift() || null;
+  }
+  return g2;
+}
+// 이 경매를 누가 얼마에 가져갔다 치고 정산한 뒤, 끝까지 둔다
+function playout(g2, me, winner, price, rnd, level) {
+  const loser = other(winner);
+  g2.lot.bets[winner] = price;
+  g2.lot.bets[loser] = Math.max(g2.lot.bets[loser] || 0, 0);
+  g2.lot.folded = loser;
+  settle(g2, winner);
+  let guard = 0;
+  while (!g2.over && guard++ < 400) {
+    if (g2.phase === 'settled') { nextTurn(g2); continue; }
+    const w = activePlayer(g2); if (!w) break;
+    if (!applyAi(g2, w, rnd, level)) break;
+  }
+  return g2.over ? (g2.winner === me ? 1 : 0) : 0.5;
+}
+// 이 값에 사는 것이 물러서는 것보다 나은가 — 여러 판 두어 보고 이긴 비율로 견준다
+function mcCeiling(g, me, cap, rnd, samples) {
+  if (!g.lot || cap < 1) return 0;
+  const you = other(me);
+  const myBet = g.lot.bets[me] || 0, opBet = g.lot.bets[you] || 0;
+  const worlds = [];
+  for (let i = 0; i < samples; i++) worlds.push(imagine(g, me, rnd));
+  const clone = (w) => JSON.parse(JSON.stringify(w));
+  // 물러선다 — 상대가 부른 값에 가져가고, 나는 이미 부른 값의 절반을 낸다
+  let foldWin = 0;
+  for (const w of worlds) foldWin += playout(clone(w), me, you, opBet, rnd, 'hard');
+  foldWin /= worlds.length;
+  // 살 수 있는 값들 중에서, 물러서는 것보다 나은 가장 높은 값
+  const lo = Math.max(1, minRaise(g, me));
+  let best = 0;
+  const tried = new Set();
+  for (const n of [lo, Math.ceil((lo + cap) / 2), cap]) {
+    const price = Math.max(lo, Math.min(cap, n));
+    if (tried.has(price)) continue;
+    tried.add(price);
+    let win = 0;
+    for (const w of worlds) win += playout(clone(w), me, me, price, rnd, 'hard');
+    win /= worlds.length;
+    if (win >= foldWin) best = Math.max(best, price);
+  }
+  return best;
+}
+
 // AI 가 지금 할 일 하나. 서버가 이걸 받아 그대로 둔다.
 // { act:'draw' } | { act:'offer', cardId } | { act:'choose', type }
 // | { act:'raise', amount } | { act:'fold' } | { act:'closeBet', amount }
@@ -589,7 +683,14 @@ function aiAct(g, me, rnd = Math.random, level = 'hard') {
   if (g.phase === 'bid') {
     if (g.lot.turnToAct !== me) return null;
     const a = apprise(g, me, P);
-    const cap = ceilingFor(g, me, P, a, rnd);
+    let cap = ceilingFor(g, me, P, a, rnd);
+    // 전문가는 저울로 잡은 상한을 한 번 더 두어 보고 고친다 — 저울은 사람이
+    // 매긴 값이지만, 두어 본 결과는 이 판이 직접 알려 주는 값이다.
+    if (P.mc && !a.mustWin && !a.mustDeny) {
+      const capHard = capFor(g, me, P, a);
+      const mc = mcCeiling(g, me, capHard, rnd, P.mc);
+      if (mc > 0) cap = Math.max(cap, Math.min(capHard, mc));
+    }
     const lo = minRaise(g, me);
     // 먼저 부르는 자리라 물러설 수 없으면, 가장 싸게 한 칩만 건다
     if (!canRaise(g, me) || lo > cap || cap <= 0) return canFold(g, me) ? { act: 'fold' } : { act: 'raise', amount: lo };
@@ -642,9 +743,19 @@ function aiAct(g, me, rnd = Math.random, level = 'hard') {
     const cost = g.lot.closeBet + 1;
     if (g.chips[me] < cost) return { act: 'decline' };
     if (a.mustWin || a.mustDeny) return { act: 'take' };
+    // 사느냐 마느냐로 판이 한 번에 갈린다. 전문가는 여기서도 두어 본다 —
+    // 안 보이는 한 장은 상상해 채운다(imagine 이 하는 일이 그것이다).
+    if (P.mc && g.chips[me] >= cost) {
+      const worlds = [];
+      for (let i = 0; i < P.mc; i++) worlds.push(imagine(g, me, rnd));
+      const clone = (w) => JSON.parse(JSON.stringify(w));
+      let take = 0, pass = 0;
+      for (const w of worlds) take += playout(clone(w), me, me, cost, rnd, 'hard');
+      for (const w of worlds) pass += playout(clone(w), me, A, g.lot.closeBet, rnd, 'hard');
+      return take >= pass ? { act: 'take' } : { act: 'decline' };
+    }
     // 보이는 것은 공개 카드 한 장뿐이라 값을 낮게 잡게 된다. 안 보이는 한 장에도
-    // 값이 있으니 그만큼 여유를 둔다 (전문가만 — 이 어림이 곧 실력이다).
-    // 안 보이는 한 장 몫으로 3 개어치 여유를 둔다 (자가대전으로 맞춘 값).
+    // 값이 있으니 그만큼 여유를 둔다 (자가대전으로 맞춘 값).
     const cap = ceilingFor(g, me, P, a, rnd) + (P.reason ? 3 : 0);
     return cap >= cost ? { act: 'take' } : { act: 'decline' };
   }
@@ -684,5 +795,6 @@ module.exports = {
   settle, nextTurn, viewFor,
   completedKind, needLeft, byProgress, initDeck, activePlayer, timeout,
   LEVELS, setDist, unseenCounts, apprise, positionScore, reasonedCeiling, setTune,
+  imagine, playout, mcCeiling,
   aiAct, applyAi,
 };
