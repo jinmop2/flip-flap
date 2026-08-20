@@ -3010,6 +3010,9 @@ function yieldToOtherAudio() {
 
 // ── 인게임 설정 패널 (배경음악 / 효과음 / 가이드) ──
 let guideOff = localStorage.getItem('ff_guide') === 'off';
+// 진동은 기본 켜짐. 되는 기기(안드로이드)에서만 실제로 울린다.
+let vibeOff = localStorage.getItem('ff_vibe') === 'off';
+const canVibe = () => !!(navigator && navigator.vibrate);
 function applySettings() {   // 저장된 상태를 화면·오디오에 반영
   setBgmVolume(bgmOff ? 0 : BGM_VOL);
   // 안내 문구는 모드마다 다른 칸에 뜬다. 2인전 것만 끄면 트웰브에서는
@@ -3018,7 +3021,11 @@ function applySettings() {   // 저장된 상태를 화면·오디오에 반영
     const sb = document.getElementById(id); if (sb) sb.style.display = guideOff ? 'none' : '';
   }
   const set = (id, on) => { const t = document.getElementById(id); if (t) t.classList.toggle('on', on); };
-  set('togBgm', !bgmOff); set('togSfx', !sfxOff); set('togGuide', !guideOff);
+  set('togBgm', !bgmOff); set('togSfx', !sfxOff); set('togGuide', !guideOff); set('togVibe', !vibeOff);
+  // 진동이 없는 기기(아이폰 사파리 등)에서는 줄 자체를 감춘다 —
+  // 눌러도 아무 일이 없는 스위치는 고장으로 보인다.
+  const vr = document.getElementById('spVibeRow');
+  if (vr) vr.style.display = canVibe() ? '' : 'none';
   const cur = (window.FF && FF.lang()) || 'ko';
   document.querySelectorAll('.sp-segb[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === cur));
 }
@@ -3052,6 +3059,27 @@ function toggleSfx() {
 function toggleGuide() {
   guideOff = !guideOff; localStorage.setItem('ff_guide', guideOff ? 'off' : 'on');
   applySettings();
+}
+// ── 진동 ───────────────────────────────────────────────────────────────────
+// 안드로이드(플레이 앱 포함)에서만 된다. 아이폰 사파리에는 이 통로 자체가 없다 —
+// 그래서 "안 되는 기기에서는 조용히 아무 일도 안 일어난다" 로 둔다.
+// 짧고 드물게. 매 손짓마다 울리면 그 순간부터 성가신 기능이 된다.
+const VIBE = {
+  tap: 8,                       // 내가 무언가를 놓았다
+  turn: [0, 14],                // 내 차례가 왔다
+  win: [0, 18, 60, 26, 60, 40], // 이겼다
+  lose: [0, 40, 90, 40],        // 졌다
+  got: [0, 12, 45, 20],         // 낙찰 — 무언가를 가져왔다
+  warn: [0, 10, 60, 10],        // 시간이 얼마 없다
+};
+function vibe(kind) {
+  if (vibeOff) return;
+  const p = VIBE[kind]; if (!p) return;
+  try { if (navigator.vibrate) navigator.vibrate(p); } catch (_) {}
+}
+function toggleVibe() {
+  vibeOff = !vibeOff; localStorage.setItem('ff_vibe', vibeOff ? 'off' : 'on');
+  applySettings(); if (!vibeOff) vibe('tap');   // 켤 때 한 번 느껴 보라고
 }
 // 패널 바깥 클릭 시 닫기.
 // 로비 탭(설정)도 예외로 둔다 — 안 그러면 누르는 순간 pointerdown 이 먼저 닫고
@@ -4566,6 +4594,8 @@ socket.on('state_update', s => {
   }
   // 내 차례 알림 (탭이 숨겨져 있을 때)
   const mine = isMyAction(s);
+  // 내 차례가 막 왔다 — 화면을 안 보고 있어도 알 수 있게 한 번 울린다
+  if (mine && !prevMyAction) vibe('turn');
   if (mine && !prevMyAction && document.hidden) { startTitleBlink(); playSound('ping'); }
   if (!mine) stopTitleBlink();
   prevMyAction = mine;
@@ -4714,7 +4744,7 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
       : timeout ? '상대 시간 초과!'
       : byProgress ? `세트 근접 승리! (${setKind}짜리에 가장 가까웠어요)`
       : `${setKind}짜리 세트 완성!`;
-    playSound('victory');
+    playSound('victory'); vibe('win');
     if (setKind && !byProgress && !forfeit) { celebrateSet('myAcq', setKind); playSound('setwin'); delay = 1400; }
     else animateWinCards();
   } else {
@@ -4723,7 +4753,7 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
       : timeout ? '시간 초과...'
       : byProgress ? '상대가 세트에 더 가까웠어요.'
       : `상대가 ${setKind}짜리 세트를 완성했어요.`;
-    playSound('defeat');
+    playSound('defeat'); vibe('lose');
     screenFx('lose');
     if (setKind && !byProgress && !forfeit) { celebrateSet('oppAcq', setKind); delay = 1400; }
   }
@@ -4828,7 +4858,7 @@ socket.on('clock', ({ t1, t2, active }) => {
   lastMyT = myT;
 });
 socket.on('time_warning', ({ player }) => {
-  if (player === myIndex) playSound('bell');
+  if (player === myIndex) { playSound('bell'); vibe('warn'); }
 });
 
 // ── 카드 ────────────────────────────────────────────────────
@@ -5555,12 +5585,14 @@ socket.on('tv_clock', ({ time, active, me }) => {
   // 내 차례에 10초 아래로 내려가면 초읽기 소리 — 2인전과 같다
   if (active === me && mine <= 10 && mine > 0 && Date.now() - tvTickAt > 900) { tvTickAt = Date.now(); tvSfx('tick'); }
 });
-socket.on('tv_warn', ({ player }) => { if (player === tvMe) tvSfx('hourglass'); });
+socket.on('tv_warn', ({ player }) => { if (player === tvMe) { tvSfx('hourglass'); vibe('warn'); } });
 
 socket.on('tv_state', (v) => {
   // 방금 뒤집은 카드인지는 "직전 상태" 를 봐야 안다. tvPrev 를 갈아 끼운 뒤에
   // 보면 이미 새 상태라 늘 아니라고 나온다 — 여기서 미리 적어 둔다.
   tvJustDrew = !!(tvPrev && !tvPrev.lot && v.lot);
+  // 내 차례가 막 왔다 — 화면을 안 보고 있어도 알 수 있게 한 번 울린다
+  if (tvPrev && tvPrev.active !== v.me && v.active === v.me) vibe('turn');
   tvReact(tvPrev, v);      // 바뀐 대목을 말풍선·움직임으로 먼저 알린다
   tvPrev = v; tvView = v;
   tvRender(v);
@@ -5581,6 +5613,7 @@ function tvShowOver(win, endBy) {
     : (win ? '덱 소진 — 세트에 더 가까웠어요!' : '덱 소진 — 상대가 세트에 더 가까웠어요.');
   let delay = 500;
   if (win) {
+    vibe('win');
     title.textContent = '🏆 승리!'; title.style.color = '#ffd94a';
     title.style.textShadow = '0 0 24px rgba(255,215,80,.45)';
     desc.textContent = why || (tvSetKind(true) ? `${tvSetKind(true)}짜리 세트 완성!` : '세트 완성!');
@@ -5588,6 +5621,7 @@ function tvShowOver(win, endBy) {
     if (endBy === 'set') { celebrateSet('tv-myAcq', tvSetKind(true)); playSound('setwin'); delay = 1400; }
     screenFx('win');
   } else {
+    vibe('lose');
     title.textContent = '패배...'; title.style.color = '#9a8a90'; title.style.textShadow = 'none';
     desc.textContent = why || (tvSetKind(false) ? `상대가 ${tvSetKind(false)}짜리 세트를 완성했어요.`
                                                  : '상대가 세트를 완성했어요.');
@@ -5839,6 +5873,7 @@ function tvReact(prev, v) {
     // 카드가 이긴 쪽으로. 경매대에 놓여 있던 그 카드가 그대로 떠오른다 —
     // 지웠다가 잠시 뒤 띄우면 한 번 사라졌다 나타나 보인다(그게 어색했다).
     // 판이 다시 그려진 다음 프레임에 곧바로 띄운다.
+    if (iWon) vibe('got');
     tvFlying = (l.prize || []).map((c) => c.id);
     requestAnimationFrame(() => requestAnimationFrame(() => {
       tvLand(l.prize || [], iWon);
