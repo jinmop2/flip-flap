@@ -359,6 +359,15 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('건 칩이 레일에 쌓인다', /function tvPot\(box, n, mine, unknown\)/.test(cli)
      && /tvPot\(\$\('tv-potMe'\), v\.lot\.myBet, true, false\)/.test(cli));
   ok('클로즈에서 상대 값은 물음표', /oppHidden \? 0 : \(v\.lot\.oppBet \|\| 0\), false, oppHidden/.test(cli));
+  // 물러선 것은 말풍선으로 잠깐 스치고 만다 — 건 칩 위에 도장으로 남긴다
+  ok('포기하면 건 칩 위에 PASS', /class="pot-pass">PASS</.test(htm)
+     && /\.tv-pot\.passed \.pot-pass \{ display:block; \}/.test(htm));
+  ok('물러선 쪽에만 찍는다', /classList\.toggle\('passed', v\.last\.folded === v\.me\)/.test(cli));
+  ok('한 푼도 안 걸고 물러서도 보인다', /box\.classList\.contains\('passed'\)/.test(cli));
+  ok('다음 경매에서 지운다', /\$\('tv-potMe'\)\.classList\.remove\('passed'\)/.test(cli));
+  // 내 칩은 이모트 위, 상대 칩은 조금 안쪽으로
+  ok('내 칩이 이모트 위', /id="tv-myChips"[\s\S]{0,300}id="tv-emoteSlot"/.test(htm));
+  ok('상대 칩을 판 쪽으로 당겼다', /#tv-oppChips \{ margin-right:30px; \}/.test(htm));
   ok('액수는 큰 버튼으로 고른다', /function tvAmount/.test(cli) && /\.tv-step \{[\s\S]{0,80}width:46px; height:46px/.test(htm));
   ok('클로즈는 짝수만 나온다', /tvAmount\(box, 2, hi, 2, 2\)/.test(cli));
   ok('숫자 입력칸의 작은 화살표는 안 쓴다', !/inp\.type = 'number'/.test(cli));

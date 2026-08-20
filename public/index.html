@@ -4022,6 +4022,8 @@
     .cs-stack .chip.gone { animation:csGone .32s ease-in forwards; }
     @keyframes csGone { to { transform:translate(-26px,-26px) scaleX(.6); opacity:0; } }
     .tv-chips b { line-height:1; padding-bottom:1px; }
+    /* 상대 칩은 화면 끝에 딱 붙어 있으면 잘 안 읽힌다 — 판 쪽으로 조금 당긴다 */
+    #tv-oppChips { margin-right:30px; }
 
     /* 존 — 2인전과 같은 배치 */
     #tv-oppZone { padding-top:calc(84px + var(--safe-t)); display:flex; flex-direction:column; align-items:center; }
@@ -4137,6 +4139,19 @@
     .pot-stack .chip.dark { background:linear-gradient(180deg,#3a3a3a 0 38%, #efefef 38% 62%, #141414 62%); }
     .pot-stack .chip.light { background:linear-gradient(180deg,#f7f7f7 0 38%, #2a2a2a 38% 62%, #d8d8d8 62%); }
     .tv-pot.hide { visibility:hidden; }
+    /* 물러섰다는 것은 건 칩 위에 도장처럼 찍어 준다 — 말풍선은 곧 사라지지만
+       이건 그 경매가 끝날 때까지 남아, 왜 상대가 가져갔는지가 보인다. */
+    .pot-pass {
+      display:none; position:absolute; left:50%; top:50%; z-index:3;
+      transform:translate(-50%,-50%) rotate(-14deg);
+      font-family:'Fredoka'; font-size:.6rem; font-weight:900; letter-spacing:1px;
+      color:#ffd0d0; background:rgba(120,20,30,.85); border:1.5px solid rgba(255,120,120,.8);
+      border-radius:5px; padding:1px 5px; white-space:nowrap;
+      box-shadow:0 2px 6px rgba(0,0,0,.5);
+      animation:potPass .3s cubic-bezier(.34,1.5,.64,1);
+    }
+    .tv-pot.passed .pot-pass { display:block; }
+    @keyframes potPass { from { opacity:0; transform:translate(-50%,-50%) rotate(-14deg) scale(1.6); } }
 
     #tv-bank { width:64px; display:flex; flex-direction:column; align-items:center; gap:3px;
       font-size:.66rem; color:rgba(255,255,255,.5); font-weight:700; }
@@ -5731,10 +5746,12 @@
   </div>
   <!-- 오른쪽 아래: 내 시계 · 프로필 · 칩 -->
   <div id="tv-mebar">
+    <!-- 내 칩이 맨 위. 얼마 남았는지는 매 수마다 보는 것이라 손 가까이보다
+         눈 가까이 있는 편이 낫다. 이모트는 그 아래. -->
+    <div class="tv-chips" id="tv-myChips"><span class="cs-stack"></span><b>20</b></div>
     <!-- 이모트는 2인전에서 쓰던 그 조각을 그대로 옮겨 온다(tvOpen 참고).
          같은 버튼이 두 벌 있으면 안 읽힌 알림·쿨타임이 따로 놀기 시작한다. -->
     <div id="tv-emoteSlot"></div>
-    <div class="tv-chips" id="tv-myChips"><span class="cs-stack"></span><b>20</b></div>
     <div class="timer pc-timer" id="tv-myTimer">5:00</div>
     <div class="game-pcard" id="tv-myProfile" onclick="toggleStats(this)"><div class="pc-body"></div><div class="pc-stats"></div></div>
   </div>
@@ -5767,9 +5784,9 @@
          숫자만 있으면 얼마가 오갔는지 읽어야 하지만, 쌓여 있으면 보인다.
          은행을 가운데 두어 흐름(내 자리 → 내 배팅 → 은행)이 한 방향으로 읽힌다. -->
     <div id="tv-rail">
-      <div class="tv-pot opp" id="tv-potOpp"><span class="pot-stack"></span><b>0</b><small>상대</small></div>
+      <div class="tv-pot opp" id="tv-potOpp"><span class="pot-stack"><i class="pot-pass">PASS</i></span><b>0</b><small>상대</small></div>
       <div id="tv-bank"><i class="chip dark"></i><i class="chip light"></i><span>은행</span></div>
-      <div class="tv-pot me" id="tv-potMe"><span class="pot-stack"></span><b>0</b><small>내 배팅</small></div>
+      <div class="tv-pot me" id="tv-potMe"><span class="pot-stack"><i class="pot-pass">PASS</i></span><b>0</b><small>내 배팅</small></div>
     </div>
     <div id="tv-status">–</div>
     <div id="tv-actions"></div>

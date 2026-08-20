@@ -5617,7 +5617,8 @@ function tvPot(box, n, mine, unknown) {
   if (!box) return;
   const st = box.querySelector('.pot-stack');
   const num = box.querySelector('b');
-  const show = n > 0 || unknown;
+  // 물러선 쪽은 한 푼도 안 걸었을 수 있다. 그래도 도장은 보여야 한다.
+  const show = n > 0 || unknown || box.classList.contains('passed');
   box.classList.toggle('hide', !show);
   num.textContent = unknown ? '?' : String(n);
   const want = unknown ? 3 : Math.max(0, Math.min(POT_MAX, Math.ceil(n / 1.5)));
@@ -5627,6 +5628,8 @@ function tvPot(box, n, mine, unknown) {
     for (const el of [...st.querySelectorAll('.chip')].slice(want)) el.remove();
     return;
   }
+  // 칩만 더한다 — PASS 도장(.pot-pass)은 이 더미 안에 같이 살고 있어서
+  // 통째로 비우면 도장까지 날아간다
   for (let i = have; i < want; i++) {
     const c = document.createElement('i');
     c.className = 'chip ' + (mine ? 'light' : 'dark');
@@ -5879,6 +5882,7 @@ function tvRender(v) {
     const oppHidden = v.lot.oppBet === null && v.lot.type === 'close' && v.auctioneer !== v.me;
     tvPot($('tv-potMe'), v.lot.myBet, true, false);
     tvPot($('tv-potOpp'), oppHidden ? 0 : (v.lot.oppBet || 0), false, oppHidden);
+    $('tv-potMe').classList.remove('passed'); $('tv-potOpp').classList.remove('passed');
   } else if (v.phase === 'settled' && v.last) {
     // 경매대는 비운다 — 카드는 이긴 쪽 앞으로 날아가 거기 남는다.
     // (날아가는 연출은 tvReact 가 경매대 자리에서 띄운다)
@@ -5886,11 +5890,15 @@ function tvRender(v) {
     $('tv-typeBadge').textContent = v.last.winner === v.me ? '내가 낙찰' : '상대가 낙찰';
     // 정산 화면에서는 실제로 낸 값만큼만 남긴다 — 곧 은행으로 쓸려 간다
     const iWon = v.last.winner === v.me;
+    // 도장을 먼저 찍는다 — 한 푼도 안 걸고 물러선 자리도 보여야 하니까
+    $('tv-potMe').classList.toggle('passed', v.last.folded === v.me);
+    $('tv-potOpp').classList.toggle('passed', !!v.last.folded && v.last.folded !== v.me);
     tvPot($('tv-potMe'), iWon ? v.last.wPay : v.last.lPay, true, false);
     tvPot($('tv-potOpp'), iWon ? v.last.lPay : v.last.wPay, false, false);
   } else {
     $('tv-typeBadge').textContent = ''; $('tv-typeBadge').className = 'type-badge';
     tvPot($('tv-potMe'), 0, true, false); tvPot($('tv-potOpp'), 0, false, false);
+    $('tv-potMe').classList.remove('passed'); $('tv-potOpp').classList.remove('passed');
   }
 
   const mh = $('tv-myHand'); mh.innerHTML = '';
