@@ -2605,8 +2605,12 @@ function chatView(c, viewer) {
   const blocked = blockedOf(viewer);
   return chatArr(c)
     .filter(m => !blocked.includes(m.idl))
-    .map(m => ({ id: m.id, idl: m.idl, nick: nickOfIdl(m.idl) || m.nick, text: m.text, at: m.at,
-                 mine: m.idl === String(viewer.id).toLowerCase() }));
+    .map(m => {
+      const w = Object.prototype.hasOwnProperty.call(db.users, m.idl) ? db.users[m.idl] : null;
+      return { id: m.id, idl: m.idl, nick: nickOfIdl(m.idl) || m.nick, text: m.text, at: m.at,
+               nickColor: (w && w.nickColor) || null,      // 물감은 이름을 쓰는 곳마다 따라간다
+               mine: m.idl === String(viewer.id).toLowerCase() };
+    });
 }
 
 function clanChatList(token) {

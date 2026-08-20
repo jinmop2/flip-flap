@@ -68,7 +68,7 @@
       const can = !!f.online && !f.ingame;
       const label = f.ingame ? '게임 중' : (f.online ? '초대' : '접속 중 아님');
       return `<button class="q-invrow${can ? '' : ' off'}"${can ? ` onclick="q4Invite('${f.idl}')"` : ''}>
-        <span class="q-invnm">${typeof esc === 'function' ? esc(f.nick) : f.nick}</span>
+        <span class="q-invnm${typeof ncClass === 'function' ? ncClass(f.nickColor) : ''}">${typeof esc === 'function' ? esc(f.nick) : f.nick}</span>
         <span class="q-invst${f.ingame ? ' busy' : ''}">${label}</span></button>`;
     }).join('');
   }

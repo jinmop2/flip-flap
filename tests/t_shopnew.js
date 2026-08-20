@@ -77,5 +77,27 @@ ok('잔액 안 깎임', a.byToken(t2).coins === 10);
   ok('교환소에도 걸린다', /\.gc-stage, \.lb-box, \.lb-list, \.gc-pane/.test(h));
 }
 
+// 물감(닉네임 염색)은 이름이 나오는 자리마다 따라가야 한다.
+// 로비 프로필과 판 안 프로필에만 붙어 있어서, 정작 남이 내 이름을 보는
+// 자리(대기실 좌석·방 목록·친구·클랜·채팅)에서는 맹물이었다.
+{
+  const fs3 = require('fs'), path3 = require('path');
+  const cli = fs3.readFileSync(path3.join(__dirname, '..', 'public/client.js'), 'utf8');
+  const c4 = fs3.readFileSync(path3.join(__dirname, '..', 'public/client4.js'), 'utf8');
+  const srv = fs3.readFileSync(path3.join(__dirname, '..', 'server.js'), 'utf8');
+  const acc = fs3.readFileSync(path3.join(__dirname, '..', 'accounts.js'), 'utf8');
+
+  ok('대기실 좌석', /ws-nick\$\{ncClass\(s2\.profile && s2\.profile\.nickColor\)\}/.test(cli));
+  ok('방 목록의 방장', /hostColor: \(r\.profiles && r\.profiles\[0\] && r\.profiles\[0\]\.nickColor\)/.test(srv)
+     && /ncClass\(r\.hostColor\)/.test(cli));
+  ok('친구 목록', /soc-nick">\$\{clan\}<span class="\$\{ncClass\(f\.nickColor\)/.test(cli));
+  ok('클랜 멤버·신청자', /ncClass\(m\.nickColor\)/.test(cli));
+  ok('인게임 채팅 친구 목록', /gc-frow[^`]*ncClass\(f\.nickColor\)/.test(cli));
+  ok('클랜 채팅 쓴 사람', /gc-who\$\{ncClass\(m\.nickColor\)\}/.test(cli)
+     && /gc-who\$\{ncClass\(msg\.nickColor\)\}/.test(cli));
+  ok('채팅 기록에 물감이 실린다', /nickColor: \(w && w\.nickColor\) \|\| null/.test(acc));
+  ok('다인전 초대 목록', /q-invnm\$\{typeof ncClass === 'function' \? ncClass\(f\.nickColor\)/.test(c4));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

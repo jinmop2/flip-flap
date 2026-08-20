@@ -1421,7 +1421,7 @@ function friendRow(f, kind) {
   return `<div class="soc-item">
     ${kind === 'friend' ? `<span class="soc-dot ${f.ingame ? 'busy' : (f.online ? 'on' : '')}"></span>` : ''}
     <div class="soc-info">
-      <div class="soc-nick">${clan}${esc(f.nick)}</div>
+      <div class="soc-nick">${clan}<span class="${ncClass(f.nickColor).trim()}">${esc(f.nick)}</span></div>
       <div class="soc-meta">Lv.${f.level} · ${rankIco(f.rankIcon)} ${esc(f.rank)} · ${f.rp} RP${
         kind === 'friend' ? (f.ingame ? ' · <b style="color:#ffab5e">게임 중</b>' : (f.online ? ' · 접속 중' : '')) : ''}</div>
     </div>
@@ -1526,7 +1526,7 @@ function renderClanData(r) {
 function renderMyClan(c) {
   const memberRow = m => `<div class="soc-item">
     <div class="soc-info">
-      <div class="soc-nick">${m.isOwner ? '👑' : m.isVice ? '🛡' : ''}${esc(m.nick)}${
+      <div class="soc-nick">${m.isOwner ? '👑' : m.isVice ? '🛡' : ''}<span class="${ncClass(m.nickColor).trim()}">${esc(m.nick)}</span>${
         m.isOwner ? '<span class="soc-role owner">클랜장</span>'
         : m.isVice ? '<span class="soc-role vice">부클랜장</span>' : ''}</div>
       <div class="soc-meta">Lv.${m.level} · ${rankIco(m.rankIcon)} ${esc(m.rank)} · ${m.rp} RP${
@@ -1539,7 +1539,7 @@ function renderMyClan(c) {
   </div>`;
   const applicantRow = m => `<div class="soc-item">
     <div class="soc-info">
-      <div class="soc-nick">${esc(m.nick)}</div>
+      <div class="soc-nick"><span class="${ncClass(m.nickColor).trim()}">${esc(m.nick)}</span></div>
       <div class="soc-meta">Lv.${m.level} · ${rankIco(m.rankIcon)} ${esc(m.rank)} · ${m.rp} RP</div>
     </div>
     <div class="soc-acts">
@@ -2811,7 +2811,7 @@ function renderRoomList(list) {
       // 모드가 넷이 됐다 — 들어가기 전에 무슨 판인지는 보여야 한다
       const mode = r.mode && r.mode !== 'classic'
         ? `<span class="rl-mode m-${esc(r.mode)}">${esc(MODE_NAME[r.mode] || r.mode)}</span>` : '';
-      item.innerHTML = `<div class="rl-info"><div class="rl-name">${lock}${esc(r.name)}${mode}</div><div class="rl-host">👤 ${esc(r.host)}</div></div>`;
+      item.innerHTML = `<div class="rl-info"><div class="rl-name">${lock}${esc(r.name)}${mode}</div><div class="rl-host">👤 <span class="${ncClass(r.hostColor).trim()}">${esc(r.host)}</span></div></div>`;
       const b = document.createElement('button'); b.className = 'btn btn-gold rl-join'; b.textContent = '참가';
       b.onclick = () => joinRoomById(r.id, r.secret);
       item.appendChild(b);
@@ -3737,7 +3737,7 @@ async function gcLoadFriends() {
     const un = gcUnread[f.idl];
     const tail = un ? `<span class="gc-un">${un}</span>`
                     : `<span class="gc-off">${f.ingame ? '게임 중' : f.online ? '접속 중' : '오프라인'}</span>`;
-    return `<button class="gc-frow" onclick="gcOpenTalk('${esc(f.idl)}')">${esc(f.nick)}${tail}</button>`;
+    return `<button class="gc-frow" onclick="gcOpenTalk('${esc(f.idl)}')"><span class="${ncClass(f.nickColor).trim()}">${esc(f.nick)}</span>${tail}</button>`;
   }).join('');
 }
 window.gcOpenTalk = function (idl) { gcWith = idl; gcLoadTalk(idl); };
@@ -3767,7 +3767,7 @@ function gcPaint(box, msgs, showName) {
   if (!msgs || !msgs.length) { box.innerHTML = '<div class="gc-empty">아직 대화가 없어요</div>'; return; }
   box.innerHTML = msgs.map((m) =>
     `<div class="gc-m${m.mine ? ' mine' : ''}">` +
-    (showName && !m.mine ? `<span class="gc-who">${esc(m.nick)}</span>` : '') +
+    (showName && !m.mine ? `<span class="gc-who${ncClass(m.nickColor)}">${esc(m.nick)}</span>` : '') +
     `${esc(m.text)}</div>`).join('');
   box.scrollTop = box.scrollHeight;
 }
@@ -3840,7 +3840,7 @@ socket.on('clan_chat', ({ msg }) => {
   const box = document.getElementById('gcClanMsgs');
   const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
   box.insertAdjacentHTML('beforeend',
-    `<div class="gc-m"><span class="gc-who">${esc(msg.nick)}</span>${esc(msg.text)}</div>`);
+    `<div class="gc-m"><span class="gc-who${ncClass(msg.nickColor)}">${esc(msg.nick)}</span>${esc(msg.text)}</div>`);
   box.scrollTop = box.scrollHeight;
 });
 
@@ -4281,7 +4281,7 @@ window.roomInvite = async function () {
   const r = await apiPost('/api/friends', { token: authToken() });
   const on = ((r && r.friends) || []).filter((f) => f.online && !f.ingame);
   box.innerHTML = on.length
-    ? on.map((f) => `<button class="gc-frow" onclick="roomInviteTo('${esc(f.idl)}')">${esc(f.nick)}<span class="gc-off">부르기</span></button>`).join('')
+    ? on.map((f) => `<button class="gc-frow" onclick="roomInviteTo('${esc(f.idl)}')"><span class="${ncClass(f.nickColor).trim()}">${esc(f.nick)}</span><span class="gc-off">부르기</span></button>`).join('')
     : '<div class="gc-empty">지금 부를 수 있는 친구가 없어요.<br>코드를 공유해 보세요.</div>';
 };
 window.roomInviteTo = function (idl) {
@@ -4326,7 +4326,7 @@ socket.on('room_lobby', (r) => {
       const kick = (roomIsHost && !s2.host)
         ? `<button class="ws-kick" title="내보내기" onclick="event.stopPropagation();roomKick(${i})">×</button>` : '';
       return `<div class="wc-seat">${kick}<div class="ws-face">${face}</div>
-        <div class="ws-nick">${esc(s2.nick)}</div>
+        <div class="ws-nick${ncClass(s2.profile && s2.profile.nickColor)}">${esc(s2.nick)}</div>
         ${s2.host ? '<div class="ws-host">방장</div>' : `<div class="ws-tag">${esc(lvl)}</div>`}</div>`;
     }).join('');
   }

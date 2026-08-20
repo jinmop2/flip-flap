@@ -1323,6 +1323,7 @@ function openRoomList() {
   for (const [id, r] of Object.entries(rooms)) {
     if (!r.vsBot && !r.game && r.players[0] && !r.players[1])
       list.push({ id, name: r.name || '이름 없는 방', host: (r.nicks && r.nicks[0]) || '???',
+                  hostColor: (r.profiles && r.profiles[0] && r.profiles[0].nickColor) || null,
                   secret: !!r.secret, mode: r.mode || 'classic' });   // 무슨 모드인지 알고 들어가야 한다
     // 진행 중인 멀티 게임 → 관전 가능 목록
     else if (!r.vsBot && r.game && r.game.phase !== 'game_over' && !r.secret)
