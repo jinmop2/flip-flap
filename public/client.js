@@ -4969,10 +4969,11 @@ function applyMySkins() {
 // 그래서 pointerdown 에서 자리를 기억하고 pointerup 에서 판단한다. 조금 움직인
 // 건 탭으로 친다(12px). 그리고 pointerdown 순간의 카드 id 로 처리하므로,
 // 그 사이 DOM 이 바뀌어도 누른 카드가 바뀌지 않는다.
-const TAP_SLOP = 12;
+const TAP_SLOP = 16;   // 손가락은 흐른다. 12 는 엄지로 누를 때 자주 넘겼다.
 function onTap(el, fn) {
-  let sx = 0, sy = 0, live = false;
+  let sx = 0, sy = 0, live = false, doneAt = 0;
   el.style.touchAction = 'manipulation';
+  const fire = (e) => { doneAt = Date.now(); fn(e); };
   el.addEventListener('pointerdown', (e) => {
     if (e.button !== undefined && e.button !== 0) return;   // 오른쪽 버튼 무시
     live = true; sx = e.clientX; sy = e.clientY;
@@ -4984,10 +4985,17 @@ function onTap(el, fn) {
     live = false;
     if (Math.hypot(e.clientX - sx, e.clientY - sy) > TAP_SLOP) return;   // 끌었으면 탭이 아니다
     e.preventDefault();
-    fn(e);
+    fire(e);
   });
-  // 포인터 이벤트가 없는 옛 브라우저용
-  if (!window.PointerEvent) el.addEventListener('click', fn);
+  // 마지막 보루 — pointerup 이 안 오는 경우가 있다. 손가락이 조금 흐른 것을
+  // 브라우저가 제스처로 채 가면 pointercancel 만 오고 끝난다(화면 아래쪽 버튼이
+  // 특히 그렇다). 그럴 때도 브라우저는 click 을 만들어 주므로 그것으로 받는다.
+  // 방금 탭으로 처리했으면 무시한다 — 안 그러면 한 번 누르고 두 번 먹는다.
+  el.addEventListener('click', (e) => {
+    if (Date.now() - doneAt < 700) return;
+    live = false;
+    fire(e);
+  });
 }
 window.onTap = onTap;   // 다인전(client4)도 같은 처리를 쓴다
 

@@ -33,10 +33,24 @@ ok('레일이 화면 밖으로 안 잘린다', /left = Math\.max\(left, host\.le
 // 레일이 지나갈 틈이 없으면 전리품이 테이블 밖으로 밀려난다
 ok('전리품과 손패 사이에 레일 자리가 있다', /#tv-myAcq \{ margin-bottom:34px; \}/.test(htm) && /#tv-oppAcq \{ margin-top:34px; \}/.test(htm));
 
-console.log('\n④ 배경은 방바닥');
+console.log('\n④ 배경은 어두운 방, 바깥은 검정');
 ok('트웰브 배경이 어두운 방이다', /#tv \{[^}]*#241a14/.test(htm));
+ok('바깥은 완전한 검정으로 마감한다', /#070403 74%, #000 100%\)/.test(htm)
+   && /background-color:#000;/.test(htm));
+ok('테이블 둘레만 빛이 든다', /#tv::after \{[\s\S]{0,320}radial-gradient\(ellipse 76% 56% at 50% 46%/.test(htm));
+ok('어둠은 바닥에만 얹힌다 — 카드는 안 먹는다', /#tv::after \{[\s\S]{0,320}z-index:0;/.test(htm)
+   && /#tv::after \{[\s\S]{0,120}pointer-events:none/.test(htm));
 
-console.log('\n⑤ 다시 그릴 때마다 맞춘다');
+console.log('\n⑤ 가운데 네모 박스는 없다');
+ok('경매대에 배경도 테두리도 없다', /#tv-mat \{[\s\S]{0,420}background:none; border:0; box-shadow:none;/.test(htm));
+
+console.log('\n⑥ 버튼은 한 번에 눌린다');
+ok('pointerup 이 사라져도 click 으로 받는다', /el\.addEventListener\('click', \(e\) => \{\s*\n\s*if \(Date\.now\(\) - doneAt < 700\) return;/.test(cli));
+ok('두 번 먹지 않는다', /const fire = \(e\) => \{ doneAt = Date\.now\(\); fn\(e\); \};/.test(cli));
+ok('손가락이 조금 흘러도 탭이다', /const TAP_SLOP = 16;/.test(cli));
+ok('상대 칸이 화면 폭만큼 늘어나지 않는다', /#tv-oppbar \{ top:calc\(4px \+ var\(--safe-t\)\); left:10px; right:auto;/.test(htm));
+
+console.log('\n⑦ 다시 그릴 때마다 맞춘다');
 ok('정렬 끝에 테이블을 깐다', /tvLayTable\(\);   \/\/ 줄을 맞춘 뒤라야/.test(cli));
 ok('나가면 테이블을 치운다', /tv-table'\)[\s\S]{0,80}classList\.remove\('on'\)/.test(cli));
 
