@@ -367,20 +367,26 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('물러선 쪽에만 찍는다', /classList\.toggle\('passed', v\.last\.folded === v\.me\)/.test(cli));
   ok('한 푼도 안 걸고 물러서도 보인다', /box\.classList\.contains\('passed'\)/.test(cli));
   ok('다음 경매에서 지운다', /\$\('tv-potMe'\)\.classList\.remove\('passed'\)/.test(cli));
-  // 내 칩은 이모트 위, 상대 칩은 조금 안쪽으로
-  ok('내 칩이 이모트 위', /id="tv-myChips"[\s\S]{0,300}id="tv-emoteSlot"/.test(htm));
-  // 상대 자리는 왼쪽 위다 — 오른쪽 위는 메뉴 아이콘이 쓴다
-  ok('상대 칩을 판 쪽으로 당겼다', /#tv-oppChips \{ margin-left:30px; \}/.test(htm));
+  // 가진 칩은 판 위에 올린다 — 왼쪽 레일에 상대 칩 · 덱 · 내 칩 순으로.
+  // 판 밖에 두면 '내 지갑' 이 아니라 화면 장식으로 보인다.
+  ok('칩이 판 위 레일에 있다',
+     /id="tv-lrail">[\s\S]{0,120}id="tv-oppChips"[\s\S]{0,400}id="tv-deck"[\s\S]{0,400}id="tv-myChips"/.test(htm));
+  ok('좁은 레일에서 숫자가 안 접힌다', /#tv-lrail \.tv-chips \{[^}]*white-space:nowrap/.test(htm));
   ok('액수는 큰 버튼으로 고른다', /function tvAmount/.test(cli) && /\.tv-step \{[\s\S]{0,80}width:46px; height:46px/.test(htm));
   ok('클로즈는 짝수만 나온다', /tvAmount\(box, 2, hi, 2, 2\)/.test(cli));
   ok('숫자 입력칸의 작은 화살표는 안 쓴다', !/inp\.type = 'number'/.test(cli));
   // 단계가 바뀌어도 판이 안 밀리게 — 칸마다 높이를 못 박았는가
   ok('문구 칸 높이 고정', /#tv-status \{[\s\S]{0,300}height:32px/.test(htm));
-  ok('버튼 칸 높이 고정', /#tv-actions \{[\s\S]{0,140}height:56px/.test(htm));
+  // 배팅은 화면 맨 아래 한 줄 — 판 한복판에 있으면 카드를 가리고 엄지에서도 멀다
+  ok('배팅 줄이 맨 아래', /#tv-actions \{ position:absolute;[^}]*bottom:calc\(10px \+ var\(--safe-b\)\)/.test(htm));
+  ok('배팅 줄 빈자리는 통과시킨다', /#tv-actions \{[\s\S]{0,220}pointer-events:none;/.test(htm)
+     && /#tv-actions > \* \{ pointer-events:auto; \}/.test(htm));
+  ok('손패가 배팅 줄에 안 깔린다', /#tv-myZone \{[\s\S]{0,120}padding-bottom:calc\(66px \+ var\(--safe-b\)\)/.test(htm));
   // 높이는 화면에 매어 둔다 — 낮은 화면에서 안 줄면 아래 칸을 밀어낸다
   ok('카드 자리 고정', /#tv-mat \.a-card \{ width:70px; height:min\(98px, 15vh\)/.test(htm));
   ok('2인전과 같은 줄 구성', /id="tv-oppZone"/.test(htm) && /id="tv-centerZone"/.test(htm) && /id="tv-myZone"/.test(htm));
-  ok('덱은 띄워 붙여 경매대를 안 민다', /#tv-deck \{ position:absolute/.test(htm));
+  ok('덱은 띄워 붙여 경매대를 안 민다', /#tv-lrail \{ position:absolute/.test(htm));
+  ok('덱이 가죽 테두리에 안 걸친다', /#tv-lrail \{ left:26px;/.test(htm));
   // 덱·은행이 카드보다 조금 위에 있어 줄이 안 맞아 보였다. 자리를 손으로 짚지 않고
   // 실제로 그려진 칸의 높이에 맞춘다 (화면 크기에 따라 카드가 줄기 때문이다).
   ok('덱·은행을 카드 줄에 맞춘다', /function tvAlignRow\(\)/.test(cli)
@@ -447,7 +453,16 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('사람이 둔 뒤에도 쉰다', /const pause = \(g\.phase === 'bid' \|\| g\.phase === 'close'\) \? 1400 : 900;/.test(read('server.js'))
      && /room2\.tvThink = setTimeout\(\(\) => tvBot\(roomId\), pause\)/.test(read('server.js')));
   ok('내 프로필이 보인다', /id="tv-myProfile"/.test(htm) && /renderGameProfile\('tv-myProfile'/.test(cli));
-  ok('프로필이 칩을 안 덮는다', /#tv-oppbar > \*, #tv-mebar > \* \{ position:static/.test(htm));
+  // 사람은 판 위아래에 앉는다 — 프로필과 시계가 손패 바로 위에 나란히
+  ok('자리가 손패 위에 있다',
+     /id="tv-oppSeat"[\s\S]{0,400}id="tv-oppHand"/.test(htm)
+     && /id="tv-mySeat"[\s\S]{0,400}id="tv-myHand"/.test(htm));
+  ok('시계가 프로필 옆에 붙어 있다',
+     /id="tv-oppProfile"[\s\S]{0,200}id="tv-oppTimer"/.test(htm)
+     && /id="tv-myProfile"[\s\S]{0,200}id="tv-myTimer"/.test(htm)
+     && /\.tv-seat \{ display:flex; align-items:center/.test(htm));
+  ok('이모트는 왼쪽 아래', /#tv-emoteSlot \{ position:absolute; left:14px; bottom:calc\(12px \+ var\(--safe-b\)\)/.test(htm));
+  ok('프로필이 칩을 안 덮는다', /\.tv-seat > \* \{ position:static/.test(htm));
   ok('판이 화면을 채운다', /#tv \{[\s\S]{0,400}position:fixed; inset:0/.test(htm));
   // 상대 손패가 좌측 상단 버튼·노치에 가리지 않아야 한다
   ok('상대 줄이 버튼을 피한다', /#tv-oppZone \{ padding-top:calc\(84px \+ var\(--safe-t\)\)/.test(htm));
@@ -529,7 +544,7 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   ok('날아간 뒤 더미에 얹는다', /tvFlying = tvFlying\.filter/.test(cli) && /tvPile\(box, cards, landingIds\)/.test(cli));
   // 칩은 가운데에서 오른쪽 은행으로만 흐른다
   // 오른쪽 레일 — 위에서부터 상대 배팅 · 은행 · 내 배팅
-  ok('은행 자리가 있다', /id="tv-bank"/.test(htm) && /#tv-rail \{ position:absolute; left:calc\(50% \+ 168px\)/.test(htm));
+  ok('은행 자리가 있다', /id="tv-bank"/.test(htm) && /#tv-rail \{ position:absolute; left:calc\(50% \+ 120px\)/.test(htm));
   ok('레일이 셋을 세로로 세운다', /id="tv-potOpp"[\s\S]{0,200}id="tv-bank"[\s\S]{0,200}id="tv-potMe"/.test(htm));
   // 곧게 가로지르면 미끄러지는 것처럼 보인다 — 살짝 떠올랐다 내려앉게
   ok('칩이 떠서 건너간다', /function tvTossChip\(fromEl, toEl, mine, delay\)/.test(cli)
@@ -620,8 +635,9 @@ console.log('\n㉒ 모드가 달라도 내 것은 그대로 — 스킨·설명�
   ok('저절로 뜨지 않는다', !/rulesFirstTime/.test(cli));
 
   // 오른쪽 끝 패가 옆줄에 가리지 않게
-  ok('세로줄 빈자리는 손가락을 통과시킨다', /#tv-oppbar, #tv-mebar \{ pointer-events:none; \}/.test(htm)
-     && /#tv-oppbar > \*, #tv-mebar > \* \{ pointer-events:auto; \}/.test(htm));
+  ok('세로줄 빈자리는 손가락을 통과시킨다', /#tv-oppZone, #tv-myZone \{ pointer-events:none; \}/.test(htm)
+     && /\.tv-seat \{[^}]*pointer-events:none/.test(htm)
+     && /\.tv-seat > \* \{ position:static; pointer-events:auto; \}/.test(htm));
   ok('2인전도 같이 고쳤다', /#oppbar, #mebar \{ pointer-events:none; \}/.test(htm));
 
   // 방식을 고르기 전에는 출품 카드를 무를 수 있다
