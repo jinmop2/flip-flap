@@ -384,8 +384,11 @@ console.log('\n⑨ 다인전 설명서');
      && !/class="rules-box[^"]*\brules-box2\b/.test(html));
   ok('여닫는 함수', /function toggleRules4/.test(cli));
   // 이제 한 창에서 탭으로 오간다 — 다인전 화면이면 인원에 맞는 탭으로 연다
+  // 어느 판에 앉아 있는지는 currentMode() 한 곳에서 판단한다 —
+  // 설명 버튼이 늘 그 판의 탭을 연다(트웰브·아이템전도 같은 통로).
   ok('다인전에서는 그쪽 탭이 뜬다',
-     /classList\.contains\('quad4'\)[\s\S]{0,140}rulesTab\(document\.body\.classList\.contains\('q-n3'\) \? '3' : '4'\)/.test(cli));
+     /function currentMode\(\)[\s\S]{0,300}contains\('quad4'\)\) return c\.contains\('q-n3'\) \? '3' : '4'/.test(cli)
+     && /rulesTab\(currentMode\(\)\)/.test(cli));
   ok('ESC 로도 닫힌다', /\['rules4Modal',\s*\(\) => rulesClose\(\)\]/.test(cli));
 
   // 내용이 실제 규칙과 맞는가 (game4.js 가 진짜다)

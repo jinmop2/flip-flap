@@ -69,6 +69,8 @@ function fitBoard() {
 }
 fitBoard();
 addEventListener('resize', fitBoard);
+// 화면이 바뀌면 카드 크기도 바뀐다 — 덱·은행 줄도 다시 맞춘다
+addEventListener('resize', () => { try { if (document.body.classList.contains('twelve')) tvAlignRow(); } catch (_) {} });
 addEventListener('orientationchange', () => setTimeout(fitBoard, 250));
 if (window.visualViewport) window.visualViewport.addEventListener('resize', fitBoard);
 
@@ -5266,8 +5268,6 @@ function renderAuction(changed) {
 
   items.appendChild(slotEl('중앙 카드', a.centerCard, { animate: drewNow, draw: drewNow }));
   if (s.phase !== 'offer') {
-    const plus = document.createElement('span'); plus.className = 'vs-tag'; plus.textContent = '+';
-    items.appendChild(plus);
     // a.offeredCard 공개 여부는 서버가 결정 (choose_type엔 진행자만, 클로즈는 reveal 때 공개)
     const revealClosed = isReveal && atype === 'closed';
     const lbl = (s.phase === 'choose_type' && mine) ? '출품 (교체 가능)'
@@ -5911,6 +5911,32 @@ function tvPile(box, cards, landingIds) {
   }
 }
 
+// 덱·은행을 경매품 카드와 한 줄에 맞춘다.
+// 둘 다 가운데 칸의 한가운데(50%)에 걸어 두었는데, 경매대 안에서는 카드가
+// 딱지·이름표 아래에 놓여 그만큼 내려가 있다. 그래서 눈으로 보면 줄이 안 맞았다.
+// 자리를 손으로 짚지 않고, 실제로 그려진 카드의 높이에 맞춘다.
+function tvAlignRow() {
+  // 카드 자체가 아니라 그 카드가 앉는 칸을 잰다 — 카드는 뽑히는 동안 움직이므로
+  // 그때 재면 어긋난 값이 잡힌다.
+  const card = document.getElementById('tv-center');
+  const deck = document.getElementById('tv-deck');
+  const stack = document.getElementById('tv-deckStack');
+  const rail = document.getElementById('tv-rail');
+  const bank = document.getElementById('tv-bank');
+  if (!card || !deck || !stack) return;
+  const cy = (() => { const b = card.getBoundingClientRect(); return b.height ? b.top + b.height / 2 : 0; })();
+  if (!cy) return;
+  const fix = (box, inner) => {
+    if (!box || !inner) return;
+    box.style.marginTop = '0px';
+    const b = inner.getBoundingClientRect();
+    if (!b.height) return;
+    box.style.marginTop = Math.round(cy - (b.top + b.height / 2)) + 'px';
+  };
+  fix(deck, stack);
+  fix(rail, bank);
+}
+
 // 덱에서 뽑아 경매대에 놓는 모습.
 // 그냥 나타나면 "뽑았다" 는 느낌이 없다 — 덱 자리에서 뒷면으로 출발해
 // 날아오면서 앞면으로 뒤집힌다.
@@ -6062,6 +6088,7 @@ function tvRender(v) {
   // 날아오는 중인 카드는 자리만 잡고 아직 안 보인다 (tvLand 가 켠다)
   tvPile($('tv-myAcq'), v.myAcq, tvFlying);
   tvPile($('tv-oppAcq'), v.oppAcq, tvFlying);
+  requestAnimationFrame(tvAlignRow);   // 그려진 뒤라야 실제 높이를 잰다
   tvActions(v);
 }
 

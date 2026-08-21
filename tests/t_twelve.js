@@ -380,6 +380,14 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('카드 자리 고정', /#tv-mat \.a-card \{ width:70px; height:min\(98px, 15vh\)/.test(htm));
   ok('2인전과 같은 줄 구성', /id="tv-oppZone"/.test(htm) && /id="tv-centerZone"/.test(htm) && /id="tv-myZone"/.test(htm));
   ok('덱은 띄워 붙여 경매대를 안 민다', /#tv-deck \{ position:absolute/.test(htm));
+  // 덱·은행이 카드보다 조금 위에 있어 줄이 안 맞아 보였다. 자리를 손으로 짚지 않고
+  // 실제로 그려진 칸의 높이에 맞춘다 (화면 크기에 따라 카드가 줄기 때문이다).
+  ok('덱·은행을 카드 줄에 맞춘다', /function tvAlignRow\(\)/.test(cli)
+     && /requestAnimationFrame\(tvAlignRow\)/.test(cli));
+  ok('움직이는 카드 말고 칸을 잰다', /const card = document\.getElementById\('tv-center'\);/.test(cli));
+  ok('화면이 바뀌면 다시 맞춘다', /addEventListener\('resize', \(\) => \{ try \{ if \(document\.body\.classList\.contains\('twelve'\)\) tvAlignRow\(\)/.test(cli));
+  // 두 장 사이의 + 는 뺐다 (모든 모드)
+  ok('가운데 + 를 지웠다', !/vs-tag/.test(htm) && !/vs-tag/.test(cli));
 }
 
 console.log('\n⑲ 무슨 일이 있었는지 보이는가');

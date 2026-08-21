@@ -3642,7 +3642,8 @@
       height:118px; flex-shrink:0; }
     .a-slot { display:flex; flex-direction:column; align-items:center; gap:5px; }
     .a-label { font-size:.6rem; color:rgba(255,220,150,.55); text-transform:uppercase; letter-spacing:1.5px; font-weight:700; }
-    .vs-tag { align-self:center; font-family:'Bangers'; font-size:1.1rem; color:rgba(255,215,120,.45); padding:0 2px; }
+    /* 두 장 사이의 + 는 뺐다. 나란히 놓인 두 장이 한 묶음이라는 건 이미 보인다 —
+       글자 하나가 더 있으면 읽을 것만 늘고 자리도 좁아진다. */
     #actionArea { height:44px; flex-shrink:0; display:flex; justify-content:center; align-items:center; }
     /* 확정 버튼이 앉을 자리. 비어 있어도 자리를 지켜 버튼이 생길 때 판이 안 들썩인다. */
     .bid-confirm-slot { display:flex; align-items:center; justify-content:center; }
@@ -5810,7 +5811,6 @@
       <div class="type-badge" id="tv-typeBadge"></div>
       <div class="auction-row">
         <div class="a-slot"><div class="a-label">공개 카드</div><div id="tv-center" class="a-card"></div></div>
-        <span class="vs-tag">+</span>
         <div class="a-slot"><div class="a-label" id="tv-offerLbl">출품 카드</div><div id="tv-offer" class="a-card"></div></div>
       </div>
     </div>
