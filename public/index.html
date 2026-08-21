@@ -6022,12 +6022,12 @@
 
   <!-- 오른쪽 위 메뉴 — 판 위에 버튼 넉 장이 늘어서 있으면 카드보다 버튼이
        먼저 눈에 든다. 평소엔 줄 세 개짜리 아이콘 하나만 두고, 누르면 펼친다. -->
-  <div id="tv-menuWrap">
-    <button id="tv-menuBtn" onclick="tvMenu()" title="메뉴" aria-label="메뉴" aria-expanded="false">
+  <div class="tv-menuWrap" id="tv-menuWrap">
+    <button class="tv-menuBtn" id="tv-menuBtn" onclick="tvMenu()" title="메뉴" aria-label="메뉴" aria-expanded="false">
       <span class="mb-bars"><i></i><i></i><i></i></span>
       <i class="ctrl-dot" id="chatDotTv" style="display:none"></i>
     </button>
-    <div id="tv-menu">
+    <div class="tv-menu" id="tv-menu">
       <button onclick="tvMenu(false);toggleGameChat()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg></span>채팅<i class="ctrl-dot" id="chatDotTvM" style="display:none"></i></button>
       <button onclick="tvMenu(false);tvRules(true)"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>설명</button>
       <button onclick="tvMenu(false);toggleSettings()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>설정</button>

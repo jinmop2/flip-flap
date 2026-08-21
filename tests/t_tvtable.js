@@ -104,13 +104,37 @@ ok('손패 줄의 여백도 통과시킨다',
    && /#tv-myHand \.fan-slot, #tv-myHand \.card \{ pointer-events:auto; \}/.test(htm));
 ok('안내 문구가 손패를 덮지 않는다', /#tv-status \{ pointer-events:none; \}/.test(htm));
 
+console.log('\n⑥-1 회전하면 판을 다시 잰다');
+// 판 높이는 --app-h 에 매여 있고 그 값은 다른 처리에서 뒤늦게 들어온다.
+// 그 자리에서 바로 재면 가로에서 세로로 돌아올 때 아직 가로 높이가 박혀 있어
+// 자리가 다 눌린 채로 잡힌다 — 실제로 테이블이 336x82 로 납작해졌다.
+ok('한 프레임 뒤와 한 박자 더 뒤에 잰다', /function scheduleRelayout\(\) \{[\s\S]{0,260}requestAnimationFrame[\s\S]{0,200}setTimeout\(relayoutBoards, 260\)/.test(cli));
+ok('가로↔세로 두 갈래 모두에서 부른다',
+   (cli.match(/scheduleRelayout\(\);/g) || []).length >= 3);
+ok('화면 높이가 바뀌면 같이 잰다', /if \(typeof scheduleRelayout === 'function'\) scheduleRelayout\(\);/.test(cli));
+ok('회전은 값이 늦게 확정되니 여러 번 잰다', /for \(const t of \[50, 250, 600\]\) setTimeout\(fitBoard, t\);/.test(cli));
+
 console.log('\n⑥-2 가로 모드는 예전 그대로');
 // 가로는 배치가 통째로 다르다(왼쪽 상대 · 가운데 판 · 아래 손패). 세로용
 // 테이블을 그대로 얹으면 판이 한쪽에 쏠린 작은 타원이 된다 — 실제로 그랬다.
 ok('가로에서는 테이블을 안 그린다', /body\.land #game-table, body\.land #tv-table \{ display:none; \}/.test(htm));
 ok('가로에서는 화면 전체가 펠트', /body\.land #game, body\.land #tv \{[\s\S]{0,200}var\(--felt\)/.test(htm));
-ok('가로에서는 자리 재기를 건너뛴다', /if \(document\.body\.classList\.contains\('land'\)\) \{ table\.classList\.remove\('on'\); return; \}/.test(cli));
+ok('가로에서는 자리 재기를 건너뛴다',
+   /if \(document\.body\.classList\.contains\('land'\)\) \{\s*\n\s*table\.classList\.remove\('on'\);/.test(cli));
+// 세로에서 밀어 둔 자리를 안 풀면 돌린 뒤에도 판이 그만큼 밀린 채로 남는다
+ok('밀어 둔 자리도 푼다', /const z = document\.getElementById\(cfg\.zone\); if \(z\) z\.style\.transform = '';/.test(cli));
 ok('낸 카드는 가운데 줄에 나란히', /body\.land #g-rail \{ position:static;/.test(htm));
+
+// 트웰브와 2인전이 같은 조각(.tv-menuWrap/.tv-menuBtn/.tv-menu)을 쓴다.
+// 선택자만 클래스로 바꾸고 마크업에 클래스를 안 달면, 규칙이 통째로 안 걸려
+// 메뉴가 늘 펼쳐진 채로 뜬다 — 실제로 그랬다.
+ok('두 판 모두 메뉴 조각에 클래스가 달려 있다',
+   /<div class="tv-menuWrap" id="tv-menuWrap">/.test(htm)
+   && /<button class="tv-menuBtn" id="tv-menuBtn"/.test(htm)
+   && /<div class="tv-menu" id="tv-menu">/.test(htm)
+   && /<div class="tv-menuWrap" id="g-menuWrap">/.test(htm)
+   && /<button class="tv-menuBtn" id="g-menuBtn"/.test(htm)
+   && /<div class="tv-menu" id="g-menu">/.test(htm));
 
 console.log('\n⑦ 다시 그릴 때마다 맞춘다');
 ok('정렬 끝에 테이블을 깐다', /tvLayTable\(\);   \/\/ 줄을 맞춘 뒤라야/.test(cli));

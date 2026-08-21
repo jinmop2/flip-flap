@@ -399,7 +399,10 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('덱·은행을 카드 줄에 맞춘다', /function tvAlignRow\(\)/.test(cli)
      && /requestAnimationFrame\(tvAlignRow\)/.test(cli));
   ok('움직이는 카드 말고 칸을 잰다', /const card = document\.getElementById\('tv-center'\);/.test(cli));
-  ok('화면이 바뀌면 다시 맞춘다', /addEventListener\('resize', \(\) => \{[\s\S]{0,160}tvAlignRow\(\);\s*\n\s*else gameLayTable\(\);/.test(cli));
+  // 회전은 값이 늦게 확정된다 — 그 자리에서 바로 재면 돌리기 전 크기로 잡힌다
+  ok('화면이 바뀌면 다시 맞춘다',
+     /function relayoutBoards\(\) \{[\s\S]{0,200}tvAlignRow\(\);\s*\n\s*else gameLayTable\(\);/.test(cli)
+     && /function scheduleRelayout\(\)/.test(cli));
   // 두 장 사이의 + 는 뺐다 (모든 모드)
   ok('가운데 + 를 지웠다', !/vs-tag/.test(htm) && !/vs-tag/.test(cli));
 }

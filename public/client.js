@@ -12,6 +12,8 @@ function syncAppHeight() {
     _appHRaf = 0;
     const h = Math.round((window.visualViewport && window.visualViewport.height) || window.innerHeight);
     if (h > 0) document.documentElement.style.setProperty('--app-h', h + 'px');
+    // 판 높이는 이 값에 매여 있다 — 값이 바뀌었으면 테이블도 다시 재야 한다
+    if (typeof scheduleRelayout === 'function') scheduleRelayout();
   });
 }
 // 화면 아래쪽을 연달아 두 번 두드리면, iOS 는 보이는 영역(visual viewport)을
@@ -53,6 +55,7 @@ function fitBoard() {
   if (vw <= 700 && vh > vw) {
     body.classList.remove('board-zoom', 'land');
     root.style.removeProperty('--board-zoom');
+    scheduleRelayout();   // 가로에서 돌아온 길이다 — 판을 다시 재야 한다
     return;
   }
 
@@ -66,17 +69,33 @@ function fitBoard() {
   root.style.setProperty('--board-zoom', String(Math.max(0.42, Math.min(1.9, z))));
   body.classList.add('board-zoom');
   body.classList.toggle('land', land);
+  scheduleRelayout();
 }
-fitBoard();
-addEventListener('resize', fitBoard);
-// 화면이 바뀌면 카드 크기도 바뀐다 — 덱·은행 줄도 다시 맞춘다
-addEventListener('resize', () => {
+// 화면이 바뀌면 카드 크기도 자리도 바뀐다 — 테이블을 다시 잰다.
+// 세로↔가로는 배치가 통째로 갈리므로(.land) 반드시 그 뒤에 불려야 한다.
+function relayoutBoards() {
   try {
     if (document.body.classList.contains('twelve')) tvAlignRow();
     else gameLayTable();
   } catch (_) {}
+}
+// 그 자리에서 바로 재면 안 된다. 판 높이는 --app-h 에 매여 있고 그 값은 다른
+// 리사이즈 처리에서 뒤늦게 들어온다 — 가로에서 세로로 돌아오면 아직 가로 높이가
+// 박혀 있어 자리가 다 눌린 채로 잡힌다(테이블이 82px 로 납작해졌다).
+// 한 프레임 뒤와, 값이 늦게 확정되는 기기를 위해 한 박자 더 뒤에 잰다.
+let _relayRaf = 0, _relayTo = 0;
+function scheduleRelayout() {
+  if (!_relayRaf) _relayRaf = requestAnimationFrame(() => { _relayRaf = 0; relayoutBoards(); });
+  clearTimeout(_relayTo);
+  _relayTo = setTimeout(relayoutBoards, 260);
+}
+fitBoard();
+addEventListener('resize', fitBoard);
+// 회전은 값이 늦게 확정된다. 한 번만 재면 돌리기 전 크기로 잡혀 판이 그대로
+// 남는다 — 여러 번 나눠 다시 잰다.
+addEventListener('orientationchange', () => {
+  for (const t of [50, 250, 600]) setTimeout(fitBoard, t);
 });
-addEventListener('orientationchange', () => setTimeout(fitBoard, 250));
 if (window.visualViewport) window.visualViewport.addEventListener('resize', fitBoard);
 
 syncAppHeight();
@@ -6036,8 +6055,14 @@ function layTable(cfg) {
   const table = document.getElementById(cfg.table);
   const host = document.getElementById(cfg.host);
   if (!table || !host) return;
-  // 가로 모드는 배치가 통째로 다르다 — 거기서는 화면 전체가 펠트라 잴 것이 없다
-  if (document.body.classList.contains('land')) { table.classList.remove('on'); return; }
+  // 가로 모드는 배치가 통째로 다르다 — 거기서는 화면 전체가 펠트라 잴 것이 없다.
+  // 세로에서 밀어 둔 자리도 풀어야 한다. 안 그러면 돌린 뒤에도 판이 그만큼
+  // 밀린 채로 남는다.
+  if (document.body.classList.contains('land')) {
+    table.classList.remove('on');
+    const z = document.getElementById(cfg.zone); if (z) z.style.transform = '';
+    return;
+  }
   const rect = (id) => { const el = document.getElementById(id); return el ? el.getBoundingClientRect() : null; };
   const wide = cfg.wide.map(rect).filter((r) => r && r.width > 0);
   if (wide.length < 2) { table.classList.remove('on'); return; }
