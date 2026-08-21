@@ -104,6 +104,14 @@ ok('손패 줄의 여백도 통과시킨다',
    && /#tv-myHand \.fan-slot, #tv-myHand \.card \{ pointer-events:auto; \}/.test(htm));
 ok('안내 문구가 손패를 덮지 않는다', /#tv-status \{ pointer-events:none; \}/.test(htm));
 
+console.log('\n⑥-2 가로 모드는 예전 그대로');
+// 가로는 배치가 통째로 다르다(왼쪽 상대 · 가운데 판 · 아래 손패). 세로용
+// 테이블을 그대로 얹으면 판이 한쪽에 쏠린 작은 타원이 된다 — 실제로 그랬다.
+ok('가로에서는 테이블을 안 그린다', /body\.land #game-table, body\.land #tv-table \{ display:none; \}/.test(htm));
+ok('가로에서는 화면 전체가 펠트', /body\.land #game, body\.land #tv \{[\s\S]{0,200}var\(--felt\)/.test(htm));
+ok('가로에서는 자리 재기를 건너뛴다', /if \(document\.body\.classList\.contains\('land'\)\) \{ table\.classList\.remove\('on'\); return; \}/.test(cli));
+ok('낸 카드는 가운데 줄에 나란히', /body\.land #g-rail \{ position:static;/.test(htm));
+
 console.log('\n⑦ 다시 그릴 때마다 맞춘다');
 ok('정렬 끝에 테이블을 깐다', /tvLayTable\(\);   \/\/ 줄을 맞춘 뒤라야/.test(cli));
 ok('나가면 테이블을 치운다', /tv-table'\)[\s\S]{0,80}classList\.remove\('on'\)/.test(cli));

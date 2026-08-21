@@ -4036,6 +4036,19 @@
       gap:2px; padding:6px 10px calc(4px + var(--safe-b));
       align-items:stretch;
     }
+    /* 가로 모드는 배치가 통째로 다르다(왼쪽 상대 · 가운데 판 · 아래 손패).
+       세로용 테이블을 그대로 얹으면 판이 한쪽에 쏠린 작은 타원이 된다 —
+       가로에서는 예전처럼 화면 전체가 펠트다. */
+    body.land #game-table, body.land #tv-table { display:none; }
+    body.land #game, body.land #tv {
+      background:radial-gradient(ellipse 90% 70% at 50% 50%, var(--felt) 0%, var(--felt-d) 78%, #0d1e18 100%);
+      border-radius:28px; border:10px solid #2a1c12; outline:2px solid #3a281a;
+      box-shadow:inset 0 0 80px rgba(0,0,0,.55), inset 0 0 0 3px rgba(200,160,0,.18), 0 24px 60px rgba(0,0,0,.6);
+    }
+    body.land #game::after, body.land #tv::after { display:none; }
+    /* 낸 카드는 가운데 줄에 나란히 — 세로용 오른쪽 레일 자리는 여기서 화면을 넘는다 */
+    body.land #g-rail { position:static; transform:none; width:auto; flex-direction:row; gap:8px; }
+    body.land #g-rail .bid-area { min-height:0; }
     body.land #oppZone { grid-area:opp; padding-top:70px; justify-content:flex-start; gap:2px; }
     body.land #centerZone {
       grid-area:center; flex-direction:row; flex-wrap:wrap;

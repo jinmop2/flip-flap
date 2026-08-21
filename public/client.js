@@ -6036,6 +6036,8 @@ function layTable(cfg) {
   const table = document.getElementById(cfg.table);
   const host = document.getElementById(cfg.host);
   if (!table || !host) return;
+  // 가로 모드는 배치가 통째로 다르다 — 거기서는 화면 전체가 펠트라 잴 것이 없다
+  if (document.body.classList.contains('land')) { table.classList.remove('on'); return; }
   const rect = (id) => { const el = document.getElementById(id); return el ? el.getBoundingClientRect() : null; };
   const wide = cfg.wide.map(rect).filter((r) => r && r.width > 0);
   if (wide.length < 2) { table.classList.remove('on'); return; }
