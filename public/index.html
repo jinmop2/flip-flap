@@ -245,14 +245,25 @@
     .nc-pink   { color:#ff8ecf !important; }
     .nc-lime   { color:#c8f05a !important; }
     .nc-gold   { color:#ffd94a !important; text-shadow:0 0 9px rgba(255,215,80,.55); }
-    .nc-rainbow {
-      background:linear-gradient(90deg,#ff6b6b,#ffd94a,#7dd87d,#6bb8ff,#c39bff,#ff6b6b);
-      background-size:200% 100%;
-      -webkit-background-clip:text; background-clip:text;
-      -webkit-text-fill-color:transparent; color:transparent !important;
-      animation:ncRainbow 3s steps(30) infinite;   /* 매 프레임 → 초당 10프레임 리페인트로 축소 */
+    /* 무지개 — 글자에 그라디언트를 오려 붙이던 방식은 명패(.np-*)와 못 산다.
+       명패도 background 를 쓰는데 뒤에 오는 규칙이 이겨서, 글자는 투명한 채
+       그라디언트만 사라진다. 즉 이름이 통째로 안 보였다.
+       색을 갈아 끼우는 쪽으로 바꾼다 — 어디에 얹혀도 글자가 보인다.
+       (애니메이션 값은 보통 선언보다 세므로 .pb-nick 같은 색도 이긴다) */
+    .nc-rainbow { animation:ncRainbow 3.6s steps(1, end) infinite; }
+    @keyframes ncRainbow {
+      0%   { color:#ff6b6b; }
+      17%  { color:#ffab5e; }
+      34%  { color:#ffd94a; }
+      50%  { color:#7dd87d; }
+      67%  { color:#5ee0d8; }
+      84%  { color:#c39bff; }
+      100% { color:#ff6b6b; }
     }
-    @keyframes ncRainbow { to { background-position:200% 0; } }
+    /* 모션을 줄여 달라고 한 기기에서는 한 색으로 고정한다 */
+    @media (prefers-reduced-motion:reduce) {
+      .nc-rainbow { animation:none; color:#ffd94a !important; }
+    }
     /* ── 카드백 스킨 ──
        기본 뒷면은 무늬 없는 어두운 보라. 스킨은 "샀다는 게 한눈에 보이게"
        각각 다른 문양(격자·색동·다마스크·성운)을 넣고 안쪽 테두리까지 바꾼다.
@@ -722,6 +733,12 @@
        깔면 아무것도 안 감싸는 네모 테두리 하나가 떠 있는 것처럼 보인다. */
     #gcPaneExch #gcShop { background:none; border-radius:0; padding:6px 2px; }
     .gc-hint { align-self:center; font-size:.76rem; color:#8a7a80; }
+    /* 스포이드에 담아 둔 색 — 목록 맨 위에 한 줄로 */
+    .pip-row { display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px;
+      background:rgba(0,0,0,.3); border:1px solid rgba(185,141,52,.35); border-radius:11px; }
+    .pip-swatch { font-family:'Fredoka'; font-weight:900; font-size:.9rem; }
+    .pip-n { font-size:.72rem; color:#c8a86a; margin-left:auto; }
+    .pip-row .soc-btn:disabled { opacity:.45; }
     /* 탭을 옮길 때 잠깐 어두워졌다 밝아진다.
        창이 통째로 갈리는 순간을 그냥 보여 주면 화면이 툭 끊긴 것처럼 보인다.
        한 번 덮었다 걷는 것만으로 같은 전환이 이어진 동작으로 읽힌다. */

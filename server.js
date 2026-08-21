@@ -505,6 +505,11 @@ app.post('/api/gacha/exchange', rateLimit(30), (req, res) => {
   const { token, itemId } = req.body || {};
   res.json(accounts.exchangeShard(token, itemId));
 });
+// 스포이드 — 담아 둔 색으로 되돌린다 (한 개 소모)
+app.post('/api/pipette', rateLimit(20), (req, res) => {
+  const { token } = req.body || {};
+  res.json(accounts.usePipette(token));
+});
 
 // ── 카카오 간편로그인 (REST 키는 환경변수 KAKAO_REST_KEY) ──
 const KAKAO_REST_KEY = process.env.KAKAO_REST_KEY || '';

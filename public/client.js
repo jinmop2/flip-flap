@@ -2421,12 +2421,26 @@ function renderExchange() {
   const pool = _gachaInfo.pool.slice().sort((a, b) =>
     rank(a) - rank(b) || b.cost - a.cost || a.name.localeCompare(b.name));
 
-  let html = '', lastSect = null;
+  // 스포이드는 쓰면 없어지는 물건이라 "이미 가진 것" 으로 밀어 두면 안 된다.
+  // 담아 둔 색과 남은 개수를 맨 위에 보여 주고, 거기서 바로 되돌린다.
+  let html = '';
+  if (myAccount && (myAccount.pipettes > 0) && myAccount.dyeSaved) {
+    const same = myAccount.nickColor === myAccount.dyeSaved;
+    html += `<div class="gc-sect">담아 둔 색</div>`
+      + `<div class="pip-row">`
+      + `<span class="pip-swatch nc-${esc(myAccount.dyeSaved)}">${esc(DYE_NAMES[myAccount.dyeSaved] || myAccount.dyeSaved)}</span>`
+      + `<span class="pip-n">🧪 ${myAccount.pipettes}개</span>`
+      + `<button class="soc-btn" ${same ? 'disabled' : ''} onclick="usePipette()">${same ? '지금 그 색' : '이 색으로'}</button>`
+      + `</div>`;
+  }
+  let lastSect = null;
   for (const p of pool) {
-    const owned = !!mine[p.id], poor = !owned && have < p.cost;
+    const consumable = p.id === 'dye_pipette';
+    const owned = !consumable && !!mine[p.id], poor = !owned && have < p.cost;
     const sect = owned ? '이미 가진 것'
       : p.only ? '파편으로만 얻는 것'
       : poor ? '파편이 더 필요해요' : '지금 바꿀 수 있어요';
+    // (스포이드는 소모품이라 사도 '이미 가진 것' 으로 안 내려간다)
     if (sect !== lastSect) { html += `<div class="gc-sect">${sect}</div>`; lastSect = sect; }
     const cls = `gc-buy t-${p.tier}` + (owned ? ' owned' : poor ? ' poor' : '');
     const click = owned || poor ? '' : ` onclick="doExchange('${p.id}')"`;
@@ -2438,6 +2452,23 @@ function renderExchange() {
   box.innerHTML = html || '<div class="gc-hint">교환할 수 있는 게 없어요</div>';
   paintIcons(box);
 }
+
+// 담아 둔 색으로 되돌린다 (스포이드 한 개 소모)
+window.usePipette = async function () {
+  if (!myAccount || !myAccount.dyeSaved) return;
+  const name = DYE_NAMES[myAccount.dyeSaved] || myAccount.dyeSaved;
+  askConfirm({ icon: '🧪', title: `«${name}» 로 되돌릴까요?`,
+               desc: `스포이드 한 개를 씁니다 (남은 ${myAccount.pipettes}개)`,
+               yes: '되돌리기', no: '취소' }, async () => {
+    const r = await apiPost('/api/pipette', { token: authToken() });
+    if (!r || r.error) { toast(esc((r && r.error) || '되돌리지 못했어요')); return; }
+    myAccount = r.profile || myAccount;
+    renderAccount(); renderExchange();
+    if (typeof renderShop === 'function') { try { renderShop(); } catch (_) {} }
+    toast(`🧪 «${esc(DYE_NAMES[r.dye] || r.dye)}» 로 되돌렸어요`);
+    playSound('setwin');
+  });
+};
 
 let _exchBusy = false;
 function doExchange(itemId) {
@@ -2459,7 +2490,8 @@ function doExchange(itemId) {
       renderAccount();
       renderExchange();
       if (typeof renderShop === 'function') { try { renderShop(); } catch (_) {} }
-      toast(`«${esc(r.name)}» 을 얻었어요!`);
+      if (r.saved) toast(`🧪 지금 색(${esc(DYE_NAMES[r.saved] || r.saved)})을 담았어요! 언제든 한 번 되돌릴 수 있어요`, 3200);
+      else toast(`«${esc(r.name)}» 을 얻었어요!`);
       playSound('setwin');
     } finally { _exchBusy = false; }
   });

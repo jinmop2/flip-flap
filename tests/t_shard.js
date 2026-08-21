@@ -100,7 +100,9 @@ console.log('\n③-b 파편으로만 살 수 있는 줄');
   const bought = only.filter((p) => !a.buyItem(t, p.id).error);
   ok('코인으로는 못 산다', bought.length === 0, bought.map((p) => p.id).join(' '));
 
-  // 파편으로는 살 수 있어야 한다
+  // 파편으로는 살 수 있어야 한다.
+  // 스포이드는 "지금 색" 을 담는 물건이라 색이 없으면 못 산다 — 하나 칠해 둔다.
+  u.nickColor = 'blue';
   const one = only[0];
   u.shards = one.cost;
   const r = a.exchangeShard(t, one.id);
@@ -235,6 +237,60 @@ console.log('\n⑥ 화면에 교환소가 배선돼 있는가');
   const dx = cli.slice(cli.indexOf('function doExchange'), cli.indexOf('function doExchange') + 1200);
   ok('askConfirm 을 콜백 방식으로 쓴다', !/await\s+askConfirm/.test(dx));
   ok('askConfirm 에 객체를 넘긴다', /askConfirm\(\{/.test(dx));
+}
+
+console.log('\n⑧ 염색 스포이드 — 지금 색을 담아 두었다 한 번 되돌린다');
+{
+  const t = a.signup('pipetteman', 'pw1234', '스포이드시험').token;
+  const u = a.byToken(t);
+  u.shards = 10000; u.items = {}; u.coins = 1e9;
+
+  ok('담을 색이 없으면 못 산다', !!a.exchangeShard(t, 'dye_pipette').error);
+  const before = u.shards;
+  u.nickColor = 'cyan';
+  const buy = a.exchangeShard(t, 'dye_pipette');
+  ok('색이 있으면 살 수 있다', !!(buy && buy.ok), buy && buy.error);
+  ok('산 순간의 색을 담는다', u.dyeSaved === 'cyan', String(u.dyeSaved));
+  ok('파편이 나갔다', u.shards === before - 350, String(before - u.shards));
+  ok('못 사면 파편도 안 나간다', (() => {
+    const t2 = a.signup('pipette2', 'pw1234', '스포이드둘').token;
+    const u2 = a.byToken(t2); u2.shards = 500; u2.nickColor = null;
+    a.exchangeShard(t2, 'dye_pipette');
+    return u2.shards === 500;
+  })());
+
+  // 염색약을 새로 발라 색이 바뀐 뒤에 되돌린다
+  u.nickColor = 'red';
+  ok('되돌리면 담아 둔 색', (() => { const r = a.usePipette(t); return r.ok && u.nickColor === 'cyan'; })(), String(u.nickColor));
+  ok('한 개를 쓴다', !u.items.dye_pipette, JSON.stringify(u.items));
+  ok('없으면 못 쓴다', !!a.usePipette(t).error);
+  // 담긴 색은 남는다 — 같은 색을 또 담으려고 다시 살 필요는 없게
+  ok('담긴 색은 남는다', u.dyeSaved === 'cyan');
+
+  // 여러 개 쟁여 둘 수 있다 (소모품이라 "이미 보유" 로 막으면 안 된다)
+  u.nickColor = 'gold';
+  a.exchangeShard(t, 'dye_pipette');
+  a.exchangeShard(t, 'dye_pipette');
+  ok('여러 개 살 수 있다', u.items.dye_pipette === 2, String(u.items.dye_pipette));
+  ok('마지막에 산 색으로 갈린다', u.dyeSaved === 'gold', String(u.dyeSaved));
+  ok('같은 색이면 안 쓴다', !!a.usePipette(t).error);
+
+  // 화면에도 담긴 색·개수가 내려가야 버튼을 그린다
+  const p = a.profileOf(u);
+  ok('프로필에 담긴 색이 실린다', p.dyeSaved === 'gold' && p.pipettes === 2);
+}
+
+console.log('\n⑨ 무지개 — 명패 위에서도 보이는가');
+{
+  const fs2 = require('fs'), path2 = require('path');
+  const htm = fs2.readFileSync(path2.join(__dirname, '..', 'public/index.html'), 'utf8');
+  // 글자에 그라디언트를 오려 붙이면 명패(.np-*)도 background 를 써서 뒤에 오는
+  // 쪽이 이긴다 — 글자는 투명한 채 그라디언트만 사라져 이름이 통째로 안 보였다.
+  ok('글자를 오려 붙이지 않는다', !/\.nc-rainbow \{[^}]*background-clip/.test(htm));
+  ok('색을 갈아 끼운다', /\.nc-rainbow \{ animation:ncRainbow/.test(htm)
+     && /@keyframes ncRainbow \{[\s\S]{0,200}color:#ff6b6b/.test(htm));
+  ok('투명 글자가 남아 있지 않다', !/\.nc-rainbow[^}]*text-fill-color:transparent/.test(htm));
+  ok('모션을 줄이면 한 색으로', /@media \(prefers-reduced-motion:reduce\) \{\s*\n\s*\.nc-rainbow \{ animation:none/.test(htm));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

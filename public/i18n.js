@@ -314,6 +314,12 @@
     '루비 명패': 'Ruby Plate',
     '크리스탈 명패': 'Crystal Plate',
     '파편 명패': 'Shard Plate',
+    '염색 스포이드': 'Dye Pipette',
+    '지금 닉네임 색을 담아 둔다 · 언제든 한 번 그 색으로 되돌린다 (1회용)':
+      'Stores your current name color · restores it once, whenever you like (single use)',
+    '담아 둔 색': 'Saved color',
+    '이 색으로': 'Restore',
+    '지금 그 색': 'Already on',
     '흑요석 명패': 'Obsidian Plate',
     '한지 명패': 'Hanji Plate',
     '블루 테이블': 'Blue Table',

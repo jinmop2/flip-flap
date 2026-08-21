@@ -490,6 +490,23 @@ function bestRankOf(u) {
   return rankIndex(now) > rankIndex(prev) ? now : prev;
 }
 
+// 스포이드 쓰기 — 담아 둔 색으로 되돌리고 한 개를 쓴다.
+// 되돌린 뒤에도 담긴 색은 남긴다(같은 색을 또 담아 두려고 다시 살 필요는 없게).
+function usePipette(token) {
+  const idl = tokenIndex[token];
+  const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  u.items = u.items || {};
+  if (!(u.items.dye_pipette > 0)) return { error: '스포이드가 없어요.' };
+  if (!u.dyeSaved) return { error: '담아 둔 색이 없어요.' };
+  if (u.nickColor === u.dyeSaved) return { error: '이미 그 색이에요.' };
+  u.items.dye_pipette--;
+  if (u.items.dye_pipette <= 0) delete u.items.dye_pipette;
+  u.nickColor = u.dyeSaved;
+  persist(idl);
+  return { ok: true, dye: u.nickColor, left: u.items.dye_pipette || 0, profile: profileOf(u) };
+}
+
 // 화면에 그릴 진행 정보 — 다음 등급까지 얼마나 남았는지, 승단전 중인지
 function rankInfoOf(u) {
   if (!u) return null;
@@ -532,6 +549,8 @@ function profileOf(u) {
     cycle: cycleProgress(u), cycleDone: (u.stats || {}).cycle || 0,   // 오늘 진행 · 누적 완성 횟수
     sinceLegend: u.sinceLegend || 0,
     nickColor: u.nickColor || null,          // 염색약 결과 (색 키)
+    dyeSaved: u.dyeSaved || null,            // 스포이드에 담아 둔 색
+    pipettes: (u.items && u.items.dye_pipette) || 0,
     cardBack: u.cardBack || null,            // 장착 중인 카드백
     avatar: u.avatar || null,                // 장착 중인 아바타 (랭킹·게임 화면에서 남도 본다)
     winStamp: u.winStamp || null,            // 낙찰 도장
@@ -846,6 +865,10 @@ const SHOP = {
   np_daily: { name: '행운의 명패', icon: '🍀', price: 1500, type: 'plate', desc: '장착 중이면 매일 출석 보상 +50🪙' },
   np_lv50:  { name: '레벨50 한정 명패', icon: '🎖️', price: 0, type: 'plate', milestone: true, desc: '레벨 50 달성자 한정 · 코인·경험치 각 +3%' },
   dye_rare: { name: '희귀 염색약 확정권', icon: '💎', price: 0, type: 'dye_rare', milestone: true, desc: '희귀 색상(청록·핑크·라임) 확정 — 레벨20 보상' },
+  // 스포이드 — 염색약은 눌러 보기 전엔 무슨 색이 나올지 모른다. 마음에 드는
+  // 색을 들고 있으면 새 염색약이 무섭다. 그 색을 담아 두었다가 한 번 되돌린다.
+  dye_pipette: { name: '염색 스포이드', icon: '🧪', price: 0, type: 'pipette', shard: 350,
+                 desc: '지금 닉네임 색을 담아 둔다 · 언제든 한 번 그 색으로 되돌린다 (1회용)' },
   tbl_blue:  { name: '블루 테이블',   icon: '🔵', price: 600,  type: 'table', desc: '차분한 심해 블루 테이블' },
   tbl_purple:{ name: '퍼플 테이블',   icon: '🟣', price: 700,  type: 'table', desc: '고급스러운 자주빛 테이블' },
   tbl_gold:  { name: '골드 테이블',   icon: '🟡', price: 1200, type: 'table', desc: '럭셔리 카지노 골드 테이블' },
@@ -1201,14 +1224,22 @@ function exchangeShard(token, itemId) {
   gachaLocks.add(idl);
   try {
     u.items = u.items || {};
-    if (u.items[itemId]) return { error: '이미 보유한 아이템이에요.' };
+    if (u.items[itemId] && SHOP[itemId].type !== 'pipette') return { error: '이미 보유한 아이템이에요.' };
     // 값은 서버가 정한다. 클라이언트가 보낸 값은 쓰지 않는다.
     const cost = isOnly ? SHARD_ONLY[itemId] : SHARD_COST[TIER_OF[itemId]];
     if ((u.shards || 0) < cost) return { error: `파편이 부족해요. (보유 ${u.shards || 0} / 필요 ${cost})` };
     u.shards -= cost;
-    u.items[itemId] = true;
+    // 스포이드는 사는 순간의 색을 담는다 — 담을 색이 없으면 살 이유도 없다
+    if (SHOP[itemId].type === 'pipette') {
+      if (!u.nickColor) { u.shards += cost; return { error: '지금 담을 색이 없어요. 염색을 먼저 해주세요.' }; }
+      u.items[itemId] = (u.items[itemId] || 0) + 1;
+      u.dyeSaved = u.nickColor;
+    } else {
+      u.items[itemId] = true;
+    }
     persist(idl);
-    return { ok: true, itemId, cost, name: SHOP[itemId].name, profile: profileOf(u) };
+    return { ok: true, itemId, cost, name: SHOP[itemId].name, profile: profileOf(u),
+             saved: SHOP[itemId].type === 'pipette' ? u.dyeSaved : undefined };
   } finally { gachaLocks.delete(idl); }
 }
 
@@ -2802,7 +2833,7 @@ module.exports = {
   calcRpDelta, refreshRankState, startPromo, promoResult, refreshAce, seasonReset,
   seasonKey, seasonNo, seasonState, checkSeason, snapshot, saveSnapshot, snapshotList,
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
-  gachaInfo, rollGacha, exchangeShard, GACHA_TIER, TIER_OF, SHARD_ONLY, bonusOf,
+  gachaInfo, rollGacha, exchangeShard, usePipette, GACHA_TIER, TIER_OF, SHARD_ONLY, bonusOf,
   missionList, claimMission, titleList, dmList, dmSend, dmUnread,
   tourEnter, tourRefund, tourPrize, miniStake, miniPay, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,
   // 친구
