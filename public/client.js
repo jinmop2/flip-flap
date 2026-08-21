@@ -4971,15 +4971,30 @@ function applyMySkins() {
 // 그 사이 DOM 이 바뀌어도 누른 카드가 바뀌지 않는다.
 const TAP_SLOP = 16;   // 손가락은 흐른다. 12 는 엄지로 누를 때 자주 넘겼다.
 function onTap(el, fn) {
-  let sx = 0, sy = 0, live = false, doneAt = 0;
-  el.style.touchAction = 'manipulation';
+  let sx = 0, sy = 0, mx = 0, my = 0, live = false, doneAt = 0;
+  // manipulation 은 '더블탭 확대만' 막는다 — 훑어 넘기기(pan)는 그대로 살아 있어서,
+  // 아이폰이 손가락을 스크롤로 채 가면 pointerup 대신 pointercancel 만 오고 탭이
+  // 통째로 사라진다(화면 아래쪽 버튼에서 특히 자주 났다). 누르는 자리에서는
+  // 스크롤할 것이 없으니 아예 none 으로 잠근다.
+  el.style.touchAction = 'none';
   const fire = (e) => { doneAt = Date.now(); fn(e); };
+  const near = () => Math.hypot(mx - sx, my - sy) <= TAP_SLOP;
   el.addEventListener('pointerdown', (e) => {
     if (e.button !== undefined && e.button !== 0) return;   // 오른쪽 버튼 무시
-    live = true; sx = e.clientX; sy = e.clientY;
-    try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    live = true; sx = mx = e.clientX; sy = my = e.clientY;
+    // 손가락에는 캡처를 걸지 않는다. 웹킷에서 터치 포인터를 잡아 두면 뒤따르는
+    // pointerup 이 엉뚱한 데로 가는 일이 있다. 마우스는 눌러 끌고 나갔다 돌아오는
+    // 경우가 있어 캡처가 도움이 된다.
+    if (e.pointerType === 'mouse') { try { el.setPointerCapture(e.pointerId); } catch (_) {} }
   });
-  el.addEventListener('pointercancel', () => { live = false; });
+  el.addEventListener('pointermove', (e) => { if (live) { mx = e.clientX; my = e.clientY; } });
+  // 채여 간 누름도 제자리에서 뗀 것이면 탭으로 친다 — 스크롤을 잠갔으니
+  // 여기까지 오는 것은 대개 브라우저가 가로챈 '멀쩡한 탭' 이다.
+  el.addEventListener('pointercancel', () => {
+    if (!live) return;
+    live = false;
+    if (near()) fire();
+  });
   el.addEventListener('pointerup', (e) => {
     if (!live) return;
     live = false;
@@ -4987,10 +5002,8 @@ function onTap(el, fn) {
     e.preventDefault();
     fire(e);
   });
-  // 마지막 보루 — pointerup 이 안 오는 경우가 있다. 손가락이 조금 흐른 것을
-  // 브라우저가 제스처로 채 가면 pointercancel 만 오고 끝난다(화면 아래쪽 버튼이
-  // 특히 그렇다). 그럴 때도 브라우저는 click 을 만들어 주므로 그것으로 받는다.
-  // 방금 탭으로 처리했으면 무시한다 — 안 그러면 한 번 누르고 두 번 먹는다.
+  // 마지막 보루 — 포인터 이벤트가 통째로 새어 나가도 click 은 대개 온다.
+  // 방금 탭으로 처리했으면 무시한다. 안 그러면 한 번 누르고 두 번 먹는다.
   el.addEventListener('click', (e) => {
     if (Date.now() - doneAt < 700) return;
     live = false;
@@ -5011,7 +5024,12 @@ function onPress(el, fn) {
     last = now;
     fn(e);
   };
+  // 버튼 위에서 훑어 넘길 일은 없다. manipulation 으로 두면 아이폰이 손가락을
+  // 스크롤로 채 가면서 pointerup 도 click 도 없이 pointercancel 만 남기고
+  // 누름이 통째로 사라진다 — 화면 아래쪽 버튼에서 특히 그랬다.
+  el.style.touchAction = 'none';
   el.addEventListener('pointerup', (e) => { if (e.button === 0) fire(e); });
+  el.addEventListener('pointercancel', fire);
   el.addEventListener('click', fire);
 }
 window.onPress = onPress;
@@ -6212,8 +6230,8 @@ function tvAmount(box, lo, hi, step, init) {
     minus.disabled = v - step < lo;
     plus.disabled = v + step > hi;
   };
-  onTap(minus, () => { if (v - step >= lo) { v -= step; paint(); sfxTick(); } });
-  onTap(plus,  () => { if (v + step <= hi) { v += step; paint(); sfxTick(); } });
+  onPress(minus, () => { if (v - step >= lo) { v -= step; paint(); sfxTick(); } });
+  onPress(plus,  () => { if (v + step <= hi) { v += step; paint(); sfxTick(); } });
   paint();
   return { get: () => v };
 }
@@ -6227,7 +6245,9 @@ function tvActions(v) {
   const btn = (label, fn, ghost) => {
     const b = document.createElement('button');
     b.className = 'tv-btn' + (ghost ? ' ghost' : '');
-    b.textContent = label; onTap(b, fn); box.appendChild(b); return b;
+    // 2인전 버튼과 같은 길(onPress)로 받는다. 여기만 onTap 이라 아이폰에서
+    // 오픈·클로즈 경매가 안 눌린다는 말이 나왔다.
+    b.textContent = label; onPress(b, fn); box.appendChild(b); return b;
   };
 
   if (v.over) { st.textContent = '판 종료'; return; }

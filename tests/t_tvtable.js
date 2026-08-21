@@ -44,10 +44,21 @@ ok('어둠은 바닥에만 얹힌다 — 카드는 안 먹는다', /#tv::after \
 console.log('\n⑤ 가운데 네모 박스는 없다');
 ok('경매대에 배경도 테두리도 없다', /#tv-mat \{[\s\S]{0,420}background:none; border:0; box-shadow:none;/.test(htm));
 
-console.log('\n⑥ 버튼은 한 번에 눌린다');
-ok('pointerup 이 사라져도 click 으로 받는다', /el\.addEventListener\('click', \(e\) => \{\s*\n\s*if \(Date\.now\(\) - doneAt < 700\) return;/.test(cli));
-ok('두 번 먹지 않는다', /const fire = \(e\) => \{ doneAt = Date\.now\(\); fn\(e\); \};/.test(cli));
+console.log('\n⑥ 버튼은 한 번에 눌린다 (아이폰에서 새던 길)');
+// 아이폰은 버튼 위의 손가락도 스크롤로 채 간다. 그러면 pointerup 도 click 도
+// 없이 pointercancel 만 남고 누름이 통째로 사라진다.
+ok('버튼 위에서는 훑어 넘기기를 잠근다', /el\.style\.touchAction = 'none';/.test(cli));
+ok('채여 간 누름도 받는다 \(onPress\)', /el\.addEventListener\('pointercancel', fire\);/.test(cli));
+ok('제자리에서 채였을 때만 받는다 \(onTap\)', /el\.addEventListener\('pointercancel', \(\) => \{[\s\S]{0,120}if \(near\(\)\) fire\(\);/.test(cli));
+ok('click 도 마지막 보루로 받는다', /el\.addEventListener\('click', \(e\) => \{\s*\n\s*if \(Date\.now\(\) - doneAt < 700\) return;/.test(cli)
+   && /el\.addEventListener\('click', fire\);/.test(cli));
+ok('두 번 먹지 않는다', /const fire = \(e\) => \{ doneAt = Date\.now\(\); fn\(e\); \};/.test(cli)
+   && /if \(now - last < 350\) return;/.test(cli));
 ok('손가락이 조금 흘러도 탭이다', /const TAP_SLOP = 16;/.test(cli));
+ok('터치에는 포인터 캡처를 안 건다', /if \(e\.pointerType === 'mouse'\) \{ try \{ el\.setPointerCapture/.test(cli));
+// 트웰브 버튼만 다른 길을 쓰고 있었다 — 2인전과 같은 길로 맞춘다
+ok('경매 방식 버튼이 2인전과 같은 길을 쓴다', /b\.textContent = label; onPress\(b, fn\);/.test(cli));
+ok('배팅 액수 버튼도 같은 길', /onPress\(minus, \(\) =>/.test(cli) && /onPress\(plus,  \(\) =>/.test(cli));
 ok('상대 칸이 화면 폭만큼 늘어나지 않는다', /#tv-oppbar \{ top:calc\(4px \+ var\(--safe-t\)\); left:10px; right:auto;/.test(htm));
 
 console.log('\n⑦ 다시 그릴 때마다 맞춘다');
