@@ -1,0 +1,38 @@
+// 트웰브 보드게임 연출 — 테이블 위에는 판(덱·경매대·칩·전리품)만 올라간다.
+// 손패는 손에 든 것이니 테이블 밖이어야 하고, 배경은 방바닥이어야 한다.
+// 이 구분이 무너지면 화면이 다시 '한 덩어리 판때기'로 돌아간다.
+const fs = require('fs');
+const path = require('path');
+const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+const cli = read('public/client.js'), htm = read('public/index.html');
+let pass = 0, fail = 0;
+const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra !== undefined ? '  ' + extra : ''))); };
+
+console.log('① 테이블 판');
+ok('테이블 요소가 있다', /<div id="tv-table"><\/div>/.test(htm));
+ok('나무 테두리가 있다', /#tv-table \{[^}]*border:9px solid/.test(htm));
+ok('펠트 천이다', /#tv-table \{[^}]*var\(--felt\)/.test(htm));
+ok('켜질 때만 보인다', /#tv-table\.on \{ opacity:1; \}/.test(htm));
+ok('탭을 먹지 않는다', /#tv-table \{[^}]*pointer-events:none/.test(htm));
+ok('구역들이 테이블보다 위에 있다', /#tv-oppZone, #tv-centerZone, #tv-myZone \{ position:relative; z-index:1; \}/.test(htm));
+
+console.log('\n② 무엇이 테이블 위에 오르나');
+const lay = cli.slice(cli.indexOf('function tvLayTable'), cli.indexOf('function tvLayTable') + 1800);
+ok('덱·경매대·칩·전리품을 잰다', /'tv-oppAcq', 'tv-deck', 'tv-mat', 'tv-rail', 'tv-myAcq'/.test(lay));
+ok('빈 더미도 세로 범위에 넣는다', /r\.height > 0/.test(lay));
+ok('폭이 0인 빈 더미는 가로 범위에서 뺀다', /r\.width > 0/.test(lay));
+
+console.log('\n③ 손패는 테이블 밖');
+ok('내 손패 위에서 테이블이 끝난다', /bottom = Math\.min\(bottom, myHand\.top - 6\)/.test(lay));
+ok('상대 손패 아래에서 테이블이 시작한다', /top = Math\.max\(top, oppHand\.bottom \+ 6\)/.test(lay));
+ok('전리품과 손패 사이가 떠 있다', /#tv-myAcq \{ margin-bottom:12px; \}/.test(htm) && /#tv-oppAcq \{ margin-top:12px; \}/.test(htm));
+
+console.log('\n④ 배경은 방바닥');
+ok('트웰브 배경이 어두운 방이다', /#tv \{[^}]*#241a14/.test(htm));
+
+console.log('\n⑤ 다시 그릴 때마다 맞춘다');
+ok('정렬 끝에 테이블을 깐다', /tvLayTable\(\);   \/\/ 줄을 맞춘 뒤라야/.test(cli));
+ok('나가면 테이블을 치운다', /tv-table'\)[\s\S]{0,80}classList\.remove\('on'\)/.test(cli));
+
+console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
+process.exit(fail ? 1 : 0);

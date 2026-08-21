@@ -453,7 +453,8 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   const htm = read('public/index.html'), cli = read('public/client.js'), srv = read('server.js');
   // 겉모습 — 같은 펠트, 같은 컨트롤, 같은 프로필·시계 자리
-  ok('2인전과 같은 펠트', /#tv \{[\s\S]{0,600}var\(--felt\)/.test(htm));
+  // 펠트는 이제 화면 전체가 아니라 테이블 판이 두른다 — 손패는 테이블 밖이다
+  ok('2인전과 같은 펠트', /#tv-table \{[\s\S]{0,600}var\(--felt\)/.test(htm));
   ok('같은 컨트롤 버튼', /id="tv-controls"[\s\S]{0,900}class="ctrl-btn"/.test(htm));
   ok('테이블 로고가 있다', /id="tableLogoTv"/.test(htm));
   ok('시계가 화면에 있다', /id="tv-myTimer"/.test(htm) && /id="tv-oppTimer"/.test(htm)

@@ -134,7 +134,7 @@ console.log('\n⑥ 경기장');
 {
   ok('2인 경기장과 같은 껍데기를 쓴다', /#game, #mini \{/.test(html));
   ok('테이블 스킨도 같이 입는다', /#mini\.tbl-blue/.test(html));
-  ok('스킨을 두 경기장에 다 칠한다', /for \(const id of \['game', 'mini'\]\)/.test(cli));
+  ok('스킨을 세 경기장에 다 칠한다', /for \(const id of \['game', 'mini', 'tv'\]\)/.test(cli));
   ok('경기장이 있다', /<div id="mini">/.test(html));
   ok('남의 자리를 그린다', /id="mnSeats"/.test(html) && /mn-seat2/.test(cli));
   // 온라인에서는 내가 0번이 아닐 수 있다. "내가 0번" 이라고 박아 두면

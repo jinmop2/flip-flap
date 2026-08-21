@@ -2007,7 +2007,7 @@ const shopIcon = it => {
 // 여기에 없는 종류는 "그 밖에" 로 떨어진다. 실제로 아바타·승리 연출·도장·놓기
 // 연출 넉 줄이 그렇게 한 덩어리로 뭉쳐 있었다.
 const SHOP_GROUPS = [
-  { name: '꾸미기·기타', types: ['dye', 'dye_rare', 'ticket'] },
+  { name: '꾸미기·기타', types: ['dye', 'dye_rare', 'pipette', 'ticket'] },
   { name: '카드 뒷면', types: ['cardback'] },
   { name: '카드 앞면', types: ['cardface'] },
   { name: '테이블',   types: ['table'] },
@@ -4931,7 +4931,8 @@ function screenFx(kind) {
 const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal', tbl_obsidian: 'tbl-obsidian', tbl_hanji: 'tbl-hanji', tbl_shard: 'tbl-shard', tbl_hwatu: 'tbl-hwatu' };
 const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal', face_obsidian: 'cf-obsidian', face_hanji: 'cf-hanji', face_shard: 'cf-shard', face_hwatu: 'cf-hwatu' };
 function applyMySkins() {
-  // 경기장이 여럿이다(2인전·미니게임). 하나만 칠하면 미니게임만 맨 테이블이 된다.
+  // 경기장이 여럿이다(2인전·미니게임·트웰브). 하나만 칠하면 나머지가 맨 테이블이 된다.
+  // 트웰브는 화면 전체가 아니라 가운데 테이블 판만 물든다(#tv.tbl-* #tv-table).
   for (const id of ['game', 'mini', 'tv']) {
     const g = document.getElementById(id); if (!g) continue;
     // 벗길 목록을 손으로 적으면 새 스킨을 넣을 때마다 빠뜨린다 —
@@ -5587,6 +5588,7 @@ window.tvQuit = function () {
 };
 function tvQuitNow() {
   document.body.classList.remove('twelve');
+  const tb = document.getElementById('tv-table'); if (tb) tb.classList.remove('on');
   tvMoveEmote('mebar');
   const go = document.getElementById('gameOver'); if (go) go.style.display = 'none';
   tvView = null;
@@ -5943,6 +5945,35 @@ function tvPile(box, cards, landingIds) {
   }
 }
 
+// 테이블 자리 잡기 — 판 위에 놓이는 것들(상대 전리품·덱·경매대·은행·내 전리품)을
+// 실제로 그려진 자리 그대로 감싼다. 손패와 프로필은 테이블 밖에 남는다.
+// 화면 크기마다 카드가 줄어드는 판이라 고정값으로는 또 어긋난다.
+function tvLayTable() {
+  const table = document.getElementById('tv-table');
+  if (!table) return;
+  const rect = (id) => { const el = document.getElementById(id); return el ? el.getBoundingClientRect() : null; };
+  const all = ['tv-oppAcq', 'tv-deck', 'tv-mat', 'tv-rail', 'tv-myAcq'].map(rect).filter((r) => r && r.height > 0);
+  // 전리품 더미는 비어 있으면 폭이 0 이다 — 그래도 높이는 있으니 위아래 끝을
+  // 잡는 데는 쓴다. 좌우는 실제로 자리를 차지하는 것들로만 잡는다.
+  const wide = all.filter((r) => r.width > 0);
+  if (wide.length < 3) { table.classList.remove('on'); return; }
+  const host = document.getElementById('tv').getBoundingClientRect();
+  const padX = 18, padTop = 14, padBottom = 14;
+  const left = Math.min(...wide.map((r) => r.left)) - padX;
+  const right = Math.max(...wide.map((r) => r.right)) + padX;
+  let top = Math.min(...all.map((r) => r.top)) - padTop;
+  let bottom = Math.max(...all.map((r) => r.bottom)) + padBottom;
+  // 손에 든 패는 테이블 밖이다 — 가장자리에 걸치면 판 위에 놓인 것처럼 보인다.
+  const myHand = rect('tv-myHand'), oppHand = rect('tv-oppHand');
+  if (myHand && myHand.height) bottom = Math.min(bottom, myHand.top - 6);
+  if (oppHand && oppHand.height) top = Math.max(top, oppHand.bottom + 6);
+  table.style.left = Math.round(Math.max(4, left - host.left)) + 'px';
+  table.style.top = Math.round(top - host.top) + 'px';
+  table.style.width = Math.round(Math.min(host.width - 8, right - left)) + 'px';
+  table.style.height = Math.round(bottom - top) + 'px';
+  table.classList.add('on');
+}
+
 // 덱·은행을 경매품 카드와 한 줄에 맞춘다.
 // 둘 다 가운데 칸의 한가운데(50%)에 걸어 두었는데, 경매대 안에서는 카드가
 // 딱지·이름표 아래에 놓여 그만큼 내려가 있다. 그래서 눈으로 보면 줄이 안 맞았다.
@@ -5967,6 +5998,7 @@ function tvAlignRow() {
   };
   fix(deck, stack);
   fix(rail, bank);
+  tvLayTable();   // 줄을 맞춘 뒤라야 테이블이 제 자리를 잡는다
 }
 
 // 덱에서 뽑아 경매대에 놓는 모습.
