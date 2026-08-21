@@ -134,7 +134,9 @@ ok('상점 표는 다음에도 남는다', /localStorage\.setItem\('ff_shop'/.te
 // 화면 폭과 상관없는 일이라 미디어쿼리 밖에 있어야 한다.
 {
   // 미디어쿼리 안은 여섯 칸, 바깥은 네 칸 들여쓴다 — 들여쓰기로 위치를 본다
-  ok('상대 손패 위 자리를 비운다', /\n {4}#oppZone \{ padding-top:72px/.test(htm));
+  // 왼쪽 위 조작 버튼 넉 장이 오른쪽 위 메뉴 아이콘 하나로 접힌 뒤로는
+  // 그 자리를 비워 둘 이유가 없다 — 노치를 피할 만큼만 두고 판에 내준다.
+  ok('상대 손패 위는 노치만큼만 비운다', /\n {4}#oppZone \{ padding-top:calc\(14px \+ var\(--safe-t\)\)/.test(htm));
   ok('좁은 화면에서만 비우던 옛 규칙이 없다', !/#oppZone \{ padding-top:0/.test(htm));
 }
 

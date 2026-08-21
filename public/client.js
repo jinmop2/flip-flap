@@ -70,7 +70,12 @@ function fitBoard() {
 fitBoard();
 addEventListener('resize', fitBoard);
 // 화면이 바뀌면 카드 크기도 바뀐다 — 덱·은행 줄도 다시 맞춘다
-addEventListener('resize', () => { try { if (document.body.classList.contains('twelve')) tvAlignRow(); } catch (_) {} });
+addEventListener('resize', () => {
+  try {
+    if (document.body.classList.contains('twelve')) tvAlignRow();
+    else gameLayTable();
+  } catch (_) {}
+});
 addEventListener('orientationchange', () => setTimeout(fitBoard, 250));
 if (window.visualViewport) window.visualViewport.addEventListener('resize', fitBoard);
 
@@ -3877,7 +3882,7 @@ async function gcRefreshUnread() {
 let gcClanUnread = 0;
 function gcPaintDot() {
   const on = Object.keys(gcUnread).length > 0 || gcClanUnread > 0;
-  for (const id of ['chatDot', 'chatDot4', 'chatDotTv', 'chatDotTvM']) {
+  for (const id of ['chatDot', 'chatDotG', 'chatDot4', 'chatDotTv', 'chatDotTvM']) {
     const d = document.getElementById(id); if (d) d.style.display = on ? '' : 'none';
   }
   // 로비에 있을 때도 보여야 한다 — 판 안의 채팅 버튼은 로비에서 안 보인다
@@ -4097,8 +4102,10 @@ function confirmClose(ok) {
   else if (!ok && ncb) ncb();
 }
 function exitGame() {
+  gMenu(false);
   askConfirm({ icon: '🚪', title: '게임에서 나갈까요?', desc: isVsBot ? 'AI 대전은 언제든 다시 시작할 수 있어요.' : '진행 중인 게임은 몰수패로 처리될 수 있어요.', yes: '나가기', no: '계속하기' },
-    () => { socket.emit('leave_room'); goLobby(); });
+    // 물러설 수도 있으니 판은 정말 나갈 때만 치운다
+    () => { const gt = document.getElementById('game-table'); if (gt) gt.classList.remove('on'); socket.emit('leave_room'); goLobby(); });
 }
 function rematch(btn) {
   socket.emit('rematch');
@@ -5160,6 +5167,9 @@ function render(changed = false) {
   renderPile('myAcq', s.myAcq);
   renderAuction(changed);
   renderHand();
+  // 판이 다 그려진 뒤라야 테이블이 제 자리를 잡는다 — 카드 크기가
+  // 화면마다 달라 고정값으로는 어긋난다.
+  requestAnimationFrame(gameLayTable);
 }
 
 // 중앙덱 스택
@@ -5639,21 +5649,25 @@ window.tvAgain = function () {
 };
 window.tvRules = function (show) { if (show) toggleRules(true); };
 // 오른쪽 위 메뉴. 인자를 주면 그대로 열거나 닫고, 안 주면 뒤집는다.
-window.tvMenu = function (open) {
-  const m = document.getElementById('tv-menu'), b = document.getElementById('tv-menuBtn');
+function boardMenu(menuId, btnId, wrapSel, open) {
+  const m = document.getElementById(menuId), b = document.getElementById(btnId);
   if (!m) return;
   const on = open === undefined ? !m.classList.contains('on') : !!open;
   m.classList.toggle('on', on);
   if (b) b.setAttribute('aria-expanded', on ? 'true' : 'false');
   if (on) playSound('ping');
-};
+}
+window.tvMenu = (open) => boardMenu('tv-menu', 'tv-menuBtn', '#tv-menuWrap', open);
+window.gMenu = (open) => boardMenu('g-menu', 'g-menuBtn', '#g-menuWrap', open);
 // 판 아무 데나 누르면 닫힌다 — 열어 둔 채로 카드를 만지려다 메뉴에 막히면
 // "안 눌린다" 로 느껴진다. 메뉴 안쪽 클릭은 자기 버튼이 처리한다.
 document.addEventListener('pointerdown', (e) => {
-  const m = document.getElementById('tv-menu');
-  if (!m || !m.classList.contains('on')) return;
-  if (e.target.closest('#tv-menuWrap')) return;
-  tvMenu(false);
+  for (const [menuId, wrapSel, close] of [['tv-menu', '#tv-menuWrap', tvMenu], ['g-menu', '#g-menuWrap', gMenu]]) {
+    const m = document.getElementById(menuId);
+    if (!m || !m.classList.contains('on')) continue;
+    if (e.target.closest(wrapSel)) continue;
+    close(false);
+  }
 }, true);
 const tvAct = (act, extra) => socket.emit('tv_act', Object.assign({ act }, extra || {}));
 
@@ -6003,51 +6017,66 @@ function tvPile(box, cards, landingIds) {
 // 실제로 그려진 자리 그대로 감싼다. 손패와 프로필은 테이블 밖에 남는다.
 // 화면 크기마다 카드가 줄어드는 판이라 고정값으로는 또 어긋난다.
 function tvLayTable() {
-  const table = document.getElementById('tv-table');
-  if (!table) return;
+  layTable({
+    table: 'tv-table', host: 'tv', zone: 'tv-centerZone', mid: 'tv-center',
+    wide: ['tv-deck', 'tv-mat', 'tv-rail'],
+    mySeat: 'tv-mySeat', myHand: 'tv-myHand', oppSeat: 'tv-oppSeat', oppHand: 'tv-oppHand',
+  });
+}
+// 2인전(클래식·아이템전)도 같은 판을 쓴다 — 이름만 다르다.
+function gameLayTable() {
+  if (!document.getElementById('game-table')) return;
+  layTable({
+    table: 'game-table', host: 'game', zone: 'centerZone', mid: 'auctionItems',
+    wide: ['deckStack', 'auctionMat', 'g-rail'],
+    mySeat: 'mySeat', myHand: 'myHand', oppSeat: 'oppSeat', oppHand: 'oppHand',
+  });
+}
+function layTable(cfg) {
+  const table = document.getElementById(cfg.table);
+  const host = document.getElementById(cfg.host);
+  if (!table || !host) return;
   const rect = (id) => { const el = document.getElementById(id); return el ? el.getBoundingClientRect() : null; };
-  const wide = ['tv-deck', 'tv-mat', 'tv-rail'].map(rect).filter((r) => r && r.width > 0);
+  const wide = cfg.wide.map(rect).filter((r) => r && r.width > 0);
   if (wide.length < 2) { table.classList.remove('on'); return; }
-  const host = document.getElementById('tv').getBoundingClientRect();
+  const h = host.getBoundingClientRect();
   // 가죽 레일은 펠트 밖으로 뻗는다(box-shadow spread). 그만큼을 미리 비워 두지
   // 않으면 레일이 화면 밖으로 잘려 테이블이 잘린 판때기로 보인다.
   const RAIL = 25;
   const padX = 10;   // 좌우는 바짝 — 가로로 두꺼우면 판이 납작해 보인다
   let left = Math.min(...wide.map((r) => r.left)) - padX;
   let right = Math.max(...wide.map((r) => r.right)) + padX;
-  // 위아래는 두 사람 사이를 통째로 쓴다. 놓인 것들만 감싸면 판이 아래로 쏠려
-  // 위쪽이 휑하게 빈다 — 테이블은 앉은 사람 사이를 채우는 것이다.
   // 사람은 가죽 레일에 걸터앉는다 — 프로필이 레일 위에 반쯤 올라앉는
   // 그 모양이다. 자리를 통째로 판 밖에 내보내면 그만큼 판이 짧아져
   // 가로로만 두꺼운 납작한 판때기가 된다. 손에 든 패는 여전히 판 밖이다.
   const seatMid = (id) => { const r = rect(id); return r && r.height ? r.top + r.height / 2 : null; };
   const handEdge = (id, key) => { const r = rect(id); return r && r.height ? r[key] : null; };
-  const oppMid = seatMid('tv-oppSeat'), myMid = seatMid('tv-mySeat');
-  const oppHandB = handEdge('tv-oppHand', 'bottom'), myHandT = handEdge('tv-myHand', 'top');
-  let top = oppMid != null ? oppMid : (oppHandB != null ? oppHandB + RAIL + 2 : host.top + RAIL + 2);
-  let bottom = myMid != null ? myMid : (myHandT != null ? myHandT - RAIL - 2 : host.bottom - RAIL - 2);
+  const oppMid = seatMid(cfg.oppSeat), myMid = seatMid(cfg.mySeat);
+  const oppHandB = handEdge(cfg.oppHand, 'bottom'), myHandT = handEdge(cfg.myHand, 'top');
+  let top = oppMid != null ? oppMid : (oppHandB != null ? oppHandB + RAIL + 2 : h.top + RAIL + 2);
+  let bottom = myMid != null ? myMid : (myHandT != null ? myHandT - RAIL - 2 : h.bottom - RAIL - 2);
   if (oppHandB != null) top = Math.max(top, oppHandB + 4);
   if (myHandT != null) bottom = Math.min(bottom, myHandT - 4);
-  left = Math.max(left, host.left + RAIL + 2);
-  right = Math.min(right, host.right - RAIL - 2);
-  top = Math.max(top, host.top + RAIL + 2);
-  bottom = Math.min(bottom, host.bottom - RAIL - 2);
-  table.style.left = Math.round(left - host.left) + 'px';
-  table.style.top = Math.round(top - host.top) + 'px';
+  left = Math.max(left, h.left + RAIL + 2);
+  right = Math.min(right, h.right - RAIL - 2);
+  top = Math.max(top, h.top + RAIL + 2);
+  bottom = Math.min(bottom, h.bottom - RAIL - 2);
+  table.style.left = Math.round(left - h.left) + 'px';
+  table.style.top = Math.round(top - h.top) + 'px';
   table.style.width = Math.round(Math.max(60, right - left)) + 'px';
   table.style.height = Math.round(Math.max(60, bottom - top)) + 'px';
   table.classList.add('on');
-  tvCenterBoard(top, bottom);
+  centerBoard(cfg.zone, cfg.mid, top, bottom);
 }
 
 // 덱·경매대·레일을 테이블 한가운데로. 칸 배치만으로는 아래 문구·버튼 칸 때문에
 // 위로 쏠리거나 아래로 처진다 — 테이블을 잡고 나서 그 한가운데에 맞춘다.
 // 테이블 크기는 앉은 자리로 정해지므로 여기서 내용을 밀어도 다시 안 흔들린다.
-function tvCenterBoard(top, bottom) {
-  const zone = document.getElementById('tv-centerZone');
+function centerBoard(zoneId, midId, top, bottom) {
+  const zone = document.getElementById(zoneId);
   // 경매대 상자가 아니라 카드가 앉는 칸을 기준으로 잡는다. 상자에는 이름표가
   // 붙어 있어 상자를 한가운데 두면 정작 카드는 그만큼 아래로 내려간다.
-  const mat = document.getElementById('tv-center') || document.getElementById('tv-mat');
+  const mat = document.getElementById(midId);
   if (!zone || !mat) return;
   zone.style.transform = 'translateY(0px)';
   const m = mat.getBoundingClientRect();

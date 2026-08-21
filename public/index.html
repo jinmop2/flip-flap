@@ -2411,7 +2411,25 @@
     #connStatus.hide { opacity:0; pointer-events:none; }
 
     /* ─── 테이블 ─── */
-    #game, #mini {
+    /* 2인전은 트웰브와 같은 방식으로 바뀌었다 — 화면은 어두운 방바닥이고,
+       판은 그 위에 놓인 테이블(#game-table)이다. 미니게임은 옛 방식 그대로. */
+    #game {
+      display:none; position:relative;
+      width:100%; max-width:780px; height:var(--app-h, 100vh); max-height:920px;
+      padding:10px 12px calc(8px + var(--safe-b));
+      flex-direction:column; overflow:hidden;
+      background:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/><feColorMatrix type='matrix' values='0 0 0 0 0.10 0 0 0 0 0.08 0 0 0 0 0.06 0 0 0 0.42 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>"),
+        radial-gradient(ellipse 62% 44% at 50% 46%, #241a14 0%, #150e08 46%, #070403 74%, #000 100%);
+      background-color:#000;
+    }
+    /* 테이블 둘레만 바닥이 보이고 그 밖은 어둠으로 마감한다 */
+    #game::after {
+      content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+      background:radial-gradient(ellipse 76% 56% at 50% 46%,
+        rgba(0,0,0,0) 0%, rgba(0,0,0,0) 58%, rgba(0,0,0,.42) 78%, rgba(0,0,0,.9) 92%, #000 100%);
+    }
+    #mini {
       display:none; position:relative;
       /* --app-h = 실제로 보이는 높이(JS가 visualViewport 기준으로 넣어줌).
          모바일 브라우저 주소창이 떠 있으면 100vh 가 화면보다 커져 손패가 잘린다.
@@ -2431,26 +2449,26 @@
       outline:2px solid #3a281a;
     }
     /* ── 테이블 스킨 (배경 그라데만 교체) ── */
-    #game.tbl-blue , #game4.tbl-blue , #mini.tbl-blue , #tv.tbl-blue #tv-table   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #1a3a5a 0%, #0f2438 78%, #08131f 100%); }
-    #game.tbl-purple , #game4.tbl-purple , #mini.tbl-purple , #tv.tbl-purple #tv-table { background:radial-gradient(ellipse 90% 70% at 50% 50%, #3d2350 0%, #251533 78%, #140b1c 100%); }
-    #game.tbl-gold , #game4.tbl-gold , #mini.tbl-gold , #tv.tbl-gold #tv-table   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #5a4410 0%, #3a2c0a 78%, #1e1605 100%); border-color:#4a3410; }
-    #game.tbl-forest , #game4.tbl-forest , #mini.tbl-forest , #tv.tbl-forest #tv-table { background:radial-gradient(ellipse 90% 70% at 50% 50%, #14532d 0%, #0d3a20 78%, #061f10 100%); }
-    #game.tbl-crystal , #game4.tbl-crystal , #mini.tbl-crystal , #tv.tbl-crystal #tv-table { background:
+    #game.tbl-blue #game-table , #game4.tbl-blue , #mini.tbl-blue , #tv.tbl-blue #tv-table   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #1a3a5a 0%, #0f2438 78%, #08131f 100%); }
+    #game.tbl-purple #game-table , #game4.tbl-purple , #mini.tbl-purple , #tv.tbl-purple #tv-table { background:radial-gradient(ellipse 90% 70% at 50% 50%, #3d2350 0%, #251533 78%, #140b1c 100%); }
+    #game.tbl-gold #game-table , #game4.tbl-gold , #mini.tbl-gold , #tv.tbl-gold #tv-table   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #5a4410 0%, #3a2c0a 78%, #1e1605 100%); border-color:#4a3410; }
+    #game.tbl-forest #game-table , #game4.tbl-forest , #mini.tbl-forest , #tv.tbl-forest #tv-table { background:radial-gradient(ellipse 90% 70% at 50% 50%, #14532d 0%, #0d3a20 78%, #061f10 100%); }
+    #game.tbl-crystal #game-table , #game4.tbl-crystal , #mini.tbl-crystal , #tv.tbl-crystal #tv-table { background:
       linear-gradient(118deg, rgba(255,255,255,.05) 0 12%, transparent 12.4%),
       linear-gradient(-142deg, rgba(190,240,255,.06) 0 22%, transparent 22.4%),
       radial-gradient(ellipse 90% 70% at 50% 50%, #235a75 0%, #123a4e 78%, #08202c 100%);
       border-color:#2f6f8e; }
-    #game.tbl-obsidian , #game4.tbl-obsidian , #mini.tbl-obsidian , #tv.tbl-obsidian #tv-table { background:
+    #game.tbl-obsidian #game-table , #game4.tbl-obsidian , #mini.tbl-obsidian , #tv.tbl-obsidian #tv-table { background:
       linear-gradient(72deg, transparent 0 48%, rgba(200,160,70,.10) 48.3% 48.9%, transparent 49.2%),
       radial-gradient(ellipse 90% 70% at 50% 50%, #1e1e28 0%, #101018 78%, #06060a 100%);
       border-color:#4a3a18; }
-    #game.tbl-shard , #game4.tbl-shard , #mini.tbl-shard , #tv.tbl-shard #tv-table { background:
+    #game.tbl-shard #game-table , #game4.tbl-shard , #mini.tbl-shard , #tv.tbl-shard #tv-table { background:
       linear-gradient(124deg, rgba(255,255,255,.055) 0 10%, transparent 10.4%),
       linear-gradient(-66deg, rgba(170,230,255,.07) 0 20%, transparent 20.4%),
       linear-gradient(198deg, rgba(255,255,255,.04) 0 32%, transparent 32.4%),
       radial-gradient(ellipse 90% 70% at 50% 50%, #1e5776 0%, #103247 78%, #071a26 100%);
       border-color:#3d86ad; }
-    #game.tbl-hanji , #game4.tbl-hanji , #mini.tbl-hanji , #tv.tbl-hanji #tv-table { background:
+    #game.tbl-hanji #game-table , #game4.tbl-hanji , #mini.tbl-hanji , #tv.tbl-hanji #tv-table { background:
       repeating-linear-gradient(92deg, rgba(120,90,50,.05) 0 1px, transparent 1px 6px),
       radial-gradient(ellipse 90% 70% at 50% 50%, #6a5a42 0%, #46392a 78%, #2a2118 100%);
       border-color:#7a6242; }
@@ -2769,7 +2787,7 @@
       box-shadow:0 1px 5px rgba(70,10,10,.45), inset 0 1px 0 rgba(255,220,180,.25); }
 
     /* ── 테이블 — 붉은 담요 ── */
-    #game.tbl-hwatu, #game4.tbl-hwatu, #mini.tbl-hwatu , #tv.tbl-hwatu #tv-table {
+    #game.tbl-hwatu #game-table, #game4.tbl-hwatu, #mini.tbl-hwatu , #tv.tbl-hwatu #tv-table {
       background:
         repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 2px, transparent 2px 5px),
         repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 2px, transparent 2px 5px),
@@ -3470,9 +3488,35 @@
        예전엔 이 자리 비우기를 좁은 화면에서만 해서, 넓은 화면(맥북 등)에서는
        상대 패가 버튼 위로 겹쳐 올라왔다. 겹치는 건 화면 폭과 상관없는 일이다.
        (버튼 14+52 = 66, 프로필 6+63 = 69 → 72) */
-    #oppZone { padding-top:72px; margin-top:0; }
+    /* 위 여백은 노치를 피할 만큼만. 왼쪽 위 조작 버튼 넉 장이 오른쪽 위 메뉴
+       아이콘 하나로 접힌 뒤로는 그 자리를 비워 둘 이유가 없다 — 판에 내준다. */
+    #oppZone { padding-top:calc(14px + var(--safe-t)); margin-top:0; }
     #centerZone { flex:1; justify-content:center; gap:10px; }
-    #myZone { justify-content:flex-end; padding-bottom:calc(40px + var(--safe-b)); }   /* 손패를 프로필/네비바 위로 */
+    /* 아래는 화면 맨 아래 고르는 자리(#actionArea)만큼 비운다 */
+    #myZone { justify-content:flex-end; padding-bottom:calc(66px + var(--safe-b)); }
+    /* 칸의 빈 자리는 손가락을 통과시킨다 — 세로가 짧은 기기에서 칸끼리 겹치면
+       빈 여백이 버튼을 덮어 "안 눌린다"(트웰브에서 겪은 그것이다). */
+    #oppZone, #myZone { pointer-events:none; }
+    #oppZone > *, #myZone > * { pointer-events:auto; }
+    #oppHand, #myHand, #oppAcq, #myAcq { pointer-events:none; }
+    #myHand .fan-slot, #myHand .card, #oppHand .card { pointer-events:auto; }
+    #statusBar { pointer-events:none; }
+
+    /* 오른쪽 레일 — 낸 카드가 놓이는 자리. 트웰브에서 칩을 거는 그 자리다. */
+    #g-rail { position:absolute; left:calc(50% + 152px); top:50%; transform:translateY(-50%);
+      width:76px; display:flex; flex-direction:column; align-items:center; gap:10px; z-index:3; }
+    #g-rail > * { width:100%; }
+    #g-rail .bid-area { height:auto; min-height:78px; margin:0; }
+    #g-rail .bid-area .card { width:56px; height:78px; }
+    #g-rail .bid-area .card .c-num { font-size:1.5rem; }
+
+    /* 고르는 자리 — 화면 맨 아래 한 줄. 왼쪽 끝 이모트 자리는 비켜 준다. */
+    #game #actionArea { position:absolute; left:56px; right:10px; bottom:calc(10px + var(--safe-b));
+      z-index:8; display:flex; flex-wrap:nowrap; gap:6px; justify-content:center; align-items:center;
+      height:auto; min-height:48px; pointer-events:none; }
+    #game #actionArea > * { pointer-events:auto; }
+    #game #emoteWrap { position:absolute; left:14px; bottom:calc(12px + var(--safe-b)); z-index:8; }
+    #game #emoteWrap #emotePicker { right:auto; left:0; }
 
     .zone-label {
       font-size:.6rem; letter-spacing:2px; text-transform:uppercase;
@@ -3591,6 +3635,8 @@
       position:absolute; left:calc(50% - 218px); top:50%; transform:translateY(-50%);
       width:64px; height:90px; z-index:3; transition:transform .15s;
     }
+    /* 자리(프로필·시계)는 트웰브와 같은 조각을 쓴다 — .tv-seat */
+    #game .tv-seat { margin-bottom:4px; }
     #deckStack .deck-layer { position:absolute; top:0; left:0; box-shadow:0 2px 6px rgba(0,0,0,.55); }
     #deckStack .deck-count {
       position:absolute; bottom:-24px; left:50%; transform:translateX(-50%);
@@ -3660,11 +3706,11 @@
     /* ─── 경매 (테이블 중앙 매트) — 골드 스티치 펠트 매트 ─── */
     #auctionMat {
       display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
-      padding:16px 26px; border-radius:20px; box-sizing:border-box;
-      background:radial-gradient(ellipse at 50% 40%, rgba(0,0,0,.32) 0%, rgba(0,0,0,.14) 70%, rgba(0,0,0,.05) 100%);
-      border:1.5px dashed rgba(200,160,0,.3);              /* 골드 스티치 */
-      box-shadow:inset 0 0 24px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,215,120,.08);
-      width:288px; min-height:236px;   /* 크기 고정 — 덱과 안 겹치는 폭 */
+      padding:16px 26px; box-sizing:border-box;
+      /* 테이블이 곧 판이다. 여기에 또 네모 박스를 그리면 판 위에 판이 하나 더
+         놓인 꼴이라 카드가 어디에 놓인 건지 흐려진다 — 배경도 테두리도 없앤다. */
+      background:none; border:0; box-shadow:none;
+      width:288px; min-height:200px;   /* 크기 고정 — 덱과 안 겹치는 폭 */
     }
     /* 높이를 내용에 맡기면 카드가 놓일 때마다 박스가 커져서 화면 전체가 밀린다.
    비어 있을 때도 "카드가 놓인 높이"를 미리 잡아 두어 레이아웃이 흔들리지 않게 한다. */
@@ -3838,12 +3884,15 @@
       .card .c-rank { font-size:.95rem; padding:1px 6px; min-width:19px; }
       .card.back .bf.flip, .card.back .bf.flap { font-size:.8rem; }
 
-      /* 덱 스택: 화면 안쪽 왼쪽에 고정 (탭 가능하도록) */
-      #deckStack { left:8px; width:50px; height:70px; }
+      /* 덱 스택: 가죽 테두리에 안 걸치게 안쪽으로 (트웰브와 같은 자리) */
+      #deckStack { left:38px; width:46px; height:65px; }
       #deckStack .deck-count { font-size:.55rem; bottom:-17px; }
+      #g-rail { left:auto; right:34px; width:56px; gap:5px; }
+      #g-rail .bid-area { min-height:70px; }
+      #g-rail .bid-area .card { width:50px; height:70px; }
 
-      /* 경매 매트 — 덱(좌측)과 안 겹치게 폭 좁혀 중앙 정렬 */
-      #auctionMat { padding:10px 10px; gap:8px; width:auto; max-width:224px; min-width:200px; min-height:200px; margin:0 auto; }
+      /* 경매 매트 — 덱·레일과 안 겹치게 폭 좁혀 중앙 정렬 */
+      #auctionMat { padding:9px; gap:8px; width:auto; max-width:200px; min-width:182px; min-height:188px; margin:0 auto; }
       .auction-row { gap:8px; height:94px; }
       .a-label, .bid-lbl { font-size:.55rem; }
       #actionArea .btn-sm { padding:8px 12px; font-size:.8rem; }
@@ -4050,7 +4099,7 @@
     }
     /* 테이블 — 덱·경매품·전리품이 놓이는 자리. 자리는 자바스크립트가
        실제로 그려진 것들을 감싸 잡는다(tvLayTable). */
-    #tv-table {
+    #tv-table, #game-table {
       position:absolute; z-index:0; border-radius:46% / 20%; pointer-events:none;
       background:radial-gradient(ellipse 78% 62% at 50% 42%, var(--felt) 0%, var(--felt-d) 72%, #0c1c17 100%);
       /* 두툼한 가죽 레일. 팔을 얹는 그 테두리다 — 얇은 선 하나로는 '판때기'로
@@ -4066,15 +4115,15 @@
         0 26px 54px rgba(0,0,0,.68);
       opacity:0; transition:opacity .3s;
     }
-    #tv-table.on { opacity:1; }
+    #tv-table.on, #game-table.on { opacity:1; }
     /* 레일 윗면의 빛 — 가죽이 둥글게 부풀어 보이게 한다 */
-    #tv-table::before {
+    #tv-table::before, #game-table::before {
       content:''; position:absolute; inset:-23px; border-radius:inherit; pointer-events:none;
       background:linear-gradient(180deg, rgba(255,235,200,.13) 0%, rgba(255,235,200,0) 16%,
                  rgba(0,0,0,0) 78%, rgba(0,0,0,.3) 100%);
     }
     /* 펠트 안쪽 실선 — 판이 어디까지인지 눈에 잡힌다 */
-    #tv-table::after {
+    #tv-table::after, #game-table::after {
       content:''; position:absolute; inset:14px; border-radius:inherit;
       border:1px solid rgba(200,160,0,.12);
     }
@@ -4082,44 +4131,44 @@
     body.twelve #lobby, body.twelve #navBar, body.twelve #profileBar { display:none !important; }
 
     /* 판에 찍힌 상표 — 화면이 아니라 테이블 한가운데다(테이블의 자식이다) */
-    #tableLogoTv {
+    #tableLogoTv, #tableLogo {
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
       text-align:center; line-height:.78; pointer-events:none; z-index:0; opacity:.05;
       width:max-content;
     }
-    #tableLogoTv .tl { font-family:'Bangers',cursive; font-size:5.5rem; letter-spacing:8px; color:#fff; display:block; }
-    #tableLogoTv .tl.flap { transform:rotate(180deg); margin-top:-10px; }
+    #tableLogoTv .tl, #tableLogo .tl { font-family:'Bangers',cursive; font-size:5.5rem; letter-spacing:8px; color:#fff; display:block; }
+    #tableLogoTv .tl.flap, #tableLogo .tl.flap { transform:rotate(180deg); margin-top:-10px; }
 
     /* 오른쪽 위 메뉴 — 아이콘 하나, 누르면 아래로 펼쳐진다 */
-    #tv-menuWrap { position:absolute; top:calc(10px + var(--safe-t)); right:14px; z-index:9; }
-    #tv-menuBtn {
+    .tv-menuWrap { position:absolute; top:calc(10px + var(--safe-t)); right:14px; z-index:9; }
+    .tv-menuBtn {
       position:relative; width:44px; height:40px; border-radius:11px; cursor:pointer;
       background:linear-gradient(180deg, rgba(58,40,26,.95), rgba(32,21,14,.95));
       border:1px solid rgba(200,160,0,.4);
       box-shadow:0 3px 10px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,225,160,.14);
       display:flex; align-items:center; justify-content:center; padding:0;
     }
-    #tv-menuBtn:active { transform:translateY(1px); }
+    .tv-menuBtn:active { transform:translateY(1px); }
     .mb-bars { display:flex; flex-direction:column; gap:4px; width:20px; }
     .mb-bars i { display:block; height:2.5px; border-radius:2px; background:#f0d9a4; }
-    #tv-menu {
+    .tv-menu {
       position:absolute; top:46px; right:0; min-width:132px; padding:6px;
       border-radius:13px; background:rgba(24,15,10,.97);
       border:1px solid rgba(200,160,0,.36);
       box-shadow:0 12px 30px rgba(0,0,0,.6);
       display:none; flex-direction:column; gap:2px;
     }
-    #tv-menu.on { display:flex; }
-    #tv-menu button {
+    .tv-menu.on { display:flex; }
+    .tv-menu button {
       position:relative; display:flex; align-items:center; gap:9px; width:100%;
       padding:9px 11px; border:0; border-radius:9px; background:transparent; cursor:pointer;
       font-family:inherit; font-size:.86rem; font-weight:700; color:#f0e2c8; text-align:left;
     }
-    #tv-menu button:active { background:rgba(200,160,0,.16); }
-    #tv-menu button.bad { color:#ff9a9a; }
-    #tv-menu .mi { width:17px; height:17px; display:inline-flex; flex-shrink:0; }
-    #tv-menu .mi .svgi { width:100%; height:100%; }
-    #tv-menu .ctrl-dot { position:static; margin-left:auto; }
+    .tv-menu button:active { background:rgba(200,160,0,.16); }
+    .tv-menu button.bad { color:#ff9a9a; }
+    .tv-menu .mi { width:17px; height:17px; display:inline-flex; flex-shrink:0; }
+    .tv-menu .mi .svgi { width:100%; height:100%; }
+    .tv-menu .ctrl-dot { position:static; margin-left:auto; }
     /* 자리 — 사람은 판 위아래에 앉는다. 프로필과 시계가 손패 바로 위에
        나란히 서서, 누구 차례에 시간이 얼마 남았는지가 한눈에 붙어 읽힌다.
        예전엔 프로필은 구석, 시계는 또 다른 구석이라 둘을 눈으로 이어야 했다. */
@@ -4389,7 +4438,7 @@
 
     @media (max-width:600px) {
       #tv { padding:10px 12px calc(8px + var(--safe-b)); }
-      #tv-menuWrap { top:calc(8px + var(--safe-t)); right:10px; }
+      .tv-menuWrap { top:calc(8px + var(--safe-t)); right:10px; }
       #tv-emoteSlot { left:10px; bottom:calc(8px + var(--safe-b)); }
       #tv-oppZone { padding-top:calc(12px + var(--safe-t)); }
       /* 판 위 물건을 조금씩 줄여 테이블 좌우에 바닥이 보이게 한다.
@@ -4406,7 +4455,7 @@
       #tv-deckStack { width:46px; height:65px; }
       #tv-deckStack .card { width:46px; height:65px; }
       #tv-turn { font-size:.62rem; }
-      #tableLogoTv .tl { font-size:3.2rem; letter-spacing:5px; }
+      #tableLogoTv .tl, #tableLogo .tl { font-size:3.2rem; letter-spacing:5px; }
       #tv-actions { min-height:46px; }
       #tv-centerZone::before { height:90px; }
     }
@@ -4414,6 +4463,16 @@
     /* 좁은 폰(375 등) — 덱·경매대·레일이 서로 물린다. 셋을 한 단계 더 줄이고
        레일을 바짝 붙여 겹치지 않게 한다. 겹치면 카드가 칩에 가려 안 읽힌다. */
     @media (max-width:400px) {
+      /* 2인전도 좁은 폰에서는 덱·경매대·레일이 서로 물린다 */
+      #auctionMat { max-width:172px; min-width:158px; min-height:172px; padding:8px; gap:7px; }
+      #auctionMat .a-card, #auctionMat .card { width:50px; height:70px; }
+      .auction-row { height:78px; gap:7px; }
+      #deckStack { left:24px; width:42px; height:59px; }
+      #g-rail { right:24px; width:52px; }
+      #g-rail .bid-area { min-height:62px; }
+      #g-rail .bid-area .card { width:44px; height:62px; }
+      #game #actionArea { left:48px; gap:4px; }
+      #game .btn-sm { padding:8px 11px; font-size:.75rem; }
       /* 배팅 줄은 한 줄로 들어가야 한다 — 접히면 두 번째 줄이 손패를 덮는다 */
       #tv .tv-btn { padding:8px 11px; font-size:.75rem; }
       .tv-step { width:34px; height:36px; font-size:1.1rem; }
@@ -4904,27 +4963,70 @@
 <div id="fadeVeil"></div>
 
 <div id="game">
-  <div id="tableLogo">
-    <span class="tl">FLIP</span><span class="tl flap">FLAP</span>
-  </div>
-  <div id="controls">
-    <div class="ctrl-btn" id="exitBtn" title="게임 나가기" onclick="exitGame()"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span><span class="cl">나가기</span></div>
-    <div class="ctrl-btn" id="chatBtn" title="친구·클랜 채팅" onclick="toggleGameChat()"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg></span><span class="cl">채팅</span><i class="ctrl-dot" id="chatDot" style="display:none"></i></div>
-    <div class="ctrl-btn" id="rulesBtn" title="게임 설명" onclick="toggleRules(true)"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span><span class="cl">설명</span></div>
-    <div class="ctrl-btn" id="settingsBtn" title="설정" onclick="toggleSettings()"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="cl">설정</span></div>
-  </div>
-  <!-- 우측 상단 한 줄: 상대 프로필 · 시계 · 아이템 배지.
-       각자 top 값을 박아 두었더니 프로필이 난이도 배지로 커질 때 시계를 덮었다. -->
-  <div id="oppbar">
-    <div class="game-pcard" id="oppProfile" onclick="toggleStats(this)">
-      <div class="pc-body"></div><div class="pc-stats"></div>
-      <div class="pc-diff" id="cpuDiff" style="display:none"></div>
+  <!-- 판 — 트웰브와 같은 테이블. 자리는 자바스크립트가 잡는다(layTable). -->
+  <div id="game-table"><div id="tableLogo"><span class="tl">FLIP</span><span class="tl flap">FLAP</span></div></div>
+
+  <!-- 오른쪽 위 메뉴 — 판 위에 버튼 넉 장이 늘어서 있으면 카드보다 버튼이
+       먼저 눈에 든다. 평소엔 줄 세 개짜리 아이콘 하나만 두고, 누르면 펼친다. -->
+  <div class="tv-menuWrap" id="g-menuWrap">
+    <button class="tv-menuBtn" id="g-menuBtn" onclick="gMenu()" title="메뉴" aria-label="메뉴" aria-expanded="false">
+      <span class="mb-bars"><i></i><i></i><i></i></span>
+      <i class="ctrl-dot" id="chatDot" style="display:none"></i>
+    </button>
+    <div class="tv-menu" id="g-menu">
+      <button onclick="gMenu(false);toggleGameChat()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg></span>채팅<i class="ctrl-dot" id="chatDotG" style="display:none"></i></button>
+      <button onclick="gMenu(false);toggleRules(true)"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>설명</button>
+      <button onclick="gMenu(false);toggleSettings()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>설정</button>
+      <button class="bad" onclick="gMenu(false);exitGame()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>나가기</button>
     </div>
-    <div class="timer pc-timer" id="oppTimer">7:00</div>
-    <div id="oppItemBadge" style="display:none"><span>🎁</span><b id="oppItemCount">0</b></div>
   </div>
-  <!-- 우측 하단 한 줄: 이모트 · 시계 · 내 프로필 -->
-  <div id="mebar">
+
+  <!-- 상대 (맞은편) — 판 ← 전리품 ← 자리 ← 손패 -->
+  <div class="zone" id="oppZone">
+    <div class="fan top" id="oppHand"></div>
+    <div class="tv-seat" id="oppSeat">
+      <div class="game-pcard" id="oppProfile" onclick="toggleStats(this)">
+        <div class="pc-body"></div><div class="pc-stats"></div>
+        <div class="pc-diff" id="cpuDiff" style="display:none"></div>
+      </div>
+      <div class="timer pc-timer" id="oppTimer">7:00</div>
+      <div id="oppItemBadge" style="display:none"><span>🎁</span><b id="oppItemCount">0</b></div>
+    </div>
+    <div class="pile" id="oppAcq"></div>
+  </div>
+
+  <!-- 중앙 경매 매트 -->
+  <div class="zone" id="centerZone">
+    <div id="turnInfo">턴 -</div>
+    <div id="deckStack" onclick="drawCard()"></div>
+    <div id="auctionMat">
+      <div class="type-badge" id="auctionTypeBadge" style="min-height:16px"></div>
+      <div class="auction-row" id="auctionItems"></div>
+    </div>
+    <!-- 오른쪽 레일 — 낸 카드가 놓이는 자리. 트웰브에서 칩을 거는 그 자리다.
+         상대 것은 위, 내 것은 아래 — 앉은 자리와 같은 순서. -->
+    <div id="g-rail">
+      <div class="bid-area" id="oppBid"></div>
+      <div class="bid-area" id="myBid"></div>
+    </div>
+    <div id="statusBar">-</div>
+  </div>
+
+  <!-- 나 (내 자리) -->
+  <div class="zone" id="myZone">
+    <div class="pile" id="myAcq"></div>
+    <div class="tv-seat" id="mySeat">
+      <div class="game-pcard" id="myProfile" onclick="toggleStats(this)">
+        <div class="pc-body"></div><div class="pc-stats"></div>
+      </div>
+      <div class="timer pc-timer" id="myTimer">7:00</div>
+    </div>
+    <div class="fan" id="myHand"></div>
+  </div>
+
+  <!-- 고르는 자리 — 화면 맨 아래. 누르는 것은 엄지 닿는 데 있어야 한다. -->
+  <div id="actionArea"></div>
+  <!-- 이모트는 왼손 엄지 자리 -->
   <div class="emote-wrap" id="emoteWrap">
     <button class="emote-fab" id="emoteBtn" data-ico="😀" title="이모트" onclick="toggleEmotes()"></button>
     <div id="emotePicker">
@@ -4938,37 +5040,6 @@
       <button class="emo-b" onclick="sendEmote('😭')" data-e="😭"></button>
       <button id="emoteMuteBtn" class="emote-mute" onclick="toggleEmoteMute()" title="상대 이모트 차단">🔔 상대 이모트</button>
     </div>
-  </div>
-    <div class="timer pc-timer" id="myTimer">7:00</div>
-    <div class="game-pcard" id="myProfile" onclick="toggleStats(this)">
-      <div class="pc-body"></div><div class="pc-stats"></div>
-    </div>
-  </div>
-
-  <!-- 상대 (맞은편) -->
-  <div class="zone" id="oppZone">
-    <div class="fan top" id="oppHand"></div>
-    <div class="pile" id="oppAcq"></div>
-    <div class="bid-area" id="oppBid"></div>
-  </div>
-
-  <!-- 중앙 경매 매트 -->
-  <div class="zone" id="centerZone">
-    <div id="turnInfo">턴 -</div>
-    <div id="deckStack" onclick="drawCard()"></div>
-    <div id="auctionMat">
-      <div class="type-badge" id="auctionTypeBadge" style="min-height:16px"></div>
-      <div class="auction-row" id="auctionItems"></div>
-      <div id="actionArea"></div>
-    </div>
-    <div id="statusBar">-</div>
-  </div>
-
-  <!-- 나 (내 자리) -->
-  <div class="zone" id="myZone">
-    <div class="bid-area" id="myBid"></div>
-    <div class="pile" id="myAcq"></div>
-    <div class="fan" id="myHand"></div>
   </div>
 
   <!-- 아이템전 HUD (아이템 모드에서만 표시) -->

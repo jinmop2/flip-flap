@@ -390,8 +390,8 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('덱은 띄워 붙여 경매대를 안 민다', /#tv-deck \{ position:absolute/.test(htm));
   ok('덱이 가죽 테두리에 안 걸친다', /#tv-deck \{ left:38px; width:46px; \}/.test(htm));
   // 좁은 폰에서는 덱·경매대·레일이 서로 물린다 — 한 단계 더 줄인다
-  ok('좁은 폰에서 셋이 안 물린다', /@media \(max-width:400px\) \{[\s\S]{0,700}#tv-deck \{ left:24px; width:42px; \}/.test(htm)
-     && /@media \(max-width:400px\) \{[\s\S]{0,900}#tv-rail \{ right:24px; width:52px; \}/.test(htm));
+  ok('좁은 폰에서 셋이 안 물린다', /@media \(max-width:400px\) \{[\s\S]{0,1400}#tv-deck \{ left:24px; width:42px; \}/.test(htm)
+     && /@media \(max-width:400px\) \{[\s\S]{0,1600}#tv-rail \{ right:24px; width:52px; \}/.test(htm));
   // 배팅 줄이 두 줄로 접히면 두 번째 줄이 손패를 덮는다
   ok('배팅 줄은 접히지 않는다', /#tv-actions \{[^}]*flex-wrap:nowrap/.test(htm));
   // 덱·은행이 카드보다 조금 위에 있어 줄이 안 맞아 보였다. 자리를 손으로 짚지 않고
@@ -399,7 +399,7 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('덱·은행을 카드 줄에 맞춘다', /function tvAlignRow\(\)/.test(cli)
      && /requestAnimationFrame\(tvAlignRow\)/.test(cli));
   ok('움직이는 카드 말고 칸을 잰다', /const card = document\.getElementById\('tv-center'\);/.test(cli));
-  ok('화면이 바뀌면 다시 맞춘다', /addEventListener\('resize', \(\) => \{ try \{ if \(document\.body\.classList\.contains\('twelve'\)\) tvAlignRow\(\)/.test(cli));
+  ok('화면이 바뀌면 다시 맞춘다', /addEventListener\('resize', \(\) => \{[\s\S]{0,160}tvAlignRow\(\);\s*\n\s*else gameLayTable\(\);/.test(cli));
   // 두 장 사이의 + 는 뺐다 (모든 모드)
   ok('가운데 + 를 지웠다', !/vs-tag/.test(htm) && !/vs-tag/.test(cli));
 }
@@ -435,12 +435,13 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('설정 버튼이 있다', /toggleSettings\(\)/.test(ctrl));
   ok('설명 버튼이 있다', /tvRules\(true\)/.test(ctrl));
   ok('나가기 버튼이 있다', /tvQuit\(\)/.test(ctrl));
-  ok('평소엔 아이콘 하나만 보인다', /id="tv-menuBtn"/.test(ctrl) && /#tv-menu \{[^}]*display:none/.test(htm));
-  ok('눌러야 펼쳐진다', /#tv-menu\.on \{ display:flex; \}/.test(htm) && /window\.tvMenu = function \(open\)/.test(cli));
-  ok('판을 누르면 닫힌다', /if \(e\.target\.closest\('#tv-menuWrap'\)\) return;\s*\n\s*tvMenu\(false\);/.test(cli));
+  ok('평소엔 아이콘 하나만 보인다', /id="tv-menuBtn"/.test(ctrl) && /\.tv-menu \{[^}]*display:none/.test(htm));
+  ok('눌러야 펼쳐진다', /\.tv-menu\.on \{ display:flex; \}/.test(htm)
+     && /window\.tvMenu = \(open\) => boardMenu\('tv-menu', 'tv-menuBtn'/.test(cli));
+  ok('판을 누르면 닫힌다', /if \(e\.target\.closest\(wrapSel\)\) continue;\s*\n\s*close\(false\);/.test(cli));
   ok('나가면 메뉴도 닫는다', /tv-table'\)[\s\S]{0,90}tvMenu\(false\);/.test(cli));
   ok('안 읽은 채팅 표시도 뜬다', /id="chatDotTv"/.test(htm)
-     && /'chatDot', 'chatDot4', 'chatDotTv', 'chatDotTvM'/.test(cli));
+     && /'chatDot', 'chatDotG', 'chatDot4', 'chatDotTv', 'chatDotTvM'/.test(cli));
   ok('이모트 자리가 있다', /id="tv-emoteSlot"/.test(htm));
   ok('이모트는 두 벌 만들지 않는다', /function tvMoveEmote/.test(cli)
      && (htm.match(/id="emoteBtn"/g) || []).length === 1);
@@ -449,7 +450,7 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('상대 이모트가 상대 쪽에 뜬다', /tv \? 'tv-oppProfile' : 'oppProfile'/.test(cli));
 
   // 컨트롤이 노치에 안 가리게 — 좁은 화면에서도 안전 여백을 지킨다
-  ok('좁은 화면에서도 노치를 피한다', /#tv-menuWrap \{ top:calc\(8px \+ var\(--safe-t\)\)/.test(htm));
+  ok('좁은 화면에서도 노치를 피한다', /\.tv-menuWrap \{ top:calc\(8px \+ var\(--safe-t\)\)/.test(htm));
   // 경매대가 화면 한가운데 오게 — 아래 칸만큼 위에도 빈 칸을 둔다
   ok('경매대가 가운데로 내려온다', /#tv-centerZone::before \{ content:''; height:min\(98px, 9vh\)/.test(htm));
   ok('낮은 화면에서는 빈 칸을 접는다', /@media \(max-height:720px\) \{[\s\S]{0,120}#tv-centerZone::before \{ display:none/.test(htm));
@@ -501,7 +502,7 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   const htm = read('public/index.html'), cli = read('public/client.js'), srv = read('server.js');
   // 겉모습 — 같은 펠트, 같은 컨트롤, 같은 프로필·시계 자리
   // 펠트는 이제 화면 전체가 아니라 테이블 판이 두른다 — 손패는 테이블 밖이다
-  ok('2인전과 같은 펠트', /#tv-table \{[\s\S]{0,600}var\(--felt\)/.test(htm));
+  ok('2인전과 같은 펠트', /#tv-table, #game-table \{[\s\S]{0,600}var\(--felt\)/.test(htm));
   ok('같은 컨트롤 버튼', /id="tv-menuWrap"[\s\S]{0,1200}id="tv-menu"/.test(htm));
   ok('테이블 로고가 있다', /id="tableLogoTv"/.test(htm));
   ok('시계가 화면에 있다', /id="tv-myTimer"/.test(htm) && /id="tv-oppTimer"/.test(htm)

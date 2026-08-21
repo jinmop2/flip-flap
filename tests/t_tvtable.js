@@ -10,18 +10,23 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++,
 
 console.log('① 테이블 판');
 ok('테이블 요소가 있다', /<div id="tv-table">/.test(htm));
-ok('두툼한 가죽 레일이 둘러 있다', /#tv-table \{[\s\S]{0,900}0 0 0 22px #2b1d13/.test(htm));
-ok('위아래가 둥근 판이다', /#tv-table \{[^}]*border-radius:46% \/ 20%/.test(htm));
-ok('레일 윗면에 빛이 있다', /#tv-table::before \{[\s\S]{0,200}inset:-23px/.test(htm));
-ok('펠트 천이다', /#tv-table \{[^}]*var\(--felt\)/.test(htm));
-ok('켜질 때만 보인다', /#tv-table\.on \{ opacity:1; \}/.test(htm));
-ok('탭을 먹지 않는다', /#tv-table \{[^}]*pointer-events:none/.test(htm));
+ok('두툼한 가죽 레일이 둘러 있다', /#tv-table, #game-table \{[\s\S]{0,900}0 0 0 22px #2b1d13/.test(htm));
+ok('위아래가 둥근 판이다', /#tv-table, #game-table \{[^}]*border-radius:46% \/ 20%/.test(htm));
+ok('레일 윗면에 빛이 있다', /#tv-table::before, #game-table::before \{[\s\S]{0,200}inset:-23px/.test(htm));
+ok('펠트 천이다', /#tv-table, #game-table \{[^}]*var\(--felt\)/.test(htm));
+ok('켜질 때만 보인다', /#tv-table\.on, #game-table\.on \{ opacity:1; \}/.test(htm));
+ok('탭을 먹지 않는다', /#tv-table, #game-table \{[^}]*pointer-events:none/.test(htm));
 ok('구역들이 테이블보다 위에 있다', /#tv-oppZone, #tv-centerZone, #tv-myZone \{ position:relative; z-index:1; \}/.test(htm));
 
 console.log('\n② 무엇이 테이블 위에 오르나');
-const lay = cli.slice(cli.indexOf('function tvLayTable'), cli.indexOf('function tvLayTable') + 1800);
+const lay = cli.slice(cli.indexOf('function layTable(cfg)'), cli.indexOf('function layTable(cfg)') + 2400);
 // 좌우는 판 위에 놓인 것들로, 위아래는 앉은 사람 사이로 잡는다.
-ok('가로는 덱·경매대·레일로 잰다', /const wide = \['tv-deck', 'tv-mat', 'tv-rail'\]/.test(lay));
+// 판은 하나의 셈을 두 모드가 나눠 쓴다 — 트웰브에서 맞춘 것이 2인전에서 어긋나면 안 된다
+ok('두 판이 같은 셈을 쓴다', /function tvLayTable\(\) \{\s*\n\s*layTable\(\{/.test(cli)
+   && /function gameLayTable\(\) \{/.test(cli));
+ok('가로는 덱·경매대·레일로 잰다', /const wide = cfg\.wide\.map\(rect\)/.test(lay)
+   && /wide: \['tv-deck', 'tv-mat', 'tv-rail'\]/.test(cli)
+   && /wide: \['deckStack', 'auctionMat', 'g-rail'\]/.test(cli));
 ok('빈 더미에 휘둘리지 않는다', /r\.width > 0/.test(lay));
 
 console.log('\n③ 손패는 테이블 밖');
@@ -37,14 +42,13 @@ ok('그래도 손패는 판 밖에 남는다',
    && /if \(myHandT != null\) bottom = Math\.min\(bottom, myHandT - 4\);/.test(lay));
 ok('좌우는 바짝 붙인다 — 가로로 두꺼우면 납작해 보인다', /const padX = 10;/.test(lay));
 // 덱·경매품은 테이블 한가운데 — 아래 문구 칸 때문에 저절로는 위로 쏠린다
-ok('판 위 물건을 테이블 한가운데로', /function tvCenterBoard\(top, bottom\)/.test(cli)
-   && /tvCenterBoard\(top, bottom\);/.test(cli));
-ok('상자가 아니라 카드 칸을 가운데 맞춘다',
-   /const mat = document\.getElementById\('tv-center'\) \|\| document\.getElementById\('tv-mat'\)/.test(cli));
+ok('판 위 물건을 테이블 한가운데로', /function centerBoard\(zoneId, midId, top, bottom\)/.test(cli)
+   && /centerBoard\(cfg\.zone, cfg\.mid, top, bottom\);/.test(cli));
+ok('상자가 아니라 카드 칸을 가운데 맞춘다', /mid: 'tv-center'/.test(cli) && /mid: 'auctionItems'/.test(cli));
 ok('테이블을 잡은 뒤에 맞춘다 — 서로 물고 흔들리지 않게',
-   cli.indexOf('table.classList.add(\'on\');') < cli.indexOf('tvCenterBoard(top, bottom);'));
-ok('레일이 화면 밖으로 안 잘린다', /left = Math\.max\(left, host\.left \+ RAIL \+ 2\)/.test(lay)
-   && /right = Math\.min\(right, host\.right - RAIL - 2\)/.test(lay));
+   cli.indexOf('table.classList.add(\'on\');') < cli.indexOf('centerBoard(cfg.zone'));
+ok('레일이 화면 밖으로 안 잘린다', /left = Math\.max\(left, h\.left \+ RAIL \+ 2\)/.test(lay)
+   && /right = Math\.min\(right, h\.right - RAIL - 2\)/.test(lay));
 // 레일이 지나갈 틈이 없으면 전리품이 테이블 밖으로 밀려난다
 ok('전리품과 손패 사이에 레일 자리가 있다', /#tv-myAcq \{ margin-bottom:34px; \}/.test(htm) && /#tv-oppAcq \{ margin-top:34px; \}/.test(htm));
 

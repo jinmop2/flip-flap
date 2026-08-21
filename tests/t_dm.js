@@ -118,7 +118,9 @@ console.log('\n⑧ 인게임 채팅 화면');
   const cli = fs.readFileSync(__dirname + '/../public/client.js', 'utf8');
 
   // 판을 나가지 않고도 얘기할 수 있어야 한다 — 두 판 모두 좌측 상단에서
-  ok('2인전 조작바에 채팅 버튼', /id="chatBtn"[^>]*onclick="toggleGameChat\(\)"/.test(html));
+  // 2인전 조작은 오른쪽 위 메뉴 하나로 접혔다 — 채팅은 그 안에 있다
+  ok('2인전 조작바에 채팅 버튼',
+     /id="g-menu"[\s\S]{0,600}?onclick="gMenu\(false\);toggleGameChat\(\)"/.test(html));
   ok('다인전 조작바에도 있다',
      /id="q-controls"[\s\S]{0,900}?onclick="toggleGameChat\(\)"/.test(html));
   ok('패널은 하나만 둔다', (html.match(/id="gameChat"/g) || []).length === 1);
