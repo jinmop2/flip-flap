@@ -61,6 +61,18 @@ ok('경매 방식 버튼이 2인전과 같은 길을 쓴다', /b\.textContent = 
 ok('배팅 액수 버튼도 같은 길', /onPress\(minus, \(\) =>/.test(cli) && /onPress\(plus,  \(\) =>/.test(cli));
 ok('상대 칸이 화면 폭만큼 늘어나지 않는다', /#tv-oppbar \{ top:calc\(4px \+ var\(--safe-t\)\); left:10px; right:auto;/.test(htm));
 
+// 진짜 원인은 겹침이었다. 세로가 짧은 기기(아이폰 사파리는 아래 툴바 때문에
+// 745px 쯤 된다)에서 내 칸이 위로 올라와 경매 버튼을 통째로 덮었다 —
+// 측정하니 391 표본 중 121/121 이 가려져 아예 못 누르는 상태였다.
+// 내 칸은 DOM 뒤라 같은 z-index 에서 가운데 칸 위에 얹힌다.
+ok('칸의 빈 자리는 손가락을 통과시킨다',
+   /#tv-oppZone, #tv-myZone \{ pointer-events:none; \}/.test(htm)
+   && /#tv-oppZone > \*, #tv-myZone > \* \{ pointer-events:auto; \}/.test(htm));
+ok('손패 줄의 여백도 통과시킨다',
+   /#tv-myHand, #tv-oppHand, #tv-myAcq, #tv-oppAcq, #tv \.tv-say \{ pointer-events:none; \}/.test(htm)
+   && /#tv-myHand \.fan-slot, #tv-myHand \.card \{ pointer-events:auto; \}/.test(htm));
+ok('안내 문구가 손패를 덮지 않는다', /#tv-status \{ pointer-events:none; \}/.test(htm));
+
 console.log('\n⑦ 다시 그릴 때마다 맞춘다');
 ok('정렬 끝에 테이블을 깐다', /tvLayTable\(\);   \/\/ 줄을 맞춘 뒤라야/.test(cli));
 ok('나가면 테이블을 치운다', /tv-table'\)[\s\S]{0,80}classList\.remove\('on'\)/.test(cli));

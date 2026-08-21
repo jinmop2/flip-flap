@@ -4163,6 +4163,17 @@
 
     /* 존 — 2인전과 같은 배치 */
     #tv-oppZone, #tv-centerZone, #tv-myZone { position:relative; z-index:1; }
+    /* 세로가 짧은 기기에서는 칸끼리 겹친다. 겹치는 쪽이 위(내 칸은 DOM 뒤라
+       가운데 칸 위에 얹힌다)라, 빈 여백이 경매 버튼을 덮어 안 눌렸다.
+       — 실제로 아이폰(375x667)에서 버튼 아래쪽이 #tv-myZone 에 먹혔다.
+       칸의 빈 자리는 손가락을 통과시키고, 실제 물건만 받게 한다. */
+    #tv-oppZone, #tv-myZone { pointer-events:none; }
+    #tv-oppZone > *, #tv-myZone > * { pointer-events:auto; }
+    /* 손패 줄도 대부분이 여백이다 — 카드가 앉은 칸만 받는다 */
+    #tv-myHand, #tv-oppHand, #tv-myAcq, #tv-oppAcq, #tv .tv-say { pointer-events:none; }
+    #tv-myHand .fan-slot, #tv-myHand .card { pointer-events:auto; }
+    /* 가운데 칸도 마찬가지 — 문구 알약과 빈 여백이 손패를 덮으면 안 된다 */
+    #tv-status { pointer-events:none; }
     #tv-oppZone { padding-top:calc(84px + var(--safe-t)); display:flex; flex-direction:column; align-items:center; }
     #tv-centerZone { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
       gap:10px; width:100%; position:relative; }
