@@ -369,9 +369,11 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('다음 경매에서 지운다', /\$\('tv-potMe'\)\.classList\.remove\('passed'\)/.test(cli));
   // 가진 칩은 판 위에 올린다 — 왼쪽 레일에 상대 칩 · 덱 · 내 칩 순으로.
   // 판 밖에 두면 '내 지갑' 이 아니라 화면 장식으로 보인다.
-  ok('칩이 판 위 레일에 있다',
-     /id="tv-lrail">[\s\S]{0,120}id="tv-oppChips"[\s\S]{0,400}id="tv-deck"[\s\S]{0,400}id="tv-myChips"/.test(htm));
-  ok('좁은 레일에서 숫자가 안 접힌다', /#tv-lrail \.tv-chips \{[^}]*white-space:nowrap/.test(htm));
+  // 배팅과 가진 칩은 한자리에 모아 오른쪽 레일에 세운다 — 칩 이야기는
+  // 한 군데서 읽혀야 한다. 위에서부터 상대 칩 · 상대 배팅 · 은행 · 내 배팅 · 내 칩.
+  ok('칩이 오른쪽 레일에 다 모여 있다',
+     /id="tv-rail">[\s\S]{0,200}id="tv-oppChips"[\s\S]{0,300}id="tv-potOpp"[\s\S]{0,300}id="tv-bank"[\s\S]{0,300}id="tv-potMe"[\s\S]{0,300}id="tv-myChips"/.test(htm));
+  ok('다섯 칸이 서므로 칩 딱지는 작게', /\.tv-chips\.mini \{[^}]*white-space:nowrap/.test(htm));
   ok('액수는 큰 버튼으로 고른다', /function tvAmount/.test(cli) && /\.tv-step \{[\s\S]{0,80}width:46px; height:46px/.test(htm));
   ok('클로즈는 짝수만 나온다', /tvAmount\(box, 2, hi, 2, 2\)/.test(cli));
   ok('숫자 입력칸의 작은 화살표는 안 쓴다', !/inp\.type = 'number'/.test(cli));
@@ -385,8 +387,8 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   // 높이는 화면에 매어 둔다 — 낮은 화면에서 안 줄면 아래 칸을 밀어낸다
   ok('카드 자리 고정', /#tv-mat \.a-card \{ width:70px; height:min\(98px, 15vh\)/.test(htm));
   ok('2인전과 같은 줄 구성', /id="tv-oppZone"/.test(htm) && /id="tv-centerZone"/.test(htm) && /id="tv-myZone"/.test(htm));
-  ok('덱은 띄워 붙여 경매대를 안 민다', /#tv-lrail \{ position:absolute/.test(htm));
-  ok('덱이 가죽 테두리에 안 걸친다', /#tv-lrail \{ left:26px;/.test(htm));
+  ok('덱은 띄워 붙여 경매대를 안 민다', /#tv-deck \{ position:absolute/.test(htm));
+  ok('덱이 가죽 테두리에 안 걸친다', /#tv-deck \{ left:26px; width:50px; \}/.test(htm));
   // 덱·은행이 카드보다 조금 위에 있어 줄이 안 맞아 보였다. 자리를 손으로 짚지 않고
   // 실제로 그려진 칸의 높이에 맞춘다 (화면 크기에 따라 카드가 줄기 때문이다).
   ok('덱·은행을 카드 줄에 맞춘다', /function tvAlignRow\(\)/.test(cli)
@@ -454,9 +456,11 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
      && /room2\.tvThink = setTimeout\(\(\) => tvBot\(roomId\), pause\)/.test(read('server.js')));
   ok('내 프로필이 보인다', /id="tv-myProfile"/.test(htm) && /renderGameProfile\('tv-myProfile'/.test(cli));
   // 사람은 판 위아래에 앉는다 — 프로필과 시계가 손패 바로 위에 나란히
-  ok('자리가 손패 위에 있다',
-     /id="tv-oppSeat"[\s\S]{0,400}id="tv-oppHand"/.test(htm)
-     && /id="tv-mySeat"[\s\S]{0,400}id="tv-myHand"/.test(htm));
+  // 두 사람 다 판 ← 전리품 ← 자리 ← 손패 순. 상대만 자리가 손패 바깥이면
+  // 마주 앉은 모양이 아니라 한쪽만 뒤로 물러앉은 꼴이 된다.
+  ok('자리가 손패보다 판 쪽에 있다',
+     /id="tv-oppHand"[\s\S]{0,400}id="tv-oppSeat"[\s\S]{0,400}id="tv-oppAcq"/.test(htm)
+     && /id="tv-myAcq"[\s\S]{0,400}id="tv-mySeat"[\s\S]{0,400}id="tv-myHand"/.test(htm));
   ok('시계가 프로필 옆에 붙어 있다',
      /id="tv-oppProfile"[\s\S]{0,200}id="tv-oppTimer"/.test(htm)
      && /id="tv-myProfile"[\s\S]{0,200}id="tv-myTimer"/.test(htm)

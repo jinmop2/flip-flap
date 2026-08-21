@@ -6004,26 +6004,25 @@ function tvLayTable() {
   const table = document.getElementById('tv-table');
   if (!table) return;
   const rect = (id) => { const el = document.getElementById(id); return el ? el.getBoundingClientRect() : null; };
-  const all = ['tv-oppAcq', 'tv-lrail', 'tv-mat', 'tv-rail', 'tv-myAcq'].map(rect).filter((r) => r && r.height > 0);
-  // 전리품 더미는 비어 있으면 폭이 0 이다 — 그래도 높이는 있으니 위아래 끝을
-  // 잡는 데는 쓴다. 좌우는 실제로 자리를 차지하는 것들로만 잡는다.
-  const wide = all.filter((r) => r.width > 0);
-  if (wide.length < 3) { table.classList.remove('on'); return; }
+  const wide = ['tv-deck', 'tv-mat', 'tv-rail'].map(rect).filter((r) => r && r.width > 0);
+  if (wide.length < 2) { table.classList.remove('on'); return; }
   const host = document.getElementById('tv').getBoundingClientRect();
   // 가죽 레일은 펠트 밖으로 뻗는다(box-shadow spread). 그만큼을 미리 비워 두지
   // 않으면 레일이 화면 밖으로 잘려 테이블이 잘린 판때기로 보인다.
   const RAIL = 25;
-  const padX = 16, padTop = 7, padBottom = 7;
+  const padX = 16;
   let left = Math.min(...wide.map((r) => r.left)) - padX;
   let right = Math.max(...wide.map((r) => r.right)) + padX;
-  let top = Math.min(...all.map((r) => r.top)) - padTop;
-  let bottom = Math.max(...all.map((r) => r.bottom)) + padBottom;
-  // 사람은 테이블 밖에 앉는다 — 프로필·시계·손패는 판 위가 아니다.
-  // 자리가 손패보다 위이므로 자리 기준으로 잘라야 프로필이 판에 안 걸린다.
-  const mine = [rect('tv-mySeat'), rect('tv-myHand')].filter((r) => r && r.height);
-  const theirs = [rect('tv-oppSeat'), rect('tv-oppHand')].filter((r) => r && r.height);
-  if (mine.length) bottom = Math.min(bottom, Math.min(...mine.map((r) => r.top)) - RAIL - 2);
-  if (theirs.length) top = Math.max(top, Math.max(...theirs.map((r) => r.bottom)) + RAIL + 2);
+  // 위아래는 두 사람 사이를 통째로 쓴다. 놓인 것들만 감싸면 판이 아래로 쏠려
+  // 위쪽이 휑하게 빈다 — 테이블은 앉은 사람 사이를 채우는 것이다.
+  const seatEdge = (seat, hand, pick) => {
+    const rs = [rect(seat), rect(hand)].filter((r) => r && r.height);
+    return rs.length ? pick(...rs.map((r) => (pick === Math.min ? r.top : r.bottom))) : null;
+  };
+  const myTop = seatEdge('tv-mySeat', 'tv-myHand', Math.min);
+  const oppBottom = seatEdge('tv-oppSeat', 'tv-oppHand', Math.max);
+  let top = oppBottom != null ? oppBottom + RAIL + 2 : host.top + RAIL + 2;
+  let bottom = myTop != null ? myTop - RAIL - 2 : host.bottom - RAIL - 2;
   left = Math.max(left, host.left + RAIL + 2);
   right = Math.min(right, host.right - RAIL - 2);
   top = Math.max(top, host.top + RAIL + 2);
@@ -6033,6 +6032,23 @@ function tvLayTable() {
   table.style.width = Math.round(Math.max(60, right - left)) + 'px';
   table.style.height = Math.round(Math.max(60, bottom - top)) + 'px';
   table.classList.add('on');
+  tvCenterBoard(top, bottom);
+}
+
+// 덱·경매대·레일을 테이블 한가운데로. 칸 배치만으로는 아래 문구·버튼 칸 때문에
+// 위로 쏠리거나 아래로 처진다 — 테이블을 잡고 나서 그 한가운데에 맞춘다.
+// 테이블 크기는 앉은 자리로 정해지므로 여기서 내용을 밀어도 다시 안 흔들린다.
+function tvCenterBoard(top, bottom) {
+  const zone = document.getElementById('tv-centerZone');
+  // 경매대 상자가 아니라 카드가 앉는 칸을 기준으로 잡는다. 상자에는 이름표가
+  // 붙어 있어 상자를 한가운데 두면 정작 카드는 그만큼 아래로 내려간다.
+  const mat = document.getElementById('tv-center') || document.getElementById('tv-mat');
+  if (!zone || !mat) return;
+  zone.style.transform = 'translateY(0px)';
+  const m = mat.getBoundingClientRect();
+  if (!m.height) return;
+  const want = (top + bottom) / 2, now = m.top + m.height / 2;
+  zone.style.transform = `translateY(${Math.round(want - now)}px)`;
 }
 
 // 덱·은행을 경매품 카드와 한 줄에 맞춘다.
@@ -6043,13 +6059,11 @@ function tvAlignRow() {
   // 카드 자체가 아니라 그 카드가 앉는 칸을 잰다 — 카드는 뽑히는 동안 움직이므로
   // 그때 재면 어긋난 값이 잡힌다.
   const card = document.getElementById('tv-center');
-  // 덱은 이제 왼쪽 레일(칩·덱·칩) 안에 있다. 덱만 밀면 레일 안에서 혼자
-  // 어긋나므로, 덱 무더기를 기준 삼아 레일 전체를 카드 줄에 맞춘다.
-  const lrail = document.getElementById('tv-lrail');
+  const deck = document.getElementById('tv-deck');
   const stack = document.getElementById('tv-deckStack');
   const rail = document.getElementById('tv-rail');
   const bank = document.getElementById('tv-bank');
-  if (!card || !lrail || !stack) return;
+  if (!card || !deck || !stack) return;
   const cy = (() => { const b = card.getBoundingClientRect(); return b.height ? b.top + b.height / 2 : 0; })();
   if (!cy) return;
   const fix = (box, inner) => {
@@ -6059,7 +6073,7 @@ function tvAlignRow() {
     if (!b.height) return;
     box.style.marginTop = Math.round(cy - (b.top + b.height / 2)) + 'px';
   };
-  fix(lrail, stack);
+  fix(deck, stack);
   fix(rail, bank);
   tvLayTable();   // 줄을 맞춘 뒤라야 테이블이 제 자리를 잡는다
 }

@@ -4186,16 +4186,15 @@
       justify-content:flex-end; padding-bottom:calc(66px + var(--safe-b)); }
 
     /* 덱 — 2인전 덱과 같은 자리·크기 */
-    /* 왼쪽 레일 — 가진 칩과 덱. 오른쪽 레일과 짝을 이룬다.
-       예전엔 덱만 왼쪽 끝에 홀로 붙어 가죽 테두리에 걸쳐 있었다. */
-    #tv-lrail { position:absolute; left:calc(50% - 196px); top:50%; transform:translateY(-50%);
-      width:76px; display:flex; flex-direction:column; align-items:center; gap:10px; z-index:3; }
-    /* 레일이 좁아 숫자가 줄바꿈되면 '2 0' 처럼 읽힌다 — 한 줄로 못 박는다 */
-    #tv-lrail .tv-chips { padding:4px 8px 4px 5px; font-size:.76rem; gap:5px; white-space:nowrap; }
-    #tv-lrail .tv-chips b { white-space:nowrap; }
-    #tv-lrail .cs-stack { width:16px; height:28px; }
-    #tv-lrail .cs-stack .chip { width:16px; }
-    #tv-deck { width:64px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+    /* 덱 — 판 왼쪽. 가죽 테두리에 걸치지 않게 안쪽으로 들여 세운다. */
+    #tv-deck { position:absolute; left:calc(50% - 190px); top:50%; transform:translateY(-50%);
+      width:64px; z-index:3; display:flex; flex-direction:column; align-items:center; gap:8px; }
+    /* 레일에 들어가는 칩 현황 — 한 줄짜리 작은 딱지. 세로로 다섯 칸이 서므로
+       가진 칩까지 큰 쌓기로 두면 레일이 판을 넘어간다. */
+    .tv-chips.mini { padding:3px 8px 3px 5px; font-size:.74rem; gap:4px; white-space:nowrap;
+      border-radius:11px; align-items:center; }
+    .tv-chips.mini .cs-stack { width:14px; height:20px; }
+    .tv-chips.mini .cs-stack .chip { width:14px; height:4px; }
     #tv-deckStack { position:relative; width:64px; height:90px; }
     #tv-deckStack .card { position:absolute; top:0; left:0; box-shadow:0 2px 6px rgba(0,0,0,.55); }
     #tv-deckCount { font-size:.66rem; color:rgba(255,255,255,.55); font-weight:700; white-space:nowrap; }
@@ -4378,9 +4377,8 @@
       #tv-mat { width:auto; max-width:224px; min-width:200px; min-height:200px; padding:10px; gap:8px; }
       #tv-mat .a-card { width:58px; height:81px; }
       /* 가죽 레일이 화면 끝에서 25px 을 먹는다 — 그보다 안쪽에 서야 판 위다 */
-      #tv-lrail { left:26px; width:58px; gap:7px; }
-      #tv-deck { width:50px; }
-      #tv-rail { left:auto; right:26px; width:58px; gap:7px; }
+      #tv-deck { left:26px; width:50px; }
+      #tv-rail { left:auto; right:22px; width:60px; gap:5px; }
       #tv-bank { width:50px; font-size:.6rem; }
       .tv-pot { min-height:44px; }
       .pot-stack { height:24px; }
@@ -5921,11 +5919,11 @@
 
   <!-- 상대 — 판 위쪽에 앉는다. 프로필·시계가 손패 위에 나란히. -->
   <div class="zone" id="tv-oppZone">
+    <div class="fan top" id="tv-oppHand"></div>
     <div class="tv-seat" id="tv-oppSeat">
       <div class="game-pcard" id="tv-oppProfile" onclick="toggleStats(this)"><div class="pc-body"></div><div class="pc-stats"></div></div>
       <div class="timer pc-timer" id="tv-oppTimer">5:00</div>
     </div>
-    <div class="fan top" id="tv-oppHand"></div>
     <div class="pile" id="tv-oppAcq"></div>
     <div class="tv-say" id="tv-oppSay"></div>
   </div>
@@ -5934,14 +5932,10 @@
   <div class="zone" id="tv-centerZone">
     <!-- 왼쪽 레일 — 가진 칩. 판 밖에 두면 '내 지갑' 이 아니라 화면 장식으로
          보인다. 상대 것은 위, 내 것은 아래 — 앉은 자리와 같은 순서다. -->
-    <div id="tv-lrail">
-      <div class="tv-chips" id="tv-oppChips"><span class="cs-stack"></span><b>20</b></div>
-      <div id="tv-deck" title="눌러서 뒤집기">
-        <div id="tv-turn">턴 1</div>
-        <div id="tv-deckStack"></div>
-        <div id="tv-deckCount">덱 <b id="tv-deckLeft">12</b></div>
-      </div>
-      <div class="tv-chips" id="tv-myChips"><span class="cs-stack"></span><b>20</b></div>
+    <div id="tv-deck" title="눌러서 뒤집기">
+      <div id="tv-turn">턴 1</div>
+      <div id="tv-deckStack"></div>
+      <div id="tv-deckCount">덱 <b id="tv-deckLeft">12</b></div>
     </div>
     <div id="tv-mat">
       <div class="type-badge" id="tv-typeBadge"></div>
@@ -5954,9 +5948,11 @@
          숫자만 있으면 얼마가 오갔는지 읽어야 하지만, 쌓여 있으면 보인다.
          은행을 가운데 두어 흐름(내 자리 → 내 배팅 → 은행)이 한 방향으로 읽힌다. -->
     <div id="tv-rail">
+      <div class="tv-chips mini" id="tv-oppChips"><span class="cs-stack"></span><b>20</b></div>
       <div class="tv-pot opp" id="tv-potOpp"><span class="pot-stack"><i class="pot-pass">PASS</i></span><b>0</b><small>상대</small></div>
       <div id="tv-bank"><i class="chip dark"></i><i class="chip light"></i><span>은행</span></div>
       <div class="tv-pot me" id="tv-potMe"><span class="pot-stack"><i class="pot-pass">PASS</i></span><b>0</b><small>내 배팅</small></div>
+      <div class="tv-chips mini" id="tv-myChips"><span class="cs-stack"></span><b>20</b></div>
     </div>
     <div id="tv-status">–</div>
   </div>

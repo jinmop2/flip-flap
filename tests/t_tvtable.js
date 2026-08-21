@@ -20,19 +20,25 @@ ok('구역들이 테이블보다 위에 있다', /#tv-oppZone, #tv-centerZone, #
 
 console.log('\n② 무엇이 테이블 위에 오르나');
 const lay = cli.slice(cli.indexOf('function tvLayTable'), cli.indexOf('function tvLayTable') + 1800);
-ok('덱·경매대·칩·전리품을 잰다', /'tv-oppAcq', 'tv-lrail', 'tv-mat', 'tv-rail', 'tv-myAcq'/.test(lay));
-ok('빈 더미도 세로 범위에 넣는다', /r\.height > 0/.test(lay));
-ok('폭이 0인 빈 더미는 가로 범위에서 뺀다', /r\.width > 0/.test(lay));
+// 좌우는 판 위에 놓인 것들로, 위아래는 앉은 사람 사이로 잡는다.
+ok('가로는 덱·경매대·레일로 잰다', /const wide = \['tv-deck', 'tv-mat', 'tv-rail'\]/.test(lay));
+ok('빈 더미에 휘둘리지 않는다', /r\.width > 0/.test(lay));
 
 console.log('\n③ 손패는 테이블 밖');
 ok('레일 두께를 알고 있다', /const RAIL = 25;/.test(lay));
-// 자리(프로필·시계)가 손패보다 위다 — 손패만 보고 자르면 프로필이 판에 걸친다
-ok('내 자리 위에서 레일이 끝난다',
-   /const mine = \[rect\('tv-mySeat'\), rect\('tv-myHand'\)\]/.test(lay)
-   && /bottom = Math\.min\(bottom, Math\.min\(\.\.\.mine\.map\(\(r\) => r\.top\)\) - RAIL - 2\)/.test(lay));
-ok('상대 자리 아래에서 레일이 시작한다',
-   /const theirs = \[rect\('tv-oppSeat'\), rect\('tv-oppHand'\)\]/.test(lay)
-   && /top = Math\.max\(top, Math\.max\(\.\.\.theirs\.map\(\(r\) => r\.bottom\)\) \+ RAIL \+ 2\)/.test(lay));
+// 놓인 것만 감싸면 판이 아래로 쏠려 위가 휑하게 빈다 — 두 사람 사이를 통째로 쓴다
+ok('위아래는 앉은 사람 사이를 다 쓴다',
+   /const myTop = seatEdge\('tv-mySeat', 'tv-myHand', Math\.min\)/.test(lay)
+   && /const oppBottom = seatEdge\('tv-oppSeat', 'tv-oppHand', Math\.max\)/.test(lay)
+   && /let top = oppBottom != null \? oppBottom \+ RAIL \+ 2/.test(lay)
+   && /let bottom = myTop != null \? myTop - RAIL - 2/.test(lay));
+// 덱·경매품은 테이블 한가운데 — 아래 문구 칸 때문에 저절로는 위로 쏠린다
+ok('판 위 물건을 테이블 한가운데로', /function tvCenterBoard\(top, bottom\)/.test(cli)
+   && /tvCenterBoard\(top, bottom\);/.test(cli));
+ok('상자가 아니라 카드 칸을 가운데 맞춘다',
+   /const mat = document\.getElementById\('tv-center'\) \|\| document\.getElementById\('tv-mat'\)/.test(cli));
+ok('테이블을 잡은 뒤에 맞춘다 — 서로 물고 흔들리지 않게',
+   cli.indexOf('table.classList.add(\'on\');') < cli.indexOf('tvCenterBoard(top, bottom);'));
 ok('레일이 화면 밖으로 안 잘린다', /left = Math\.max\(left, host\.left \+ RAIL \+ 2\)/.test(lay)
    && /right = Math\.min\(right, host\.right - RAIL - 2\)/.test(lay));
 // 레일이 지나갈 틈이 없으면 전리품이 테이블 밖으로 밀려난다
@@ -64,7 +70,7 @@ ok('터치에는 포인터 캡처를 안 건다', /if \(e\.pointerType === 'mous
 // 트웰브 버튼만 다른 길을 쓰고 있었다 — 2인전과 같은 길로 맞춘다
 ok('경매 방식 버튼이 2인전과 같은 길을 쓴다', /b\.textContent = label; onPress\(b, fn\);/.test(cli));
 ok('배팅 액수 버튼도 같은 길', /onPress\(minus, \(\) =>/.test(cli) && /onPress\(plus,  \(\) =>/.test(cli));
-ok('덱 무더기 기준으로 왼쪽 레일 전체를 카드 줄에 맞춘다', /fix\(lrail, stack\);/.test(cli));
+ok('덱·은행을 카드 줄에 맞춘다', /fix\(deck, stack\);/.test(cli) && /fix\(rail, bank\);/.test(cli));
 
 // 진짜 원인은 겹침이었다. 세로가 짧은 기기(아이폰 사파리는 아래 툴바 때문에
 // 745px 쯤 된다)에서 내 칸이 위로 올라와 경매 버튼을 통째로 덮었다 —
