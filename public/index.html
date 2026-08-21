@@ -4160,7 +4160,6 @@
     @keyframes csGone { to { transform:translate(-26px,-26px) scaleX(.6); opacity:0; } }
     .tv-chips b { line-height:1; padding-bottom:1px; }
     /* 상대 칩은 화면 끝에 딱 붙어 있으면 잘 안 읽힌다 — 판 쪽으로 조금 당긴다 */
-    #tv-oppChips { margin-left:30px; }
 
     /* 존 — 2인전과 같은 배치 */
     #tv-oppZone, #tv-centerZone, #tv-myZone { position:relative; z-index:1; }
@@ -4191,8 +4190,8 @@
       width:64px; z-index:3; display:flex; flex-direction:column; align-items:center; gap:8px; }
     /* 레일에 들어가는 칩 현황 — 한 줄짜리 작은 딱지. 세로로 다섯 칸이 서므로
        가진 칩까지 큰 쌓기로 두면 레일이 판을 넘어간다. */
-    .tv-chips.mini { padding:3px 8px 3px 5px; font-size:.74rem; gap:4px; white-space:nowrap;
-      border-radius:11px; align-items:center; }
+    .tv-chips.mini { padding:3px 6px; font-size:.74rem; gap:4px; white-space:nowrap;
+      border-radius:11px; align-items:center; justify-content:center; }
     .tv-chips.mini .cs-stack { width:14px; height:20px; }
     .tv-chips.mini .cs-stack .chip { width:14px; height:4px; }
     #tv-deckStack { position:relative; width:64px; height:90px; }
@@ -4284,6 +4283,12 @@
        칩은 늘 위아래(각자 자리)에서 가운데(은행)로만 흐른다. */
     #tv-rail { position:absolute; left:calc(50% + 120px); top:50%; transform:translateY(-50%);
       width:76px; display:flex; flex-direction:column; align-items:center; gap:10px; z-index:3; }
+    /* 레일 안의 다섯 칸은 폭을 맞춰 한 줄로 세운다 — 내용 길이에 따라 제각각
+       가운데 정렬되면 20 과 8 이 서로 다른 자리에 서서 삐뚤어 보인다. */
+    #tv-rail > * { width:100%; box-sizing:border-box; justify-content:center; }
+    /* 가진 칩과 건 칩은 다른 이야기다 — 사이를 벌려 한 덩어리로 안 읽히게 */
+    #tv-rail #tv-oppChips { margin-bottom:8px; }
+    #tv-rail #tv-myChips { margin-top:8px; }
     .tv-pot { display:flex; flex-direction:column; align-items:center; gap:1px;
       font-family:'Fredoka'; font-weight:900; color:#f0e2c8; min-height:52px; justify-content:flex-end; }
     .tv-pot.opp { justify-content:flex-start; }
@@ -4313,7 +4318,7 @@
     .tv-pot.passed .pot-pass { display:block; }
     @keyframes potPass { from { opacity:0; transform:translate(-50%,-50%) rotate(-14deg) scale(1.6); } }
 
-    #tv-bank { width:64px; display:flex; flex-direction:column; align-items:center; gap:3px;
+    #tv-bank { display:flex; flex-direction:column; align-items:center; gap:3px;
       font-size:.66rem; color:rgba(255,255,255,.5); font-weight:700; }
     #tv-bank .chip { margin-bottom:-9px; }
     #tv-bank span { margin-top:12px; }
@@ -4379,7 +4384,7 @@
       /* 가죽 레일이 화면 끝에서 25px 을 먹는다 — 그보다 안쪽에 서야 판 위다 */
       #tv-deck { left:26px; width:50px; }
       #tv-rail { left:auto; right:22px; width:60px; gap:5px; }
-      #tv-bank { width:50px; font-size:.6rem; }
+      #tv-bank { font-size:.6rem; }
       .tv-pot { min-height:44px; }
       .pot-stack { height:24px; }
       #tv-deckStack { width:50px; height:70px; }

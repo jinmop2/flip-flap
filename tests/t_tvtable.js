@@ -55,6 +55,18 @@ ok('어둠은 바닥에만 얹힌다 — 카드는 안 먹는다', /#tv::after \
 console.log('\n⑤ 가운데 네모 박스는 없다');
 ok('경매대에 배경도 테두리도 없다', /#tv-mat \{[\s\S]{0,420}background:none; border:0; box-shadow:none;/.test(htm));
 
+console.log('\n⑤-2 레일은 한 줄로 반듯하게');
+// 다섯 칸이 제 내용 길이대로 가운데 정렬되면 20 과 8 이 서로 다른 자리에 서서
+// 삐뚤어 보인다. 폭을 맞춰 한 줄로 세운다.
+ok('레일 칸의 폭을 맞춘다', /#tv-rail > \* \{ width:100%; box-sizing:border-box; justify-content:center; \}/.test(htm));
+ok('은행도 제 폭을 고집하지 않는다', !/#tv-bank \{ width:/.test(htm) && !/#tv-bank \{ width:50px/.test(htm));
+// 가진 칩과 건 칩은 다른 이야기다
+ok('가진 칩과 건 칩 사이를 벌린다',
+   /#tv-rail #tv-oppChips \{ margin-bottom:8px; \}/.test(htm)
+   && /#tv-rail #tv-myChips \{ margin-top:8px; \}/.test(htm));
+// 상대 칩만 옆으로 밀려 판 밖으로 삐져나가던 옛 값
+ok('상대 칩만 옆으로 밀지 않는다', !/#tv-oppChips \{ margin-left:30px; \}/.test(htm));
+
 console.log('\n⑥ 버튼은 한 번에 눌린다 (아이폰에서 새던 길)');
 // 아이폰은 버튼 위의 손가락도 스크롤로 채 간다. 그러면 pointerup 도 click 도
 // 없이 pointercancel 만 남고 누름이 통째로 사라진다.
