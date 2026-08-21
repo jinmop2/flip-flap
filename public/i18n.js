@@ -82,7 +82,7 @@
     '무작위 매칭 · RP 반영': 'Random matching · counts for RP',
     '기록 안 됨': 'Not recorded',
     '방': 'Rooms',
-    'AI 2명 · 손패 7장': '2 AI · 7 cards',
+    'AI 2명 · 손패 6장': '2 AI · 6 cards',
     'AI 3명 · 손패 6장': '3 AI · 6 cards',
 
     '솔로플레이': 'Solo play',
@@ -611,7 +611,6 @@
     'AI 2명': '2 AI',
     'AI 3명': '3 AI',
     '손패 6장': '6 cards each',
-    '손패 7장': '7 cards each',
     '※ 베타 — 전적·코인에 반영되지 않습니다': '※ Beta — does not affect your record or coins',
     '진행자도 함께 입찰합니다 (첫 경매만 제외)': 'The auctioneer bids too',
     '배팅 카드는': 'Bid cards go',

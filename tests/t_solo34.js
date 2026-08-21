@@ -24,7 +24,7 @@ function solo(n, ip) {
     ok('자리 3개', beg && beg.n === 3 && beg.seats.length === 3);
     ok('사람 1 · AI 2', beg && beg.seats.filter((x) => !x.isBot).length === 1
                           && beg.seats.filter((x) => x.isBot).length === 2);
-    ok('손패 7장', st && st.myHand && st.myHand.length === 7);
+    ok('손패 6장', st && st.myHand && st.myHand.length === 6);   // 3인 덱을 30장으로 줄이며 6장으로
     ok('내 자리는 0번', beg && beg.me === 0);
   }
 

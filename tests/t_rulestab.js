@@ -64,8 +64,8 @@ console.log('\n④ 3인용·4인용은 같은 글, 다른 숫자');
   ok('안내 줄도 상자 밖', /rules-tabs[\s\S]{0,700}id="rules4Note"[\s\S]{0,400}class="rules-box"/.test(html));
   // 실제 규칙(game4.js)과 숫자가 같아야 한다
   const g4 = fs.readFileSync(src + '/game4.js', 'utf8');
-  ok('손패 장수가 규칙과 같다', /const HAND = \{ 3: 7, 4: 6 \}/.test(g4));
-  ok('덱 장수가 주석과 같다', /3인 덱 17장 \/ 4인 덱 14장/.test(g4));
+  ok('손패 장수가 규칙과 같다', /const HAND = \{ 3: 6, 4: 6 \}/.test(g4));
+  ok('덱 장수가 주석과 같다', /3인 덱 12장 \/ 4인 덱 14장/.test(g4));
 }
 
 console.log('\n⑤ 아이템전 설명서');

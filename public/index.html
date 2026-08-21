@@ -1385,7 +1385,7 @@
     /* 왼쪽의 이름·남은장수 배지가 60px 쯤 먹는다. 그만큼 빼고도 11장이 들어가야 한다. */
     #q-myacq .q-pg .card { width:36px; height:50px; padding:3px 3px 2px; border-width:1.5px; }
     #q-myacq .q-pg .card:not(:first-child) { margin-left:-18px; }
-    /* 3인전은 손패가 7장이라 6장 기준 크기로는 화면을 넘는다 — 조금 줄인다 */
+    /* 3인전 손패도 이제 6장이지만, 자리 폭이 달라 크기는 따로 잡아 둔다 */
     body.q-n3 #q-myhand .card { width:56px; height:78px; }
     body.q-n3 #q-myhand .card .c-rank { font-size:.9rem; padding:1px 5px; min-width:20px; }
     body.q-n3 #q-myhand .card .c-num { font-size:1.9rem; }
@@ -4792,7 +4792,7 @@
       <button class="mm-tile t-quad" onclick="q4Start(3)">
         <span class="mt-ico">👥</span>
         <span class="mt-name">3인전</span>
-        <span class="mt-sub">AI 2명 · 손패 7장</span>
+        <span class="mt-sub">AI 2명 · 손패 6장</span>
       </button>
       <button class="mm-tile t-quad" onclick="q4Start(4)">
         <span class="mt-ico">👪</span>
@@ -5344,30 +5344,30 @@
     <span data-ico="⚠"></span> 경매로 따서 <b>내 앞에 깔 카드만</b> 인정 (손에 든 카드는 X)<br>
     <span data-ico="🏁"></span> 덱이 다 떨어지면 <b>세트에 가장 근접한 사람</b>이 승리</span></p>
 
-    <h3><span data-ico="🗂"></span> 카드 구성 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 총 38장</span></h3>
-    <p style="font-size:.78rem;margin-top:-2px">2인전(24장)보다 두툼하다. 3인·4인이 <b>같은 한 벌</b>을 쓰고, 손패 장수로 균형을 맞춘다.</p>
+    <h3><span data-ico="🗂"></span> 카드 구성 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 4인 38장 · 3인 30장</span></h3>
+    <p style="font-size:.78rem;margin-top:-2px">2인전(24장)보다 두툼하다. 3인은 <b>같은 한 벌에서 8장을 덜어내고</b> 시작한다 — 카드가 많으면 한 장의 무게가 가벼워진다.</p>
     <div class="r-comp">
       <div class="r-comp-row">
         <div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
-        <span><b>2짜리</b> · 4장 <span class="r-comp-g">(등급 1–4)</span></span>
+        <span><b>2짜리</b> · 4장 <span class="r-comp-g">(3인 3장)</span></span>
       </div>
       <div class="r-comp-row">
         <div class="rc" data-kind="3"><span class="rc-rank">1</span><span class="rc-num">3</span></div>
-        <span><b>3짜리</b> · 6장 <span class="r-comp-g">(등급 1–6)</span></span>
+        <span><b>3짜리</b> · 6장 <span class="r-comp-g">(3인 5장)</span></span>
       </div>
       <div class="r-comp-row">
         <div class="rc" data-kind="4"><span class="rc-rank">1</span><span class="rc-num">4</span></div>
-        <span><b>4짜리</b> · 10장 <span class="r-comp-g">(등급 1–10)</span></span>
+        <span><b>4짜리</b> · 10장 <span class="r-comp-g">(3인 8장)</span></span>
       </div>
       <div class="r-comp-row">
         <div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
-        <span><b>6짜리</b> · 18장 <span class="r-comp-g">(등급 1–18)</span></span>
+        <span><b>6짜리</b> · 18장 <span class="r-comp-g">(3인 14장)</span></span>
       </div>
     </div>
     <div class="r4-tbl">
-      <div class="r4-row r4-head"><span>인원</span><span>손패</span><span>중앙 덱</span></div>
-      <div class="r4-row"><span>3인</span><span>7장</span><span>17장</span></div>
-      <div class="r4-row"><span>4인</span><span>6장</span><span>14장</span></div>
+      <div class="r4-row r4-head"><span>인원</span><span>덱</span><span>손패</span><span>중앙 덱</span></div>
+      <div class="r4-row"><span>3인</span><span>30장</span><span>6장</span><span>12장</span></div>
+      <div class="r4-row"><span>4인</span><span>38장</span><span>6장</span><span>14장</span></div>
     </div>
 
     <h3><span data-ico="🔄"></span> 한 번의 경매</h3>

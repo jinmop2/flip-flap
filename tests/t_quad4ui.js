@@ -395,10 +395,17 @@ console.log('\n⑨ 다인전 설명서');
   const g4src = fs.readFileSync(src + '/game4.js', 'utf8');
   // 다른 설명서까지 끌어오면 없는 문구도 있는 것처럼 보인다 — 이 상자 안에서만 찾는다
   const box = html.slice(html.indexOf('id="rulesBox4"'), html.indexOf('id="rulesMiniModal"'));
-  ok('덱 38장', /DECK38 = \[\[2, 4\], \[3, 6\], \[4, 10\], \[6, 18\]\]/.test(g4src) && /38장/.test(box));
+  // 3인은 같은 한 벌에서 8장을 덜어낸다 — 38장은 3인에게 과했다
+  // (17장 덱에서 실제로 뽑히는 건 7.9장뿐이었다)
+  ok('덱 4인 38장 · 3인 30장',
+     /DECK38 = \[\[2, 4\], \[3, 6\], \[4, 10\], \[6, 18\]\]/.test(g4src)
+     && /DECK30 = \[\[2, 3\], \[3, 5\], \[4, 8\], \[6, 14\]\]/.test(g4src)
+     && /SPECS = \{ 3: DECK30, 4: DECK38 \}/.test(g4src)
+     && /4인 38장 · 3인 30장/.test(box));
   ok('4종 10장·6종 18장', /4짜리<\/b> · 10장/.test(box) && /6짜리<\/b> · 18장/.test(box));
-  ok('손패 3인 7·4인 6', /HAND = \{ 3: 7, 4: 6 \}/.test(g4src)
-     && /<span>3인<\/span><span>7장<\/span>/.test(box) && /<span>4인<\/span><span>6장<\/span>/.test(box));
+  ok('손패 둘 다 6장', /HAND = \{ 3: 6, 4: 6 \}/.test(g4src)
+     && /<span>3인<\/span><span>30장<\/span><span>6장<\/span><span>12장<\/span>/.test(box)
+     && /<span>4인<\/span><span>38장<\/span><span>6장<\/span><span>14장<\/span>/.test(box));
   ok('진행자도 같이 낸다', /전원<\/b>이 배팅 카드를 낸다/.test(box));
   ok('클로즈는 순차 공개', /<b>시계방향으로 한 명씩<\/b>/.test(box));
   ok('역순 분배', /약하게 부른 사람이 가장 강한 카드<\/b>/.test(box));
