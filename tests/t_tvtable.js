@@ -10,7 +10,9 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++,
 
 console.log('① 테이블 판');
 ok('테이블 요소가 있다', /<div id="tv-table"><\/div>/.test(htm));
-ok('나무 테두리가 있다', /#tv-table \{[^}]*border:9px solid/.test(htm));
+ok('두툼한 가죽 레일이 둘러 있다', /#tv-table \{[\s\S]{0,900}0 0 0 22px #2b1d13/.test(htm));
+ok('위아래가 둥근 판이다', /#tv-table \{[^}]*border-radius:46% \/ 20%/.test(htm));
+ok('레일 윗면에 빛이 있다', /#tv-table::before \{[\s\S]{0,200}inset:-23px/.test(htm));
 ok('펠트 천이다', /#tv-table \{[^}]*var\(--felt\)/.test(htm));
 ok('켜질 때만 보인다', /#tv-table\.on \{ opacity:1; \}/.test(htm));
 ok('탭을 먹지 않는다', /#tv-table \{[^}]*pointer-events:none/.test(htm));
@@ -23,9 +25,13 @@ ok('빈 더미도 세로 범위에 넣는다', /r\.height > 0/.test(lay));
 ok('폭이 0인 빈 더미는 가로 범위에서 뺀다', /r\.width > 0/.test(lay));
 
 console.log('\n③ 손패는 테이블 밖');
-ok('내 손패 위에서 테이블이 끝난다', /bottom = Math\.min\(bottom, myHand\.top - 6\)/.test(lay));
-ok('상대 손패 아래에서 테이블이 시작한다', /top = Math\.max\(top, oppHand\.bottom \+ 6\)/.test(lay));
-ok('전리품과 손패 사이가 떠 있다', /#tv-myAcq \{ margin-bottom:12px; \}/.test(htm) && /#tv-oppAcq \{ margin-top:12px; \}/.test(htm));
+ok('레일 두께를 알고 있다', /const RAIL = 25;/.test(lay));
+ok('내 손패 위에서 레일이 끝난다', /bottom = Math\.min\(bottom, myHand\.top - RAIL - 2\)/.test(lay));
+ok('상대 손패 아래에서 레일이 시작한다', /top = Math\.max\(top, oppHand\.bottom \+ RAIL \+ 2\)/.test(lay));
+ok('레일이 화면 밖으로 안 잘린다', /left = Math\.max\(left, host\.left \+ RAIL \+ 2\)/.test(lay)
+   && /right = Math\.min\(right, host\.right - RAIL - 2\)/.test(lay));
+// 레일이 지나갈 틈이 없으면 전리품이 테이블 밖으로 밀려난다
+ok('전리품과 손패 사이에 레일 자리가 있다', /#tv-myAcq \{ margin-bottom:34px; \}/.test(htm) && /#tv-oppAcq \{ margin-top:34px; \}/.test(htm));
 
 console.log('\n④ 배경은 방바닥');
 ok('트웰브 배경이 어두운 방이다', /#tv \{[^}]*#241a14/.test(htm));

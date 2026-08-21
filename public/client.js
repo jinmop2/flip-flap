@@ -3877,7 +3877,7 @@ async function gcRefreshUnread() {
 let gcClanUnread = 0;
 function gcPaintDot() {
   const on = Object.keys(gcUnread).length > 0 || gcClanUnread > 0;
-  for (const id of ['chatDot', 'chatDot4', 'chatDotTv']) {
+  for (const id of ['chatDot', 'chatDot4', 'chatDotTv', 'chatDotTvM']) {
     const d = document.getElementById(id); if (d) d.style.display = on ? '' : 'none';
   }
   // 로비에 있을 때도 보여야 한다 — 판 안의 채팅 버튼은 로비에서 안 보인다
@@ -5597,6 +5597,7 @@ window.tvQuit = function () {
 function tvQuitNow() {
   document.body.classList.remove('twelve');
   const tb = document.getElementById('tv-table'); if (tb) tb.classList.remove('on');
+  tvMenu(false);
   tvMoveEmote('mebar');
   const go = document.getElementById('gameOver'); if (go) go.style.display = 'none';
   tvView = null;
@@ -5609,6 +5610,23 @@ window.tvAgain = function () {
   else tvQuit();
 };
 window.tvRules = function (show) { if (show) toggleRules(true); };
+// 오른쪽 위 메뉴. 인자를 주면 그대로 열거나 닫고, 안 주면 뒤집는다.
+window.tvMenu = function (open) {
+  const m = document.getElementById('tv-menu'), b = document.getElementById('tv-menuBtn');
+  if (!m) return;
+  const on = open === undefined ? !m.classList.contains('on') : !!open;
+  m.classList.toggle('on', on);
+  if (b) b.setAttribute('aria-expanded', on ? 'true' : 'false');
+  if (on) playSound('ping');
+};
+// 판 아무 데나 누르면 닫힌다 — 열어 둔 채로 카드를 만지려다 메뉴에 막히면
+// "안 눌린다" 로 느껴진다. 메뉴 안쪽 클릭은 자기 버튼이 처리한다.
+document.addEventListener('pointerdown', (e) => {
+  const m = document.getElementById('tv-menu');
+  if (!m || !m.classList.contains('on')) return;
+  if (e.target.closest('#tv-menuWrap')) return;
+  tvMenu(false);
+}, true);
 const tvAct = (act, extra) => socket.emit('tv_act', Object.assign({ act }, extra || {}));
 
 socket.on('tv_begin', (d) => {
@@ -5966,19 +5984,26 @@ function tvLayTable() {
   const wide = all.filter((r) => r.width > 0);
   if (wide.length < 3) { table.classList.remove('on'); return; }
   const host = document.getElementById('tv').getBoundingClientRect();
-  const padX = 18, padTop = 14, padBottom = 14;
-  const left = Math.min(...wide.map((r) => r.left)) - padX;
-  const right = Math.max(...wide.map((r) => r.right)) + padX;
+  // 가죽 레일은 펠트 밖으로 뻗는다(box-shadow spread). 그만큼을 미리 비워 두지
+  // 않으면 레일이 화면 밖으로 잘려 테이블이 잘린 판때기로 보인다.
+  const RAIL = 25;
+  const padX = 16, padTop = 7, padBottom = 7;
+  let left = Math.min(...wide.map((r) => r.left)) - padX;
+  let right = Math.max(...wide.map((r) => r.right)) + padX;
   let top = Math.min(...all.map((r) => r.top)) - padTop;
   let bottom = Math.max(...all.map((r) => r.bottom)) + padBottom;
-  // 손에 든 패는 테이블 밖이다 — 가장자리에 걸치면 판 위에 놓인 것처럼 보인다.
+  // 손에 든 패는 테이블 밖이다 — 레일에 걸쳐도 판 위에 놓인 것처럼 보인다.
   const myHand = rect('tv-myHand'), oppHand = rect('tv-oppHand');
-  if (myHand && myHand.height) bottom = Math.min(bottom, myHand.top - 6);
-  if (oppHand && oppHand.height) top = Math.max(top, oppHand.bottom + 6);
-  table.style.left = Math.round(Math.max(4, left - host.left)) + 'px';
+  if (myHand && myHand.height) bottom = Math.min(bottom, myHand.top - RAIL - 2);
+  if (oppHand && oppHand.height) top = Math.max(top, oppHand.bottom + RAIL + 2);
+  left = Math.max(left, host.left + RAIL + 2);
+  right = Math.min(right, host.right - RAIL - 2);
+  top = Math.max(top, host.top + RAIL + 2);
+  bottom = Math.min(bottom, host.bottom - RAIL - 2);
+  table.style.left = Math.round(left - host.left) + 'px';
   table.style.top = Math.round(top - host.top) + 'px';
-  table.style.width = Math.round(Math.min(host.width - 8, right - left)) + 'px';
-  table.style.height = Math.round(bottom - top) + 'px';
+  table.style.width = Math.round(Math.max(60, right - left)) + 'px';
+  table.style.height = Math.round(Math.max(60, bottom - top)) + 'px';
   table.classList.add('on');
 }
 

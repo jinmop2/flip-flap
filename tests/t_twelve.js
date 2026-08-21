@@ -369,7 +369,8 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('다음 경매에서 지운다', /\$\('tv-potMe'\)\.classList\.remove\('passed'\)/.test(cli));
   // 내 칩은 이모트 위, 상대 칩은 조금 안쪽으로
   ok('내 칩이 이모트 위', /id="tv-myChips"[\s\S]{0,300}id="tv-emoteSlot"/.test(htm));
-  ok('상대 칩을 판 쪽으로 당겼다', /#tv-oppChips \{ margin-right:30px; \}/.test(htm));
+  // 상대 자리는 왼쪽 위다 — 오른쪽 위는 메뉴 아이콘이 쓴다
+  ok('상대 칩을 판 쪽으로 당겼다', /#tv-oppChips \{ margin-left:30px; \}/.test(htm));
   ok('액수는 큰 버튼으로 고른다', /function tvAmount/.test(cli) && /\.tv-step \{[\s\S]{0,80}width:46px; height:46px/.test(htm));
   ok('클로즈는 짝수만 나온다', /tvAmount\(box, 2, hi, 2, 2\)/.test(cli));
   ok('숫자 입력칸의 작은 화살표는 안 쓴다', !/inp\.type = 'number'/.test(cli));
@@ -414,13 +415,19 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('내 말풍선 꼬리는 아래로', /\.tv-say\.me \.bub::after \{ top:100%/.test(htm));
   ok('말풍선이 읽을 만큼 머문다', /\}, 300\); \}, 3400\);/.test(cli));
 
-  // 2인전에 있는 것은 여기도 있어야 한다 — 채팅·설정·이모트
-  const ctrl = htm.slice(htm.indexOf('id="tv-controls"'), htm.indexOf('id="tv-oppbar"'));
+  // 2인전에 있는 것은 여기도 있어야 한다 — 채팅·설정·이모트.
+  // 다만 판 위에 버튼 넉 장을 늘어놓지 않고 오른쪽 위 메뉴 하나로 접어 둔다.
+  const ctrl = htm.slice(htm.indexOf('id="tv-menuWrap"'), htm.indexOf('id="tv-oppbar"'));
   ok('채팅 버튼이 있다', /toggleGameChat\(\)/.test(ctrl));
   ok('설정 버튼이 있다', /toggleSettings\(\)/.test(ctrl));
   ok('설명 버튼이 있다', /tvRules\(true\)/.test(ctrl));
   ok('나가기 버튼이 있다', /tvQuit\(\)/.test(ctrl));
-  ok('안 읽은 채팅 표시도 뜬다', /id="chatDotTv"/.test(htm) && /'chatDot', 'chatDot4', 'chatDotTv'/.test(cli));
+  ok('평소엔 아이콘 하나만 보인다', /id="tv-menuBtn"/.test(ctrl) && /#tv-menu \{[^}]*display:none/.test(htm));
+  ok('눌러야 펼쳐진다', /#tv-menu\.on \{ display:flex; \}/.test(htm) && /window\.tvMenu = function \(open\)/.test(cli));
+  ok('판을 누르면 닫힌다', /if \(e\.target\.closest\('#tv-menuWrap'\)\) return;\s*\n\s*tvMenu\(false\);/.test(cli));
+  ok('나가면 메뉴도 닫는다', /tv-table'\)[\s\S]{0,90}tvMenu\(false\);/.test(cli));
+  ok('안 읽은 채팅 표시도 뜬다', /id="chatDotTv"/.test(htm)
+     && /'chatDot', 'chatDot4', 'chatDotTv', 'chatDotTvM'/.test(cli));
   ok('이모트 자리가 있다', /id="tv-emoteSlot"/.test(htm));
   ok('이모트는 두 벌 만들지 않는다', /function tvMoveEmote/.test(cli)
      && (htm.match(/id="emoteBtn"/g) || []).length === 1);
@@ -429,7 +436,7 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('상대 이모트가 상대 쪽에 뜬다', /tv \? 'tv-oppProfile' : 'oppProfile'/.test(cli));
 
   // 컨트롤이 노치에 안 가리게 — 좁은 화면에서도 안전 여백을 지킨다
-  ok('좁은 화면에서도 노치를 피한다', /#tv-controls \{ top:calc\(8px \+ var\(--safe-t\)\)/.test(htm));
+  ok('좁은 화면에서도 노치를 피한다', /#tv-menuWrap \{ top:calc\(8px \+ var\(--safe-t\)\)/.test(htm));
   // 경매대가 화면 한가운데 오게 — 아래 칸만큼 위에도 빈 칸을 둔다
   ok('경매대가 가운데로 내려온다', /#tv-centerZone::before \{ content:''; height:min\(98px, 9vh\)/.test(htm));
   ok('낮은 화면에서는 빈 칸을 접는다', /@media \(max-height:720px\) \{[\s\S]{0,120}#tv-centerZone::before \{ display:none/.test(htm));
@@ -455,7 +462,7 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   // 겉모습 — 같은 펠트, 같은 컨트롤, 같은 프로필·시계 자리
   // 펠트는 이제 화면 전체가 아니라 테이블 판이 두른다 — 손패는 테이블 밖이다
   ok('2인전과 같은 펠트', /#tv-table \{[\s\S]{0,600}var\(--felt\)/.test(htm));
-  ok('같은 컨트롤 버튼', /id="tv-controls"[\s\S]{0,900}class="ctrl-btn"/.test(htm));
+  ok('같은 컨트롤 버튼', /id="tv-menuWrap"[\s\S]{0,1200}id="tv-menu"/.test(htm));
   ok('테이블 로고가 있다', /id="tableLogoTv"/.test(htm));
   ok('시계가 화면에 있다', /id="tv-myTimer"/.test(htm) && /id="tv-oppTimer"/.test(htm)
      && /class="timer pc-timer"/.test(htm));
