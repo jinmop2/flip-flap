@@ -9,7 +9,7 @@ let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra !== undefined ? '  ' + extra : ''))); };
 
 console.log('① 테이블 판');
-ok('테이블 요소가 있다', /<div id="tv-table"><\/div>/.test(htm));
+ok('테이블 요소가 있다', /<div id="tv-table">/.test(htm));
 ok('두툼한 가죽 레일이 둘러 있다', /#tv-table \{[\s\S]{0,900}0 0 0 22px #2b1d13/.test(htm));
 ok('위아래가 둥근 판이다', /#tv-table \{[^}]*border-radius:46% \/ 20%/.test(htm));
 ok('레일 윗면에 빛이 있다', /#tv-table::before \{[\s\S]{0,200}inset:-23px/.test(htm));

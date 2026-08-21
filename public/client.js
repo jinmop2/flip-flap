@@ -4055,10 +4055,12 @@ function showEmote(emoji, side) {
   if (emoji === '🫖') b.classList.add('em-teabag');
   let x = window.innerWidth / 2, y = side === 'me' ? window.innerHeight - 160 : 120;
   // 내 이모티콘은 이모트 버튼 바로 위에서 뜸 (중앙 X). 상대 것은 상대 손패 근처
+  // 이모트는 그 사람 이름 위에서 뜬다. 예전엔 내 것만 이모트 버튼 위에서 떴는데,
+  // 버튼이 화면 구석으로 옮겨 간 뒤로는 누가 보낸 것인지 읽히지 않았다.
   const tv = document.body.classList.contains('twelve');
   const anchor = side === 'me'
-    ? document.getElementById('emoteBtn')
-    : document.getElementById(tv ? 'tv-oppProfile' : 'oppProfile');   // 상대 것도 프로필 쪽 사이드에 (중앙 X)
+    ? document.getElementById(tv ? 'tv-myProfile' : 'myProfile') || document.getElementById('emoteBtn')
+    : document.getElementById(tv ? 'tv-oppProfile' : 'oppProfile');
   if (anchor) {
     const r = anchor.getBoundingClientRect();
     if (r.width) { x = r.left + r.width / 2; y = side === 'me' ? r.top - 44 : r.bottom + 8; }

@@ -390,8 +390,10 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('덱은 띄워 붙여 경매대를 안 민다', /#tv-deck \{ position:absolute/.test(htm));
   ok('덱이 가죽 테두리에 안 걸친다', /#tv-deck \{ left:38px; width:46px; \}/.test(htm));
   // 좁은 폰에서는 덱·경매대·레일이 서로 물린다 — 한 단계 더 줄인다
-  ok('좁은 폰에서 셋이 안 물린다', /@media \(max-width:400px\) \{[\s\S]{0,400}#tv-deck \{ left:24px; width:42px; \}/.test(htm)
-     && /@media \(max-width:400px\) \{[\s\S]{0,500}#tv-rail \{ right:24px; width:52px; \}/.test(htm));
+  ok('좁은 폰에서 셋이 안 물린다', /@media \(max-width:400px\) \{[\s\S]{0,700}#tv-deck \{ left:24px; width:42px; \}/.test(htm)
+     && /@media \(max-width:400px\) \{[\s\S]{0,900}#tv-rail \{ right:24px; width:52px; \}/.test(htm));
+  // 배팅 줄이 두 줄로 접히면 두 번째 줄이 손패를 덮는다
+  ok('배팅 줄은 접히지 않는다', /#tv-actions \{[^}]*flex-wrap:nowrap/.test(htm));
   // 덱·은행이 카드보다 조금 위에 있어 줄이 안 맞아 보였다. 자리를 손으로 짚지 않고
   // 실제로 그려진 칸의 높이에 맞춘다 (화면 크기에 따라 카드가 줄기 때문이다).
   ok('덱·은행을 카드 줄에 맞춘다', /function tvAlignRow\(\)/.test(cli)
@@ -464,10 +466,24 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('자리가 손패보다 판 쪽에 있다',
      /id="tv-oppHand"[\s\S]{0,400}id="tv-oppSeat"[\s\S]{0,400}id="tv-oppAcq"/.test(htm)
      && /id="tv-myAcq"[\s\S]{0,400}id="tv-mySeat"[\s\S]{0,400}id="tv-myHand"/.test(htm));
+  // 이름이 판 한가운데, 시계는 그 옆. 시계까지 흐름에 두면 [이름+시계] 두 덩이의
+  // 한가운데가 가운데가 되어 정작 이름은 왼쪽으로 밀려 앉는다.
   ok('시계가 프로필 옆에 붙어 있다',
      /id="tv-oppProfile"[\s\S]{0,200}id="tv-oppTimer"/.test(htm)
      && /id="tv-myProfile"[\s\S]{0,200}id="tv-myTimer"/.test(htm)
-     && /\.tv-seat \{ display:flex; align-items:center/.test(htm));
+     && /\.tv-seat \{ position:relative; display:flex; align-items:center/.test(htm));
+  ok('시계는 흐름에서 빼서 이름 옆에 띄운다',
+     /\.tv-seat \.pc-timer \{ position:absolute; left:100%;/.test(htm)
+     && /width:max-content; white-space:nowrap;/.test(htm));
+  // 말풍선은 그 사람 이름에서 나온다 — 배팅액이 누구 것인지 읽혀야 한다
+  ok('말풍선이 자리 옆에서 나온다',
+     /id="tv-oppSeat"[\s\S]{0,400}id="tv-oppSay"[\s\S]{0,200}id="tv-oppAcq"/.test(htm)
+     && /id="tv-myAcq"[\s\S]{0,200}id="tv-mySay"[\s\S]{0,300}id="tv-mySeat"/.test(htm));
+  ok('이모트도 이름 위에서 뜬다', /document\.getElementById\(tv \? 'tv-myProfile' : 'myProfile'\)/.test(cli));
+  // 트웰브의 이모트 버튼은 왼쪽 아래다 — 오른쪽 기준으로 펴면 목록이 잘린다
+  ok('이모트 목록이 안쪽으로 펴진다', /#tv-emoteSlot #emotePicker \{ right:auto; left:0; \}/.test(htm));
+  // 상표는 화면이 아니라 판 한가운데에 찍힌다
+  ok('로고가 테이블 안에 있다', /<div id="tv-table"><div id="tableLogoTv">/.test(htm));
   ok('이모트는 왼쪽 아래', /#tv-emoteSlot \{ position:absolute; left:14px; bottom:calc\(12px \+ var\(--safe-b\)\)/.test(htm));
   ok('프로필이 칩을 안 덮는다', /\.tv-seat > \* \{ position:static/.test(htm));
   ok('판이 화면을 채운다', /#tv \{[\s\S]{0,400}position:fixed; inset:0/.test(htm));

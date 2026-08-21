@@ -3025,6 +3025,9 @@
       animation:slideDown .2s ease;
     }
     #emotePicker.show { display:grid; }
+    /* 트웰브의 이모트 버튼은 왼쪽 아래다. 오른쪽 끝을 기준으로 펴면 목록이
+       화면 왼쪽으로 넘어가 잘린다 — 안쪽(오른쪽)으로 펴야 한다. */
+    #tv-emoteSlot #emotePicker { right:auto; left:0; }
     #emotePicker button {
       width:38px; height:38px; border:none; border-radius:10px; background:transparent;
       font-size:1.35rem; cursor:pointer; transition:transform .1s, background .1s;
@@ -4078,9 +4081,11 @@
     body.twelve #tv { display:flex; }
     body.twelve #lobby, body.twelve #navBar, body.twelve #profileBar { display:none !important; }
 
+    /* 판에 찍힌 상표 — 화면이 아니라 테이블 한가운데다(테이블의 자식이다) */
     #tableLogoTv {
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
       text-align:center; line-height:.78; pointer-events:none; z-index:0; opacity:.05;
+      width:max-content;
     }
     #tableLogoTv .tl { font-family:'Bangers',cursive; font-size:5.5rem; letter-spacing:8px; color:#fff; display:block; }
     #tableLogoTv .tl.flap { transform:rotate(180deg); margin-top:-10px; }
@@ -4118,9 +4123,15 @@
     /* 자리 — 사람은 판 위아래에 앉는다. 프로필과 시계가 손패 바로 위에
        나란히 서서, 누구 차례에 시간이 얼마 남았는지가 한눈에 붙어 읽힌다.
        예전엔 프로필은 구석, 시계는 또 다른 구석이라 둘을 눈으로 이어야 했다. */
-    .tv-seat { display:flex; align-items:center; justify-content:center; gap:8px;
+    .tv-seat { position:relative; display:flex; align-items:center; justify-content:center; gap:8px;
       flex-shrink:0; pointer-events:none; }
     .tv-seat > * { position:static; pointer-events:auto; }
+    /* 시계는 흐름에서 빼서 이름 옆에 띄운다. 흐름에 두면 [이름+시계] 두 덩이의
+       한가운데가 가운데가 되어, 정작 이름은 왼쪽으로 밀려 앉는다. */
+    /* 흐름에서 뺀 칸은 제 너비를 잃는다 — 못 박아 주지 않으면 5:00 이
+       한 글자씩 세로로 접힌다. */
+    .tv-seat .pc-timer { position:absolute; left:100%; margin-left:8px; top:50%; transform:translateY(-50%);
+      width:max-content; white-space:nowrap; }
     #tv-oppSeat { margin-bottom:4px; }
     #tv-mySeat { margin-bottom:4px; }
     /* 이모트 — 왼손 엄지 자리. 배팅 버튼과 겹치지 않게 왼쪽 끝에 둔다. */
@@ -4236,8 +4247,8 @@
     }
     /* 배팅 — 화면 맨 아래 한 줄. 판 한복판에 있으면 카드를 가리고, 엄지에서도
        멀다. 왼쪽 끝 이모트 자리만큼은 비켜 준다. */
-    #tv-actions { position:absolute; left:66px; right:14px; bottom:calc(10px + var(--safe-b));
-      z-index:8; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; align-items:center;
+    #tv-actions { position:absolute; left:56px; right:10px; bottom:calc(10px + var(--safe-b));
+      z-index:8; display:flex; flex-wrap:nowrap; gap:6px; justify-content:center; align-items:center;
       min-height:48px; pointer-events:none; }
     #tv-actions > * { pointer-events:auto; }
     .tv-btn {
@@ -4366,7 +4377,7 @@
       #tv-myZone { padding-bottom:calc(58px + var(--safe-b)); }
       .tv-say { height:22px; }
       #tv-status { height:28px; font-size:.78rem; padding:0 12px; }
-      #tv-actions { min-height:44px; gap:6px; left:60px; }
+      #tv-actions { min-height:44px; gap:5px; left:52px; }
       #tv .tv-btn { padding:8px 13px; font-size:.78rem; }
       .tv-step { width:38px; height:38px; font-size:1.25rem; }
       .tv-amt .tv-num { min-width:48px; height:38px; font-size:1.15rem; }
@@ -4403,6 +4414,11 @@
     /* 좁은 폰(375 등) — 덱·경매대·레일이 서로 물린다. 셋을 한 단계 더 줄이고
        레일을 바짝 붙여 겹치지 않게 한다. 겹치면 카드가 칩에 가려 안 읽힌다. */
     @media (max-width:400px) {
+      /* 배팅 줄은 한 줄로 들어가야 한다 — 접히면 두 번째 줄이 손패를 덮는다 */
+      #tv .tv-btn { padding:8px 11px; font-size:.75rem; }
+      .tv-step { width:34px; height:36px; font-size:1.1rem; }
+      .tv-amt .tv-num { min-width:42px; height:36px; font-size:1.05rem; }
+      #tv-actions { left:48px; gap:4px; }
       #tv-mat { max-width:172px; min-width:158px; min-height:172px; padding:8px; gap:7px; }
       #tv-mat .a-card { width:50px; height:70px; }
       #tv-deck { left:24px; width:42px; }
@@ -5918,8 +5934,7 @@
 <!-- ══ TWELVE — 칩으로 사는 경매. 뼈대·색·소리는 2인전과 같게 ══ -->
 <div id="tv">
   <!-- 테이블 — 덱·경매품·전리품만 이 위에 놓인다. 손패와 사람은 밖에. -->
-  <div id="tv-table"></div>
-  <div id="tableLogoTv"><span class="tl">FLIP</span><span class="tl flap">FLAP</span></div>
+  <div id="tv-table"><div id="tableLogoTv"><span class="tl">FLIP</span><span class="tl flap">FLAP</span></div></div>
 
   <!-- 오른쪽 위 메뉴 — 판 위에 버튼 넉 장이 늘어서 있으면 카드보다 버튼이
        먼저 눈에 든다. 평소엔 줄 세 개짜리 아이콘 하나만 두고, 누르면 펼친다. -->
@@ -5945,8 +5960,9 @@
       <div class="game-pcard" id="tv-oppProfile" onclick="toggleStats(this)"><div class="pc-body"></div><div class="pc-stats"></div></div>
       <div class="timer pc-timer" id="tv-oppTimer">5:00</div>
     </div>
-    <div class="pile" id="tv-oppAcq"></div>
+    <!-- 말풍선은 자리 바로 아래 — 얼마를 불렀는지는 그 사람 이름에서 나와야 한다 -->
     <div class="tv-say" id="tv-oppSay"></div>
+    <div class="pile" id="tv-oppAcq"></div>
   </div>
 
   <!-- 가운데 — 덱은 왼쪽, 경매대가 한가운데, 칩은 양옆 레일. 전부 판 위다. -->
@@ -5980,8 +5996,8 @@
 
   <!-- 나 — 판 아래쪽에 앉는다. 프로필·시계가 손패 위에. -->
   <div class="zone" id="tv-myZone">
-    <div class="tv-say me" id="tv-mySay"></div>
     <div class="pile" id="tv-myAcq"></div>
+    <div class="tv-say me" id="tv-mySay"></div>
     <div class="tv-seat" id="tv-mySeat">
       <div class="game-pcard" id="tv-myProfile" onclick="toggleStats(this)"><div class="pc-body"></div><div class="pc-stats"></div></div>
       <div class="timer pc-timer" id="tv-myTimer">5:00</div>
