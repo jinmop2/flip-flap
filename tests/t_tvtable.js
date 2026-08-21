@@ -26,12 +26,16 @@ ok('빈 더미에 휘둘리지 않는다', /r\.width > 0/.test(lay));
 
 console.log('\n③ 손패는 테이블 밖');
 ok('레일 두께를 알고 있다', /const RAIL = 25;/.test(lay));
-// 놓인 것만 감싸면 판이 아래로 쏠려 위가 휑하게 빈다 — 두 사람 사이를 통째로 쓴다
-ok('위아래는 앉은 사람 사이를 다 쓴다',
-   /const myTop = seatEdge\('tv-mySeat', 'tv-myHand', Math\.min\)/.test(lay)
-   && /const oppBottom = seatEdge\('tv-oppSeat', 'tv-oppHand', Math\.max\)/.test(lay)
-   && /let top = oppBottom != null \? oppBottom \+ RAIL \+ 2/.test(lay)
-   && /let bottom = myTop != null \? myTop - RAIL - 2/.test(lay));
+// 사람은 가죽 레일에 걸터앉는다 — 자리를 통째로 판 밖에 내보내면 그만큼 판이
+// 짧아져 가로로만 두꺼운 납작한 판때기가 된다. 손에 든 패는 여전히 판 밖이다.
+ok('자리 한가운데를 판 끝으로 잡는다',
+   /const seatMid = \(id\) =>/.test(lay)
+   && /let top = oppMid != null \? oppMid :/.test(lay)
+   && /let bottom = myMid != null \? myMid :/.test(lay));
+ok('그래도 손패는 판 밖에 남는다',
+   /if \(oppHandB != null\) top = Math\.max\(top, oppHandB \+ 4\);/.test(lay)
+   && /if \(myHandT != null\) bottom = Math\.min\(bottom, myHandT - 4\);/.test(lay));
+ok('좌우는 바짝 붙인다 — 가로로 두꺼우면 납작해 보인다', /const padX = 10;/.test(lay));
 // 덱·경매품은 테이블 한가운데 — 아래 문구 칸 때문에 저절로는 위로 쏠린다
 ok('판 위 물건을 테이블 한가운데로', /function tvCenterBoard\(top, bottom\)/.test(cli)
    && /tvCenterBoard\(top, bottom\);/.test(cli));

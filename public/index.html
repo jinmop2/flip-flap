@@ -4174,7 +4174,9 @@
     #tv-myHand .fan-slot, #tv-myHand .card { pointer-events:auto; }
     /* 가운데 칸도 마찬가지 — 문구 알약과 빈 여백이 손패를 덮으면 안 된다 */
     #tv-status { pointer-events:none; }
-    #tv-oppZone { padding-top:calc(84px + var(--safe-t)); display:flex; flex-direction:column; align-items:center; }
+    /* 위 여백은 노치를 피할 만큼만. 예전엔 왼쪽 위 조작 버튼 넉 장을 피하느라
+       84px 을 비웠는데, 그 자리는 이제 메뉴 아이콘 하나뿐이라 테이블만 짧아졌다. */
+    #tv-oppZone { padding-top:calc(14px + var(--safe-t)); display:flex; flex-direction:column; align-items:center; }
     #tv-centerZone { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
       gap:10px; width:100%; position:relative; }
     /* 경매대 아래에만 문구·버튼 칸이 있으니, 가운데를 맞추면 경매대는 그
@@ -4186,7 +4188,7 @@
 
     /* 덱 — 2인전 덱과 같은 자리·크기 */
     /* 덱 — 판 왼쪽. 가죽 테두리에 걸치지 않게 안쪽으로 들여 세운다. */
-    #tv-deck { position:absolute; left:calc(50% - 190px); top:50%; transform:translateY(-50%);
+    #tv-deck { position:absolute; left:calc(50% - 218px); top:50%; transform:translateY(-50%);
       width:64px; z-index:3; display:flex; flex-direction:column; align-items:center; gap:8px; }
     /* 레일에 들어가는 칩 현황 — 한 줄짜리 작은 딱지. 세로로 다섯 칸이 서므로
        가진 칩까지 큰 쌓기로 두면 레일이 판을 넘어간다. */
@@ -4281,7 +4283,7 @@
 
     /* 오른쪽 레일 — 위에서부터 상대 배팅 · 은행 · 내 배팅.
        칩은 늘 위아래(각자 자리)에서 가운데(은행)로만 흐른다. */
-    #tv-rail { position:absolute; left:calc(50% + 120px); top:50%; transform:translateY(-50%);
+    #tv-rail { position:absolute; left:calc(50% + 152px); top:50%; transform:translateY(-50%);
       width:76px; display:flex; flex-direction:column; align-items:center; gap:10px; z-index:3; }
     /* 레일 안의 다섯 칸은 폭을 맞춰 한 줄로 세운다 — 내용 길이에 따라 제각각
        가운데 정렬되면 20 과 8 이 서로 다른 자리에 서서 삐뚤어 보인다. */
@@ -4360,7 +4362,7 @@
       body.twelve #tv-centerZone::before { display:none; }
       #tv-centerZone { gap:6px; }
       #tv-mat { padding:8px 10px; gap:6px; }
-      #tv-oppZone { padding-top:calc(56px + var(--safe-t)); }
+      #tv-oppZone { padding-top:calc(10px + var(--safe-t)); }
       #tv-myZone { padding-bottom:calc(58px + var(--safe-b)); }
       .tv-say { height:22px; }
       #tv-status { height:28px; font-size:.78rem; padding:0 12px; }
@@ -4378,21 +4380,35 @@
       #tv { padding:10px 12px calc(8px + var(--safe-b)); }
       #tv-menuWrap { top:calc(8px + var(--safe-t)); right:10px; }
       #tv-emoteSlot { left:10px; bottom:calc(8px + var(--safe-b)); }
-      #tv-oppZone { padding-top:calc(70px + var(--safe-t)); }
-      #tv-mat { width:auto; max-width:224px; min-width:200px; min-height:200px; padding:10px; gap:8px; }
-      #tv-mat .a-card { width:58px; height:81px; }
+      #tv-oppZone { padding-top:calc(12px + var(--safe-t)); }
+      /* 판 위 물건을 조금씩 줄여 테이블 좌우에 바닥이 보이게 한다.
+         덱·경매대·레일이 화면 폭을 꽉 채우면 테이블이 가로로만 두꺼운
+         납작한 판때기로 보인다. */
+      #tv-mat { width:auto; max-width:200px; min-width:182px; min-height:188px; padding:9px; gap:8px; }
+      #tv-mat .a-card { width:56px; height:78px; }
       /* 가죽 레일이 화면 끝에서 25px 을 먹는다 — 그보다 안쪽에 서야 판 위다 */
-      #tv-deck { left:26px; width:50px; }
-      #tv-rail { left:auto; right:22px; width:60px; gap:5px; }
+      #tv-deck { left:38px; width:46px; }
+      #tv-rail { left:auto; right:34px; width:56px; gap:5px; }
       #tv-bank { font-size:.6rem; }
       .tv-pot { min-height:44px; }
       .pot-stack { height:24px; }
-      #tv-deckStack { width:50px; height:70px; }
-      #tv-deckStack .card { width:50px; height:70px; }
+      #tv-deckStack { width:46px; height:65px; }
+      #tv-deckStack .card { width:46px; height:65px; }
       #tv-turn { font-size:.62rem; }
       #tableLogoTv .tl { font-size:3.2rem; letter-spacing:5px; }
       #tv-actions { min-height:46px; }
       #tv-centerZone::before { height:90px; }
+    }
+
+    /* 좁은 폰(375 등) — 덱·경매대·레일이 서로 물린다. 셋을 한 단계 더 줄이고
+       레일을 바짝 붙여 겹치지 않게 한다. 겹치면 카드가 칩에 가려 안 읽힌다. */
+    @media (max-width:400px) {
+      #tv-mat { max-width:172px; min-width:158px; min-height:172px; padding:8px; gap:7px; }
+      #tv-mat .a-card { width:50px; height:70px; }
+      #tv-deck { left:24px; width:42px; }
+      #tv-deckStack { width:42px; height:59px; }
+      #tv-deckStack .card { width:42px; height:59px; }
+      #tv-rail { right:24px; width:52px; }
     }
 
     .tv-obtns .btn { flex:1; }

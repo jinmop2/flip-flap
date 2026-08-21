@@ -6010,19 +6010,22 @@ function tvLayTable() {
   // 가죽 레일은 펠트 밖으로 뻗는다(box-shadow spread). 그만큼을 미리 비워 두지
   // 않으면 레일이 화면 밖으로 잘려 테이블이 잘린 판때기로 보인다.
   const RAIL = 25;
-  const padX = 16;
+  const padX = 10;   // 좌우는 바짝 — 가로로 두꺼우면 판이 납작해 보인다
   let left = Math.min(...wide.map((r) => r.left)) - padX;
   let right = Math.max(...wide.map((r) => r.right)) + padX;
   // 위아래는 두 사람 사이를 통째로 쓴다. 놓인 것들만 감싸면 판이 아래로 쏠려
   // 위쪽이 휑하게 빈다 — 테이블은 앉은 사람 사이를 채우는 것이다.
-  const seatEdge = (seat, hand, pick) => {
-    const rs = [rect(seat), rect(hand)].filter((r) => r && r.height);
-    return rs.length ? pick(...rs.map((r) => (pick === Math.min ? r.top : r.bottom))) : null;
-  };
-  const myTop = seatEdge('tv-mySeat', 'tv-myHand', Math.min);
-  const oppBottom = seatEdge('tv-oppSeat', 'tv-oppHand', Math.max);
-  let top = oppBottom != null ? oppBottom + RAIL + 2 : host.top + RAIL + 2;
-  let bottom = myTop != null ? myTop - RAIL - 2 : host.bottom - RAIL - 2;
+  // 사람은 가죽 레일에 걸터앉는다 — 프로필이 레일 위에 반쯤 올라앉는
+  // 그 모양이다. 자리를 통째로 판 밖에 내보내면 그만큼 판이 짧아져
+  // 가로로만 두꺼운 납작한 판때기가 된다. 손에 든 패는 여전히 판 밖이다.
+  const seatMid = (id) => { const r = rect(id); return r && r.height ? r.top + r.height / 2 : null; };
+  const handEdge = (id, key) => { const r = rect(id); return r && r.height ? r[key] : null; };
+  const oppMid = seatMid('tv-oppSeat'), myMid = seatMid('tv-mySeat');
+  const oppHandB = handEdge('tv-oppHand', 'bottom'), myHandT = handEdge('tv-myHand', 'top');
+  let top = oppMid != null ? oppMid : (oppHandB != null ? oppHandB + RAIL + 2 : host.top + RAIL + 2);
+  let bottom = myMid != null ? myMid : (myHandT != null ? myHandT - RAIL - 2 : host.bottom - RAIL - 2);
+  if (oppHandB != null) top = Math.max(top, oppHandB + 4);
+  if (myHandT != null) bottom = Math.min(bottom, myHandT - 4);
   left = Math.max(left, host.left + RAIL + 2);
   right = Math.min(right, host.right - RAIL - 2);
   top = Math.max(top, host.top + RAIL + 2);

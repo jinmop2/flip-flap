@@ -388,7 +388,10 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
   ok('카드 자리 고정', /#tv-mat \.a-card \{ width:70px; height:min\(98px, 15vh\)/.test(htm));
   ok('2인전과 같은 줄 구성', /id="tv-oppZone"/.test(htm) && /id="tv-centerZone"/.test(htm) && /id="tv-myZone"/.test(htm));
   ok('덱은 띄워 붙여 경매대를 안 민다', /#tv-deck \{ position:absolute/.test(htm));
-  ok('덱이 가죽 테두리에 안 걸친다', /#tv-deck \{ left:26px; width:50px; \}/.test(htm));
+  ok('덱이 가죽 테두리에 안 걸친다', /#tv-deck \{ left:38px; width:46px; \}/.test(htm));
+  // 좁은 폰에서는 덱·경매대·레일이 서로 물린다 — 한 단계 더 줄인다
+  ok('좁은 폰에서 셋이 안 물린다', /@media \(max-width:400px\) \{[\s\S]{0,400}#tv-deck \{ left:24px; width:42px; \}/.test(htm)
+     && /@media \(max-width:400px\) \{[\s\S]{0,500}#tv-rail \{ right:24px; width:52px; \}/.test(htm));
   // 덱·은행이 카드보다 조금 위에 있어 줄이 안 맞아 보였다. 자리를 손으로 짚지 않고
   // 실제로 그려진 칸의 높이에 맞춘다 (화면 크기에 따라 카드가 줄기 때문이다).
   ok('덱·은행을 카드 줄에 맞춘다', /function tvAlignRow\(\)/.test(cli)
@@ -469,8 +472,10 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('프로필이 칩을 안 덮는다', /\.tv-seat > \* \{ position:static/.test(htm));
   ok('판이 화면을 채운다', /#tv \{[\s\S]{0,400}position:fixed; inset:0/.test(htm));
   // 상대 손패가 좌측 상단 버튼·노치에 가리지 않아야 한다
-  ok('상대 줄이 버튼을 피한다', /#tv-oppZone \{ padding-top:calc\(84px \+ var\(--safe-t\)\)/.test(htm));
-  ok('좁은 화면에서도 피한다', /#tv-oppZone \{ padding-top:calc\(70px \+ var\(--safe-t\)\); \}/.test(htm));
+  // 예전엔 왼쪽 위 조작 버튼 넉 장을 피하느라 위를 84px 비웠다. 이제 그 자리는
+  // 오른쪽 위 메뉴 아이콘 하나뿐이라, 노치를 피할 만큼만 두고 테이블에 내준다.
+  ok('위 여백은 노치를 피할 만큼만', /#tv-oppZone \{ padding-top:calc\(14px \+ var\(--safe-t\)\)/.test(htm));
+  ok('좁은 화면에서도 마찬가지', /#tv-oppZone \{ padding-top:calc\(12px \+ var\(--safe-t\)\); \}/.test(htm));
 }
 
 console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
@@ -548,7 +553,7 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   ok('날아간 뒤 더미에 얹는다', /tvFlying = tvFlying\.filter/.test(cli) && /tvPile\(box, cards, landingIds\)/.test(cli));
   // 칩은 가운데에서 오른쪽 은행으로만 흐른다
   // 오른쪽 레일 — 위에서부터 상대 배팅 · 은행 · 내 배팅
-  ok('은행 자리가 있다', /id="tv-bank"/.test(htm) && /#tv-rail \{ position:absolute; left:calc\(50% \+ 120px\)/.test(htm));
+  ok('은행 자리가 있다', /id="tv-bank"/.test(htm) && /#tv-rail \{ position:absolute; left:calc\(50% \+ 152px\)/.test(htm));
   ok('레일이 셋을 세로로 세운다', /id="tv-potOpp"[\s\S]{0,200}id="tv-bank"[\s\S]{0,200}id="tv-potMe"/.test(htm));
   // 곧게 가로지르면 미끄러지는 것처럼 보인다 — 살짝 떠올랐다 내려앉게
   ok('칩이 떠서 건너간다', /function tvTossChip\(fromEl, toEl, mine, delay\)/.test(cli)
