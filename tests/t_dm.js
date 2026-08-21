@@ -122,7 +122,7 @@ console.log('\n⑧ 인게임 채팅 화면');
   ok('2인전 조작바에 채팅 버튼',
      /id="g-menu"[\s\S]{0,600}?onclick="gMenu\(false\);toggleGameChat\(\)"/.test(html));
   ok('다인전 조작바에도 있다',
-     /id="q-controls"[\s\S]{0,900}?onclick="toggleGameChat\(\)"/.test(html));
+     /id="q-menu"[\s\S]{0,600}?onclick="qMenu\(false\);toggleGameChat\(\)"/.test(html));
   ok('패널은 하나만 둔다', (html.match(/id="gameChat"/g) || []).length === 1);
   ok('친구·클랜 두 탭', /data-gct="friend"/.test(html) && /data-gct="clan"/.test(html));
 

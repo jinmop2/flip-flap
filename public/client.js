@@ -3901,7 +3901,7 @@ async function gcRefreshUnread() {
 let gcClanUnread = 0;
 function gcPaintDot() {
   const on = Object.keys(gcUnread).length > 0 || gcClanUnread > 0;
-  for (const id of ['chatDot', 'chatDotG', 'chatDot4', 'chatDotTv', 'chatDotTvM']) {
+  for (const id of ['chatDot', 'chatDotG', 'chatDot4', 'chatDot4M', 'chatDotTv', 'chatDotTvM']) {
     const d = document.getElementById(id); if (d) d.style.display = on ? '' : 'none';
   }
   // 로비에 있을 때도 보여야 한다 — 판 안의 채팅 버튼은 로비에서 안 보인다
@@ -5678,10 +5678,15 @@ function boardMenu(menuId, btnId, wrapSel, open) {
 }
 window.tvMenu = (open) => boardMenu('tv-menu', 'tv-menuBtn', '#tv-menuWrap', open);
 window.gMenu = (open) => boardMenu('g-menu', 'g-menuBtn', '#g-menuWrap', open);
+window.qMenu = (open) => boardMenu('q-menu', 'q-menuBtn', '#q-menuWrap', open);
+window.mnMenu = (open) => boardMenu('mn-menu', 'mn-menuBtn', '#mn-menuWrap', open);
 // 판 아무 데나 누르면 닫힌다 — 열어 둔 채로 카드를 만지려다 메뉴에 막히면
 // "안 눌린다" 로 느껴진다. 메뉴 안쪽 클릭은 자기 버튼이 처리한다.
 document.addEventListener('pointerdown', (e) => {
-  for (const [menuId, wrapSel, close] of [['tv-menu', '#tv-menuWrap', tvMenu], ['g-menu', '#g-menuWrap', gMenu]]) {
+  for (const [menuId, wrapSel, close] of [
+    ['tv-menu', '#tv-menuWrap', tvMenu], ['g-menu', '#g-menuWrap', gMenu],
+    ['q-menu', '#q-menuWrap', qMenu], ['mn-menu', '#mn-menuWrap', mnMenu],
+  ]) {
     const m = document.getElementById(menuId);
     if (!m || !m.classList.contains('on')) continue;
     if (e.target.closest(wrapSel)) continue;

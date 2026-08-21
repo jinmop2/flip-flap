@@ -63,6 +63,11 @@ ok('어둠은 바닥에만 얹힌다 — 카드는 안 먹는다', /#tv::after \
 console.log('\n⑤ 가운데 네모 박스는 없다');
 ok('경매대에 배경도 테두리도 없다', /#tv-mat \{[\s\S]{0,420}background:none; border:0; box-shadow:none;/.test(htm));
 
+// 부채꼴로 눕힌 카드는 제 칸 아래로 삐져나온다 — 그만큼 안 띄우면
+// 상대 카드가 프로필을 깔고 앉는다(실제로 6장 전부 겹쳐 있었다).
+ok('상대 카드가 프로필을 안 깔고 앉는다',
+   /#tv-oppSeat \{ margin-top:16px;/.test(htm) && /#game #oppSeat \{ margin-top:16px; \}/.test(htm));
+
 console.log('\n⑤-2 레일은 한 줄로 반듯하게');
 // 다섯 칸이 제 내용 길이대로 가운데 정렬되면 20 과 8 이 서로 다른 자리에 서서
 // 삐뚤어 보인다. 폭을 맞춰 한 줄로 세운다.
@@ -135,6 +140,17 @@ ok('두 판 모두 메뉴 조각에 클래스가 달려 있다',
    && /<div class="tv-menuWrap" id="g-menuWrap">/.test(htm)
    && /<button class="tv-menuBtn" id="g-menuBtn"/.test(htm)
    && /<div class="tv-menu" id="g-menu">/.test(htm));
+
+// 네 판이 같은 메뉴를 쓴다 — 한 군데만 바꾸면 나머지가 옛 모습으로 남는다
+ok('모든 판이 줄 세 개 아이콘 하나로', ['tv', 'g', 'q', 'mn'].every((k) =>
+  new RegExp(`<div class="tv-menuWrap" id="${k}-menuWrap">`).test(htm)
+  && new RegExp(`<button class="tv-menuBtn" id="${k}-menuBtn"`).test(htm)
+  && new RegExp(`<div class="tv-menu" id="${k}-menu">`).test(htm)));
+ok('옛 조작바는 남아 있지 않다',
+   !/id="tv-controls"/.test(htm) && !/id="controls"/.test(htm)
+   && !/id="q-controls"/.test(htm) && !/id="miniControls"/.test(htm));
+ok('네 개 다 바깥을 누르면 닫힌다',
+   /\['q-menu', '#q-menuWrap', qMenu\], \['mn-menu', '#mn-menuWrap', mnMenu\]/.test(cli));
 
 console.log('\n⑦ 다시 그릴 때마다 맞춘다');
 ok('정렬 끝에 테이블을 깐다', /tvLayTable\(\);   \/\/ 줄을 맞춘 뒤라야/.test(cli));

@@ -1444,6 +1444,9 @@
     .q-owho .rank-art svg { width:100%; height:100%; display:block; }
 
     /* 좌측 상단에 가로 일렬 — 세로로 쌓으니 상대 자리를 눌렀다 */
+    /* 3·4인전·미니게임의 메뉴 아이콘은 각 판이 쓰는 층 위에 서야 한다 */
+    #q-menuWrap { z-index:40; }
+    #mn-menuWrap { z-index:12; }
     #q-controls { position:absolute; top:calc(8px + var(--safe-t)); left:8px; z-index:40;
       display:flex; flex-direction:row; gap:6px; }
     /* 오른쪽 아래 — 위에서부터 시계, 그 아래 내 프로필.
@@ -3637,6 +3640,8 @@
     }
     /* 자리(프로필·시계)는 트웰브와 같은 조각을 쓴다 — .tv-seat */
     #game .tv-seat { margin-bottom:4px; }
+    /* 상대 손패는 부채꼴이라 제 칸 아래로 삐져나온다 — 프로필을 그만큼 내린다 */
+    #game #oppSeat { margin-top:16px; }
     #deckStack .deck-layer { position:absolute; top:0; left:0; box-shadow:0 2px 6px rgba(0,0,0,.55); }
     #deckStack .deck-count {
       position:absolute; bottom:-24px; left:50%; transform:translateX(-50%);
@@ -4194,7 +4199,9 @@
        한 글자씩 세로로 접힌다. */
     .tv-seat .pc-timer { position:absolute; left:100%; margin-left:8px; top:50%; transform:translateY(-50%);
       width:max-content; white-space:nowrap; }
-    #tv-oppSeat { margin-bottom:4px; }
+    /* 부채꼴로 눕힌 카드는 제 칸보다 아래로 삐져나온다(칸은 안 눕은 크기로
+       잡히기 때문이다). 그만큼 띄우지 않으면 상대 카드가 프로필을 깔고 앉는다. */
+    #tv-oppSeat { margin-top:16px; margin-bottom:4px; }
     #tv-mySeat { margin-bottom:4px; }
     /* 이모트 — 왼손 엄지 자리. 배팅 버튼과 겹치지 않게 왼쪽 끝에 둔다. */
     #tv-emoteSlot { position:absolute; left:14px; bottom:calc(12px + var(--safe-b)); z-index:8; }
@@ -4987,7 +4994,7 @@
       <i class="ctrl-dot" id="chatDot" style="display:none"></i>
     </button>
     <div class="tv-menu" id="g-menu">
-      <button onclick="gMenu(false);toggleGameChat()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg></span>채팅<i class="ctrl-dot" id="chatDotG" style="display:none"></i></button>
+      <button title="친구·클랜 채팅" onclick="gMenu(false);toggleGameChat()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg></span>채팅<i class="ctrl-dot" id="chatDotG" style="display:none"></i></button>
       <button onclick="gMenu(false);toggleRules(true)"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>설명</button>
       <button onclick="gMenu(false);toggleSettings()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>설정</button>
       <button class="bad" onclick="gMenu(false);exitGame()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>나가기</button>
@@ -5139,10 +5146,16 @@
   <div id="tableLogoMini" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;line-height:.78;pointer-events:none;z-index:1;opacity:.06">
     <span class="tl">FLIP</span><span class="tl flap">FLAP</span>
   </div>
-  <div id="miniControls">
-    <div class="ctrl-btn" onclick="miniStand()" title="자리에서 일어나기"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span><span class="cl">일어서기</span></div>
-    <div class="ctrl-btn" onclick="miniRank(true)" title="족보"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M4 14h16"/></svg></span><span class="cl">족보</span></div>
-    <div class="ctrl-btn" onclick="toggleRulesMini(true)" title="설명"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span><span class="cl">설명</span></div>
+  <div class="tv-menuWrap" id="mn-menuWrap">
+    <button class="tv-menuBtn" id="mn-menuBtn" onclick="mnMenu()" title="메뉴" aria-label="메뉴" aria-expanded="false">
+      <span class="mb-bars"><i></i><i></i><i></i></span>
+    </button>
+    <div class="tv-menu" id="mn-menu">
+      <button onclick="mnMenu(false);miniRank(true)"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M4 14h16"/></svg></span>족보</button>
+      <button onclick="mnMenu(false);toggleRulesMini(true)"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>설명</button>
+      <button onclick="mnMenu(false);toggleSettings()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>설정</button>
+      <button class="bad" title="자리에서 일어나기" onclick="mnMenu(false);miniStand()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>일어서기</button>
+    </div>
   </div>
 
   <div class="mn-top" id="mnSeats"></div>
@@ -6028,7 +6041,7 @@
       <i class="ctrl-dot" id="chatDotTv" style="display:none"></i>
     </button>
     <div class="tv-menu" id="tv-menu">
-      <button onclick="tvMenu(false);toggleGameChat()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg></span>채팅<i class="ctrl-dot" id="chatDotTvM" style="display:none"></i></button>
+      <button title="친구·클랜 채팅" onclick="tvMenu(false);toggleGameChat()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg></span>채팅<i class="ctrl-dot" id="chatDotTvM" style="display:none"></i></button>
       <button onclick="tvMenu(false);tvRules(true)"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>설명</button>
       <button onclick="tvMenu(false);toggleSettings()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>설정</button>
       <button class="bad" onclick="tvMenu(false);tvQuit()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>나가기</button>
@@ -6099,11 +6112,18 @@
 <!-- 결과 -->
 <div id="game4">
   <!-- 좌측 상단 조작 — 2인전과 같은 자리, 같은 모양 -->
-  <div id="q-controls">
-    <div class="ctrl-btn" onclick="q4AskQuit()" title="게임 나가기"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span><span class="cl">나가기</span></div>
-    <div class="ctrl-btn" title="친구·클랜 채팅" onclick="toggleGameChat()"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg></span><span class="cl">채팅</span><i class="ctrl-dot" id="chatDot4" style="display:none"></i></div>
-    <div class="ctrl-btn" onclick="toggleRules(true)" title="게임 설명"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span><span class="cl">설명</span></div>
-    <div class="ctrl-btn" onclick="toggleSettings()" title="설정"><span class="ci"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="cl">설정</span></div>
+  <!-- 오른쪽 위 메뉴 — 트웰브·2인전과 같은 줄 세 개 아이콘 -->
+  <div class="tv-menuWrap" id="q-menuWrap">
+    <button class="tv-menuBtn" id="q-menuBtn" onclick="qMenu()" title="메뉴" aria-label="메뉴" aria-expanded="false">
+      <span class="mb-bars"><i></i><i></i><i></i></span>
+      <i class="ctrl-dot" id="chatDot4" style="display:none"></i>
+    </button>
+    <div class="tv-menu" id="q-menu">
+      <button title="친구·클랜 채팅" onclick="qMenu(false);toggleGameChat()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg></span>채팅<i class="ctrl-dot" id="chatDot4M" style="display:none"></i></button>
+      <button onclick="qMenu(false);toggleRules(true)"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>설명</button>
+      <button onclick="qMenu(false);toggleSettings()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>설정</button>
+      <button class="bad" onclick="qMenu(false);q4AskQuit()"><span class="mi"><svg class="svgi" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>나가기</button>
+    </div>
   </div>
   <!-- 대기방 친구 초대 -->
   <div class="lb-modal" id="q-inviteModal" onclick="if(event.target===this)q4CloseInvite()">

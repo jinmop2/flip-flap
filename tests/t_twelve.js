@@ -444,7 +444,7 @@ console.log('\n⑲ 무슨 일이 있었는지 보이는가');
   ok('판을 누르면 닫힌다', /if \(e\.target\.closest\(wrapSel\)\) continue;\s*\n\s*close\(false\);/.test(cli));
   ok('나가면 메뉴도 닫는다', /tv-table'\)[\s\S]{0,90}tvMenu\(false\);/.test(cli));
   ok('안 읽은 채팅 표시도 뜬다', /id="chatDotTv"/.test(htm)
-     && /'chatDot', 'chatDotG', 'chatDot4', 'chatDotTv', 'chatDotTvM'/.test(cli));
+     && /'chatDot', 'chatDotG', 'chatDot4', 'chatDot4M', 'chatDotTv', 'chatDotTvM'/.test(cli));
   ok('이모트 자리가 있다', /id="tv-emoteSlot"/.test(htm));
   ok('이모트는 두 벌 만들지 않는다', /function tvMoveEmote/.test(cli)
      && (htm.match(/id="emoteBtn"/g) || []).length === 1);

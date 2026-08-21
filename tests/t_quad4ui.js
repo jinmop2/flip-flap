@@ -179,27 +179,27 @@ console.log('\n⑨ 빈 자리와 뒷면을 구분하는가');
 
 console.log('\n⑩ 나가기·설명·설정·프로필');
 {
-  ok('좌측 상단 조작', /id="q-controls"/.test(html));
-  ok('가로 일렬', /#q-controls \{[^}]*flex-direction:row/.test(html));
+  // 조작 넉 장은 오른쪽 위 메뉴 아이콘 하나로 접혔다 — 트웰브·2인전과 같다
+  ok('오른쪽 위 메뉴 아이콘', /<div class="tv-menuWrap" id="q-menuWrap">/.test(html)
+     && /<button class="tv-menuBtn" id="q-menuBtn"/.test(html));
   ok('중앙 나가기는 없앴다', !/id="q-quit"/.test(html));
   ok('상대 자리를 버튼 아래로 내렸다', /#q-opps \{ margin-top:36px/.test(html));
   // 시계와 프로필은 각자 띄우지 않고 #q-mebar 한 줄로 묶었다(⑥ 참고).
   ok('내 줄은 오른쪽 맨 아래', /#q-mebar \{[^}]*right:8px[^}]*bottom:calc\(4px/.test(html));
   ok('손패 아래 자리를 비워 둔다', /#q-me \{ padding-bottom:\d+px/.test(html));
   ok('시계가 그 줄 안에 있다', /id="q-mebar"[\s\S]{0,400}?id="q-timer"/.test(html));
-  ok('조작 버튼을 줄여 자리를 벌었다', /#q-controls \.ctrl-btn \{[^}]*height:34px/.test(html));
+  ok('메뉴가 판 위층에 선다', /#q-menuWrap \{ z-index:40; \}/.test(html));
   ok('상대 등급·레벨을 보여준다', /q-owho/.test(c4) && /\.q-owho \{/.test(html));
   ok('AI 는 AI 로 적는다', /who\.textContent = 'AI'/.test(c4));
   // 개수를 박아 두면 버튼이 하나 늘 때마다 깨진다. 있어야 할 것이 다 있는지를 본다.
   {
-    const bar = html.slice(html.indexOf('id="q-controls"'), html.indexOf('id="q-meProfile"'));
+    const bar = html.slice(html.indexOf('id="q-menuWrap"'), html.indexOf('id="q-menuWrap"') + 2200);
     for (const [name, re] of [['나가기', /q4AskQuit\(\)/], ['채팅', /toggleGameChat\(\)/],
                               ['설명', /toggleRules\(true\)/], ['설정', /toggleSettings\(\)/]])
       ok(`${name} 버튼이 있다`, re.test(bar));
-    ok('2인전과 같은 것들만', (bar.match(/ctrl-btn/g) || []).length === 4,
-       String((bar.match(/ctrl-btn/g) || []).length));
+    ok('2인전과 같은 것들만', (bar.match(/<button/g) || []).length === 5,
+       String((bar.match(/<button/g) || []).length));
   }
-  ok('2인전과 같은 자리', /#q-controls \{[^}]*position:absolute[^}]*left:8px/.test(html));
   ok('내 프로필이 판에 보인다', /id="q-meProfile"/.test(html) && /renderGameProfile\('q-meProfile'/.test(c4));
 
   // 나갈 때 판 곡이 계속 흐르면 안 된다 — 2인전은 새로고침으로 저절로 로비 곡이 된다.
@@ -257,7 +257,7 @@ console.log('\n⑬ 나가기 확인 · 친구 초대 · 상대 명패');
 
   // 나가기 — 예전엔 누르는 즉시 나가서 잘못 눌러도 판이 끝났다
   ok('나가기가 한 번 묻는다', /function q4AskQuit|q4AskQuit = function/.test(c4));
-  ok('버튼이 확인을 거친다', /onclick="q4AskQuit\(\)"/.test(html));
+  ok('버튼이 확인을 거친다', /onclick="qMenu\(false\);q4AskQuit\(\)"/.test(html));
   ok('바로 안 나간다', !/onclick="q4Quit\(\)" title="게임 나가기"/.test(html));
   ok('진행 중이면 AI 인계를 알린다', /자리를 AI 가 이어받아요/.test(c4));
 
