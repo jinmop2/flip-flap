@@ -282,7 +282,15 @@ async function claimReferral() {
 }
 // 초대 링크(?ref=아이디)로 접속 시 코드 보관
 try { const rp = new URLSearchParams(location.search).get('ref'); if (rp) localStorage.setItem('ff_ref', rp); } catch (_) {}
-const ncClass = c => c ? ' nc-' + c : '';   // 닉네임 염색 클래스
+// 닉네임 염색 — 단색은 글자 색만 갈면 되니 이름 칸에 바로 건다.
+// 무지개만 다르다. 글자에 그라디언트를 오려 붙이려면 background 를 써야 하는데
+// 명패(.np-*)도 같은 칸을 쓴다. 한 요소에 둘을 얹으면 뒤에 오는 쪽이 이겨서
+// 이름이 통째로 사라진다 — 그래서 무지개는 글자만 안쪽 <i> 로 감싼다.
+const ncClass = c => (c && c !== 'rainbow') ? ' nc-' + c : '';
+// 염색된 이름 한 조각. 이름을 찍는 곳은 전부 이걸 거쳐야 물감이 빠짐없이 따라간다.
+const nickHTML = (nick, color) => color === 'rainbow'
+  ? `<i class="nc-rainbow">${esc(nick)}</i>`
+  : esc(nick);
 const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby', np_crystal: 'np-crystal', np_obsidian: 'np-obsidian', np_hanji: 'np-hanji', np_shard: 'np-shard', np_hwatu: 'np-hwatu' };
 const xpPct = p => Math.max(0, Math.min(100, Math.round((p.xpInLevel || 0) / (p.xpNeeded || 100) * 100)));
 const npClass = p => p && NP_CLASS[p] ? ' ' + NP_CLASS[p] : '';   // 명패 클래스
@@ -418,7 +426,7 @@ function renderAccount() {
         <span class="pb-lv">Lv.${p.level}</span>
       </div>
       <div class="pb-mid">
-        <div class="pb-nickrow"><span class="pb-nick${ncClass(p.nickColor)}${npClass(p.plate)}" onclick="event.stopPropagation();openPlate()" title="명패 고르기">${esc(p.nick)}</span>${titleTag(p.titleInfo)}</div>
+        <div class="pb-nickrow"><span class="pb-nick${ncClass(p.nickColor)}${npClass(p.plate)}" onclick="event.stopPropagation();openPlate()" title="명패 고르기">${nickHTML(p.nick, p.nickColor)}</span>${titleTag(p.titleInfo)}</div>
         <div class="pb-stats">${p.wins}승 ${p.losses}패${total ? ` (${p.winRate}%)` : ''} · <span style="color:${p.rankColor}">${esc(p.rank)}</span></div>
       </div>
       <div class="pb-right">
@@ -447,7 +455,7 @@ async function openMyInfo() {
     <div class="mi-head">
       <div class="mi-ava" style="color:${p.rankColor}">${faceOf(p)}</div>
       <div class="mi-info">
-        <div class="mi-nick${ncClass(p.nickColor)}">${esc(p.nick)} ${canNick ? '<button class="pc-icon" onclick="closeMyInfo();openNickModal()" title="닉네임 바꾸기">✏️</button>' : ''}</div>
+        <div class="mi-nick${ncClass(p.nickColor)}">${nickHTML(p.nick, p.nickColor)} ${canNick ? '<button class="pc-icon" onclick="closeMyInfo();openNickModal()" title="닉네임 바꾸기">✏️</button>' : ''}</div>
         <div class="mi-line">Lv.<b>${p.level}</b> (XP ${p.xpInLevel}/${p.xpNeeded}) · <span style="color:${p.rankColor}">${esc(p.rank)}</span> <b>${p.rp} RP</b></div>
         <div class="mi-line"><b>${p.wins}승 ${p.losses}패</b> · 승률 ${p.winRate}%</div>
         <div class="mi-badges">
@@ -849,7 +857,7 @@ async function renderLeaderboard(r) {
         <div class="pod pod-${p.no}${myNick && p.nick === myNick ? ' me' : ''}">
           <div class="pod-ava" style="color:${p.rankColor}">${podFace(p)}</div>
           <div class="pod-stand">
-            <div class="pod-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</div>
+            <div class="pod-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${nickHTML(p.nick, p.nickColor)}</div>
             <div class="pod-title">${titleTag(p.titleInfo) || ''}</div>
             <div class="pod-grade" style="color:${p.rankColor}">${esc(p.rank)}</div>
             <div class="pod-rp">${p.rp} RP</div>
@@ -864,7 +872,7 @@ async function renderLeaderboard(r) {
       row.className = 'lb-row' + (myNick && p.nick === myNick ? ' me' : '');
       row.innerHTML = `<span class="lb-no${p.no <= 3 ? ' top' : ''}">${p.no <= 3 ? rankIco(['🥇','🥈','🥉'][p.no-1]) : p.no}</span>
         <span class="lb-rank" style="color:${p.rankColor}">${faceOf(p)}</span>
-        <span class="lb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span>
+        <span class="lb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${nickHTML(p.nick, p.nickColor)}</span>
         <span class="lb-title">${titleTag(p.titleInfo)}</span>
         <span class="lb-wl">${p.wins}승 ${p.losses}패</span>
         <span class="lb-rp">${p.rp} RP</span>`;
@@ -881,7 +889,7 @@ async function renderLeaderboard(r) {
         const row = document.createElement('div'); row.className = 'lb-row me lb-mine';
         row.innerHTML = `<span class="lb-no">${me.no}</span>
           <span class="lb-rank" style="color:${me.rankColor}">${faceOf(me)}</span>
-          <span class="lb-nick${ncClass(me.nickColor)}">${esc(me.nick)}</span>
+          <span class="lb-nick${ncClass(me.nickColor)}">${nickHTML(me.nick, me.nickColor)}</span>
           <span class="lb-title">${titleTag(me.titleInfo)}</span>
           <span class="lb-wl">${me.wins}승 ${me.losses}패</span>
           <span class="lb-rp">${me.rp} RP</span>`;
@@ -1431,7 +1439,7 @@ function friendRow(f, kind) {
   return `<div class="soc-item">
     ${kind === 'friend' ? `<span class="soc-dot ${f.ingame ? 'busy' : (f.online ? 'on' : '')}"></span>` : ''}
     <div class="soc-info">
-      <div class="soc-nick">${clan}<span class="${ncClass(f.nickColor).trim()}">${esc(f.nick)}</span></div>
+      <div class="soc-nick">${clan}<span class="${ncClass(f.nickColor).trim()}">${nickHTML(f.nick, f.nickColor)}</span></div>
       <div class="soc-meta">Lv.${f.level} · ${rankIco(f.rankIcon)} ${esc(f.rank)} · ${f.rp} RP${
         kind === 'friend' ? (f.ingame ? ' · <b style="color:#ffab5e">게임 중</b>' : (f.online ? ' · 접속 중' : '')) : ''}</div>
     </div>
@@ -1536,7 +1544,7 @@ function renderClanData(r) {
 function renderMyClan(c) {
   const memberRow = m => `<div class="soc-item">
     <div class="soc-info">
-      <div class="soc-nick">${m.isOwner ? '👑' : m.isVice ? '🛡' : ''}<span class="${ncClass(m.nickColor).trim()}">${esc(m.nick)}</span>${
+      <div class="soc-nick">${m.isOwner ? '👑' : m.isVice ? '🛡' : ''}<span class="${ncClass(m.nickColor).trim()}">${nickHTML(m.nick, m.nickColor)}</span>${
         m.isOwner ? '<span class="soc-role owner">클랜장</span>'
         : m.isVice ? '<span class="soc-role vice">부클랜장</span>' : ''}</div>
       <div class="soc-meta">Lv.${m.level} · ${rankIco(m.rankIcon)} ${esc(m.rank)} · ${m.rp} RP${
@@ -1549,7 +1557,7 @@ function renderMyClan(c) {
   </div>`;
   const applicantRow = m => `<div class="soc-item">
     <div class="soc-info">
-      <div class="soc-nick"><span class="${ncClass(m.nickColor).trim()}">${esc(m.nick)}</span></div>
+      <div class="soc-nick"><span class="${ncClass(m.nickColor).trim()}">${nickHTML(m.nick, m.nickColor)}</span></div>
       <div class="soc-meta">Lv.${m.level} · ${rankIco(m.rankIcon)} ${esc(m.rank)} · ${m.rp} RP</div>
     </div>
     <div class="soc-acts">
@@ -1677,7 +1685,7 @@ function renderChat(toBottom) {
   }
   box.innerHTML = _chatMsgs.map(m => `
     <div class="chat-row ${m.mine ? 'mine' : ''}">
-      ${m.mine ? '' : `<div class="chat-who">${esc(m.nick || '')}</div>`}
+      ${m.mine ? '' : `<div class="chat-who${ncClass(m.nickColor)}">${nickHTML(m.nick || '', m.nickColor)}</div>`}
       <div class="chat-bubble" ${m.mine ? '' : `onclick="chatMenu(event,'${esc(m.id)}','${esc(m.idl)}','${esc(m.nick || '')}')"`}>${esc(m.text)}</div>
       <div class="chat-time">${chatTime(m.at)}</div>
     </div>`).join('');
@@ -2758,7 +2766,7 @@ function renderGameProfile(elId, p) {
     body.innerHTML = `<span class="gp-rank">👤</span><span class="gp-nick">${esc(p.nick)}</span>`;
     if (stats) stats.innerHTML = `게스트 (기록 없음)`;
   } else {
-    body.innerHTML = `<span class="gp-rank gp-art" style="color:${p.rankColor}">${rankIco(p.rankIcon)}</span><span class="gp-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</span><span class="gp-lv">Lv.${p.level}</span>`;
+    body.innerHTML = `<span class="gp-rank gp-art" style="color:${p.rankColor}">${rankIco(p.rankIcon)}</span><span class="gp-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${nickHTML(p.nick, p.nickColor)}</span><span class="gp-lv">Lv.${p.level}</span>`;
     // 닉네임을 누르면 상대 정보 — 전적을 펼치는 것과 따로 논다
     const nk = body.querySelector('.gp-nick');
     if (nk) { nk.style.cursor = 'pointer'; nk.title = '상대 정보';
@@ -2788,7 +2796,7 @@ function openOppInfo(p) {
     body.innerHTML = `<div class="op-head">
       <span class="op-ava" style="color:${p.rankColor}">${faceOf(p)}</span>
       <span class="op-mid">
-        <div class="op-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${esc(p.nick)}</div>
+        <div class="op-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${nickHTML(p.nick, p.nickColor)}</div>
         <div class="op-line">Lv.<b>${p.level}</b> · <span style="color:${p.rankColor}">${esc(p.rank)}</span> <b>${p.rp || 0} RP</b></div>
         <div class="op-line"><b>${p.wins}승 ${p.losses}패</b> · 승률 ${p.winRate}%</div>
         ${p.titleInfo ? `<div class="op-line">${titleTag(p.titleInfo)}</div>` : ''}
@@ -2853,7 +2861,7 @@ function renderRoomList(list) {
       // 모드가 넷이 됐다 — 들어가기 전에 무슨 판인지는 보여야 한다
       const mode = r.mode && r.mode !== 'classic'
         ? `<span class="rl-mode m-${esc(r.mode)}">${esc(MODE_NAME[r.mode] || r.mode)}</span>` : '';
-      item.innerHTML = `<div class="rl-info"><div class="rl-name">${lock}${esc(r.name)}${mode}</div><div class="rl-host">👤 <span class="${ncClass(r.hostColor).trim()}">${esc(r.host)}</span></div></div>`;
+      item.innerHTML = `<div class="rl-info"><div class="rl-name">${lock}${esc(r.name)}${mode}</div><div class="rl-host">👤 <span class="${ncClass(r.hostColor).trim()}">${nickHTML(r.host, r.hostColor)}</span></div></div>`;
       const b = document.createElement('button'); b.className = 'btn btn-gold rl-join'; b.textContent = '참가';
       b.onclick = () => joinRoomById(r.id, r.secret);
       item.appendChild(b);
@@ -3807,7 +3815,7 @@ async function gcLoadFriends() {
     const un = gcUnread[f.idl];
     const tail = un ? `<span class="gc-un">${un}</span>`
                     : `<span class="gc-off">${f.ingame ? '게임 중' : f.online ? '접속 중' : '오프라인'}</span>`;
-    return `<button class="gc-frow" onclick="gcOpenTalk('${esc(f.idl)}')"><span class="${ncClass(f.nickColor).trim()}">${esc(f.nick)}</span>${tail}</button>`;
+    return `<button class="gc-frow" onclick="gcOpenTalk('${esc(f.idl)}')"><span class="${ncClass(f.nickColor).trim()}">${nickHTML(f.nick, f.nickColor)}</span>${tail}</button>`;
   }).join('');
 }
 window.gcOpenTalk = function (idl) { gcWith = idl; gcLoadTalk(idl); };
@@ -3837,7 +3845,7 @@ function gcPaint(box, msgs, showName) {
   if (!msgs || !msgs.length) { box.innerHTML = '<div class="gc-empty">아직 대화가 없어요</div>'; return; }
   box.innerHTML = msgs.map((m) =>
     `<div class="gc-m${m.mine ? ' mine' : ''}">` +
-    (showName && !m.mine ? `<span class="gc-who${ncClass(m.nickColor)}">${esc(m.nick)}</span>` : '') +
+    (showName && !m.mine ? `<span class="gc-who${ncClass(m.nickColor)}">${nickHTML(m.nick, m.nickColor)}</span>` : '') +
     `${esc(m.text)}</div>`).join('');
   box.scrollTop = box.scrollHeight;
 }
@@ -3910,7 +3918,7 @@ socket.on('clan_chat', ({ msg }) => {
   const box = document.getElementById('gcClanMsgs');
   const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
   box.insertAdjacentHTML('beforeend',
-    `<div class="gc-m"><span class="gc-who${ncClass(msg.nickColor)}">${esc(msg.nick)}</span>${esc(msg.text)}</div>`);
+    `<div class="gc-m"><span class="gc-who${ncClass(msg.nickColor)}">${nickHTML(msg.nick, msg.nickColor)}</span>${esc(msg.text)}</div>`);
   box.scrollTop = box.scrollHeight;
 });
 
@@ -4351,7 +4359,7 @@ window.roomInvite = async function () {
   const r = await apiPost('/api/friends', { token: authToken() });
   const on = ((r && r.friends) || []).filter((f) => f.online && !f.ingame);
   box.innerHTML = on.length
-    ? on.map((f) => `<button class="gc-frow" onclick="roomInviteTo('${esc(f.idl)}')"><span class="${ncClass(f.nickColor).trim()}">${esc(f.nick)}</span><span class="gc-off">부르기</span></button>`).join('')
+    ? on.map((f) => `<button class="gc-frow" onclick="roomInviteTo('${esc(f.idl)}')"><span class="${ncClass(f.nickColor).trim()}">${nickHTML(f.nick, f.nickColor)}</span><span class="gc-off">부르기</span></button>`).join('')
     : '<div class="gc-empty">지금 부를 수 있는 친구가 없어요.<br>코드를 공유해 보세요.</div>';
 };
 window.roomInviteTo = function (idl) {
@@ -4397,7 +4405,7 @@ socket.on('room_lobby', (r) => {
       const kick = (roomIsHost && !s2.host)
         ? `<button class="ws-kick" title="내보내기" onclick="event.stopPropagation();roomKick(${i})">×</button>` : '';
       return `<div class="wc-seat">${kick}<div class="ws-face">${face}</div>
-        <div class="ws-nick${ncClass(s2.profile && s2.profile.nickColor)}">${esc(s2.nick)}</div>
+        <div class="ws-nick${ncClass(s2.profile && s2.profile.nickColor)}">${nickHTML(s2.nick, s2.profile && s2.profile.nickColor)}</div>
         ${s2.host ? '<div class="ws-host">방장</div>' : `<div class="ws-tag">${esc(lvl)}</div>`}</div>`;
     }).join('');
   }

@@ -280,17 +280,43 @@ console.log('\n⑧ 염색 스포이드 — 지금 색을 담아 두었다 한 �
   ok('프로필에 담긴 색이 실린다', p.dyeSaved === 'gold' && p.pipettes === 2);
 }
 
-console.log('\n⑨ 무지개 — 명패 위에서도 보이는가');
+console.log('\n⑨ 무지개 — 가로 그라디언트 + 왼→오 빛');
 {
   const fs2 = require('fs'), path2 = require('path');
   const htm = fs2.readFileSync(path2.join(__dirname, '..', 'public/index.html'), 'utf8');
-  // 글자에 그라디언트를 오려 붙이면 명패(.np-*)도 background 를 써서 뒤에 오는
-  // 쪽이 이긴다 — 글자는 투명한 채 그라디언트만 사라져 이름이 통째로 안 보였다.
-  ok('글자를 오려 붙이지 않는다', !/\.nc-rainbow \{[^}]*background-clip/.test(htm));
-  ok('색을 갈아 끼운다', /\.nc-rainbow \{ animation:ncRainbow/.test(htm)
-     && /@keyframes ncRainbow \{[\s\S]{0,200}color:#ff6b6b/.test(htm));
-  ok('투명 글자가 남아 있지 않다', !/\.nc-rainbow[^}]*text-fill-color:transparent/.test(htm));
-  ok('모션을 줄이면 한 색으로', /@media \(prefers-reduced-motion:reduce\) \{\s*\n\s*\.nc-rainbow \{ animation:none/.test(htm));
+  const cli = fs2.readFileSync(path2.join(__dirname, '..', 'public/client.js'), 'utf8');
+  const blk = (htm.match(/\.nc-rainbow \{[\s\S]*?\n    \}/) || [''])[0];
+  ok('이름 전체에 가로로 깔린다', /linear-gradient\(90deg, #ff6b6b[\s\S]*#c39bff 100%\)/.test(blk));
+  ok('색이 하나씩 갈아 끼워지지 않는다', !/@keyframes ncRainbow/.test(htm));
+  ok('글자에 오려 붙인다', /background-clip:text/.test(blk) && /-webkit-text-fill-color:transparent/.test(blk));
+  ok('빛이 왼쪽에서 오른쪽으로 지난다',
+     /@keyframes ncSheen \{[\s\S]{0,200}0%   \{ background-position:-160% 0/.test(htm)
+     && /45%  \{ background-position: 260% 0/.test(htm));
+  ok('빛은 훑고 나면 쉰다', /100% \{ background-position: 260% 0/.test(htm));
+  ok('모션을 줄이면 빛만 끈다',
+     /@media \(prefers-reduced-motion:reduce\) \{\s*\n\s*\.nc-rainbow \{ animation:none; background-position:-160% 0/.test(htm));
+
+  // 명패(.np-*)와 같은 칸을 쓰면 하나가 죽는다 — 무지개는 안쪽 <i> 로 내려간다
+  ok('무지개는 이름 칸에 직접 걸지 않는다', /const ncClass = c => \(c && c !== 'rainbow'\)/.test(cli));
+  ok('이름 글자만 한 겹 감싼다', /const nickHTML = \(nick, color\) => color === 'rainbow'/.test(cli)
+     && /<i class="nc-rainbow">\$\{esc\(nick\)\}<\/i>/.test(cli));
+
+  // 물감은 이름을 찍는 자리마다 빠짐없이 따라가야 한다
+  for (const [name, re] of [
+    ['로비 프로필', /pb-nick\$\{ncClass\(p\.nickColor\)\}\$\{npClass\(p\.plate\)\}[^`]*nickHTML\(p\.nick, p\.nickColor\)/],
+    ['내 정보',     /mi-nick\$\{ncClass\(p\.nickColor\)\}">\$\{nickHTML\(p\.nick, p\.nickColor\)\}/],
+    ['랭킹 시상대', /pod-nick\$\{ncClass[^`]*nickHTML\(p\.nick, p\.nickColor\)/],
+    ['랭킹 목록',   /lb-nick\$\{ncClass\(p\.nickColor\)[^`]*nickHTML\(p\.nick, p\.nickColor\)/],
+    ['랭킹 내 줄',  /lb-nick\$\{ncClass\(me\.nickColor\)[^`]*nickHTML\(me\.nick, me\.nickColor\)/],
+    ['인게임 프로필', /gp-nick\$\{ncClass\(p\.nickColor\)[^`]*nickHTML\(p\.nick, p\.nickColor\)/],
+    ['상대 정보',   /op-nick\$\{ncClass\(p\.nickColor\)[^`]*nickHTML\(p\.nick, p\.nickColor\)/],
+    ['대기실 좌석', /ws-nick\$\{ncClass[^`]*nickHTML\(s2\.nick, s2\.profile && s2\.profile\.nickColor\)/],
+    ['방 목록 방장', /nickHTML\(r\.host, r\.hostColor\)/],
+    ['친구 목록',   /nickHTML\(f\.nick, f\.nickColor\)/],
+    ['클랜 멤버',   /nickHTML\(m\.nick, m\.nickColor\)/],
+    ['클랜 채팅',   /chat-who\$\{ncClass\(m\.nickColor\)\}">\$\{nickHTML\(m\.nick \|\| '', m\.nickColor\)\}/],
+    ['인게임 채팅', /gc-who\$\{ncClass\(msg\.nickColor\)\}">\$\{nickHTML\(msg\.nick, msg\.nickColor\)\}/],
+  ]) ok(`${name} 에 물감이 따라간다`, re.test(cli));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

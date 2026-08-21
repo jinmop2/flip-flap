@@ -245,24 +245,34 @@
     .nc-pink   { color:#ff8ecf !important; }
     .nc-lime   { color:#c8f05a !important; }
     .nc-gold   { color:#ffd94a !important; text-shadow:0 0 9px rgba(255,215,80,.55); }
-    /* 무지개 — 글자에 그라디언트를 오려 붙이던 방식은 명패(.np-*)와 못 산다.
-       명패도 background 를 쓰는데 뒤에 오는 규칙이 이겨서, 글자는 투명한 채
-       그라디언트만 사라진다. 즉 이름이 통째로 안 보였다.
-       색을 갈아 끼우는 쪽으로 바꾼다 — 어디에 얹혀도 글자가 보인다.
-       (애니메이션 값은 보통 선언보다 세므로 .pb-nick 같은 색도 이긴다) */
-    .nc-rainbow { animation:ncRainbow 3.6s steps(1, end) infinite; }
-    @keyframes ncRainbow {
-      0%   { color:#ff6b6b; }
-      17%  { color:#ffab5e; }
-      34%  { color:#ffd94a; }
-      50%  { color:#7dd87d; }
-      67%  { color:#5ee0d8; }
-      84%  { color:#c39bff; }
-      100% { color:#ff6b6b; }
+    /* 무지개 — 색이 하나씩 갈아 끼워지는 게 아니라, 이름 전체에 무지개가
+       가로로 한 번 깔린다. 그 위로 흰 빛이 왼쪽에서 오른쪽으로 훑고 지나간다.
+
+       글자에 그라디언트를 오려 붙이려면 background 칸을 써야 하는데, 명패(.np-*)
+       도 같은 칸을 쓴다. 한 요소에 둘을 얹으면 뒤에 오는 쪽이 이겨서 이름이
+       통째로 사라졌다(예전 버그). 그래서 이름 글자만 안쪽 <i> 로 한 겹 감싼다 —
+       명패는 바깥 요소가, 물감은 안쪽 <i> 가 각자 자기 background 를 쓴다. */
+    .nc-rainbow {
+      display:inline-block; font-style:normal;
+      background-image:
+        linear-gradient(100deg, rgba(255,255,255,0) 38%, rgba(255,255,255,.92) 50%, rgba(255,255,255,0) 62%),
+        linear-gradient(90deg, #ff6b6b 0%, #ffab5e 17%, #ffd94a 33%, #7dd87d 50%, #5ee0d8 66%, #6bb8ff 83%, #c39bff 100%);
+      background-size:260% 100%, 100% 100%;
+      background-position:-160% 0, 0 0;
+      background-repeat:no-repeat;
+      -webkit-background-clip:text; background-clip:text;
+      -webkit-text-fill-color:transparent; color:transparent !important;
+      animation:ncSheen 3.8s linear infinite;
     }
-    /* 모션을 줄여 달라고 한 기기에서는 한 색으로 고정한다 */
+    /* 빛은 훑고 지나간 뒤 잠깐 쉰다 — 쉬지 않고 돌면 이름이 계속 번쩍여 읽기 힘들다 */
+    @keyframes ncSheen {
+      0%   { background-position:-160% 0, 0 0; }
+      45%  { background-position: 260% 0, 0 0; }
+      100% { background-position: 260% 0, 0 0; }
+    }
+    /* 모션을 줄여 달라고 한 기기에서는 빛만 끄고 무지개는 그대로 둔다 */
     @media (prefers-reduced-motion:reduce) {
-      .nc-rainbow { animation:none; color:#ffd94a !important; }
+      .nc-rainbow { animation:none; background-position:-160% 0, 0 0; }
     }
     /* ── 카드백 스킨 ──
        기본 뒷면은 무늬 없는 어두운 보라. 스킨은 "샀다는 게 한눈에 보이게"
