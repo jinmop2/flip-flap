@@ -59,8 +59,8 @@ console.log('\n② AI 가 패 세기를 읽는다');
     }
     return n;
   };
-  const strong = bets(mk(201, 202));    // 지배자 (합 4)
-  const weak = bets(mk(609, 610));      // 꼴찌 (합 12)
+  const strong = bets(mk(201, 202));    // 2땡
+  const weak = bets(mk(406, 607));      // 가장 약한 끗
   ok('센 패로는 자주 건다', strong > 200, String(strong));
   ok('약한 패로는 훨씬 덜 건다', weak < strong * 0.5, `${weak} vs ${strong}`);
   ok('그래도 가끔은 지른다 (읽히지 않게)', weak > 0, String(weak));
@@ -79,14 +79,16 @@ console.log('\n② AI 가 패 세기를 읽는다');
     return n;
   };
   ok('센 패는 받는다', calls(mk(201, 202)) > 250, String(calls(mk(201, 202))));
-  ok('꼴찌 패는 대개 접는다', calls(mk(609, 610)) < 120, String(calls(mk(609, 610))));
+  ok('가장 약한 끗은 대개 접는다', calls(mk(406, 607)) < 150, String(calls(mk(406, 607))));
 }
 
 console.log('\n③ 첫 라운드는 한 장으로 가늠한다');
 {
   const c = (id) => [{ kind: Math.floor(id / 100), grade: id % 100, id }];
-  ok('2가 가장 세다', S.handStrength(c(201)) === 0);
-  ok('6이 가장 약하다', S.handStrength(c(610)) === 1);
+  // 새 족보에서는 6 도 땡·짝이 될 수 있어 예전만큼 절망적이지 않다 — 기울기가 완만하다
+  ok('2가 가장 세다', S.handStrength(c(201)) < S.handStrength(c(301)));
+  ok('6이 가장 약하다', S.handStrength(c(608)) > S.handStrength(c(401)));
+  ok('그래도 절망적이지는 않다', S.handStrength(c(608)) < 0.7, String(S.handStrength(c(608))));
   ok('3·4는 그 사이', S.handStrength(c(301)) < S.handStrength(c(401)));
   ok('빈 손은 최약체로 본다', S.handStrength([]) === 1);
 }
@@ -147,7 +149,7 @@ console.log('\n⑥ 경기장');
   ok('남의 패는 뒷면으로 깐다', /else for \(let k = 0; k < st\.count; k\+\+\) \{[\s\S]{0,240}makeCard\(null\)/.test(cli));
   ok('선 표시가 있다', /mn-first/.test(cli) && /mn-first/.test(html));
   ok('족보를 자리로 보여준다', /mn-ladder/.test(cli) && /mn-rung/.test(html));
-  ok('스나이퍼는 잡아먹는 자리를 칠한다', /beats\.includes\(i\) \? 'snipe'/.test(cli));
+  ok('졸개는 잡아먹는 자리를 칠한다', /ev\.jol \? \(i <= 3 \? 'snipe' : ''\)/.test(cli));
   ok('버튼 금액은 서버 값을 쓴다', /const amt = v\.amounts\[a\]/.test(cli));
   ok('두 번 눌러도 두 수가 안 나간다', /miniState\.turn = null;/.test(cli));
   ok('앉으면 로비를 접는다', /getElementById\('lobby'\)\.style\.display = 'none'/.test(cli));
@@ -193,9 +195,10 @@ console.log('\n⑥⁗′ 누가 이겼는지');
   ok('진행 중엔 남이 방금 한 행동이 보인다', /MINI_ACT_KO\[st\.lastAct\]/.test(cli));
   // 실제로 네 규칙이 다 나오는지 — 설명이 한 갈래만 돌면 반쪽짜리다
   const mk = (...ids) => ids.map((id) => ({ kind: Math.floor(id / 100), grade: id % 100, id }));
-  ok('앞자리로 갈린다', S.explain(mk(201, 202), mk(301, 302)).rule === 'front');
+  ok('족보로 갈린다', S.explain(mk(201, 202), mk(301, 401)).rule === 'jokbo');
+  ok('같은 족보 안에서 갈린다', S.explain(mk(201, 202), mk(301, 302)).rule === 'front');
   ok('뒷자리로 갈린다', S.explain(mk(301, 302), mk(303, 304)).rule === 'back');
-  ok('저격으로 갈린다', S.explain(mk(404, 606), mk(201, 202)).rule === 'snipe');
+  ok('졸개로 갈린다', S.explain(mk(406, 608), mk(201, 202)).rule === 'snipe');
 }
 
 console.log('\n⑥‴′ 화투 에디션');
@@ -236,7 +239,7 @@ console.log('\n⑥‴″ 결과를 볼 시간');
   ok('다음 판까지 남은 시간을 센다', /초 뒤 다음 판/.test(cli));
   ok('서버도 넉넉히 기다린다', /MINI_NEXT_MS = 9000/.test(srv));
   ok('족보표에 실제 카드를 놓는다', /mn-trcards/.test(cli) && /\.mn-trcards \.card/.test(html));
-  ok('예시는 실제로 나올 수 있는 조합', /const MINI_EX = \{/.test(cli));
+  ok('예시는 실제로 나올 수 있는 조합', /ex: \[\[2, 1\], \[2, 2\]\]/.test(cli) && /ex: \[\[4, 1\], \[6, 2\]\]/.test(cli));
 }
 
 console.log('\n⑥″ 한 화면에 들어간다');
@@ -297,7 +300,8 @@ console.log('\n⑦ 설명서');
   ok('미니게임 전용 설명서가 있다', /data-i18n-block="rulesMini"/.test(box));
   ok('로비 배우기 줄에서 열린다', /onclick="toggleRulesMini\(true\)"/.test(html));
   ok('여는 함수가 있다', /window\.toggleRulesMini/.test(cli));
-  for (const w of ['지배자', '최고급', '중간계', '최하위', '꼴찌', '거울쌍 10'])
+  // 족보를 갈아엎었다 — 땡 · 짝 · 끗 과 졸개의 배신
+  for (const w of ['땡', '짝', '끗', '2땡', '6땡', '졸개의 배신'])
     ok(`설명서에 ${w}`, box.includes(w));
   // 도박판 말(삥·하프·쿼터·따당·올인·다이) 대신 경매장 말을 쓴다
   for (const w of ['판 열기', '크게 올림', '살짝 올림', '두 배 올림', '전부 걸기', '접기'])
@@ -333,7 +337,7 @@ console.log('\n⑧ 영어판');
   ok('닫기 버튼이 살아 있다', /toggleRulesMini\(false\)/.test(b));
   // 화면에 실제로 쓰는 말이 사전에 있어야 한다 (도박판 말은 이제 안 쓴다)
   for (const k of ['미니게임', '넘기기', '판 열기', '살짝 올림', '크게 올림', '두 배 올림',
-                   '전부 걸기', '맞추기', '접기', '지배자', '꼴찌'])
+                   '전부 걸기', '맞추기', '접기', '땡', '끗'])
     ok(`${k} 번역이 있다`, i18n.includes(`'${k}':`));
   for (const k of ['삥', '하프', '쿼터', '따당', '올인', '다이'])
     ok(`도박판 말 ${k} 은 사전에 없다`, !i18n.includes(`'${k}':`), k);

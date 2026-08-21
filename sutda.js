@@ -1,16 +1,29 @@
-// ── 미니게임 족보 (섯다식 2장 승부) ──────────────────────────────────────
+// ── 미니게임 족보 (두 장 승부) ────────────────────────────────────────────
 //
 // 판정만 다루는 순수 모듈이다. 배팅·소켓·코인은 바깥이 맡고, 여기서는
 // "이 두 장이 저 두 장을 이기는가" 만 계산한다. 족보가 틀리면 게임이 통째로
-// 틀어지는데, 서버를 안 띄우고 276가지 조합을 전부 확인할 수 있어야 잡힌다.
+// 틀어지는데, 서버를 안 띄우고 190가지 조합을 전부 확인할 수 있어야 잡힌다.
 //
-// 덱은 본 게임과 같은 24장을 쓴다 — 카드를 새로 그릴 필요가 없고,
-// 플레이어가 이미 아는 카드라 족보를 새로 외우지 않아도 된다.
-//   2 그룹 2장 · 3 그룹 5장 · 4 그룹 7장 · 6 그룹 10장
+// 덱은 본 게임 카드에서 넉 장을 덜어낸 20장이다 — 카드를 새로 그릴 필요가 없고,
+// 플레이어가 이미 아는 카드라 족보만 새로 외우면 된다.
+//   2 그룹 2장 · 3 그룹 4장 · 4 그룹 6장 · 6 그룹 8장
 //
 // 카드는 { kind, grade } — kind 가 앞자리, grade 가 뒷자리. 둘 다 작을수록 강하다.
+//
+// ── 왜 족보를 갈아엎었나 ──────────────────────────────────────────────────
+// 예전 족보는 '앞자리 합이 작은 쪽' 하나로 서열을 매겼다. 그런데 6종이 덱의
+// 42% 라, 첫 장이 6이면(=거의 절반) 남은 판이 20% 확률로만 살 만한 패가 됐다.
+// 첫 배팅 라운드가 절반쯤은 형식이었다는 뜻이다. 게다가 6+6 은 '합 12 꼴찌' 라
+// 가장 흔한 조합(45가지)이 가장 죽은 패였다.
+//
+// 새 족보는 섯다의 땡과 포커의 페어를 가져와 그 자리를 메운다.
+//   · 같은 종류 두 장 = 땡  → 6+6 이 죽은 패에서 어엿한 패가 된다
+//   · 같은 등급 두 장 = 짝  → 종류가 갈려도 쥘 것이 생긴다
+//   · 나머지 = 끗 (종류 합)  → 예전 서열을 그대로 물려받는다
+// 재 보면 첫 장 기대치가 2종 85%/6종 28% 에서 2종 56%/6종 47% 로 평평해졌다.
+// "첫 장이 6이면 접는다" 가 사라진다.
 
-const SPEC = [[2, 2], [3, 5], [4, 7], [6, 10]];
+const SPEC = [[2, 2], [3, 4], [4, 6], [6, 8]];
 
 function makeDeck() {
   const out = [];
@@ -22,64 +35,69 @@ function makeDeck() {
 // 카드 하나의 세기 — 앞자리 먼저, 같으면 뒷자리. 작을수록 강하다.
 const cardValue = (c) => c.kind * 100 + c.grade;
 
-// ── 스나이퍼 ──
-// "앞자리 합 10" 은 본래 최하위권인데, 뒷자리 합까지 10이면 최상위를 잡는다.
-//   · 거울쌍 10 (4-4 + 6-6) — 0티어(합4)와 1티어(합5)를 잡는다
-//   · 일반 10-10 (나머지 6종)  — 1티어(합5)만 잡는다. 0티어에게는 진다.
-// 저격 대상이 아닌 패(합 6~9)를 만나면 그냥 '합 10' 으로 취급되어 진다.
-const SNIPER_NONE = 0, SNIPER_NORMAL = 1, SNIPER_MIRROR = 2;
+// 각 종류의 마지막 등급 (= 그 종류에서 가장 약한 카드)
+const lastGrade = (kind) => (SPEC.find(([k]) => k === kind) || [0, 0])[1];
 
-function sniperOf(a, b) {
-  if (a.kind + b.kind !== 10) return SNIPER_NONE;
-  if (a.grade + b.grade !== 10) return SNIPER_NONE;
-  // 거울쌍 — 4-4 와 6-6
-  const pair = [a, b].sort((x, y) => x.kind - y.kind);
-  if (pair[0].kind === 4 && pair[0].grade === 4 && pair[1].kind === 6 && pair[1].grade === 6)
-    return SNIPER_MIRROR;
-  return SNIPER_NORMAL;
+// ── 졸개의 배신 ──
+// 덱에서 가장 약한 두 장(4종 맨끝 + 6종 맨끝)이 모든 땡을 잡는다.
+// 본 게임의 '졸개의 배신'(최약이 최강을 잡는다)을 그대로 물려받은 것이라
+// 규칙을 새로 외울 필요가 없다. 190가지 중 딱 하나 — 그래서 터지면 사건이다.
+// 땡이 아닌 상대에게는 그냥 가장 약한 끗10 이다. 잡는 것 말고는 밑바닥이다.
+const JOL_A = 4 * 100 + lastGrade(4);
+const JOL_B = 6 * 100 + lastGrade(6);
+function isJol(a, b) {
+  const x = Math.min(cardValue(a), cardValue(b)), y = Math.max(cardValue(a), cardValue(b));
+  return x === JOL_A && y === JOL_B;
 }
 
-// 티어 — 화면에 이름을 띄우고, 저격 대상을 판단하는 데 쓴다.
-// 앞자리로 가능한 합은 4·5·6·7·8·9·10·12 뿐이다(11은 나오지 않는다).
-const TIER_OF_SUM = { 4: 0, 5: 1, 6: 2, 7: 3, 8: 4, 9: 5, 10: 6, 12: 7 };
-const TIER_NAME = ['지배자', '최고급', '중간계', '중간계', '중간계', '중간계', '최하위', '꼴찌'];
+// 족보 종류 — 작을수록 강하다
+const T_TTANG = 0, T_JJAK = 1, T_GGEUT = 2;
+const KIND_NAME = { 2: '2땡', 3: '3땡', 4: '4땡', 6: '6땡' };
 
 function evaluate(hand) {
   const [a, b] = hand;
-  const frontSum = a.kind + b.kind;
-  const backSum = a.grade + b.grade;
-  const sniper = sniperOf(a, b);
-  const tier = TIER_OF_SUM[frontSum];
-  return {
-    frontSum, backSum, sniper, tier,
-    minValue: Math.min(cardValue(a), cardValue(b)),   // 제3원칙 — 더 작은 패를 쥔 쪽
-    name: sniper === SNIPER_MIRROR ? '거울쌍 10'
-        : sniper === SNIPER_NORMAL ? '10-10 스나이퍼'
-        : `${TIER_NAME[tier]} (합 ${frontSum})`,
-  };
+  const jol = isJol(a, b);
+  const same = a.kind === b.kind;
+  const pair = !same && a.grade === b.grade;
+  const sum = a.kind + b.kind;
+  const minValue = Math.min(cardValue(a), cardValue(b));
+  if (jol) {
+    // 서열은 밑바닥(끗10 중에서도 맨 아래)이되, 땡을 잡는 힘만 따로 갖는다
+    return { type: T_GGEUT, jol: true, kind: null, sum, backSum: a.grade + b.grade, minValue,
+             rank: [T_GGEUT, sum, 99, 999], name: '졸개의 배신' };
+  }
+  // 눈금은 끝까지 갈라 둔다 — 중간에서 끊으면 서로 다른 패가 무승부가 된다
+  // (6-1+6-2 와 6-1+6-3 은 '가장 낮은 등급' 까지만 보면 같아진다).
+  if (same) {
+    return { type: T_TTANG, jol: false, kind: a.kind, sum, backSum: a.grade + b.grade, minValue,
+             rank: [T_TTANG, a.kind, Math.min(a.grade, b.grade), Math.max(a.grade, b.grade)],
+             name: KIND_NAME[a.kind] };
+  }
+  if (pair) {
+    return { type: T_JJAK, jol: false, kind: null, sum, backSum: a.grade + b.grade, minValue,
+             rank: [T_JJAK, a.grade, Math.min(a.kind, b.kind), Math.max(a.kind, b.kind)],
+             name: `${a.grade}짝` };
+  }
+  return { type: T_GGEUT, jol: false, kind: null, sum, backSum: a.grade + b.grade, minValue,
+           rank: [T_GGEUT, sum, a.grade + b.grade, minValue,
+                  Math.max(cardValue(a), cardValue(b))], name: `${sum}끗` };
 }
 
-// 저격이 통하는가 — 스나이퍼가 상대를 잡아먹는 경우만 true
-function snipes(me, opp) {
-  if (me.sniper === SNIPER_NONE) return false;
-  if (opp.sniper !== SNIPER_NONE) return false;      // 스나이퍼끼리는 저격이 아니다
-  if (me.sniper === SNIPER_MIRROR) return opp.tier === 0 || opp.tier === 1;
-  return opp.tier === 1;                             // 일반 10-10 은 1티어만
-}
+// 졸개가 상대를 잡아먹는가
+function snipes(me, opp) { return !!me.jol && opp.type === T_TTANG; }
 
 // A 가 B 를 이기면 1, 지면 -1, 완전히 같으면 0.
 // 완전히 같은 패는 덱에 카드가 한 장씩뿐이라 나올 수 없지만, 판정은 열어 둔다.
 function compare(handA, handB) {
   const A = evaluate(handA), B = evaluate(handB);
-  // ① 저격이 먼저다 — 서열을 뒤집는 규칙이라 합 비교보다 앞선다
+  // ① 졸개가 먼저다 — 서열을 뒤집는 규칙이라 족보 비교보다 앞선다
   if (snipes(A, B)) return 1;
   if (snipes(B, A)) return -1;
-  // ② 앞자리 합이 작은 쪽
-  if (A.frontSum !== B.frontSum) return A.frontSum < B.frontSum ? 1 : -1;
-  // ③ 뒷자리 합이 작은 쪽
-  if (A.backSum !== B.backSum) return A.backSum < B.backSum ? 1 : -1;
-  // ④ 더 작은 카드를 쥔 쪽
-  if (A.minValue !== B.minValue) return A.minValue < B.minValue ? 1 : -1;
+  // ② 족보 순서대로 (땡 → 짝 → 끗), 같은 족보 안에서는 정해진 눈금대로
+  for (let i = 0; i < Math.max(A.rank.length, B.rank.length); i++) {
+    const d = (A.rank[i] === undefined ? 0 : A.rank[i]) - (B.rank[i] === undefined ? 0 : B.rank[i]);
+    if (d) return d < 0 ? 1 : -1;
+  }
   return 0;
 }
 
@@ -334,8 +352,11 @@ function explain(winHand, loseHand) {
   const A = evaluate(winHand), B = evaluate(loseHand);
   if (snipes(A, B)) return { rule: 'snipe', win: A.name, lose: B.name };
   if (snipes(B, A)) return { rule: 'sniped', win: A.name, lose: B.name };
-  if (A.frontSum !== B.frontSum)
-    return { rule: 'front', a: A.frontSum, b: B.frontSum, win: A.name, lose: B.name };
+  // 족보 칸이 다르면 그것으로 갈린다 (땡 → 짝 → 끗)
+  if (A.type !== B.type) return { rule: 'jokbo', win: A.name, lose: B.name };
+  // 같은 칸 안에서는 눈금 순서대로 — 종류(끗은 합) → 등급 합 → 더 강한 카드
+  if (A.rank[1] !== B.rank[1])
+    return { rule: 'front', a: A.rank[1], b: B.rank[1], win: A.name, lose: B.name };
   if (A.backSum !== B.backSum)
     return { rule: 'back', a: A.backSum, b: B.backSum, win: A.name, lose: B.name };
   if (A.minValue !== B.minValue) {
@@ -462,17 +483,23 @@ function equityOf(cards, opponents) {
   return Math.pow(one, Math.max(1, opponents || 1));
 }
 
-// 예전 눈금 — 화면·시험에서 아직 쓴다. 0 이 가장 세고 1 이 가장 약하다.
+// 거친 눈금 — 화면·옛 AI 가 쓴다. 0 이 가장 세고 1 이 가장 약하다.
+// 족보 서열을 0~1 로 눌러 담은 것이라 정확한 승률은 아니다(그건 equity 가 한다).
 function handStrength(cards) {
   if (!cards || !cards.length) return 1;
-  if (cards.length === 1) return (cards[0].kind - 2) / 4;
+  // 한 장뿐일 때는 종류만으로 어림한다. 새 족보에서는 6 도 땡·짝이 될 수 있어
+  // 예전만큼 절망적이지 않다 — 기울기를 완만하게 잡는다.
+  if (cards.length === 1) return 0.28 + (cards[0].kind - 2) / 4 * 0.34;
   const ev = evaluate(cards);
-  if (ev.sniper === SNIPER_MIRROR) return 0.06;
-  if (ev.sniper === SNIPER_NORMAL) return 0.34;
-  return ev.tier / 7;
+  if (ev.jol) return 0.72;                      // 땡만 잡는다 — 평소엔 밑바닥
+  if (ev.type === T_TTANG) return { 2: 0.02, 3: 0.05, 4: 0.14, 6: 0.28 }[ev.kind];
+  if (ev.type === T_JJAK) return 0.42;
+  return Math.min(1, 0.5 + (ev.sum - 5) * 0.1);   // 끗5 0.5 → 끗10 1.0
 }
-const strengthOf = (ev) => (ev.sniper === SNIPER_MIRROR ? 0.5
-  : ev.sniper === SNIPER_NORMAL ? 2.5 : ev.tier);
+// 서열 눈금 — 낮을수록 세다. 족보 칸을 그대로 쓴다.
+const strengthOf = (ev) => (ev.jol ? 6.5
+  : ev.type === T_TTANG ? { 2: 0, 3: 1, 4: 2, 6: 3 }[ev.kind]
+  : ev.type === T_JJAK ? 4 : 4 + (ev.sum - 4) / 2);
 
 // 옛 AI — 지금 AI 가 정말 나아졌는지 재는 기준으로 남겨 둔다(시험에서 붙여 본다).
 function aiSimple(view, rand) {
@@ -582,7 +609,6 @@ module.exports = {
   explain, verdictOf,
   start, act, actionsFor, viewFor, roundClosed, raiseAmounts, capFor, resolve,
   aiAction, aiSimple, AI, handStrength, strengthOf, equityOf, equity2, equity1,
-  SPEC, TIER_NAME, TIER_OF_SUM,
-  SNIPER_NONE, SNIPER_NORMAL, SNIPER_MIRROR,
-  makeDeck, cardValue, sniperOf, evaluate, snipes, compare, deal, _shuffle: shuffle,
+  SPEC, KIND_NAME, T_TTANG, T_JJAK, T_GGEUT, isJol,
+  makeDeck, cardValue, evaluate, snipes, compare, deal, _shuffle: shuffle,
 };

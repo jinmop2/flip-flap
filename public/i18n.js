@@ -956,18 +956,14 @@
     '맞추기': 'Match',
     '접기': 'Fold',
     '접음': 'Folded',
-    '지배자': 'Overlord',
-    '최고급': 'Premium',
-    '중간계': 'Midlands',
-    '최하위': 'Bottom',
-    '꼴찌': 'Last',
-    '스나이퍼': 'Sniper',
-    '앞·뒤 합이 모두 10': 'Both sums exactly 10',
+    '땡': 'Pair',
+    '짝': 'Match',
+    '끗': 'Sum',
+    '졸개의 배신': 'Pawn\u2019s Betrayal',
+    '가장 약한 두 장 · 땡을 전부 잡는다': 'Weakest two cards · beats every Pair',
     '지금 내 패': 'your hand',
-    '거울쌍 10 — 지배자·최고급을 모두 잡습니다. (칠한 자리를 잡아먹어요)':
+    '졸개의 배신 — 땡은 전부 잡습니다. 땡이 아니면 가장 약한 패예요.':
       'Mirror 10 \u2014 beats both Overlord and Premium (the lit rungs).',
-    '10-10 스나이퍼 — 최고급만 잡습니다. 지배자에게는 집니다.':
-      '10-10 sniper \u2014 beats Premium only; loses to Overlord.',
     '미니게임은 로그인하면 즐길 수 있어요!': 'Log in to play the mini game!',
     '진행 중인 판이 없어요.': 'No hand in progress.',
     '금액이 올바르지 않아요.': 'That amount is not valid.',
@@ -975,7 +971,7 @@
       'Stronger toward the top. Ranked by the sum of the two big numbers.',
     '카드 두 장을 받아 서로 안 보이게 쥐고 배팅합니다.':
       'Each player takes two cards, keeps them hidden, and bets.',
-    '앞자리 합이 작을수록 강합니다.': 'The smaller the front sum, the stronger.',
+    '같은 종류면 땡, 등급이 같으면 짝, 나머지는 끗.': 'Same kind = Pair, same grade = Match, else Sum.',
 
     // ── 토너먼트 ──
     '토너먼트': 'Tournament',
@@ -1057,8 +1053,7 @@
     [/^\ud83e\ude99 \+(\d+)$/, '\ud83e\ude99 +$1'],
     [/^콜 \ud83e\ude99(\d+)$/, 'Call \ud83e\ude99$1'],
     [/^내 배팅 \ud83e\ude99(\d+) · 상대 \ud83e\ude99(\d+)$/, 'You \ud83e\ude99$1 \u00b7 Opponent \ud83e\ude99$2'],
-    [/^앞자리 합 (\d+) · 뒷자리 합 (\d+)$/, 'Front sum $1 \u00b7 back sum $2'],
-    [/^앞자리 합 (\d+)$/, 'Front sum $1'],
+    [/^종류 합 (\d+) · 등급 합 (\d+)$/, 'Kind sum $1 \u00b7 grade sum $2'],
     [/^← 강함 · 여덟 자리 중 (\d+)번째 · 약함 →$/, '\u2190 strong \u00b7 rank $1 of 8 \u00b7 weak \u2192'],
     [/^(.+) \(합 (\d+)\)$/, '$1 (sum $2)'],
     [/^덱 (\d+)장$/, 'Deck $1'],

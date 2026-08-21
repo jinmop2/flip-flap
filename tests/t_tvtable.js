@@ -66,7 +66,9 @@ ok('경매대에 배경도 테두리도 없다', /#tv-mat \{[\s\S]{0,420}backgro
 // 부채꼴로 눕힌 카드는 제 칸 아래로 삐져나온다 — 그만큼 안 띄우면
 // 상대 카드가 프로필을 깔고 앉는다(실제로 6장 전부 겹쳐 있었다).
 ok('상대 카드가 프로필을 안 깔고 앉는다',
-   /#tv-oppSeat \{ margin-top:16px;/.test(htm) && /#game #oppSeat \{ margin-top:16px; \}/.test(htm));
+   /#tv-oppSeat \{ margin-top:16px;/.test(htm) && /#game #oppSeat \{ margin-top:16px; margin-bottom:10px; \}/.test(htm));
+// 이름과 손패가 붙어 있으면 이름표가 카드에 얹힌 것처럼 보인다
+ok('이름과 손패 사이가 떠 있다', /#tv-mySeat \{ margin-bottom:14px; \}/.test(htm) && /#game \.tv-seat \{ margin-bottom:14px; \}/.test(htm));
 
 console.log('\n⑤-2 레일은 한 줄로 반듯하게');
 // 다섯 칸이 제 내용 길이대로 가운데 정렬되면 20 과 8 이 서로 다른 자리에 서서

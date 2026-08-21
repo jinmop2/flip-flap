@@ -1,4 +1,4 @@
-// 미니게임 족보 — 24장 덱에서 두 장을 뽑는 276가지를 전부 확인한다.
+// 미니게임 족보 — 20장 덱에서 두 장을 뽑는 190가지를 전부 확인한다.
 //
 // 족보가 틀리면 게임이 통째로 틀어지는데, 눈으로는 못 잡는다. 개수를 세어
 // 대조하고, 저격 규칙은 상대 티어별로 하나씩 짚는다.
@@ -16,117 +16,115 @@ for (let i = 0; i < deck.length; i++)
 
 console.log('① 덱');
 {
-  ok('24장', deck.length === 24, String(deck.length));
+  ok('20장', deck.length === 20, String(deck.length));
   ok('2그룹 2장', deck.filter((c) => c.kind === 2).length === 2);
-  ok('3그룹 5장', deck.filter((c) => c.kind === 3).length === 5);
-  ok('4그룹 7장', deck.filter((c) => c.kind === 4).length === 7);
-  ok('6그룹 10장', deck.filter((c) => c.kind === 6).length === 10);
-  ok('같은 카드가 없다', new Set(deck.map((c) => c.id)).size === 24);
-  ok('두 장 조합은 276가지', all.length === 276, String(all.length));
+  ok('3그룹 4장', deck.filter((c) => c.kind === 3).length === 4);
+  ok('4그룹 6장', deck.filter((c) => c.kind === 6 ? false : c.kind === 4).length === 6);
+  ok('6그룹 8장', deck.filter((c) => c.kind === 6).length === 8);
+  ok('같은 카드가 없다', new Set(deck.map((c) => c.id)).size === 20);
+  ok('두 장 조합은 190가지', all.length === 190, String(all.length));
 }
 
-console.log('\n② 티어별 개수');
+console.log('\n② 족보별 개수');
 {
-  const bySum = {};
-  for (const h of all) { const s = h[0].kind + h[1].kind; bySum[s] = (bySum[s] || 0) + 1; }
-  ok('앞자리 합 4 → 1개', bySum[4] === 1, String(bySum[4]));
-  ok('앞자리 합 5 → 10개', bySum[5] === 10, String(bySum[5]));
-  ok('앞자리 합 6 → 24개', bySum[6] === 24, String(bySum[6]));
-  ok('앞자리 합 7 → 35개', bySum[7] === 35, String(bySum[7]));
-  ok('앞자리 합 8 → 41개', bySum[8] === 41, String(bySum[8]));
-  ok('앞자리 합 9 → 50개', bySum[9] === 50, String(bySum[9]));
-  ok('앞자리 합 12 → 45개', bySum[12] === 45, String(bySum[12]));
-  ok('합 11 은 나오지 않는다', !bySum[11], String(bySum[11]));
-
-  const snipers = all.filter((h) => S.sniperOf(h[0], h[1]) !== S.SNIPER_NONE);
-  ok('스나이퍼 7개', snipers.length === 7, String(snipers.length));
-  ok('거울쌍 1개', snipers.filter((h) => S.sniperOf(h[0], h[1]) === S.SNIPER_MIRROR).length === 1);
-  ok('일반 10-10 6개', snipers.filter((h) => S.sniperOf(h[0], h[1]) === S.SNIPER_NORMAL).length === 6);
-
-  // 합 10 은 4그룹 7장 × 6그룹 10장 = 70가지. 스나이퍼 7개를 빼면 63개다.
-  // 규칙서에는 62로 적혀 있었는데, 그러면 전체가 275가 되어 276과 안 맞는다.
-  ok('앞자리 합 10 → 70개', bySum[10] === 70, String(bySum[10]));
-  ok('그중 일반(6티어)은 63개', bySum[10] - 7 === 63, String(bySum[10] - 7));
-  const total = Object.values(bySum).reduce((a, b) => a + b, 0);
-  ok('전부 더하면 276', total === 276, String(total));
-}
-
-console.log('\n③ 코어 룰 (1·2·3원칙)');
-{
-  // 제1원칙 — 앞자리 합이 작은 쪽
-  ok('합 4 가 합 5 를 이긴다', S.compare([C(2, 1), C(2, 2)], [C(2, 1), C(3, 1)]) === 1);
-  ok('합 6 이 합 7 을 이긴다', S.compare([C(2, 1), C(4, 1)], [C(3, 1), C(4, 1)]) === 1);
-  ok('합 9 가 합 12 를 이긴다', S.compare([C(3, 1), C(6, 1)], [C(6, 1), C(6, 2)]) === 1);
-
-  // 제2원칙 — 앞자리 합이 같으면 뒷자리 합
-  ok('같은 합이면 뒷자리 합이 작은 쪽',
-     S.compare([C(3, 1), C(4, 1)], [C(3, 5), C(4, 7)]) === 1);
-  ok('반대도 성립', S.compare([C(3, 5), C(4, 7)], [C(3, 1), C(4, 1)]) === -1);
-
-  // 제3원칙 — 둘 다 같으면 더 작은 카드를 쥔 쪽
-  // 3-1+4-5 (합7, 뒷합6) vs 3-2+4-4 (합7, 뒷합6) → 3-1 이 3-2 보다 작다
-  ok('합이 다 같으면 더 작은 패를 쥔 쪽',
-     S.compare([C(3, 1), C(4, 5)], [C(3, 2), C(4, 4)]) === 1);
-  ok('반대도 성립', S.compare([C(3, 2), C(4, 4)], [C(3, 1), C(4, 5)]) === -1);
-}
-
-console.log('\n④ 저격 — 거울쌍 10 (4-4 + 6-6)');
-{
-  const mirror = [C(4, 4), C(6, 6)];
-  ok('거울쌍으로 인식', S.evaluate(mirror).sniper === S.SNIPER_MIRROR);
-  ok('0티어(합4)를 잡는다', S.compare(mirror, [C(2, 1), C(2, 2)]) === 1);
-  ok('1티어(합5)를 잡는다', S.compare(mirror, [C(2, 1), C(3, 1)]) === 1);
-  // 저격 대상이 아니면 그냥 합 10 — 중간계에게 진다
-  for (const [name, opp] of [['2티어(합6)', [C(2, 1), C(4, 1)]], ['3티어(합7)', [C(3, 1), C(4, 1)]],
-                             ['4티어(합8)', [C(2, 1), C(6, 1)]], ['5티어(합9)', [C(3, 1), C(6, 1)]]])
-    ok(`${name}에게는 진다`, S.compare(mirror, opp) === -1, String(S.compare(mirror, opp)));
-  ok('7티어(합12)는 이긴다', S.compare(mirror, [C(6, 1), C(6, 2)]) === 1);
-}
-
-console.log('\n⑤ 저격 — 일반 10-10');
-{
-  const norm = [C(4, 1), C(6, 9)];
-  ok('일반 스나이퍼로 인식', S.evaluate(norm).sniper === S.SNIPER_NORMAL);
-  ok('1티어(합5)를 잡는다', S.compare(norm, [C(2, 1), C(3, 1)]) === 1);
-  ok('0티어(합4)에게는 진다', S.compare(norm, [C(2, 1), C(2, 2)]) === -1,
-     String(S.compare(norm, [C(2, 1), C(2, 2)])));
-  for (const [name, opp] of [['2티어', [C(2, 1), C(4, 1)]], ['5티어', [C(3, 1), C(6, 1)]]])
-    ok(`${name}에게는 진다`, S.compare(norm, opp) === -1);
-  // 규칙서에 적힌 여섯 조합이 전부 일반 스나이퍼인가
-  for (const [a, b] of [[C(4, 1), C(6, 9)], [C(4, 2), C(6, 8)], [C(4, 3), C(6, 7)],
-                        [C(4, 5), C(6, 5)], [C(4, 6), C(6, 4)], [C(4, 7), C(6, 3)]])
-    ok(`${a.kind}-${a.grade} + ${b.kind}-${b.grade} 는 스나이퍼`,
-       S.sniperOf(a, b) === S.SNIPER_NORMAL);
-}
-
-console.log('\n⑥ 스나이퍼끼리는 코어 룰');
-{
-  const mirror = [C(4, 4), C(6, 6)], norm = [C(4, 1), C(6, 9)];
-  // 둘 다 합10·뒷합10 이므로 제3원칙으로 간다. 4-1 이 4-4 보다 작다.
-  ok('저격끼리는 저격이 안 통한다', S.compare(mirror, norm) === -1, String(S.compare(mirror, norm)));
-  ok('더 작은 패를 쥔 쪽이 이긴다', S.compare(norm, mirror) === 1);
-}
-
-console.log('\n⑦ 0티어와 1티어');
-{
-  const boss = [C(2, 1), C(2, 2)];
-  ok('0티어는 단 하나', all.filter((h) => h[0].kind + h[1].kind === 4).length === 1);
-  ok('0티어는 거울쌍에게만 진다', (() => {
-    let losses = 0;
-    for (const h of all) {
-      if (h[0].id === boss[0].id && h[1].id === boss[1].id) continue;
-      if (S.compare(boss, h) === -1) losses++;
-    }
-    return losses === 1;
-  })());
-  // 1티어는 0티어와 스나이퍼 7개, 모두 8개에게 진다
-  const t1 = [C(2, 1), C(3, 1)];
-  let l1 = 0;
+  const T = { ttang: 0, jjak: 0, ggeut: {}, jol: 0 };
   for (const h of all) {
-    if (h[0].id === t1[0].id && h[1].id === t1[1].id) continue;
-    if (S.compare(t1, h) === -1) l1++;
+    const e = S.evaluate(h);
+    if (e.jol) T.jol++;
+    else if (e.type === S.T_TTANG) T.ttang++;
+    else if (e.type === S.T_JJAK) T.jjak++;
+    else T.ggeut[e.sum] = (T.ggeut[e.sum] || 0) + 1;
   }
-  ok('1티어는 8개에게만 진다 (0티어 + 스나이퍼 7)', l1 === 8, String(l1));
+  // 땡 = C(2,2)+C(4,2)+C(6,2)+C(8,2) = 1+6+15+28
+  ok('땡 50가지', T.ttang === 50, String(T.ttang));
+  // 짝(등급이 같고 종류가 다른 두 장) = 등급 1·2 는 네 종류 모두 있어 6가지씩,
+  // 3·4 는 세 종류(3·4·6) 3가지씩, 5·6 은 두 종류(4·6) 1가지씩
+  ok('짝 20가지', T.jjak === 20, String(T.jjak));
+  ok('졸개는 딱 하나', T.jol === 1, String(T.jol));
+  // 종류 곱에서 '등급이 같은 두 장'(=짝)을 뺀 값이다. 끗5 = 2장×4장 − 2
+  ok('끗 5 → 6가지', T.ggeut[5] === 6, String(T.ggeut[5]));
+  ok('끗 6 → 10가지', T.ggeut[6] === 10, String(T.ggeut[6]));
+  ok('끗 7 → 20가지', T.ggeut[7] === 20, String(T.ggeut[7]));
+  ok('끗 8 → 14가지', T.ggeut[8] === 14, String(T.ggeut[8]));
+  ok('끗 9 → 28가지', T.ggeut[9] === 28, String(T.ggeut[9]));
+  ok('끗 10 → 41가지 (졸개 제외)', T.ggeut[10] === 41, String(T.ggeut[10]));
+  ok('합 11 은 나오지 않는다', !T.ggeut[11], String(T.ggeut[11]));
+  const total = T.ttang + T.jjak + T.jol + Object.values(T.ggeut).reduce((a, b) => a + b, 0);
+  ok('전부 더하면 190', total === 190, String(total));
+}
+
+console.log('\n③ 코어 룰 — 땡 > 짝 > 끗');
+{
+  // 땡끼리는 종류가 작을수록 강하다
+  ok('2땡이 3땡을 이긴다', S.compare([C(2, 1), C(2, 2)], [C(3, 1), C(3, 2)]) === 1);
+  ok('3땡이 4땡을 이긴다', S.compare([C(3, 1), C(3, 2)], [C(4, 1), C(4, 2)]) === 1);
+  ok('4땡이 6땡을 이긴다', S.compare([C(4, 1), C(4, 2)], [C(6, 1), C(6, 2)]) === 1);
+  // 같은 땡이면 더 강한 카드를 쥔 쪽
+  ok('같은 땡은 등급이 낮은 쪽', S.compare([C(6, 1), C(6, 2)], [C(6, 3), C(6, 4)]) === 1);
+  // 가장 약한 땡도 짝을 이긴다
+  ok('6땡이 짝을 이긴다', S.compare([C(6, 7), C(6, 8)], [C(3, 1), C(4, 1)]) === 1);
+  // 짝끼리는 등급이 낮을수록 강하다
+  ok('1짝이 2짝을 이긴다', S.compare([C(3, 1), C(4, 1)], [C(3, 2), C(4, 2)]) === 1);
+  ok('같은 짝은 종류가 낮은 쪽', S.compare([C(2, 1), C(3, 1)], [C(3, 1), C(4, 1)]) === 1);
+  // 짝은 어떤 끗보다도 강하다
+  ok('짝이 5끗을 이긴다', S.compare([C(4, 5), C(6, 5)], [C(2, 1), C(3, 2)]) === 1);
+  // 끗끼리는 종류 합이 작을수록 강하다
+  ok('5끗이 6끗을 이긴다', S.compare([C(2, 1), C(3, 2)], [C(2, 1), C(4, 2)]) === 1);
+  ok('9끗이 10끗을 이긴다', S.compare([C(3, 1), C(6, 2)], [C(4, 1), C(6, 2)]) === 1);
+  // 같은 끗이면 등급 합이 작은 쪽
+  ok('같은 끗은 등급 합이 작은 쪽', S.compare([C(2, 1), C(4, 2)], [C(2, 1), C(4, 3)]) === 1);
+}
+
+console.log('\n④ 졸개의 배신 — 가장 약한 두 장이 땡을 잡는다');
+{
+  const JOL = [C(4, 6), C(6, 8)];
+  ok('졸개는 딱 한 조합', S.isJol(JOL[0], JOL[1]) === true);
+  ok('이름이 붙는다', S.evaluate(JOL).name === '졸개의 배신');
+  for (const [name, h] of [['2땡', [C(2, 1), C(2, 2)]], ['3땡', [C(3, 1), C(3, 2)]],
+                           ['4땡', [C(4, 1), C(4, 2)]], ['6땡', [C(6, 1), C(6, 2)]]])
+    ok(`${name}을 잡는다`, S.compare(JOL, h) === 1);
+  ok('짝에게는 진다', S.compare(JOL, [C(3, 1), C(4, 1)]) === -1);
+  ok('가장 약한 끗에게도 진다', S.compare(JOL, [C(4, 1), C(6, 2)]) === -1);
+  // 서열은 밑바닥이어야 한다 — 땡 말고는 아무도 못 이긴다
+  let beat = 0;
+  for (const h of all) {
+    if (h[0].id === JOL[0].id || h[1].id === JOL[1].id) continue;
+    if (S.compare(JOL, h) === 1) beat++;
+  }
+  ok('땡 말고는 못 이긴다', beat <= 50, `${beat}가지`);
+}
+
+console.log('\n⑤ 6+6 이 죽은 패가 아니다');
+{
+  // 예전 족보에서는 6+6 이 '합 12 꼴찌' 라 가장 흔한 조합이 가장 죽은 패였다.
+  const h = [C(6, 3), C(6, 4)];
+  ok('6+6 은 6땡이다', S.evaluate(h).name === '6땡');
+  ok('끗은 전부 이긴다', S.compare(h, [C(2, 1), C(3, 2)]) === 1);
+  ok('짝도 이긴다', S.compare(h, [C(3, 1), C(4, 1)]) === 1);
+}
+
+console.log('\n⑥ 이름이 사람 말로 나온다');
+{
+  ok('2땡', S.evaluate([C(2, 1), C(2, 2)]).name === '2땡');
+  ok('3짝', S.evaluate([C(3, 3), C(4, 3)]).name === '3짝');
+  ok('7끗', S.evaluate([C(3, 1), C(4, 2)]).name === '7끗');
+}
+
+console.log('\n⑦ 첫 장이 6이어도 절망적이지 않다');
+{
+  // 예전에는 첫 장이 6(덱의 42%)이면 살 만한 패가 될 확률이 20% 뿐이었다.
+  const rate = (kind) => {
+    let s = 0, c = 0;
+    for (const first of deck.filter((x) => x.kind === kind))
+      for (const second of deck) {
+        if (second.id === first.id) continue;
+        s += S.equity2([first, second]); c++;
+      }
+    return s / c;
+  };
+  const two = rate(2), six = rate(6);
+  ok('2종 첫 장과 6종 첫 장의 차이가 크지 않다', two - six < 0.15, `${(two * 100).toFixed(0)}% vs ${(six * 100).toFixed(0)}%`);
+  ok('6종 첫 장도 반타작은 된다', six > 0.4, `${(six * 100).toFixed(0)}%`);
 }
 
 console.log('\n⑧ 판정이 앞뒤로 맞는가');
@@ -152,7 +150,7 @@ console.log('\n⑨ 나눠주기');
   ok('두 사람에게 2장씩', d.hands.length === 2 && d.hands[0].length === 2 && d.hands[1].length === 2);
   const used = [...d.hands[0], ...d.hands[1]].map((c) => c.id);
   ok('같은 카드가 겹치지 않는다', new Set(used).size === 4);
-  ok('나머지는 20장', d.rest.length === 20, String(d.rest.length));
+  ok('나머지는 16장', d.rest.length === 16, String(d.rest.length));
   const again = S.deal(rngOf(1));
   ok('같은 시드면 같은 패', JSON.stringify(again.hands) === JSON.stringify(d.hands));
 }
@@ -321,14 +319,15 @@ console.log('\n⑯ 승부 — 저격이 도는 판');
   const mk = (a, b) => [a, b].map((id) => ({ kind: Math.floor(id / 100), grade: id % 100, id }));
   const st = S.start({ seats: 3, first: 0 });
   st.hands = [
-    mk(404, 606),          // 거울쌍 10 — 0·1티어를 잡는다
-    mk(201, 202),          // 지배자 (합 4)
-    mk(301, 302),          // 중간계 (합 6)
+    mk(406, 608),          // 졸개의 배신 — 땡을 잡는다
+    mk(201, 202),          // 2땡
+    mk(201 + 100, 302),    // 3땡 아님 — 3-1+3-2 를 쓴다
   ];
+  st.hands[2] = mk(301, 302);
   const w = S.resolve(st);
-  ok('저격수가 지배자를 잡는다', S.compare(st.hands[0], st.hands[1]) > 0);
-  ok('그런데 중간계에게는 진다', S.compare(st.hands[0], st.hands[2]) < 0);
-  ok('지배자는 중간계를 이긴다', S.compare(st.hands[1], st.hands[2]) > 0);
+  ok('졸개가 2땡을 잡는다', S.compare(st.hands[0], st.hands[1]) > 0);
+  ok('3땡도 잡는다', S.compare(st.hands[0], st.hands[2]) > 0);
+  ok('2땡은 3땡을 이긴다', S.compare(st.hands[1], st.hands[2]) > 0);
   ok('순환이 생겨도 승자가 하나로 정해진다', w === 0 || w === 1 || w === 2, String(w));
   let wins = 0;
   for (let i = 0; i < 3; i++) if (i !== w && S.compare(st.hands[w], st.hands[i]) > 0) wins++;
@@ -379,11 +378,14 @@ console.log('\n⑱ 2000판을 돌려도 돈이 안 샌다');
 console.log('\n⑲ AI 가 확률로 판단한다');
 {
   const mk = (...ids) => ids.map((id) => ({ kind: Math.floor(id / 100), grade: id % 100, id }));
-  ok('지배자는 거의 다 이긴다', S.equity2(mk(201, 202)) > 0.99, S.equity2(mk(201, 202)).toFixed(3));
-  ok('꼴찌는 아무도 못 이긴다', S.equity2(mk(609, 610)) === 0, String(S.equity2(mk(609, 610))));
-  // 거울쌍은 최상위만 잡는다 — 이름값과 달리 이길 확률 자체는 낮다
-  const mirror = S.equity2(mk(404, 606));
-  ok('거울쌍은 이름값보다 확률이 낮다', mirror > 0.2 && mirror < 0.5, mirror.toFixed(3));
+  ok('2땡은 거의 다 이긴다', S.equity2(mk(201, 202)) > 0.98, S.equity2(mk(201, 202)).toFixed(3));
+  // 가장 약한 끗(졸개가 아닌 4+6)은 거의 못 이긴다
+  ok('가장 약한 끗은 거의 못 이긴다', S.equity2(mk(406, 607)) < 0.03, S.equity2(mk(406, 607)).toFixed(3));
+  // 졸개는 땡만 잡는다 — 이름값과 달리 이길 확률 자체는 낮다
+  const jol = S.equity2(mk(406, 608));
+  ok('졸개는 이름값보다 확률이 낮다', jol > 0.15 && jol < 0.45, jol.toFixed(3));
+  // 6+6 이 죽은 패가 아니게 됐다 — 예전 족보에서는 0% 였다
+  ok('6땡은 어엿한 패다', S.equity2(mk(607, 608)) > 0.7, S.equity2(mk(607, 608)).toFixed(3));
   ok('한 장짜리도 잰다', S.equity1(mk(201)[0]) > S.equity1(mk(610)[0]));
   ok('상대가 늘면 확률이 떨어진다',
      S.equityOf(mk(301, 302), 3) < S.equityOf(mk(301, 302), 1));

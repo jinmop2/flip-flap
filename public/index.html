@@ -3639,9 +3639,10 @@
       width:64px; height:90px; z-index:3; transition:transform .15s;
     }
     /* 자리(프로필·시계)는 트웰브와 같은 조각을 쓴다 — .tv-seat */
-    #game .tv-seat { margin-bottom:4px; }
+    /* 이름과 손패가 붙어 있으면 이름표가 카드에 얹힌 것처럼 보인다 — 띄운다 */
+    #game .tv-seat { margin-bottom:14px; }
     /* 상대 손패는 부채꼴이라 제 칸 아래로 삐져나온다 — 프로필을 그만큼 내린다 */
-    #game #oppSeat { margin-top:16px; }
+    #game #oppSeat { margin-top:16px; margin-bottom:10px; }
     #deckStack .deck-layer { position:absolute; top:0; left:0; box-shadow:0 2px 6px rgba(0,0,0,.55); }
     #deckStack .deck-count {
       position:absolute; bottom:-24px; left:50%; transform:translateX(-50%);
@@ -4201,8 +4202,9 @@
       width:max-content; white-space:nowrap; }
     /* 부채꼴로 눕힌 카드는 제 칸보다 아래로 삐져나온다(칸은 안 눕은 크기로
        잡히기 때문이다). 그만큼 띄우지 않으면 상대 카드가 프로필을 깔고 앉는다. */
-    #tv-oppSeat { margin-top:16px; margin-bottom:4px; }
-    #tv-mySeat { margin-bottom:4px; }
+    #tv-oppSeat { margin-top:16px; margin-bottom:10px; }
+    /* 이름과 손패가 붙어 있으면 이름표가 카드에 얹힌 것처럼 보인다 — 띄운다 */
+    #tv-mySeat { margin-bottom:14px; }
     /* 이모트 — 왼손 엄지 자리. 배팅 버튼과 겹치지 않게 왼쪽 끝에 둔다. */
     #tv-emoteSlot { position:absolute; left:14px; bottom:calc(12px + var(--safe-b)); z-index:8; }
     /* 턴 번호는 덱 위에 얹는다 — 따로 띄우면 좁은 화면에서 덱과 겹친다 */
@@ -5195,7 +5197,7 @@
     <!-- 한 문장을 <b>로 쪼개면 번역이 조각나서 어순이 깨진다 — 통문장으로 둔다 -->
     <p class="auth-hint" style="text-align:center;margin:0;line-height:1.7">
       카드 두 장을 받아 서로 안 보이게 쥐고 배팅합니다.<br>
-      앞자리 합이 작을수록 강합니다.
+      같은 종류면 땡, 등급이 같으면 짝, 나머지는 끗.
     </p>
     <div class="sp-lang" style="justify-content:center">
       <div class="sp-seg" id="mnSeatSeg">
@@ -5482,26 +5484,26 @@
        오지만 맞추기·접기만 할 수 있어요. 판을 쪼개지 않으므로, 올리는 값은 가장 적게 가진
        상대가 맞출 수 있는 만큼에서 끊깁니다.</p>
 
-    <h3><span data-ico="🏅"></span> 누가 이기나</h3>
-    <p>카드 가운데 <b>큰 숫자(앞자리)</b> 두 장을 더합니다. <b>합이 작을수록 강합니다.</b></p>
+    <h3><span data-ico="🏅"></span> 누가 이기나 — 땡 · 짝 · 끗</h3>
+    <p>두 장의 관계를 먼저 봅니다. <b>같은 종류면 땡</b>, <b>등급이 같으면 짝</b>, 나머지는 <b>끗</b>입니다.</p>
     <div class="r4-tbl">
-      <div class="r4-row r4-head"><span>앞자리 합</span><span>이름</span></div>
-      <div class="r4-row"><span>4</span><span>지배자</span></div>
-      <div class="r4-row"><span>5</span><span>최고급</span></div>
-      <div class="r4-row"><span>6 · 7 · 8 · 9</span><span>중간계</span></div>
-      <div class="r4-row"><span>10</span><span>최하위</span></div>
-      <div class="r4-row"><span>12</span><span>꼴찌</span></div>
+      <div class="r4-row r4-head"><span>족보</span><span>무엇</span><span>서열</span></div>
+      <div class="r4-row"><span>땡</span><span>같은 종류 두 장</span><span>2땡 &gt; 3땡 &gt; 4땡 &gt; 6땡</span></div>
+      <div class="r4-row"><span>짝</span><span>등급이 같은 두 장</span><span>등급이 낮을수록 강함</span></div>
+      <div class="r4-row"><span>끗</span><span>나머지</span><span>종류 합 5 &gt; 6 &gt; 7 &gt; 8 &gt; 9 &gt; 10</span></div>
     </div>
-    <p>합이 같으면 <b>뒷자리(작은 숫자) 합</b>이 작은 쪽, 그것도 같으면 <b>더 강한 카드 한 장</b>을 쥔 쪽이 이깁니다.</p>
+    <p><b>땡은 어떤 짝보다 강하고, 짝은 어떤 끗보다 강합니다.</b>
+       같은 족보끼리 붙으면 <b>등급 합</b>이 작은 쪽, 그것도 같으면 <b>더 강한 카드 한 장</b>을 쥔 쪽이 이깁니다.</p>
 
-    <h3><span data-ico="🎯"></span> 스나이퍼 — 뒤집기 한 방</h3>
-    <p>앞자리 합이 10이면 원래 최하위입니다. 그런데 <b>뒷자리 합까지 정확히 10</b>이면 최상위를 잡아먹습니다.</p>
+    <h3><span data-ico="🎯"></span> 졸개의 배신 — 뒤집기 한 방</h3>
+    <p>덱에서 <b>가장 약한 두 장</b>(4-6 + 6-8)은 평소엔 밑바닥입니다. 그런데 이 한 조합만은
+       <b>땡을 전부 잡습니다</b> — 2땡이든 6땡이든.</p>
     <ul>
-      <li><b>거울쌍 10</b> (4-4 + 6-6) — <b>지배자·최고급</b>을 모두 잡습니다.</li>
-      <li><b>일반 10-10</b> — <b>최고급</b>만 잡습니다. 지배자에게는 집니다.</li>
-      <li>그 밖의 패(합 6~9)를 만나면 그냥 합 10짜리로 취급되어 집니다.</li>
+      <li>본 게임의 <b>졸개의 배신</b>(최약이 최강을 잡는다)과 같은 규칙입니다.</li>
+      <li>땡이 아닌 상대(짝·끗)에게는 <b>가장 약한 끗</b>으로 취급되어 집니다.</li>
+      <li>190가지 중 딱 하나 — 그래서 터지면 사건입니다.</li>
     </ul>
-    <p>저격은 서열을 뒤집는 규칙이라 셋 이상이 남으면 <b>A가 B를, B가 C를, C가 A를</b> 이기는
+    <p>배신은 서열을 뒤집는 규칙이라 셋 이상이 남으면 <b>A가 B를, B가 C를, C가 A를</b> 이기는
        고리가 생길 수 있습니다. 그럴 땐 <b>더 많은 사람을 이긴 쪽</b>이 가져가고, 그것도 같으면
        기본 서열로 가릅니다.</p>
 

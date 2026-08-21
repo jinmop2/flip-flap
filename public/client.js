@@ -3206,12 +3206,29 @@ function moonsEl(amount, cls) {
 
 // 족보 사다리 — 이름만 띄우면 세다는 건지 약하다는 건지 알 수 없다.
 // 앞자리 합으로 정해지는 8칸 중 몇 번째인지를 칸으로 보여준다.
+// 족보 사다리 — 위가 강하다. 서버(sutda.js)의 서열과 같은 순서여야 한다.
+//   땡(같은 종류) → 짝(같은 등급) → 끗(종류 합)
 const MINI_TIERS = [
-  { sum: 4,  name: '지배자' }, { sum: 5,  name: '최고급' },
-  { sum: 6,  name: '중간계' }, { sum: 7,  name: '중간계' },
-  { sum: 8,  name: '중간계' }, { sum: 9,  name: '중간계' },
-  { sum: 10, name: '최하위' }, { sum: 12, name: '꼴찌' },
+  { key: 'ttang2', name: '2땡',  note: '같은 2 두 장',  ex: [[2, 1], [2, 2]] },
+  { key: 'ttang3', name: '3땡',  note: '같은 3 두 장',  ex: [[3, 1], [3, 2]] },
+  { key: 'ttang4', name: '4땡',  note: '같은 4 두 장',  ex: [[4, 1], [4, 2]] },
+  { key: 'ttang6', name: '6땡',  note: '같은 6 두 장',  ex: [[6, 1], [6, 2]] },
+  { key: 'jjak',   name: '짝',   note: '등급이 같은 두 장 · 등급이 낮을수록 강함', ex: [[3, 2], [4, 2]] },
+  { key: 'g5',     name: '5끗',  note: '2 + 3',  ex: [[2, 1], [3, 2]] },
+  { key: 'g6',     name: '6끗',  note: '2 + 4',  ex: [[2, 1], [4, 2]] },
+  { key: 'g7',     name: '7끗',  note: '3 + 4',  ex: [[3, 1], [4, 2]] },
+  { key: 'g8',     name: '8끗',  note: '2 + 6',  ex: [[2, 1], [6, 2]] },
+  { key: 'g9',     name: '9끗',  note: '3 + 6',  ex: [[3, 1], [6, 2]] },
+  { key: 'g10',    name: '10끗', note: '4 + 6',  ex: [[4, 1], [6, 2]] },
 ];
+// 지금 내 패가 사다리의 몇 번째 칸인가
+function miniRungOf(ev) {
+  if (!ev) return -1;
+  if (ev.jol) return -1;                                   // 졸개는 자기 칸이 없다
+  if (ev.type === 0) return { 2: 0, 3: 1, 4: 2, 6: 3 }[ev.kind];
+  if (ev.type === 1) return 4;
+  return 5 + (ev.sum - 5);
+}
 
 
 // 나눠주는 모션 — 어느 카드가 "새로 온" 것인지 화면이 스스로 알아야 한다.
@@ -3237,20 +3254,18 @@ function miniEvalBox(ev, round) {
     return '<div class="mn-ev-hint" style="text-align:center">'
          + (round === 1 ? '아직 한 장 — 두 번째 장을 받아야 족보가 나옵니다.' : '') + '</div>';
   }
-  // 왼쪽이 강한 쪽. 스나이퍼는 자기 자리가 아니라 "잡아먹는 자리"를 칠한다 —
-  // 스나이퍼의 세기는 자기 합이 아니라 누구를 잡느냐로 정해지기 때문이다.
-  const beats = ev.sniper === 2 ? [0, 1] : ev.sniper === 1 ? [1] : [];
+  // 왼쪽이 강한 쪽. 졸개는 자기 칸이 아니라 "잡아먹는 칸"(땡 넷)을 칠한다 —
+  // 졸개의 세기는 자기 서열이 아니라 누구를 잡느냐로 정해지기 때문이다.
+  const my = miniRungOf(ev);
   const rungs = MINI_TIERS.map((_, i) => {
-    const cls = ev.sniper > 0 ? (beats.includes(i) ? 'snipe' : '') : (i === ev.tier ? 'on' : '');
+    const cls = ev.jol ? (i <= 3 ? 'snipe' : '') : (i === my ? 'on' : '');
     return `<span class="mn-rung ${cls}"></span>`;
   }).join('');
-  const hint = ev.sniper === 2
-    ? '거울쌍 10 — 지배자·최고급을 모두 잡습니다. (칠한 자리를 잡아먹어요)'
-    : ev.sniper === 1
-      ? '10-10 스나이퍼 — 최고급만 잡습니다. 지배자에게는 집니다.'
-      : `← 강함 · 여덟 자리 중 ${ev.tier + 1}번째 · 약함 →`;
+  const hint = ev.jol
+    ? '졸개의 배신 — 땡은 전부 잡습니다. 땡이 아니면 가장 약한 패예요.'
+    : `← 강함 · ${MINI_TIERS.length}칸 중 ${my + 1}번째 · 약함 →`;
   return `<div class="mn-ev-top"><span class="mn-ev-name">${esc(ev.name)}</span>`
-       + `<span class="mn-ev-sum">앞자리 합 ${ev.frontSum} · 뒷자리 합 ${ev.backSum}</span></div>`
+       + `<span class="mn-ev-sum">종류 합 ${ev.sum} · 등급 합 ${ev.backSum}</span></div>`
        + `<div class="mn-ladder">${rungs}</div>`
        + `<div class="mn-ev-hint">${esc(hint)}</div>`;
 }
@@ -3522,9 +3537,10 @@ function miniVerdictText(r) {
   const line = (x) => {
     const lose = x.seat === v.me ? '내 패' : nameOf(x.seat);
     switch (x.rule) {
-      case 'snipe':  return `<b>${esc(x.win)}</b>가 ${lose}(${esc(x.lose)})를 <b>저격</b>했습니다`;
-      case 'front':  return `앞자리 합 <b>${x.a}</b> vs ${x.b} — ${lose}보다 작아서 이깁니다`;
-      case 'back':   return `앞자리 합이 같아 <b>뒷자리 합 ${x.a}</b> vs ${x.b} 로 갈렸습니다`;
+      case 'snipe':  return `<b>${esc(x.win)}</b>이 ${lose}(${esc(x.lose)})를 <b>잡았습니다</b>`;
+      case 'jokbo':  return `<b>${esc(x.win)}</b> vs ${lose}(${esc(x.lose)}) — 족보가 높아서 이깁니다`;
+      case 'front':  return `같은 족보 — <b>${x.a}</b> vs ${x.b} 로 갈렸습니다`;
+      case 'back':   return `여기까지 같아 <b>등급 합 ${x.a}</b> vs ${x.b} 로 갈렸습니다`;
       case 'card':   return `합이 모두 같아 <b>더 강한 카드 ${esc(x.a)}</b> vs ${esc(x.b)} 로 갈렸습니다`;
       default:       return '완전히 같은 패입니다';
     }
@@ -3584,17 +3600,7 @@ socket.on('mini_stood', (r) => {
 
 // 족보표 — 글자만 늘어놓으면 "합 7" 이 어떤 패인지 머릿속에서 다시 그려야 한다.
 // 실제 카드 두 장을 놓아 눈으로 바로 알아보게 한다.
-// 예시는 그 합이 실제로 나올 수 있는 조합에서 고른다(없는 패를 그려 놓으면 거짓말이다).
-const MINI_EX = {
-  4:  [[2, 1], [2, 2]],
-  5:  [[2, 1], [3, 1]],
-  6:  [[3, 1], [3, 2]],
-  7:  [[3, 1], [4, 1]],
-  8:  [[4, 1], [4, 2]],
-  9:  [[3, 1], [6, 1]],
-  10: [[4, 1], [6, 1]],
-  12: [[6, 1], [6, 2]],
-};
+// 예시는 실제로 나올 수 있는 조합에서 고른다(없는 패를 그려 놓으면 거짓말이다) — MINI_TIERS.ex
 const miniCardOf = ([kind, grade]) => ({ kind, grade, id: kind * 100 + grade });
 
 window.miniRank = function (show) {
@@ -3616,17 +3622,17 @@ window.miniRank = function (show) {
     return d;
   };
 
+  const myRung = miniRungOf(ev);
   MINI_TIERS.forEach((t, idx) => {
-    const mine = ev && ev.sniper === 0 && ev.tier === idx;
-    const d = row((MINI_EX[t.sum] || []).map(miniCardOf), idx + 1, t.name,
-                  `앞자리 합 ${t.sum}`, mine ? 'me' : '');
+    const mine = ev && !ev.jol && myRung === idx;
+    const d = row(t.ex.map(miniCardOf), idx + 1, t.name, t.note, mine ? 'me' : '');
     if (mine) { const now = document.createElement('em'); now.className = 'mn-now'; now.textContent = '지금 내 패'; d.appendChild(now); }
     tbl.appendChild(d);
   });
-  // 스나이퍼 — 거울쌍(4-4 + 6-6)을 그대로 보여준다
-  const sn = ev && ev.sniper > 0;
-  const d = row([miniCardOf([4, 4]), miniCardOf([6, 6])], '🎯', '스나이퍼',
-                '앞·뒤 합이 모두 10', 'sn' + (sn ? ' me' : ''));
+  // 졸개의 배신 — 덱에서 가장 약한 두 장이 땡을 전부 잡는다
+  const sn = ev && ev.jol;
+  const d = row([miniCardOf([4, 6]), miniCardOf([6, 8])], '🎯', '졸개의 배신',
+                '가장 약한 두 장 · 땡을 전부 잡는다', 'sn' + (sn ? ' me' : ''));
   if (sn) { const now = document.createElement('em'); now.className = 'mn-now'; now.textContent = '지금 내 패'; d.appendChild(now); }
   tbl.appendChild(d);
   box.classList.add('show');
