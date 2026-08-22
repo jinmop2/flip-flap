@@ -665,6 +665,30 @@ function startTurn(game) {
   }
 }
 
+// 보너스 카드로 얻은 아이템을 양쪽에 알린다 — 뭘 얻었는지는 둘 다 본다.
+// 공개라야 "쟤가 돋보기를 들었다" 를 셈에 넣을 수 있다.
+function announceBonus(room, bonus) {
+  if (!room || !bonus || !bonus.length) return;
+  for (const b of bonus) {
+    const sid = room.players[b.seat - 1];
+    if (sid) io.to(sid).emit('item_get', b.item);
+    if (room.cpuIndex === b.seat - 1) room.cpuItemPending = true;
+    room.players.forEach((s2, i) => {
+      if (s2 && i !== b.seat - 1) io.to(s2).emit('bonus_card', { seat: b.seat, item: { name: b.item.name, icon: b.item.icon, tier: b.item.tier } });
+    });
+  }
+}
+
+// 아이템전 덱에 표시 카드를 섞는다.
+// 12장 중 보너스 2 · 덤 2. 재 보니 이 비율에서 판당 아이템이 1.4개 —
+// 예전(5.6개)보다 훨씬 귀해지고, 판 길이·세트 완성률은 그대로였다.
+function markSpecials(deck) {
+  const idx = deck.map((_, i) => i);
+  for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  const pick = idx.slice(0, 4);
+  for (let k = 0; k < pick.length; k++) deck[pick[k]].sp = k < 2 ? 'bonus' : 'tip';
+}
+
 function createGame(itemMode = false) {
   const deck = initDeck();
   // 선공 뽑기용 카드 2장 (덱과 별개 컨셉 카드)
@@ -681,6 +705,7 @@ function createGame(itemMode = false) {
   };
   if (itemMode) {
     game.itemMode = true;
+    markSpecials(game.centerDeck);
     game.items = { 1: [], 2: [] };       // 보유 아이템 (최대 3)
     game.itemUsed = { 1: false, 2: false };  // 턴당 1개 제한
     game.fx = items.freshFx();           // 이번 경매에만 걸리는 효과
@@ -711,9 +736,29 @@ function activePlayer(g) {
 }
 
 // 덱에서 중앙 카드 뽑기 (draw → offer)
-function drawCenter(game) {
-  game.auction.centerCard = game.centerDeck.shift();
-  game.phase = 'offer';
+// 중앙 카드 뒤집기.
+// 아이템전에서는 덱에 표시된 카드가 섞여 있다.
+//   🎁 보너스 — 뒤집은 진행자가 그 자리에서 아이템 하나. 경매품이 아니라
+//                다음 장을 다시 뽑아 경매를 이어간다.
+//   🏷 덤    — 경매품에 그대로 얹힌다. 그 경매에서 진 쪽이 아이템 하나.
+// 아이템 획득 경로를 이 둘로 좁혔다 — 예전엔 경매에 질 때마다 나와
+// 판당 5.6개씩 쌓였고, 그만큼 아이템 한 개가 시시했다.
+function drawCenter(game, room) {
+  const card = game.centerDeck.shift();
+  const bonus = [];
+  // 보너스 카드는 경매품이면서 덤이다 — 뒤집은 진행자가 그 자리에서 아이템 하나.
+  // 카드를 덱에서 빼 버리면 안 된다. 2종은 덱에 두 장뿐이라, 그중 하나가
+  // 사라지면 2세트가 영영 불가능해진다.
+  if (card && game.itemMode && card.sp === 'bonus' && !card.spUsed) {
+    const got = items.grant(game, game.auctioneer, 'common');
+    if (got) bonus.push({ seat: game.auctioneer, item: got });
+    // 표시는 이번 경매 동안 남겨 둔다 — 지워 버리면 "무슨 카드였길래 받았지" 가 된다.
+    // 두 번 주지 않게 쓴 자리만 따로 찍어 둔다.
+    card.spUsed = true;
+  }
+  game.auction.centerCard = card || null;
+  if (card) game.phase = 'offer';
+  return bonus;
 }
 
 // ── CPU AI ──────────────────────────────────────────────────
@@ -1048,7 +1093,11 @@ function maybeCpuAct(roomId) {
   }
 
   if (g.phase === 'draw' && g.auctioneer === ci + 1) {
-    delay(roomId, () => { if (g.phase !== 'draw') return; drawCenter(g); broadcast(roomId); maybeCpuAct(roomId); }, 600, 500);
+    delay(roomId, () => {
+      if (g.phase !== 'draw') return;
+      announceBonus(room, drawCenter(g, room));
+      broadcast(roomId); maybeCpuAct(roomId);
+    }, 600, 500);
   }
   else if (g.phase === 'offer' && g.auctioneer === ci + 1) {
     delay(roomId, () => {
@@ -2057,7 +2106,7 @@ io.on('connection', (socket) => {
     const room = rooms[socket.roomId]; if (!room?.game) return;
     const g = room.game;
     if (g.phase !== 'draw' || g.auctioneer !== socket.playerIndex + 1) return;
-    drawCenter(g);
+    announceBonus(room, drawCenter(g, room));
     broadcast(socket.roomId);
     setTimeout(() => maybeCpuAct(socket.roomId), 300);
   });
@@ -2501,8 +2550,10 @@ function settle(roomId) {
     }
   }
 
-  // 경매 패자 위로금 — 진 사람에게 아이템 1개 (뒤진 쪽에만 전설)
-  if (g.itemMode) {
+  // 덤 카드가 얹힌 경매에서만 아이템이 나온다 — 그리고 진 쪽이 가져간다.
+  // 이긴 쪽에 주면 앞선 사람이 더 세져 눈덩이가 된다(재 보니 아이템의 86%가
+  // 앞선 쪽으로 갔다). 진 쪽에 주면 79% 가 뒤진 쪽으로 간다.
+  if (g.itemMode && prize.some(c => c && c.sp === 'tip')) {
     const loser = p1Wins ? 2 : 1;
     const got = items.grant(g, loser);
     if (got) {
@@ -2511,6 +2562,8 @@ function settle(roomId) {
       if (room.cpuIndex === loser - 1) room.cpuItemPending = true;   // AI가 받음
     }
   }
+  // 표시는 이번 경매까지만 — 더미에 쌓인 뒤에도 딱지가 붙어 있으면 헷갈린다
+  if (g.itemMode) for (const c of prize) if (c) { delete c.sp; delete c.spUsed; }
 
   // AI가 경매를 이기면 가끔 이모트로 도발
   if (room.cpuIndex !== undefined) {

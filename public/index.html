@@ -3709,6 +3709,16 @@
     }
     .pile-count.done { color:#ffe9a8; }
 
+    /* 덤 카드 — 이 경매에 아이템이 얹혀 있다. 카드에 딱지를 붙여 둘 다 보게 한다. */
+    .card.sp-tip { box-shadow:0 0 0 2px #5cd69c, 0 3px 10px rgba(0,0,0,.5); }
+    .card.sp-bonus { box-shadow:0 0 0 2px #ffd94a, 0 3px 10px rgba(0,0,0,.5); }
+    .card .c-sp.bonus { background:#3a2a06; border-color:#ffd94a; }
+    .card .c-sp {
+      position:absolute; top:-7px; right:-6px; font-size:.78rem; line-height:1;
+      padding:3px 4px; border-radius:7px; background:#0f2a1e; border:1px solid #5cd69c;
+      box-shadow:0 2px 6px rgba(0,0,0,.5); pointer-events:none;
+    }
+
     /* ─── 경매 (테이블 중앙 매트) — 골드 스티치 펠트 매트 ─── */
     #auctionMat {
       display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
@@ -5533,15 +5543,23 @@
     <div class="rules-box" data-i18n-block="rulesItem">
       <span class="close-x" onclick="toggleRulesItem(false)">×</span>
       <h2>아이템전</h2>
-      <p style="color:#8a7a80">2인전 규칙 그대로에, <b style="color:#ffe9a8">아이템</b>이 얹힌다. 경매에서 <b style="color:#ffe9a8">진 쪽</b>에게만 들어온다.</p>
+      <p style="color:#8a7a80">2인전 규칙 그대로에, <b style="color:#ffe9a8">아이템</b>이 얹힌다. 아이템은 덱에 섞인 <b style="color:#ffe9a8">표시 카드</b>에서만 나온다.</p>
 
-      <h3><span data-ico="🎁"></span> 아이템이 들어오는 법</h3>
-      <div class="r4-steps">
-        <div class="r4-step"><b>1</b><span>경매가 끝날 때마다 <b>진 사람</b>이 아이템 1개를 받는다. 이긴 사람은 못 받는다.</span></div>
-        <div class="r4-step"><b>2</b><span>최대 <b>3개</b>까지만 든다. 꽉 차 있으면 안 들어온다.</span></div>
-        <div class="r4-step"><b>3</b><span>한 턴에 <b>1개</b>만 쓸 수 있고, 배팅 카드를 낸 뒤에는 못 쓴다.</span></div>
+      <h3><span data-ico="🎁"></span> 아이템이 들어오는 법 — 표시 카드 두 가지</h3>
+      <div class="r4-tbl">
+        <div class="r4-row r4-head"><span>카드</span><span>누가 받나</span><span>무엇이 나오나</span></div>
+        <div class="r4-row"><span>🎁 보너스</span><span>뒤집은 진행자</span><span>일반 등급만</span></div>
+        <div class="r4-row"><span>🏷 덤</span><span>그 경매에서 <b>진 쪽</b></span><span>등급 굴리기</span></div>
       </div>
-      <p>지는 쪽에 쌓이니 판이 저절로 붙는다. <b>전설은 세트 진행이 뒤진 쪽에게만</b> 나와서, 앞선 사람이 더 강해지는 눈덩이를 막는다.</p>
+      <p>중앙 덱 12장에 <b>보너스 2장 · 덤 2장</b>이 섞여 있다. 표시가 없는 경매에서는 아이템이 나오지 않는다.
+         두 카드 모두 <b>양쪽 다 보인다</b> — 저 판에 아이템이 걸렸는지 알아야 얼마를 지를지 정할 수 있다.</p>
+      <div class="r4-steps">
+        <div class="r4-step"><b>1</b><span>🎁 보너스는 <b>공짜</b>라 일반 등급만 나온다. 카드 자체는 그대로 경매에 나간다.</span></div>
+        <div class="r4-step"><b>2</b><span>🏷 덤은 <b>진 쪽</b>이 가져간다. 그래서 "이 판은 져 주는 게 낫나" 를 저울질하게 된다.</span></div>
+        <div class="r4-step"><b>3</b><span>최대 <b>3개</b>까지만 들고, 한 턴에 <b>1개</b>만 쓴다. 배팅 카드를 낸 뒤에는 못 쓴다.</span></div>
+      </div>
+      <p>덤이 지는 쪽에 쌓이니 판이 저절로 붙는다. <b>전설은 세트 진행이 뒤진 쪽에게만</b> 나와서,
+         앞선 사람이 더 강해지는 눈덩이를 막는다.</p>
 
       <h3><span data-ico="🎲"></span> 나올 확률</h3>
       <div class="r4-tbl">

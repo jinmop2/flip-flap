@@ -1261,6 +1261,10 @@ function openBombPick(hand) {
   playSound('bell');
 }
 socket.on('bomb_pick', ({ hand }) => openBombPick(hand));
+// 보너스 카드 — 상대가 뒤집어 얻었다. 무엇을 얻었는지는 둘 다 안다.
+socket.on('bonus_card', ({ item }) => {
+  toast(`🎁 상대가 보너스 카드로 <b>${esc(item.name)}</b> 를 얻었어요`, 2600);
+});
 socket.on('bomb_blew', ({ seat, card }) => {
   _bombOn = false;
   const go = document.getElementById('iuGo'); if (go) go.style.display = '';
@@ -5155,6 +5159,22 @@ function makeCard(card, opts = {}) {
   num.className = 'c-num'; num.textContent = card.kind;   // 가운데 큰 숫자 = 종류
 
   el.appendChild(top); el.appendChild(num);
+  // 덤 카드 — 이 경매에 아이템이 얹혀 있다는 표시. 양쪽 다 보고 셈에 넣어야 하므로
+  // 카드 자체에 붙인다(따로 띄우면 못 보고 지나간다).
+  if (card.sp === 'bonus') {
+    el.classList.add('sp-bonus');
+    const tag = document.createElement('span');
+    tag.className = 'c-sp bonus'; tag.textContent = '🎁';
+    tag.title = '보너스 — 뒤집은 사람이 아이템을 얻는다';
+    el.appendChild(tag);
+  }
+  if (card.sp === 'tip') {
+    el.classList.add('sp-tip');
+    const tag = document.createElement('span');
+    tag.className = 'c-sp'; tag.textContent = '🏷';
+    tag.title = '덤 — 이 경매에서 진 쪽이 아이템을 얻는다';
+    el.appendChild(tag);
+  }
 
   if (opts.draw)          el.classList.add('anim-draw');
   else if (opts.acquire)  el.classList.add('anim-acquire');

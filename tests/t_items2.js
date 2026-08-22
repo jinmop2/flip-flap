@@ -137,5 +137,41 @@ console.log('\n⑦ 눈금자 — 상대가 이 판을 얼마나 원하나');
   ok('화면에 띄운다', /f\.scan != null/.test(cli));
 }
 
+console.log('\n⑧ 아이템은 카드로 나온다 — 보너스와 덤');
+{
+  const src = read('items.js');
+  // 예전엔 경매에 질 때마다 나와 판당 5.6개씩 쌓였다. 그만큼 한 개가 시시했다.
+  // 이제 표시된 카드가 나온 판에서만 나온다 — 재 보니 판당 1.9개.
+  ok('덱에 표시 카드를 섞는다', /function markSpecials\(deck\)/.test(srv));
+  ok('보너스 2 · 덤 2', /const pick = idx\.slice\(0, 4\);[\s\S]{0,160}k < 2 \? 'bonus' : 'tip'/.test(srv));
+  ok('아이템전에서만 섞는다', /game\.itemMode = true;\s*\n\s*markSpecials\(game\.centerDeck\);/.test(srv));
+
+  // 보너스 — 뒤집은 진행자가 그 자리에서. 공짜라 일반 등급만 준다.
+  ok('보너스는 진행자에게', /card\.sp === 'bonus' && !card\.spUsed[\s\S]{0,140}items\.grant\(game, game\.auctioneer, 'common'\)/.test(srv));
+  ok('등급을 지정해 뽑을 수 있다', /function grant\(g, who, tier\)/.test(src)
+     && /const pool = tier && BY_TIER\[tier\]/.test(src));
+  ok('공짜로 전설은 안 나온다', (() => {
+    const g = { items: { 1: [], 2: [] }, p1Acquired: [], p2Acquired: [] };
+    for (let i = 0; i < 60; i++) { g.items[1] = []; if (items.grant(g, 1, 'common').tier !== 'common') return false; }
+    return true;
+  })());
+  // 카드를 덱에서 빼 버리면 안 된다 — 2종은 두 장뿐이라 하나만 사라져도 2세트가 막힌다
+  ok('보너스 카드도 경매품으로 남는다', /game\.auction\.centerCard = card \|\| null;/.test(srv)
+     && !/continue;\s*\/\/ 보너스/.test(srv));
+  ok('두 번 주지 않는다', /card\.spUsed = true;/.test(srv));
+
+  // 덤 — 그 경매의 패자에게. 이긴 쪽에 주면 아이템의 86% 가 앞선 쪽으로 갔다.
+  ok('덤은 패자에게', /prize\.some\(c => c && c\.sp === 'tip'\)[\s\S]{0,120}const loser = p1Wins \? 2 : 1;/.test(srv));
+  ok('표시 없는 경매에서는 안 나온다', !/const loser = p1Wins \? 2 : 1;\s*\n\s*const got = items\.grant\(g, loser\);\s*\n\s*if \(got\) \{\s*\n\s*const sid = room\.players\[loser - 1\];\s*\n\s*if \(sid\) io\.to\(sid\)\.emit\('item_get', got\);\s*\n\s*if \(room\.cpuIndex === loser - 1\) room\.cpuItemPending = true;\s*\n\s*\}\s*\n\s*\}\s*\n\s*\/\/ AI가 경매를/.test(srv));
+  ok('표시는 그 경매까지만', /delete c\.sp; delete c\.spUsed;/.test(srv));
+
+  // 둘 다 보여야 셈에 넣는다
+  ok('카드에 딱지를 붙인다', /card\.sp === 'tip'[\s\S]{0,200}c-sp/.test(cli)
+     && /card\.sp === 'bonus'[\s\S]{0,200}c-sp bonus/.test(cli));
+  ok('딱지 모양이 있다', /\.card \.c-sp \{/.test(htm) && /\.card\.sp-tip \{/.test(htm) && /\.card\.sp-bonus \{/.test(htm));
+  ok('상대가 보너스로 뭘 얻었는지 알린다', /socket\.on\('bonus_card'/.test(cli)
+     && /io\.to\(s2\)\.emit\('bonus_card'/.test(srv));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

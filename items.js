@@ -354,11 +354,14 @@ function use(g, me, itemId, arg) {
   return { ...out, itemId, name: ITEMS[itemId].name, icon: ITEMS[itemId].icon };
 }
 
-function grant(g, who) {
+// tier 를 주면 그 등급에서만 뽑는다 — 보너스 카드(공짜)는 일반만 준다.
+// 공짜로 전설이 나오면 그 한 장이 판을 정한다.
+function grant(g, who, tier) {
   g.items[who] ||= [];
   if (g.items[who].length >= MAX_HOLD) return null;   // 가득 차면 획득하지 않음
   const behind = isBehind(g, who);
-  const id = rollItem(behind);
+  const pool = tier && BY_TIER[tier] && BY_TIER[tier].length ? BY_TIER[tier] : null;
+  const id = pool ? pool[Math.floor(Math.random() * pool.length)] : rollItem(behind);
   g.items[who].push(id);
   return { id, name: ITEMS[id].name, icon: ITEMS[id].icon, tier: ITEMS[id].tier, desc: ITEMS[id].desc };
 }
