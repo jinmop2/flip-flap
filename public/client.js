@@ -5800,11 +5800,21 @@ function tvQuitNow() {
   tvView = null;
   clearSession(); fastReload();
 };
-window.tvAgain = function () {
-  const go = document.getElementById('gameOver'); if (go) go.style.display = 'none';
-  // 혼자 하기는 그 자리에서 다시. 온라인은 상대를 다시 잡아야 하므로 로비로.
-  if (tvBot) { socket.emit('leave_room'); setTimeout(() => socket.emit('tv_solo', { pid: PID, nick: getNick(), diff: tvDiff }), 150); }
-  else tvQuit();
+window.tvAgain = function (btn) {
+  // 혼자 하기는 그 자리에서 다시 시작한다.
+  if (tvBot) {
+    const go = document.getElementById('gameOver'); if (go) go.style.display = 'none';
+    socket.emit('leave_room');
+    setTimeout(() => socket.emit('tv_solo', { pid: PID, nick: getNick(), diff: tvDiff }), 150);
+    return;
+  }
+  // 온라인은 방금 그 사람에게 재대결을 건다. 예전엔 로비로 되돌려 보냈는데,
+  // 버튼에 '한 판 더' 라고 적어 놓고 상대와 헤어지게 하는 건 말이 안 된다.
+  // 둘 다 누르면 서버가 같은 방에서 새 판을 연다(restartGame).
+  socket.emit('rematch');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+  const note = document.getElementById('rematchNote');
+  if (note) note.textContent = '상대에게 재대결 신청 — 대기 중…';
 };
 window.tvRules = function (show) { if (show) toggleRules(true); };
 // 오른쪽 위 메뉴. 인자를 주면 그대로 열거나 닫고, 안 주면 뒤집는다.
@@ -5837,6 +5847,11 @@ const tvAct = (act, extra) => socket.emit('tv_act', Object.assign({ act }, extra
 
 socket.on('tv_begin', (d) => {
   tvMe = d.me; tvBot = !!d.vsBot; tvPrev = null;
+  // 재대결로 새 판이 열릴 때 결과창이 남아 있으면 판을 통째로 덮는다 — 화면은
+  // 멀쩡한데 아무것도 안 눌린다. 새 판이 시작되면 무조건 걷는다.
+  const go = document.getElementById('gameOver');
+  if (go) go.style.display = 'none';
+  const note = document.getElementById('rematchNote'); if (note) note.textContent = '';
   // 카드백 스킨은 이 두 값을 보고 붙는다 — 안 넣어 두면 트웰브만 맨 뒷면이 된다
   gameProfiles = d.profiles || null; myIndex = d.me;
   tvOpen();
@@ -5908,7 +5923,7 @@ function tvShowOver(win, endBy) {
   tvOverStats(win, endBy);
   // 버튼은 트웰브 것으로 갈아 끼운다 (2인전 재대결 통로와 다르다)
   const rb = document.getElementById('rematchBtn');
-  if (rb) { rb.style.display = ''; rb.disabled = false; rb.style.opacity = '1'; rb.onclick = () => tvAgain(); }
+  if (rb) { rb.style.display = ''; rb.disabled = false; rb.style.opacity = '1'; rb.onclick = () => tvAgain(rb); }
   const btns = document.getElementById('goBtns');
   if (btns) {
     const lobby = [...btns.querySelectorAll('button')].find((b) => b !== rb);

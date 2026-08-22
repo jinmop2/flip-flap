@@ -547,7 +547,8 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   ok('2인전 결과창을 쓴다', /function tvShowOver\(win, endBy\)/.test(cli)
      && /getElementById\('gameOver'\)\.style\.display = 'flex'; showRewards\(\)/.test(cli));
   ok('판 위로 올라온다', /body\.twelve #gameOver \{ z-index:41; \}/.test(htm));
-  ok('버튼은 트웰브 것으로 갈아 끼운다', /rb\.onclick = \(\) => tvAgain\(\)/.test(cli)
+  // tvAgain 은 버튼을 받아 눌린 뒤 잠근다(온라인 재대결 대기 표시)
+  ok('버튼은 트웰브 것으로 갈아 끼운다', /rb\.onclick = \(\) => tvAgain\(rb\)/.test(cli)
      && /lobby\.onclick = \(\) => tvQuitNow\(\)/.test(cli));
   ok('완성한 세트를 보여준다', /function tvOverStats\(win, endBy\)/.test(cli) && /celebrateSet\('tv-myAcq'/.test(cli));
   ok('보상 타일도 나온다', /showRewards\(\)/.test(cli));
@@ -785,6 +786,24 @@ console.log('\n㉕ 전문가는 끝까지 두어 보고 정한다 (몬테카를�
     }
     ok('한 수가 200ms 안에 끝난다', worst < 200, worst + 'ms');
   }
+}
+
+console.log('\n⑮ 재대결 — 같은 방에서 다시, 같은 게임으로');
+{
+  const fs2 = require('fs'), path2 = require('path');
+  const read = (f) => fs2.readFileSync(path2.join(__dirname, '..', f), 'utf8');
+  const srv = read('server.js'), cli = read('public/client.js');
+// restartGame 은 방 모드를 안 보고 무조건 createGame(2인전)을 만들었다.
+// TWELVE 방에서 재대결이 걸리면 칩 경매가 조용히 카드 경매로 바뀐다.
+ok('restartGame 이 TWELVE 방을 알아본다',
+   /if \(room\.mode === 'twelve'\) \{[\s\S]{0,160}tvRestart\(roomId\);[\s\S]{0,20}return;/.test(srv));
+ok('tvStart 참조를 밖에서 쓸 수 있게 꺼내 둔다',
+   /let tvRestart = null;/.test(srv) && /tvRestart = tvStart;/.test(srv));
+// '한 판 더' 라고 적어 놓고 상대와 헤어지게 하면 안 된다
+ok('온라인은 상대에게 재대결을 건다', /window\.tvAgain = function \(btn\) \{[\s\S]{0,700}socket\.emit\('rematch'\);/.test(cli));
+ok('혼자 하기는 그 자리에서 다시', /if \(tvBot\) \{[\s\S]{0,260}socket\.emit\('tv_solo'/.test(cli));
+ok('새 판이 열리면 결과창을 걷는다',
+   /socket\.on\('tv_begin'[\s\S]{0,420}getElementById\('gameOver'\);\s*\n\s*if \(go\) go\.style\.display = 'none';/.test(cli));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

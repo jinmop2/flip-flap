@@ -693,6 +693,10 @@ function announceBonus(room, bonus) {
 // 보통 카드 두 장마다 창을 하나 잡고, 창마다 아이템 카드를 한 장씩 꽂는다.
 // 판이 길든 짧든 두 턴에 한 번꼴로 반드시 나온다 — 0~1장인 판 37.1% → 5.8%,
 // 판당 1.95장 → 2.87장. 창 안의 자리는 무작위라 언제 나올지는 여전히 모른다.
+// TWELVE 를 다시 시작하는 함수는 io.on('connection') 안에 있다(tvStart).
+// 재대결은 바깥(restartGame)에서 부르므로 참조를 하나 꺼내 둔다.
+let tvRestart = null;
+
 function mixItemCards(deck) {
   const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const kinds = shuffle(['bonus', 'tip', 'bonus', 'tip']);   // 어느 창에 뭐가 올지는 무작위
@@ -2003,6 +2007,7 @@ io.on('connection', (socket) => {
     tvBot(roomId);
     broadcastRooms();
   }
+  tvRestart = tvStart;   // 재대결(restartGame)에서 부를 수 있게
 
   // 혼자 하기 (AI 와)
   socket.on('tv_solo', ({ pid, nick, diff } = {}) => {
@@ -2454,6 +2459,13 @@ function forfeitPlayer(roomId, slot) {
 // 같은 방 새 게임 시작
 function restartGame(roomId) {
   const room = rooms[roomId]; if (!room) return;
+  // 방 모드를 안 보고 무조건 2인전으로 새 판을 만들고 있었다. TWELVE 방에서
+  // 재대결이 걸리면 칩 경매가 조용히 카드 경매로 바뀐다 — 같은 자리, 다른 게임.
+  if (room.mode === 'twelve') {
+    room.rematch = [false, false];
+    if (tvRestart) tvRestart(roomId);
+    return;
+  }
   room.game = createGame(room.itemMode);
   room.startedAt = Date.now();
   room.aiMem = expert3.createMem();   // 새 판 → AI 메모리 초기화
