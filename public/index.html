@@ -1746,10 +1746,14 @@
       background:#4ec36a; box-shadow:0 0 5px #4ec36a;
     }
 
-    /* 상대 보유 아이템 수 — 상대 시계 바로 아래 (좌상단은 나가기·설명·설정 버튼 자리) */
+    /* 상대 보유 아이템 수 — 상대 자리 왼쪽. 시계가 오른쪽에 떠 있으니
+       반대편에 붙여 프로필이 한가운데에 그대로 남는다. 흐름에 두면
+       [아이템+프로필+시계] 세 덩이의 중앙이 중앙이 되어 얼굴이 왼쪽으로 밀린다. */
     #oppItemBadge {
       display:flex; align-items:center; gap:4px; padding:4px 9px; border-radius:11px;
       background:rgba(74,42,106,.85); border:1px solid #8f6fc0; color:#e8d8ff; font-size:.72rem; font-weight:700;
+      position:absolute; right:100%; margin-right:8px; top:50%; transform:translateY(-50%);
+      width:max-content; white-space:nowrap;
     }
 
     /* 진행 중인 효과 배너 (반전/연막 등) */
@@ -3512,6 +3516,10 @@
     #g-rail .bid-area { height:auto; min-height:78px; margin:0; }
     #g-rail .bid-area .card { width:56px; height:78px; }
     #g-rail .bid-area .card .c-num { font-size:1.5rem; }
+    /* 좁은 레일 — 등급 딱지도 같이 줄여야 표식과 나란히 한 줄에 들어간다 */
+    #g-rail .bid-area .card .c-rank { font-size:.8rem; padding:1px 4px; min-width:16px; border-radius:5px; }
+    #g-rail .bid-area .card .c-rank.two { font-size:.72rem; padding:1px 3px; min-width:14px; }
+    #g-rail .bid-area .card .c-mark { font-size:.6rem; }
 
     /* 고르는 자리 — 화면 맨 아래 한 줄. 왼쪽 끝 이모트 자리는 비켜 준다. */
     #game #actionArea { position:absolute; left:56px; right:10px; bottom:calc(10px + var(--safe-b));
@@ -3547,6 +3555,9 @@
       font-family:'Fredoka'; font-weight:700; font-size:1.2rem; color:#fff; line-height:1;
       background:rgba(0,0,0,.5); border-radius:7px; padding:2px 8px; min-width:26px; text-align:center;
       text-shadow:0 1px 2px rgba(0,0,0,.6); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+      /* 6-10 은 두 글자에 ⚔ 표식까지 달려, 카드가 좁은 자리(배팅 레일 등)에선
+         칸이 모자라 "1" 과 "0" 이 위아래로 접혔다. 접지 말고 줄이게 한다. */
+      white-space:nowrap;
     }
     .card.special .c-rank { background:var(--gold); color:#1a1008; text-shadow:none; }
     /* 두 자리(10 이상)는 좌우 여백을 줄이고 글자를 살짝 좁힌다. 예전엔 한 자리
@@ -3720,9 +3731,20 @@
       background:linear-gradient(160deg,#3a2a06,#241a04); border-color:#ffd94a;
       box-shadow:0 0 0 2px rgba(255,217,74,.35), 0 3px 10px rgba(0,0,0,.5);
     }
-    .card.item-card .ic-face { font-size:1.8rem; line-height:1; }
-    .card.item-card .ic-name { font-size:.56rem; letter-spacing:1px; font-weight:800; color:#bfe9d4; }
+    .card.item-card .ic-face { width:60%; max-width:44px; line-height:0; }
+    .card.item-card .ic-face svg { width:100%; height:auto; display:block; }
+    .card.item-card .ic-name { font-size:.54rem; letter-spacing:0; font-weight:800; color:#bfe9d4; text-align:center; }
     .card.item-card.ic-bonus .ic-name { color:#ffe9a8; }
+    /* 보너스냐 덤이냐는 모서리 딱지로 — 가운데는 아이템 그림 몫이다 */
+    .card.item-card .ic-tag {
+      position:absolute; top:3px; left:0; right:0; text-align:center;
+      font-size:.46rem; font-weight:800; letter-spacing:1px; line-height:1;
+      color:rgba(255,255,255,.55);
+    }
+    .card.item-card.ic-bonus .ic-tag { color:rgba(255,233,168,.7); }
+    /* 등급이 보이면 "저건 전설이다" 가 읽혀 배팅이 달라진다 */
+    .card.item-card.t-rare { border-color:#b98fe0; box-shadow:0 0 0 2px rgba(185,143,224,.35), 0 3px 10px rgba(0,0,0,.5); }
+    .card.item-card.t-legend { border-color:#ffd94a; box-shadow:0 0 0 2px rgba(255,217,74,.45), 0 0 14px rgba(255,215,80,.35), 0 3px 10px rgba(0,0,0,.5); }
 
     /* ─── 경매 (테이블 중앙 매트) — 골드 스티치 펠트 매트 ─── */
     #auctionMat {
@@ -3911,6 +3933,8 @@
       #g-rail { left:auto; right:34px; width:56px; gap:5px; }
       #g-rail .bid-area { min-height:70px; }
       #g-rail .bid-area .card { width:50px; height:70px; }
+      #g-rail .bid-area .card .c-rank { font-size:.72rem; padding:1px 3px; min-width:14px; }
+      #g-rail .bid-area .card .c-rank.two { font-size:.64rem; padding:0 2px; min-width:12px; }
 
       /* 경매 매트 — 덱·레일과 안 겹치게 폭 좁혀 중앙 정렬 */
       #auctionMat { padding:9px; gap:8px; width:auto; max-width:200px; min-width:182px; min-height:188px; margin:0 auto; }
@@ -5555,6 +5579,7 @@
         <div class="r4-row r4-head"><span>카드</span><span>누가 받나</span><span>무엇이 나오나</span></div>
         <div class="r4-row"><span>🎁 보너스</span><span>뒤집은 진행자</span><span>일반 등급만</span></div>
         <div class="r4-row"><span>🏷 덤</span><span>그 경매에서 <b>진 쪽</b></span><span>등급 굴리기</span></div>
+        <div class="r4-row"><span>둘 다</span><span>—</span><span><b>앞면 공개</b> — 무슨 아이템인지 보인다</span></div>
         <div class="r4-row"><span>보통 카드</span><span>—</span><span>아이템 없음</span></div>
       </div>
       <p><b>아이템 카드는 따로 있다.</b> 종류·등급이 없어 세트에는 안 쓰이고, 중앙 덱에 <b>보너스 2장 · 덤 2장</b>이
@@ -5564,6 +5589,9 @@
         <div class="r4-step"><b>1</b><span>🎁 보너스는 뒤집는 즉시 <b>진행자</b>가 갖는다. 공짜라 일반 등급만 나온다.</span></div>
         <div class="r4-step"><b>2</b><span>🏷 덤은 경매품에 얹혀 <b>양쪽 다 보이고</b>, 그 경매에서 <b>진 쪽</b>이 가져간다.
            그래서 "이 판은 져 주는 게 낫나" 를 저울질하게 된다.</span></div>
+        <div class="r4-step"><b>★</b><span>아이템 카드는 <b>앞면으로 공개</b>된다 — 그림과 이름, 등급 테두리까지 보인다.
+           무엇이 걸렸는지 알아야 "저것 때문에 져 준다" 가 성립하기 때문이다.
+           <b>보여 준 그 아이템이 그대로</b> 간다.</span></div>
         <div class="r4-step"><b>3</b><span>최대 <b>3개</b>까지만 들고, 한 턴에 <b>1개</b>만 쓴다. 배팅 카드를 낸 뒤에는 못 쓴다.</span></div>
       </div>
       <p>덤이 지는 쪽에 쌓이니 판이 저절로 붙는다. <b>전설은 세트 진행이 뒤진 쪽에게만</b> 나와서,

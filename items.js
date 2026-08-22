@@ -356,6 +356,24 @@ function use(g, me, itemId, arg) {
 
 // tier 를 주면 그 등급에서만 뽑는다 — 보너스 카드(공짜)는 일반만 준다.
 // 공짜로 전설이 나오면 그 한 장이 판을 정한다.
+// 이미 정해진 아이템을 그 사람에게 준다.
+// 아이템 카드는 뽑히는 순간 앞면으로 공개되므로 "무엇이 걸렸는지" 는 그때 정해지고,
+// 실제로 주는 것은 정산 때다 — 그 사이에 다시 뽑으면 보여 준 것과 달라진다.
+function give(g, who, id) {
+  if (!Object.prototype.hasOwnProperty.call(ITEMS, id)) return null;
+  g.items[who] ||= [];
+  if (g.items[who].length >= MAX_HOLD) return null;
+  g.items[who].push(id);
+  return { id, name: ITEMS[id].name, icon: ITEMS[id].icon, tier: ITEMS[id].tier, desc: ITEMS[id].desc };
+}
+
+// 아이템 하나를 정해 두기만 한다(주지는 않는다) — 카드 앞면에 얹을 것.
+function pick(tier, behind) {
+  const pool = tier && BY_TIER[tier] && BY_TIER[tier].length ? BY_TIER[tier] : null;
+  const id = pool ? pool[Math.floor(Math.random() * pool.length)] : rollItem(!!behind);
+  return { id, name: ITEMS[id].name, icon: ITEMS[id].icon, tier: ITEMS[id].tier, desc: ITEMS[id].desc };
+}
+
 function grant(g, who, tier) {
   g.items[who] ||= [];
   if (g.items[who].length >= MAX_HOLD) return null;   // 가득 차면 획득하지 않음
@@ -384,4 +402,4 @@ function isBehind(g, who) {
 const CATALOG = Object.fromEntries(Object.entries(ITEMS).map(([id, it]) =>
   [id, { name: it.name, icon: it.icon, tier: it.tier, desc: it.desc, phases: it.phases, needsCard: !!it.needsCard, loserOnly: !!it.loserOnly }]));
 
-module.exports = { ITEMS, CATALOG, MAX_HOLD, use, canUse, grant, freshFx, rollItem, isBehind };
+module.exports = { ITEMS, CATALOG, MAX_HOLD, use, canUse, grant, give, pick, freshFx, rollItem, isBehind };

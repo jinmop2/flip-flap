@@ -760,13 +760,19 @@ function drawCenter(game, room) {
     }
     // 🎁 보너스 — 뒤집은 진행자가 그 자리에서 하나. 공짜라 일반 등급만 준다.
     if (card.item === 'bonus') {
-      const got = items.grant(game, game.auctioneer, 'common');
+      const it = items.pick('common');
+      const got = items.give(game, game.auctioneer, it.id);
       if (got) bonus.push({ seat: game.auctioneer, item: got });
-      game.auction.bonusCard = { item: 'bonus', id: card.id, of: game.auctioneer };
+      // 무엇이었는지 카드 앞면으로 남겨 둔다 — 뒷면만 보이면 뭘 줬는지 알 수 없다
+      game.auction.bonusCard = { kind: 'bonus', itemId: it.id, name: it.name, tier: it.tier, of: game.auctioneer };
       continue;                             // 한 장 더 뽑아 경매를 연다
     }
-    // 🏷 덤 — 경매품에 그대로 얹힌다. 정산 때 진 쪽이 가져간다.
-    game.auction.tipCard = { item: 'tip', id: card.id };
+    // 🏷 덤 — 경매품에 앞면으로 얹힌다. 무엇이 걸렸는지 둘 다 보고,
+    // 정산 때 진 쪽이 그 아이템을 가져간다.
+    {
+      const it = items.pick(null, true);
+      game.auction.tipCard = { kind: 'tip', itemId: it.id, name: it.name, tier: it.tier };
+    }
     // 여기서 하나 더 뽑으므로 경매품이 세 장이 된다
   }
   game.auction.centerCard = null;           // 아이템 카드만 남기고 덱이 말랐다
@@ -2571,7 +2577,8 @@ function settle(roomId) {
   // 앞선 쪽으로 갔다). 진 쪽에 주면 79% 가 뒤진 쪽으로 간다.
   if (g.itemMode && tipCard) {
     const loser = p1Wins ? 2 : 1;
-    const got = items.grant(g, loser);
+    // 카드에 앞면으로 보여 준 바로 그 아이템을 준다 — 다시 뽑으면 거짓말이 된다
+    const got = items.give(g, loser, tipCard.itemId);
     if (got) {
       const sid = room.players[loser - 1];
       if (sid) io.to(sid).emit('item_get', got);

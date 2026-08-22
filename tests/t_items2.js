@@ -155,7 +155,7 @@ console.log('\n⑧ 아이템 카드는 따로 있다 — 뽑히면 경매품이 
   ok('보통 카드가 나오면 거기서 멈춘다', /if \(!card\.item\) \{[\s\S]{0,140}return bonus;/.test(srv));
 
   // 🎁 보너스 — 뒤집은 진행자가 그 자리에서. 공짜라 일반 등급만.
-  ok('보너스는 진행자에게', /card\.item === 'bonus'[\s\S]{0,160}items\.grant\(game, game\.auctioneer, 'common'\)/.test(srv));
+  ok('보너스는 진행자에게', /card\.item === 'bonus'[\s\S]{0,220}items\.pick\('common'\)[\s\S]{0,160}items\.give\(game, game\.auctioneer, it\.id\)/.test(srv));
   ok('등급을 지정해 뽑을 수 있다', /function grant\(g, who, tier\)/.test(src)
      && /const pool = tier && BY_TIER\[tier\]/.test(src));
   ok('공짜로 전설은 안 나온다', (() => {
@@ -166,14 +166,23 @@ console.log('\n⑧ 아이템 카드는 따로 있다 — 뽑히면 경매품이 
 
   // 🏷 덤 — 경매품에 얹혀 세 장이 되고, 진 쪽이 가져간다.
   // 이긴 쪽에 주면 아이템의 86% 가 앞선 쪽으로 갔다(재 봤다).
-  ok('덤은 경매품에 얹힌다', /game\.auction\.tipCard = \{ item: 'tip', id: card\.id \};/.test(srv));
+  ok('덤은 경매품에 얹힌다', /game\.auction\.tipCard = \{ kind: 'tip', itemId: it\.id, name: it\.name, tier: it\.tier \};/.test(srv));
+  // 앞면 공개 — 무엇이 걸렸는지 봐야 "저것 때문에 져 준다" 가 성립한다.
+  // 보여 준 것과 실제로 주는 것이 달라지면 안 되므로, 뽑기는 공개 때 한 번뿐이다.
+  ok('보여 준 그 아이템을 준다', /items\.give\(g, loser, tipCard\.itemId\)/.test(srv));
+  ok('정해만 두고 주지는 않는다', /function pick\(tier, behind\)/.test(src)
+     && !/function pick\(tier, behind\) \{[\s\S]{0,300}g\.items/.test(src));
   ok('덤은 패자에게', /if \(g\.itemMode && tipCard\) \{\s*\n\s*const loser = p1Wins \? 2 : 1;/.test(srv));
   ok('덤이 없으면 아이템도 없다', /const tipCard = g\.auction\.tipCard \|\| null;/.test(srv));
 
   // 둘 다 보여야 셈에 넣는다
   ok('양쪽에 보낸다', /tipCard: a\.tipCard \|\| null,/.test(srv) && /bonusCard: a\.bonusCard \|\| null,/.test(srv));
-  ok('경매품 자리에 한 장 더 그린다', /if \(a\.tipCard\) \{[\s\S]{0,260}makeItemCard\('tip'\)/.test(cli));
-  ok('아이템 카드를 따로 그린다', /function makeItemCard\(kind\)/.test(cli));
+  ok('경매품 자리에 한 장 더 그린다', /if \(a\.tipCard\) \{[\s\S]{0,260}makeItemCard\(a\.tipCard\)/.test(cli));
+  ok('보너스로 뭘 얻었는지도 판에 남는다', /if \(a\.bonusCard\) \{[\s\S]{0,320}makeItemCard\(a\.bonusCard\)/.test(cli));
+  ok('아이템 카드를 따로 그린다', /function makeItemCard\(card\)/.test(cli));
+  ok('아이템 그림을 앞면에 그린다', /itemArt\(card\.itemId\)/.test(cli)
+     && /ic-name'; \S*\.textContent = card\.name/.test(cli));
+  ok('등급이 카드에서 읽힌다', /\.card\.item-card\.t-legend \{/.test(htm) && /\.card\.item-card\.t-rare \{/.test(htm));
   ok('아이템 카드 모양이 있다', /\.card\.item-card \{/.test(htm) && /\.card\.item-card\.ic-bonus \{/.test(htm));
   ok('상대가 보너스로 뭘 얻었는지 알린다', /socket\.on\('bonus_card'/.test(cli)
      && /io\.to\(s2\)\.emit\('bonus_card'/.test(srv));

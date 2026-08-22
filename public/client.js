@@ -5176,14 +5176,24 @@ function makeCard(card, opts = {}) {
   return el;
 }
 // 아이템 카드 — 세트에 쓰이는 카드가 아니라 따로 있는 카드다.
-// 종류·등급이 없으니 숫자 대신 딱지를 크게 그린다.
-function makeItemCard(kind) {
+// 뒷면이 아니라 앞면이다. 무슨 아이템이 걸렸는지 보여야 "저것 때문에 져 줄까" 가
+// 성립한다 — '덤' 이라고만 적혀 있으면 아무 판단도 못 한다.
+function makeItemCard(card) {
+  const kind = card.kind === 'bonus' ? 'bonus' : 'tip';
+  const info = ITEM_INFO[card.itemId] || {};
   const el = document.createElement('div');
-  el.className = 'card item-card ' + (kind === 'bonus' ? 'ic-bonus' : 'ic-tip');
-  el.innerHTML = `<div class="ic-face">${kind === 'bonus' ? '🎁' : '🏷'}</div>`
-               + `<div class="ic-name">${kind === 'bonus' ? '보너스' : '덤'}</div>`;
-  el.title = kind === 'bonus' ? '보너스 — 뒤집은 사람이 아이템을 얻는다'
-                              : '덤 — 이 경매에서 진 쪽이 아이템을 얻는다';
+  el.className = 'card item-card ic-' + kind + ' t-' + (card.tier || info.tier || 'common');
+  const art = document.createElement('div');
+  art.className = 'ic-face';
+  art.innerHTML = itemArt(card.itemId);
+  const nm = document.createElement('div');
+  nm.className = 'ic-name'; nm.textContent = card.name || info.name || '아이템';
+  // 🎁/🏷 이모지는 이 게임에서 직접 그린 그림으로 갈아 끼워 왔는데 이 둘은
+  // 대응 그림이 없어 글꼴에 따라 뭉개진다 — 글자로 적는다.
+  const tag = document.createElement('div');
+  tag.className = 'ic-tag'; tag.textContent = kind === 'bonus' ? '보너스' : '덤';
+  el.append(tag, art, nm);
+  el.title = (info.desc || '') + (kind === 'bonus' ? ' — 뒤집은 사람이 얻는다' : ' — 이 경매에서 진 쪽이 얻는다');
   return el;
 }
 function slotEl(label, card, opts = {}) {
@@ -5439,10 +5449,18 @@ function renderAuction(changed) {
   if (s.phase === 'draw') return;
 
   // 아이템 카드가 뽑힌 판은 경매품이 세 장이다 — 아이템 카드 + 중앙 + 출품
+  // 보너스는 뒤집은 사람이 이미 가져갔지만, 무엇을 가져갔는지는 판에 남겨 둔다
+  if (a.bonusCard) {
+    const w = document.createElement('div'); w.className = 'a-slot';
+    const l = document.createElement('div'); l.className = 'a-label';
+    l.textContent = '보너스 (' + (a.bonusCard.of === s.myIndex ? '내 것' : '상대') + ')';
+    w.appendChild(l); w.appendChild(makeItemCard(a.bonusCard));
+    items.appendChild(w);
+  }
   if (a.tipCard) {
     const w = document.createElement('div'); w.className = 'a-slot';
     const l = document.createElement('div'); l.className = 'a-label'; l.textContent = '덤 (진 쪽)';
-    w.appendChild(l); w.appendChild(makeItemCard('tip'));
+    w.appendChild(l); w.appendChild(makeItemCard(a.tipCard));
     items.appendChild(w);
   }
   items.appendChild(slotEl('중앙 카드', a.centerCard, { animate: drewNow, draw: drewNow }));

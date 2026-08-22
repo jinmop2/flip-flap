@@ -158,5 +158,21 @@ console.log('\n⑦ 다시 그릴 때마다 맞춘다');
 ok('정렬 끝에 테이블을 깐다', /tvLayTable\(\);   \/\/ 줄을 맞춘 뒤라야/.test(cli));
 ok('나가면 테이블을 치운다', /tv-table'\)[\s\S]{0,80}classList\.remove\('on'\)/.test(cli));
 
+console.log('\n⑧ 자리는 프로필이 한가운데, 나머지는 양옆에 띄운다');
+// 흐름에 두면 [아이템+프로필+시계] 세 덩이의 중앙이 중앙이 되어 얼굴이 밀린다.
+ok('시계는 오른쪽에 띄운다', /\.tv-seat \.pc-timer \{ position:absolute; left:100%;/.test(htm));
+ok('아이템 수는 왼쪽에 띄운다',
+   /#oppItemBadge \{[\s\S]{0,320}position:absolute; right:100%;/.test(htm));
+ok('둘 다 제 너비를 못 박는다',
+   (htm.match(/width:max-content; white-space:nowrap;/g) || []).length >= 2);
+
+console.log('\n⑨ 두 자리 등급(6-10)이 세로로 접히지 않는다');
+// 6-10 은 "10" 두 글자에 ⚔ 표식까지 달려, 좁은 배팅 레일에서 칸이 모자라
+// "1" 과 "0" 이 위아래로 접혔다. 접지 말고 줄이게 한다.
+ok('등급 딱지는 줄바꿈 금지', /\.card \.c-rank \{[\s\S]{0,420}white-space:nowrap;/.test(htm));
+ok('배팅 레일에선 딱지도 줄인다',
+   /#g-rail \.bid-area \.card \.c-rank \{/.test(htm)
+   && /#g-rail \.bid-area \.card \.c-rank\.two \{/.test(htm));
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
