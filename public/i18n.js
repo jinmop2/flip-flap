@@ -1310,50 +1310,61 @@
     rulesItem: `
     <span class="close-x" onclick="toggleRulesItem(false)">\u00d7</span>
     <h2>Item Battle</h2>
-    <p style="color:#8a7a80">The two-player rules, plus <b style="color:#ffe9a8">items</b> \u2014 and only the
-       <b style="color:#ffe9a8">loser</b> of an auction gets them.</p>
+    <p style="color:#8a7a80">The two-player rules, plus <b style="color:#ffe9a8">items</b> \u2014 which ride in
+       on <b style="color:#ffe9a8">item cards</b> shuffled into the centre deck.</p>
 
-    <h3><span data-ico="\ud83c\udf81"></span> How items arrive</h3>
-    <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>After every auction the <b>loser</b> receives one item. The winner gets nothing.</span></div>
-      <div class="r4-step"><b>2</b><span>You can hold <b>three</b> at most. A full hand receives nothing.</span></div>
-      <div class="r4-step"><b>3</b><span><b>One item per turn</b>, and never after you have played your bid card.</span></div>
+    <h3><span data-ico="\ud83c\udf81"></span> Where items come from</h3>
+    <div class="r4-tbl">
+      <div class="r4-row r4-head"><span>Card</span><span>Who gets it</span><span>What shows</span></div>
+      <div class="r4-row"><span>\ud83c\udf81 Bonus</span><span>the auctioneer who flipped it</span><span>face up</span></div>
+      <div class="r4-row"><span>\ud83c\udff7 Tip</span><span>the <b>loser</b> of that auction</span><span>face up</span></div>
+      <div class="r4-row"><span>Ordinary card</span><span>\u2014</span><span>no item</span></div>
     </div>
-    <p>Items pile up on whoever is behind, so the game pulls itself back together.
-       <b>Legendary items only drop to the player behind on sets</b>, so a lead does not snowball.</p>
+    <p><b>Item cards are separate cards.</b> They carry no kind or grade, so they never count toward a set.
+       Four of them \u2014 <b>two Bonus, two Tip</b> \u2014 go into the centre deck. Flip one and you
+       <b>immediately draw again</b>, so that turn's lot is <b>three cards</b> (\ud83c\udff7 Tip + centre + offering).</p>
+    <p>The four sit <b>one per two ordinary cards</b>. A game usually ends around turn six with half the deck
+       unturned, so shuffling them in freely meant <b>whole games with no item at all</b>. Now one turns up
+       roughly <b>every other turn</b> \u2014 though where inside its window is still random.</p>
+    <div class="r4-steps">
+      <div class="r4-step"><b>1</b><span>\ud83c\udf81 Bonus goes to the <b>auctioneer</b> the moment it is flipped. The seat alternates, so it stays even.</span></div>
+      <div class="r4-step"><b>2</b><span>\ud83c\udff7 Tip rides on the lot in <b>plain sight</b> and goes to whoever <b>loses</b> that auction \u2014 so you weigh whether to throw the round.</span></div>
+      <div class="r4-step"><b>\u2605</b><span>Item cards are <b>face up</b>: art, name and tier border. You must know what is at stake for "lose this one on purpose" to mean anything. <b>What you saw is what you get.</b></span></div>
+      <div class="r4-step"><b>3</b><span>Hold <b>three</b> at most, play <b>one per turn</b>, and never after your bid card is down.</span></div>
+    </div>
+    <p>Tips pile up on whoever is losing, so the game pulls itself back together \u2014 that one rule is the
+       whole brake on a runaway lead. Since tier is ignored, chasing a legendary is a real reason to <b>throw a round</b>.</p>
 
     <h3><span data-ico="\ud83c\udfb2"></span> Drop rates</h3>
-    <div class="r4-tbl">
-      <div class="r4-row r4-head"><span>Tier</span><span>Behind</span><span>Ahead</span></div>
-      <div class="r4-row"><span>Common (3)</span><span>60%</span><span>60%</span></div>
-      <div class="r4-row"><span>Rare (6)</span><span>32%</span><span>40%</span></div>
-      <div class="r4-row"><span>Legendary (4)</span><span>8%</span><span>\u2014</span></div>
-    </div>
-    <p style="font-size:.78rem">A legendary roll turns into a rare one if you are ahead.</p>
+    <p><b>Tier is ignored.</b> All <b>13 kinds</b> are <b>shuffled into one pile</b> and drawn off the top \u2014
+       a common and a legendary have the same footing. The tier (the border colour) tells you how strong an
+       item is, not how often it turns up.</p>
+    <p>They are <b>drawn, not rolled</b>: the same item never comes twice in a row, and one pass through the
+       pile of 13 shows every kind exactly once. When the pile runs out it is shuffled anew.</p>
 
     <h3><span data-ico="\ud83d\udd0d"></span> Common</h3>
     <ul>
       <li><b>Magnifier</b> \u2014 peek at two cards in their hand</li>
-      <li><b>Hourglass</b> \u2014 take 30 seconds off their clock</li>
+      <li><b>Callipers</b> \u2014 see how useful this lot is <b>to them</b></li>
       <li><b>Swap</b> \u2014 trade one card in hand for the top of the deck</li>
     </ul>
 
     <h3><span data-ico="\ud83d\udca8"></span> Rare</h3>
     <ul>
-      <li><b>Smoke</b> \u2014 hide this lot from your opponent only</li>
       <li><b>Reversal</b> \u2014 for this auction, the <b>weaker</b> card wins</li>
-      <li><b>Pickpocket</b> \u2014 take one card from their hand, give one of yours</li>
-      <li><b>Discount</b> \u2014 win without losing your bid card</li>
+      <li><b>Exchange</b> \u2014 swap one card you have won for one of theirs</li>
+      <li><b>Bomb</b> \u2014 strap a bomb to the lot: whoever wins it <b>discards a card</b> from hand</li>
       <li><b>Charm</b> \u2014 blocks their next item <b>for this turn</b></li>
-      <li><b>Re-auction</b> \u2014 void a lost auction and bid again</li>
     </ul>
 
-    <h3><span data-ico="\ud83d\udc51"></span> Legendary <span style="font-size:.78rem;color:#8a7a80">\u2014 only when behind</span></h3>
+    <h3><span data-ico="\ud83d\udc51"></span> Legendary</h3>
     <ul>
-      <li><b>Alley Cat</b> \u2014 steal a card they have won (never from a set that is one card away)</li>
+      <li><b>Smoke</b> \u2014 hide this lot from your opponent only</li>
+      <li><b>Re-auction</b> \u2014 void a lost auction and bid again (<b>both</b> played cards are barred)</li>
+      <li><b>Alley Cat</b> \u2014 send one card they have won back to the deck</li>
       <li><b>Copier</b> \u2014 duplicate a card you have won</li>
-      <li><b>Tyrant</b> \u2014 seize the auctioneer's seat this turn (needs 2+ cards in hand)</li>
-      <li><b>Dice of Fate</b> \u2014 redraw both lot cards from the deck</li>
+      <li><b>Tyrant</b> \u2014 seize the auctioneer's seat this turn</li>
+      <li><b>Pick of Three</b> \u2014 look at the top three and choose this turn's centre card</li>
     </ul>
 
     <h3><span data-ico="\ud83e\uddff"></span> The Charm \u2014 a reading game</h3>

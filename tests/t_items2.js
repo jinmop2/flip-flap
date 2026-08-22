@@ -119,8 +119,8 @@ console.log('\n⑥ 세던 것들을 낮췄다');
   for (const it of Object.values(items.ITEMS)) t[it.tier]++;
   ok('일반 3 · 희귀 4 · 전설 6', t.common === 3 && t.rare === 4 && t.legend === 6,
      `${t.common}/${t.rare}/${t.legend}`);
-  ok('설명서 숫자도 맞다', htm.includes(`일반 (${t.common}종)`) && htm.includes(`희귀 (${t.rare}종)`)
-     && htm.includes(`전설 (${t.legend}종)`));
+  // 등급은 카드 테두리 색과 설명서 분류로만 남는다 — 뽑기에는 안 쓰인다.
+  ok('설명서 숫자도 맞다', htm.includes(`${t.common + t.rare + t.legend}가지`));
 }
 
 console.log('\n⑦ 눈금자 — 상대가 이 판을 얼마나 원하나');
@@ -189,15 +189,8 @@ console.log('\n⑧ 아이템 카드는 따로 있다 — 뽑히면 경매품이 
   ok('한 장 더 뽑는다', /while \(game\.centerDeck\.length && guard\+\+ < 12\)[\s\S]{0,900}continue;/.test(srv));
   ok('보통 카드가 나오면 거기서 멈춘다', /if \(!card\.item\) \{[\s\S]{0,140}return bonus;/.test(srv));
 
-  // 🎁 보너스 — 뒤집은 진행자가 그 자리에서. 공짜라 일반 등급만.
-  ok('보너스는 진행자에게', /card\.item === 'bonus'[\s\S]{0,220}items\.pick\('common'\)[\s\S]{0,160}items\.give\(game, game\.auctioneer, it\.id\)/.test(srv));
-  ok('등급을 지정해 뽑을 수 있다', /function grant\(g, who, tier\)/.test(src)
-     && /const pool = tier && BY_TIER\[tier\]/.test(src));
-  ok('공짜로 전설은 안 나온다', (() => {
-    const g = { items: { 1: [], 2: [] }, p1Acquired: [], p2Acquired: [] };
-    for (let i = 0; i < 60; i++) { g.items[1] = []; if (items.grant(g, 1, 'common').tier !== 'common') return false; }
-    return true;
-  })());
+  // 🎁 보너스 — 뒤집은 진행자가 그 자리에서. 진행자는 번갈아 맡으니 공짜라도 안 기운다.
+  ok('보너스는 진행자에게', /card\.item === 'bonus'[\s\S]{0,220}items\.pick\(game\)[\s\S]{0,160}items\.give\(game, game\.auctioneer, it\.id\)/.test(srv));
 
   // 🏷 덤 — 경매품에 얹혀 세 장이 되고, 진 쪽이 가져간다.
   // 이긴 쪽에 주면 아이템의 86% 가 앞선 쪽으로 갔다(재 봤다).
@@ -205,21 +198,34 @@ console.log('\n⑧ 아이템 카드는 따로 있다 — 뽑히면 경매품이 
   // 앞면 공개 — 무엇이 걸렸는지 봐야 "저것 때문에 져 준다" 가 성립한다.
   // 보여 준 것과 실제로 주는 것이 달라지면 안 되므로, 뽑기는 공개 때 한 번뿐이다.
   ok('보여 준 그 아이템을 준다', /items\.give\(g, loser, tipCard\.itemId\)/.test(srv));
-  // 덤은 공개 시점에 받을 사람이 아직 없다 — 전설 조건을 '누가 뒤처졌나' 로 잰다.
-  // 무조건 true 로 넘기면 동률인 초반부터 전설이 쏟아진다.
-  ok('전설은 격차가 벌어진 뒤에만', /const gap = items\.isBehind\(game, 1\) \|\| items\.isBehind\(game, 2\);/.test(srv)
-     && /items\.pick\(null, gap\)/.test(srv));
-  ok('열세 가지가 다 나온다', (() => {
-    const seen = new Set();
-    for (let i = 0; i < 200000; i++) seen.add(items.pick(null, true).id);
-    return Object.keys(items.ITEMS).every(id => seen.has(id));
-  })());
-  ok('동률이면 전설이 안 나온다', (() => {
-    for (let i = 0; i < 20000; i++) if (items.pick(null, false).tier === 'legend') return false;
+  // ── 뽑기는 등급을 안 따진다 — 카드게임처럼 한 벌로 섞어 위에서 뽑는다 ──
+  ok('등급 가중이 없다', !/r < 0\.60 \? 'common'/.test(src) && !/BY_TIER/.test(src));
+  ok('한 벌을 섞어 둔다', /function newItemDeck\(\) \{ return shuffle\(Object\.keys\(ITEMS\)\); \}/.test(src)
+     && /game\.itemDeck = items\.newItemDeck\(\);/.test(srv));
+  ok('덤도 그 벌에서 뽑는다', /items\.pick\(game\)[\s\S]{0,120}tipCard = \{ kind: 'tip'/.test(srv));
+  ok('다음에 뭐가 나올지 클라이언트로 안 보낸다',
+     !/itemDeck/.test(srv.slice(srv.indexOf('function stateFor'))) && !/\.\.\.game\b/.test(srv));
+  // 한 벌 안에서는 열세 가지가 한 번씩 다 나온다
+  ok('한 벌 = 열세 가지 전부, 중복 없이', (() => {
+    const all = Object.keys(items.ITEMS);
+    for (let t = 0; t < 500; t++) {
+      const g = { items: { 1: [], 2: [] } };
+      const got = []; for (let i = 0; i < all.length; i++) got.push(items.pick(g).id);
+      if (new Set(got).size !== all.length) return false;
+      if (!all.every(id => got.includes(id))) return false;
+    }
     return true;
   })());
-  ok('정해만 두고 주지는 않는다', /function pick\(tier, behind\)/.test(src)
-     && !/function pick\(tier, behind\) \{[\s\S]{0,300}g\.items/.test(src));
+  // 등급별로 몰리지 않는다 — 전설이 예전엔 종당 0.93% 였다
+  ok('열세 가지가 고르게 나온다', (() => {
+    const g = { items: { 1: [], 2: [] } }, cnt = {};
+    const N = 130000;
+    for (let i = 0; i < N; i++) { const id = items.pick(g).id; cnt[id] = (cnt[id] || 0) + 1; }
+    const exp = N / Object.keys(items.ITEMS).length;
+    return Object.keys(items.ITEMS).every(id => Math.abs((cnt[id] || 0) - exp) < exp * 0.08);
+  })());
+  ok('정해만 두고 주지는 않는다', /function pick\(g\) \{/.test(src)
+     && !/function pick\(g\) \{[\s\S]{0,200}g\.items/.test(src));
   ok('덤은 패자에게', /if \(g\.itemMode && tipCard\) \{\s*\n\s*const loser = p1Wins \? 2 : 1;/.test(srv));
   ok('덤이 없으면 아이템도 없다', /const tipCard = g\.auction\.tipCard \|\| null;/.test(srv));
 

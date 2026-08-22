@@ -266,9 +266,7 @@ const ITEMS = {
 };
 
 // ── 드롭 ───────────────────────────────────────────────
-const BY_TIER = { common: [], rare: [], legend: [] };
-for (const [id, it] of Object.entries(ITEMS)) BY_TIER[it.tier].push(id);
-
+// 등급(tier)은 이제 뽑기에 안 쓰인다 — 카드 테두리 색과 설명서 분류로만 남는다.
 const MAX_HOLD = 3;
 
 function shuffle(a) {
@@ -276,15 +274,27 @@ function shuffle(a) {
   return a;
 }
 
-// 경매 패자에게 줄 아이템 1개 추첨.
-// behind=true(세트 진행이 뒤진 쪽)일 때만 전설이 나온다.
-function rollItem(behind) {
-  const r = Math.random();
-  let tier = r < 0.60 ? 'common' : r < 0.92 ? 'rare' : 'legend';
-  if (tier === 'legend' && !behind) tier = 'rare';
-  const pool = BY_TIER[tier];
-  return pool[Math.floor(Math.random() * pool.length)];
+// ── 아이템 뽑기 ────────────────────────────────────────
+// 카드게임처럼 열세 가지를 한 벌로 섞어 놓고 위에서 한 장씩 뽑는다.
+// 등급은 안 따진다 — 일반이든 전설이든 같은 자격으로 섞여 있다.
+// 예전엔 등급 가중(일반 60 · 희귀 32 · 전설 8)에 "전설은 뒤진 쪽에게만"
+// 까지 걸려 전설 여섯 가지가 각각 0.93% 였다. 열두 판에 한 번 볼까 말까라
+// 아이템의 절반이 사실상 없는 것이나 마찬가지였다.
+//
+// 한 벌(13장)을 다 쓰면 새로 섞는다. 확률로 굴리는 게 아니라 뽑는 것이라,
+// 같은 것이 연달아 나오지 않고 한 벌 안에서는 열세 가지가 한 번씩 다 나온다.
+function newItemDeck() { return shuffle(Object.keys(ITEMS)); }
+
+// g 를 주면 그 판의 아이템 덱에서 뽑는다. 안 주면 그때그때 한 벌 섞어 한 장만
+// 쓴다(= 그냥 균등 무작위) — 시뮬레이션·테스트용 경로다.
+function drawItem(g) {
+  if (!g) return newItemDeck()[0];
+  if (!g.itemDeck || !g.itemDeck.length) g.itemDeck = newItemDeck();
+  return g.itemDeck.pop();
 }
+
+// 예전 이름 — 등급도 앞뒤도 안 따지는 균등 무작위가 됐다.
+function rollItem() { return newItemDeck()[0]; }
 
 // 이번 경매에만 걸리는 효과들 — 매 턴 초기화
 function freshFx() {
@@ -368,23 +378,20 @@ function give(g, who, id) {
 }
 
 // 아이템 하나를 정해 두기만 한다(주지는 않는다) — 카드 앞면에 얹을 것.
-function pick(tier, behind) {
-  const pool = tier && BY_TIER[tier] && BY_TIER[tier].length ? BY_TIER[tier] : null;
-  const id = pool ? pool[Math.floor(Math.random() * pool.length)] : rollItem(!!behind);
+function pick(g) {
+  const id = drawItem(g);
   return { id, name: ITEMS[id].name, icon: ITEMS[id].icon, tier: ITEMS[id].tier, desc: ITEMS[id].desc };
 }
 
-function grant(g, who, tier) {
-  g.items[who] ||= [];
-  if (g.items[who].length >= MAX_HOLD) return null;   // 가득 차면 획득하지 않음
-  const behind = isBehind(g, who);
-  const pool = tier && BY_TIER[tier] && BY_TIER[tier].length ? BY_TIER[tier] : null;
-  const id = pool ? pool[Math.floor(Math.random() * pool.length)] : rollItem(behind);
-  g.items[who].push(id);
-  return { id, name: ITEMS[id].name, icon: ITEMS[id].icon, tier: ITEMS[id].tier, desc: ITEMS[id].desc };
+// 뽑아서 바로 주기 — pick + give 한 번에.
+function grant(g, who) {
+  const it = pick(g);
+  return give(g, who, it.id);
 }
 
-// 세트 진행도가 상대보다 뒤처져 있는가 (전설 드롭 조건)
+// 세트 진행도가 상대보다 뒤처져 있는가.
+// 드롭에는 더 안 쓰인다(등급을 안 따지므로) — AI 가 아이템을 언제 쓸지
+// 고를 때 "내가 지고 있나" 를 보는 데 쓴다.
 function isBehind(g, who) {
   const rate = acq => {
     const cnt = {};
@@ -402,4 +409,4 @@ function isBehind(g, who) {
 const CATALOG = Object.fromEntries(Object.entries(ITEMS).map(([id, it]) =>
   [id, { name: it.name, icon: it.icon, tier: it.tier, desc: it.desc, phases: it.phases, needsCard: !!it.needsCard, loserOnly: !!it.loserOnly }]));
 
-module.exports = { ITEMS, CATALOG, MAX_HOLD, use, canUse, grant, give, pick, freshFx, rollItem, isBehind };
+module.exports = { ITEMS, CATALOG, MAX_HOLD, use, canUse, grant, give, pick, freshFx, rollItem, newItemDeck, isBehind };

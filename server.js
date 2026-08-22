@@ -727,6 +727,9 @@ function createGame(itemMode = false) {
   if (itemMode) {
     game.itemMode = true;
     mixItemCards(game.centerDeck);
+    // 아이템은 열세 가지를 한 벌로 섞어 놓고 위에서 뽑는다 — 등급 가중 없음.
+    // 클라이언트로는 절대 안 나간다(다음에 뭐가 나올지 보이면 안 된다).
+    game.itemDeck = items.newItemDeck();
     game.items = { 1: [], 2: [] };       // 보유 아이템 (최대 3)
     game.itemUsed = { 1: false, 2: false };  // 턴당 1개 제한
     game.fx = items.freshFx();           // 이번 경매에만 걸리는 효과
@@ -774,9 +777,10 @@ function drawCenter(game, room) {
       game.phase = 'offer';
       return bonus;
     }
-    // 🎁 보너스 — 뒤집은 진행자가 그 자리에서 하나. 공짜라 일반 등급만 준다.
+    // 🎁 보너스 — 뒤집은 진행자가 그 자리에서 하나.
+    // 진행자는 턴마다 번갈아 맡으므로 공짜라도 한쪽으로 기울지 않는다.
     if (card.item === 'bonus') {
-      const it = items.pick('common');
+      const it = items.pick(game);
       const got = items.give(game, game.auctioneer, it.id);
       if (got) bonus.push({ seat: game.auctioneer, item: got });
       // 무엇이었는지 카드 앞면으로 남겨 둔다 — 뒷면만 보이면 뭘 줬는지 알 수 없다
@@ -786,13 +790,8 @@ function drawCenter(game, room) {
     // 🏷 덤 — 경매품에 앞면으로 얹힌다. 무엇이 걸렸는지 둘 다 보고,
     // 정산 때 진 쪽이 그 아이템을 가져간다.
     {
-      // 전설은 "뒤처진 쪽에게만" 이 원칙이다. 그런데 덤은 뽑는 순간 앞면으로
-      // 공개되고 실제로 가져갈 사람(그 경매의 패자)은 아직 정해지지 않았다.
-      // 그래서 받는 사람 기준으로는 못 재고, "지금 판에 뒤처진 사람이 있는가"
-      // 로 잰다 — 아직 동률인 초반엔 전설이 안 나오고, 격차가 벌어진 뒤에만
-      // 나온다. 덤 자체가 패자에게 가므로 실제로는 79%가 뒤진 쪽으로 간다.
-      const gap = items.isBehind(game, 1) || items.isBehind(game, 2);
-      const it = items.pick(null, gap);
+      // 등급도 앞뒤도 안 따진다 — 열세 가지를 한 벌로 섞어 놓고 위에서 뽑는다.
+      const it = items.pick(game);
       game.auction.tipCard = { kind: 'tip', itemId: it.id, name: it.name, tier: it.tier };
     }
     // 여기서 하나 더 뽑으므로 경매품이 세 장이 된다

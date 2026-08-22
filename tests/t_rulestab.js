@@ -79,12 +79,16 @@ console.log('\n⑤ 아이템전 설명서');
   const it = fs.readFileSync(src + '/items.js', 'utf8');
   const tiers = { common: 0, rare: 0, legend: 0 };
   for (const m of it.matchAll(/tier: '(\w+)'/g)) tiers[m[1]]++;
-  ok(`일반 ${tiers.common}종이 설명서와 같다`, box.includes(`일반 (${tiers.common}종)`), String(tiers.common));
-  ok(`희귀 ${tiers.rare}종이 설명서와 같다`, box.includes(`희귀 (${tiers.rare}종)`), String(tiers.rare));
-  ok(`전설 ${tiers.legend}종이 설명서와 같다`, box.includes(`전설 (${tiers.legend}종)`), String(tiers.legend));
+  const kinds = tiers.common + tiers.rare + tiers.legend;
+  ok(`${kinds}가지가 설명서와 같다`, box.includes(`${kinds}가지`), String(kinds));
   ok('보유 한도가 코드와 같다', /const MAX_HOLD = 3/.test(it) && box.includes('3개'));
-  ok('확률이 코드와 같다', /r < 0\.60 \? 'common' : r < 0\.92 \? 'rare'/.test(it)
-     && box.includes('60%') && box.includes('32%') && box.includes('8%'));
+  // 등급 가중은 없앴다 — 한 벌로 섞어 뽑는다. 설명서에 옛 확률표가 남아 있으면 거짓말이 된다.
+  ok('등급 가중이 코드에 없다', !/r < 0\.60 \? 'common'/.test(it) && !/BY_TIER/.test(it));
+  ok('설명서에도 옛 확률표가 없다',
+     !box.includes('60%') && !box.includes('32%') && !/전설 \(\d종\)<\/span><span>8%/.test(box));
+  ok('한 벌로 섞어 뽑는다고 적혀 있다',
+     /function newItemDeck\(\) \{ return shuffle\(Object\.keys\(ITEMS\)\); \}/.test(it)
+     && box.includes('한 벌로 섞어') && box.includes('등급은 안 따진다'));
   // 12개 아이템 이름이 다 적혀 있어야 한다
   const names = [...it.matchAll(/name: '([^']+)', icon:/g)].map((m) => m[1]);
   const missing = names.filter((n) => !box.includes(n));
