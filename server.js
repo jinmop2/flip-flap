@@ -943,22 +943,29 @@ function cpuPickItem(g, me, room) {
       case 'copy':       return myAcq.length < 1 ? -1
                               : expert ? (myDist <= 1 ? 12 : myAcq.length >= 2 ? 8 : 4)
                               : (myAcq.length >= 2 ? 8 : -1);
-      // 주사위 — 이 경매품이 나에게 쓸모없을 때 판을 갈아 버린다
-      case 'dice':       return g.centerDeck.length < 2 ? -1
-                              : expert ? (wantPrize < 0.3 ? 7 : behind ? 5 : 1)
-                              : (behind ? 6 : 2);
+      // 고르기 — 덱 위 3장에서 내가 원하는 것을 집어 온다. 리치일수록 값어치가 크다.
+      case 'pick3':      return g.centerDeck.length < 2 ? -1
+                              : expert ? (myDist <= 1 ? 11 : wantPrize < 0.3 ? 7 : 4)
+                              : (behind ? 6 : 3);
       // 부적 — 이번 턴에만 산다. 상대가 전설을 들고 있으면 값어치가 크다.
-      case 'ward':       return (g.items[opp] || []).some(x => ['steal', 'tyrant', 'copy', 'dice'].includes(x)) ? 7 : 3;
+      case 'ward':       return (g.items[opp] || []).some(x => ['steal', 'tyrant', 'copy', 'pick3', 'smoke'].includes(x)) ? 7 : 3;
       // 역전 — 내 손패가 약할 때만. 강한 손패로 걸면 스스로 진다.
       case 'flip':       if (!expert) return 5;
                          if (!myBest || g.phase === 'draw') return 2;
                          return strength(myBest) >= 500 ? 8 : strength(myBest) >= 300 ? 4 : -1;
-      case 'discount':   return 5;
-      case 'smoke':      return g.phase !== 'draw' ? (expert && wantPrize >= 0.55 ? 6 : 4) : -1;
-      case 'pickpocket': return 4;
+      case 'smoke':      return g.phase !== 'draw' ? (expert && wantPrize >= 0.55 ? 8 : 5) : -1;
+      // 폭탄 — 내가 원하지 않는 판일수록 좋다. 이 경매를 상대가 먹으면 손해를 보게 만든다.
+      // 내가 이길 판에 걸면 내가 버려야 하니, 원하는 판에는 안 건다.
+      case 'bomb':       if (g.phase === 'draw' || !prize.length) return -1;
+                         return expert ? (wantPrize < 0.35 ? 9 : wantPrize < 0.55 ? 4 : -1)
+                                       : (wantPrize < 0.5 ? 6 : 1);
+      // 교환권 — 서로 딴 것이 있어야 뜻이 있다. 상대가 앞서 있을수록 값어치가 크다.
+      case 'trade':      return (!myAcq.length || !opAcq.length) ? -1
+                              : expert ? (opDist <= myDist ? 8 : 4) : 5;
       case 'magnify':    return expert ? (g.phase === 'bidding' ? 5 : 2) : 3;
       case 'swap':       return g.centerDeck.length ? 2 : -1;
-      case 'hourglass':  return 1;
+      // 눈금자 — 상대가 이 판을 얼마나 원하는지 알면 얼마를 지를지가 정해진다
+      case 'scan':       return prize.length ? 2 : -1;
       default:           return 0;
     }
   };
@@ -1214,7 +1221,12 @@ function stateFor(game, pi) {
       // 내가 건 부적만 알려준다 — 상대 것을 알려주면 값싼 걸 던져 태우면 그만이라 뜻이 없어진다
       wardMe: !!game.fx.ward[me],
       peek: game.fx.peek[me] || null,   // 돋보기로 훔쳐본 상대 카드 (나에게만)
+      // 폭탄은 양쪽 다 안다 — 알아야 "이겨도 되나" 를 저울질할 수 있다
+      bomb: !!game.fx.bomb,
+      banned: game.fx.banned ? (game.fx.banned[me] || null) : null,
+      scan: game.fx.scan ? (game.fx.scan[me] == null ? null : game.fx.scan[me]) : null,
     };
+    base.bombPick = game.bombPick === me;
   }
   return base;
 }
@@ -2078,6 +2090,21 @@ io.on('connection', (socket) => {
     setTimeout(() => maybeCpuAct(socket.roomId), 300);
   });
 
+  // 폭탄에 맞은 사람이 버릴 카드를 고른다
+  socket.on('bomb_discard', ({ cardId }) => {
+    const room = rooms[socket.roomId]; if (!room?.game) return;
+    const g = room.game;
+    const me = socket.playerIndex + 1;
+    if (!g.itemMode || g.bombPick !== me) return;
+    const hand = me === 1 ? g.p1Hand : g.p2Hand;
+    const i = hand.findIndex(c => String(c.id) === String(cardId));
+    if (i < 0) return;
+    const gone = hand.splice(i, 1)[0];
+    g.bombPick = null;
+    room.players.forEach(sid => { if (sid) io.to(sid).emit('bomb_blew', { seat: me, card: gone }); });
+    broadcast(socket.roomId);
+  });
+
   socket.on('submit_bid', ({ cardId }) => {
     const room = rooms[socket.roomId]; if (!room?.game) return;
     const g = room.game; if (g.phase !== 'bidding') return;
@@ -2091,6 +2118,10 @@ io.on('connection', (socket) => {
     const hand = isP1 ? g.p1Hand : g.p2Hand;
     const idx = hand.findIndex(c => c.id === cardId);
     if (idx === -1) return;
+    // 재경매로 묶인 카드는 다시 못 낸다 — 그게 이 아이템의 전부다
+    if (g.itemMode && g.fx && g.fx.banned && g.fx.banned[me] === cardId) {
+      return socket.emit('item_error', '방금 낸 카드는 다시 낼 수 없어요.');
+    }
     if (isP1 && g.auction.p1Submitted) return;
     if (!isP1 && g.auction.p2Submitted) return;
     const card = hand.splice(idx, 1)[0];
@@ -2449,6 +2480,26 @@ function settle(roomId) {
   if (noSwap) { g.p1Hand.push(p1Bid); g.p2Hand.push(p2Bid); }
   else { g.p2Hand.push(p1Bid); g.p1Hand.push(p2Bid); }
   g.auction = null;
+
+  // 폭탄 — 낙찰받은 쪽이 손패 1장을 버린다. 폭탄을 건 사람도 예외가 아니다.
+  // 사람이면 무엇을 버릴지 고르게 하고, AI 는 안 쓸 카드를 알아서 버린다.
+  if (g.itemMode && g.fx.bomb) {
+    const winner = p1Wins ? 1 : 2;
+    const wHand = winner === 1 ? g.p1Hand : g.p2Hand;
+    const isCpu = room.cpuIndex === winner - 1;
+    if (wHand.length && isCpu) {
+      const acq = winner === 1 ? g.p1Acquired : g.p2Acquired;
+      const t = cpuTarget(acq, wHand);
+      const junk = [...wHand].sort((x, y) =>
+        (x.kind === t ? 1 : 0) - (y.kind === t ? 1 : 0) || strength(y) - strength(x))[0];
+      wHand.splice(wHand.indexOf(junk), 1);
+      room.players.forEach(sid => { if (sid) io.to(sid).emit('bomb_blew', { seat: winner, card: junk }); });
+    } else if (wHand.length) {
+      g.bombPick = winner;            // 이 사람이 고를 때까지 판이 기다린다
+      const sid = room.players[winner - 1];
+      if (sid) io.to(sid).emit('bomb_pick', { hand: wHand });
+    }
+  }
 
   // 경매 패자 위로금 — 진 사람에게 아이템 1개 (뒤진 쪽에만 전설)
   if (g.itemMode) {

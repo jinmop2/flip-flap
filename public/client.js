@@ -1071,17 +1071,18 @@ function closeMissions() { document.getElementById('missionModal').classList.rem
 // 실제 효과·검증은 전부 서버가 하므로 여기 값을 고쳐도 게임에 영향은 없다.
 const ITEM_INFO = {
   magnify:    { name: '돋보기',       icon: '🔍', tier: 'common', desc: '상대 손패 2장을 훔쳐본다' },
-  hourglass:  { name: '모래시계',     icon: '⏳', tier: 'common', desc: '상대의 남은 시간을 30초 깎는다' },
+  scan:       { name: '눈금자',       icon: '📏', tier: 'common', desc: '이번 경매품이 상대에게 얼마나 쓸모 있는지 본다' },
   swap:       { name: '손바꿈',       icon: '🔀', tier: 'common', desc: '내 손패 1장을 덱의 카드와 바꾼다', needsCard: true },
-  smoke:      { name: '연막탄',       icon: '💨', tier: 'rare',   desc: '이번 경매품을 상대에게만 가린다' },
+  smoke:      { name: '연막탄',       icon: '💨', tier: 'legend', desc: '이번 경매품을 상대에게만 가린다' },
   flip:       { name: '뒤집개',       icon: '🔄', tier: 'rare',   desc: '이번 경매만 약한 카드가 이긴다' },
-  pickpocket: { name: '소매치기',     icon: '🪝', tier: 'rare',   desc: '상대 손패 1장을 뺏고 내 카드 1장을 넘긴다' },
-  discount:   { name: '에누리',       icon: '💰', tier: 'rare',   desc: '이겨도 배팅 카드를 뺏기지 않는다' },
-  redo:       { name: '재경매',       icon: '📢', tier: 'rare',   desc: '진 경매를 무효로 하고 다시 배팅한다' },
-  steal:      { name: '도둑고양이',   icon: '🐈', tier: 'legend', desc: '상대가 낙찰받은 카드 1장을 훔친다' },
+  trade:      { name: '교환권',       icon: '🔁', tier: 'rare',   desc: '내가 딴 카드 1장과 상대가 딴 카드 1장을 맞바꾼다' },
+  bomb:       { name: '폭탄',         icon: '💣', tier: 'rare',   desc: '경매품에 폭탄을 얹는다 — 먹는 쪽이 손패 1장을 버린다' },
+  ward:       { name: '부적',         icon: '🧿', tier: 'rare',   desc: '상대의 다음 아이템 1개를 이번 턴 동안 막는다' },
+  redo:       { name: '재경매',       icon: '📢', tier: 'legend', desc: '진 경매를 무효로 하고 다시 배팅한다 — 방금 낸 카드는 둘 다 못 쓴다' },
+  steal:      { name: '도둑고양이',   icon: '🐈', tier: 'legend', desc: '상대가 낙찰받은 카드 1장을 덱으로 되돌린다' },
   copy:       { name: '복사기',       icon: '🖨️', tier: 'legend', desc: '내가 낙찰받은 카드 1장을 복제한다' },
   tyrant:     { name: '폭군',         icon: '👑', tier: 'legend', desc: '이번 턴 진행자 권한을 뺏는다' },
-  dice:       { name: '운명의 주사위', icon: '🎲', tier: 'legend', desc: '경매품 2장을 새로 뽑아 바꾼다' },
+  pick3:      { name: '고르기',       icon: '🎴', tier: 'legend', desc: '덱 맨 위 3장 중 하나를 이번 중앙 카드로 고른다' },
 };
 const TIER_LABEL = { common: '일반', rare: '희귀', legend: '전설' };
 // 직접 그린 SVG 아이콘 (item-icons.js). 못 불러오면 이모지로 대체.
@@ -1108,6 +1109,8 @@ function renderItems(s) {
   const badge = document.getElementById('oppItemBadge');
   if (!bar) return;
   if (!s || !s.itemMode) { bar.style.display = 'none'; badge.style.display = 'none'; hideFxBanner(); return; }
+  // 새로 들어와도(새로고침·재접속) 고를 차례면 다시 띄운다 — 안 그러면 판이 멈춘 채로 보인다
+  if (s.bombPick && !_bombOn) openBombPick(s.myHand || []);
   bar.style.display = '';
   badge.style.display = '';
   document.getElementById('oppItemCount').textContent = s.oppItemCount || 0;
@@ -1134,8 +1137,8 @@ function itemUsableNow(id, s) {
   const PRE = ['draw', 'offer', 'choose_type', 'bidding'];
   const phases = id === 'redo' ? ['reveal']
                : id === 'tyrant' ? ['draw']
-               : id === 'dice' ? ['choose_type', 'bidding']
-               : id === 'smoke' ? ['offer', 'choose_type', 'bidding']
+               : id === 'pick3' ? ['choose_type', 'bidding']
+               : (id === 'smoke' || id === 'bomb') ? ['offer', 'choose_type', 'bidding']
                : PRE;
   if (!phases.includes(s.phase)) return false;
   if (s.phase === 'bidding' && s.auction && s.auction.myBid) return false;   // 배팅 낸 뒤엔 불가
@@ -1157,7 +1160,9 @@ function renderFxBanner(s) {
   if (f.wardMe) msgs.push('🧿 부적 — 상대의 다음 아이템을 막는다');
   if (f.smokedMe) msgs.push('💨 연막 — 경매품이 안 보인다');
   if (f.smokedOpp) msgs.push('💨 상대 시야를 가림');
-  if (f.noSwapMe) msgs.push('💰 에누리 — 배팅 카드를 지킨다');
+  if (f.bomb) msgs.push('💣 폭탄 — 먹는 쪽이 손패 1장을 버린다');
+  if (f.banned) msgs.push('📢 방금 낸 카드는 못 낸다');
+  if (f.scan != null) msgs.push(['📏 상대에겐 별 쓸모 없다', '📏 상대에게 쓸 만하다', '📏 상대가 간절히 원한다'][f.scan]);
   let peekHtml = '';
   if (f.peek && f.peek.length) {
     peekHtml = ' 🔍 ' + f.peek.map(c =>
@@ -1173,8 +1178,9 @@ function hideFxBanner() { const el = document.getElementById('fxBanner'); if (el
 const WHEN_TEXT = {
   redo:   '경매 결과가 공개된 뒤, 진 쪽만',
   tyrant: '진행자가 카드를 뽑기 전에 (손패 2장 이상)',
-  dice:   '경매 방식이 정해진 뒤부터 배팅 전까지',
+  pick3:  '경매 방식이 정해진 뒤부터 배팅 전까지',
   smoke:  '경매품이 나온 뒤부터 배팅 전까지',
+  bomb:   '경매품이 나온 뒤부터 배팅 전까지',
 };
 function explainItem(id) {
   const it = ITEM_INFO[id]; if (!it) return;
@@ -1218,6 +1224,52 @@ function pickIuCard(el, cardId) {
   document.getElementById('iuGo').disabled = false;
 }
 function closeItemUse() { document.getElementById('itemUseModal').classList.remove('show'); _iuItem = null; _iuCard = null; }
+
+// ── 폭탄 ──────────────────────────────────────────────────────────────
+// 낙찰받은 쪽이 손패 1장을 버린다. 무엇을 버릴지는 본인이 고른다 —
+// 자동으로 버려 주면 "왜 저게 없어졌지" 가 되고, 고르게 하면 그것 자체가 한 수다.
+// 닫을 수 없는 창이다. 고르기 전에는 판이 안 넘어간다.
+let _bombOn = false;
+function openBombPick(hand) {
+  if (_bombOn) return;
+  _bombOn = true;
+  const it = { name: '폭탄이 터졌다', desc: '버릴 카드를 고르세요 — 되돌릴 수 없어요' };
+  document.getElementById('iuTitle').textContent = it.name;
+  document.getElementById('iuIcon').innerHTML = itemArt('bomb');
+  document.getElementById('iuDesc').textContent = it.desc;
+  const box = document.getElementById('iuHand');
+  box.innerHTML = '';
+  (hand || []).forEach((c) => {
+    const el = document.createElement('div');
+    el.className = 'iu-c';
+    el.innerHTML = `${c.kind}<small>${c.grade}등급</small>`;
+    el.addEventListener('click', () => {
+      socket.emit('bomb_discard', { cardId: c.id });
+      _bombOn = false;
+      const g2 = document.getElementById('iuGo'); if (g2) g2.style.display = '';
+      const n2 = document.getElementById('iuNo'); if (n2) n2.style.display = '';
+      document.getElementById('itemUseModal').classList.remove('show', 'no-close');
+    });
+    box.appendChild(el);
+  });
+  // 고르는 것 말고는 길이 없다 — 사용·취소 버튼을 둘 다 숨긴다.
+  // 취소가 남아 있으면 강제 선택을 빠져나가 판이 멈춘 채로 남는다.
+  const go = document.getElementById('iuGo'); if (go) go.style.display = 'none';
+  const no = document.getElementById('iuNo'); if (no) no.style.display = 'none';
+  const modal = document.getElementById('itemUseModal');
+  modal.classList.add('show', 'no-close');
+  playSound('bell');
+}
+socket.on('bomb_pick', ({ hand }) => openBombPick(hand));
+socket.on('bomb_blew', ({ seat, card }) => {
+  _bombOn = false;
+  const go = document.getElementById('iuGo'); if (go) go.style.display = '';
+  const no = document.getElementById('iuNo'); if (no) no.style.display = '';
+  const m = document.getElementById('itemUseModal'); if (m) m.classList.remove('no-close');
+  const who = (state && seat === state.myIndex) ? '내' : '상대';
+  toast(`💣 ${who} 손패에서 ${card.kind}-${card.grade} 가 날아갔어요`, 2400);
+  screenFx('shake');
+});
 function confirmUseItem() {
   if (!_iuItem) return;
   socket.emit('use_item', { itemId: _iuItem, cardId: _iuCard ?? undefined });
@@ -4028,7 +4080,8 @@ const ESC_TARGETS = [
   ['gachaModal',   () => closeGacha()],
   ['createModal',  () => closeCreate()],
   ['codeModal',    () => closeCode()],
-  ['itemUseModal', () => closeItemUse()],
+  // 폭탄으로 버릴 카드를 고르는 중이면 못 닫는다 — 고를 때까지 판이 기다린다
+  ['itemUseModal', () => { if (!_bombOn) closeItemUse(); }],
   ['matchModal',   () => cancelMatch()],       // 대기열에서도 빼야 한다
   ['confirmModal', () => confirmClose(false)], // 확인창은 대개 가장 위에 뜬다
   // nickModal 은 일부러 제외 — 닉네임을 정해야 넘어가는 단계라 ESC 로 건너뛰면 안 된다

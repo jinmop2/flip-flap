@@ -16,15 +16,14 @@ const ITEM_ICONS = {
     <path d="M13 17 A9 9 0 0 1 20 12" stroke="#fff6e0" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".9"/>
   </svg>`,
 
-  hourglass: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path d="M13 7 h22 M13 41 h22" stroke="#2a0a10" stroke-width="5.5" stroke-linecap="round"/>
-    <path d="M13 7 h22 M13 41 h22" stroke="#e0b84a" stroke-width="3.4" stroke-linecap="round"/>
-    <path d="M16 9 h16 v5 l-8 10 8 10 v5 h-16 v-5 l8-10 -8-10 z"
-          fill="#fff6e0" stroke="#2a0a10" stroke-width="1.8" stroke-linejoin="round"/>
-    <path d="M17.6 10.6 h12.8 v3 l-6.4 8 -6.4-8 z" fill="#e06a5a"/>
-    <path d="M20.6 36.4 h6.8 v-2.6 l-3.4-4.4 -3.4 4.4 z" fill="#e06a5a"/>
-    <circle cx="24" cy="26.5" r="1.15" fill="#e06a5a"/>
-    <circle cx="24" cy="30.5" r="0.95" fill="#e06a5a"/>
+  // 눈금자 — 상대에게 얼마나 쓸모 있는지 '재는' 물건이다.
+  scan: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <g transform="rotate(-20 24 24)">
+      <rect x="6" y="18" width="36" height="13" rx="2.5" fill="#fff6e0" stroke="#2a0a10" stroke-width="2"/>
+      <path d="M12 18 v6 M18 18 v4 M24 18 v6 M30 18 v4 M36 18 v6" stroke="#2a0a10" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M6 24.5 h36" stroke="#e0b84a" stroke-width="1.4"/>
+      <circle cx="24" cy="28" r="1.6" fill="#e06a5a"/>
+    </g>
   </svg>`,
 
   swap: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -66,30 +65,22 @@ const ITEM_ICONS = {
     <path d="M17 41.5 L8.5 34 L17.5 28 z" fill="#5fd0c0" stroke="#2a0a10" stroke-width="1.7" stroke-linejoin="round"/>
   </svg>`,
 
-  pickpocket: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <g transform="rotate(-16 22 20)">
-      <rect x="13" y="7" width="18" height="25" rx="3" fill="#f7d98a" stroke="#2a0a10" stroke-width="1.8"/>
-      <rect x="16" y="10.5" width="12" height="18" rx="1.6" fill="#c99a3a" opacity=".5"/>
-    </g>
-    <path d="M13 30 c0-3.4 3-5.4 6-4.2 l7 2.8" fill="none" stroke="#2a0a10" stroke-width="6.6" stroke-linecap="round"/>
-    <path d="M13 30 c0-3.4 3-5.4 6-4.2 l7 2.8" fill="none" stroke="#5fd0c0" stroke-width="4.2" stroke-linecap="round"/>
-    <path d="M13 30 c-2.6 4.4-1 9.6 3.4 11.6 4.6 2.1 9.8-.2 11.4-4.8"
-          fill="none" stroke="#2a0a10" stroke-width="6.6" stroke-linecap="round"/>
-    <path d="M13 30 c-2.6 4.4-1 9.6 3.4 11.6 4.6 2.1 9.8-.2 11.4-4.8"
-          fill="none" stroke="#5fd0c0" stroke-width="4.2" stroke-linecap="round"/>
-    <circle cx="30.5" cy="35.5" r="2.6" fill="#b98fe0" stroke="#2a0a10" stroke-width="1.5"/>
+  // 교환권 — 두 장이 자리를 맞바꾼다. 화살표가 서로 반대로 돌아 '맞바꿈' 이 읽힌다.
+  trade: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <rect x="5" y="13" width="15" height="21" rx="3" fill="#fff6e0" stroke="#2a0a10" stroke-width="2" transform="rotate(-9 12 23)"/>
+    <rect x="28" y="13" width="15" height="21" rx="3" fill="#e0b84a" stroke="#2a0a10" stroke-width="2" transform="rotate(9 36 23)"/>
+    <path d="M20 18 h8 l-3-3 M28 30 h-8 l3 3" fill="none" stroke="#2a0a10" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M20 18 h8 l-3-3 M28 30 h-8 l3 3" fill="none" stroke="#5cd69c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`,
 
-  discount: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <defs><linearGradient id="iiDiscBag" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f7d98a"/><stop offset="1" stop-color="#c99a3a"/></linearGradient></defs>
-    <path d="M18 12 l-3-5 h18 l-3 5" fill="#7a4e10" stroke="#2a0a10" stroke-width="1.7" stroke-linejoin="round"/>
-    <path d="M18.5 12 h11 c6.5 4 10 10.5 10 17 0 7-5.5 12-15.5 12 S8.5 36 8.5 29 c0-6.5 3.5-13 10-17 z"
-          fill="url(#iiDiscBag)" stroke="#2a0a10" stroke-width="1.9" stroke-linejoin="round"/>
-    <circle cx="24" cy="28.5" r="8" fill="#fff6e0" stroke="#2a0a10" stroke-width="1.6"/>
-    <path d="M28.5 23.5 L19.5 33.5" stroke="#e06a5a" stroke-width="2.6" stroke-linecap="round"/>
-    <circle cx="20.6" cy="25" r="2.2" fill="none" stroke="#e06a5a" stroke-width="2"/>
-    <circle cx="27.4" cy="32" r="2.2" fill="none" stroke="#e06a5a" stroke-width="2"/>
+  // 폭탄 — 심지에 불이 붙어 있다. 먹는 쪽이 손해라는 걸 그림만으로 알아야 한다.
+  bomb: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M30 13 l4-5 M34 8 l5 1 M34 8 l1-5" stroke="#ffd94a" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="M28 15 q4-7 9-6" fill="none" stroke="#2a0a10" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M28 15 q4-7 9-6" fill="none" stroke="#c8a86a" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="22" cy="29" r="13" fill="#3a2430" stroke="#2a0a10" stroke-width="2"/>
+    <circle cx="17.5" cy="24.5" r="3.6" fill="#fff6e0" opacity=".55"/>
+    <rect x="25" y="12" width="7" height="5" rx="1.5" fill="#2a0a10" transform="rotate(30 28 14)"/>
   </svg>`,
 
   // 부적 — 붉은 종이에 먹으로 친 부적. 막는 물건이라 가운데를 비우지 않고 꽉 채웠다.
@@ -159,18 +150,13 @@ const ITEM_ICONS = {
     <circle cx="24" cy="8" r="3" fill="#e06a5a" stroke="#2a0a10" stroke-width="1.6"/>
   </svg>`,
 
-  dice: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <defs><linearGradient id="iiDiceBody" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#fff6e0"/><stop offset="1" stop-color="#d8c9ad"/></linearGradient></defs>
-    <path d="M18 6 l4.5 3 M30 6 l-3 4.5 M9 18 l4 3 M40 15 l-4.5 2" stroke="#ffd94a" stroke-width="2.6" stroke-linecap="round"/>
-    <g transform="rotate(-13 25 28)">
-      <rect x="11" y="15" width="28" height="28" rx="6" fill="url(#iiDiceBody)" stroke="#2a0a10" stroke-width="2"/>
-      <circle cx="19" cy="23" r="2.7" fill="#e06a5a"/>
-      <circle cx="31" cy="23" r="2.7" fill="#2a0a10"/>
-      <circle cx="25" cy="29" r="2.7" fill="#2a0a10"/>
-      <circle cx="19" cy="35" r="2.7" fill="#2a0a10"/>
-      <circle cx="31" cy="35" r="2.7" fill="#e06a5a"/>
-    </g>
+  // 고르기 — 석 장 중 한 장에 체크. '뽑는' 게 아니라 '고르는' 것이라는 게 요점이다.
+  pick3: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <rect x="4" y="16" width="14" height="20" rx="3" fill="#d8c9ad" stroke="#2a0a10" stroke-width="2" transform="rotate(-14 11 26)"/>
+    <rect x="17" y="15" width="14" height="20" rx="3" fill="#e8dcc0" stroke="#2a0a10" stroke-width="2"/>
+    <rect x="28" y="9" width="16" height="23" rx="3" fill="#fff6e0" stroke="#2a0a10" stroke-width="2.4" transform="rotate(11 36 20)"/>
+    <path d="M33 17 l3 3 6-7" fill="none" stroke="#5cd69c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M20 40 l4-5 4 5" fill="none" stroke="#ffd94a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`,
 };
 
