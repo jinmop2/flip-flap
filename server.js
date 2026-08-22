@@ -684,14 +684,30 @@ function announceBonus(room, bonus) {
 //   · 종류·등급이 없으므로 세트 셈에 끼어들지 않는다
 //   · 뽑히면 그 자리에서 하나 더 뽑는다 — 그래서 경매품이 세 장이 된다
 //     (🏷 덤 카드 + 중앙 카드 + 출품 카드)
-// 넉 장(보너스 2 · 덤 2)을 섞는다. 재 보니 판당 아이템이 1.9개 —
-// 예전(질 때마다 5.6개)보다 훨씬 귀해지고, 판 길이·세트 완성률은 그대로였다.
+// 넉 장(보너스 2 · 덤 2)을 넣는다. 통째로 섞으면 안 된다.
+// 중앙 덱은 12장이지만 판은 평균 6.3턴에 끝나(sim.js 4000판) 절반만 뒤집힌다.
+// 그래서 16장 전체에 고루 섞으면 아이템 카드 한 장이 뒤집히는 앞쪽에 들어올
+// 확률이 장당 절반도 안 됐다 — 재 보니 한 판에 0~1장만 나오는 판이 37.1%,
+// 아예 한 장도 안 나오는 판이 12.2% 였다. 아이템전인데 아이템을 못 본다.
+//
+// 보통 카드 두 장마다 창을 하나 잡고, 창마다 아이템 카드를 한 장씩 꽂는다.
+// 판이 길든 짧든 두 턴에 한 번꼴로 반드시 나온다 — 0~1장인 판 37.1% → 5.8%,
+// 판당 1.95장 → 2.87장. 창 안의 자리는 무작위라 언제 나올지는 여전히 모른다.
 function mixItemCards(deck) {
-  const extra = [];
-  for (let i = 0; i < 2; i++) extra.push({ item: 'bonus', id: 'it_b' + i });
-  for (let i = 0; i < 2; i++) extra.push({ item: 'tip', id: 'it_t' + i });
-  deck.push(...extra);
-  for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+  const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const kinds = shuffle(['bonus', 'tip', 'bonus', 'tip']);   // 어느 창에 뭐가 올지는 무작위
+  const WIN = 2;                                             // 보통 카드 두 장이 창 하나
+  const out = [];
+  for (let w = 0; w < kinds.length; w++) {
+    const seg = deck.slice(w * WIN, (w + 1) * WIN);
+    if (!seg.length) break;
+    seg.splice(Math.floor(Math.random() * (seg.length + 1)), 0,
+               { item: kinds[w], id: 'it_' + kinds[w][0] + w });
+    out.push(...seg);
+  }
+  out.push(...deck.slice(kinds.length * WIN));   // 남은 보통 카드는 그대로 뒤에
+  deck.length = 0;
+  deck.push(...out);
 }
 
 function createGame(itemMode = false) {
@@ -770,7 +786,13 @@ function drawCenter(game, room) {
     // 🏷 덤 — 경매품에 앞면으로 얹힌다. 무엇이 걸렸는지 둘 다 보고,
     // 정산 때 진 쪽이 그 아이템을 가져간다.
     {
-      const it = items.pick(null, true);
+      // 전설은 "뒤처진 쪽에게만" 이 원칙이다. 그런데 덤은 뽑는 순간 앞면으로
+      // 공개되고 실제로 가져갈 사람(그 경매의 패자)은 아직 정해지지 않았다.
+      // 그래서 받는 사람 기준으로는 못 재고, "지금 판에 뒤처진 사람이 있는가"
+      // 로 잰다 — 아직 동률인 초반엔 전설이 안 나오고, 격차가 벌어진 뒤에만
+      // 나온다. 덤 자체가 패자에게 가므로 실제로는 79%가 뒤진 쪽으로 간다.
+      const gap = items.isBehind(game, 1) || items.isBehind(game, 2);
+      const it = items.pick(null, gap);
       game.auction.tipCard = { kind: 'tip', itemId: it.id, name: it.name, tier: it.tier };
     }
     // 여기서 하나 더 뽑으므로 경매품이 세 장이 된다

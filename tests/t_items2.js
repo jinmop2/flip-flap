@@ -141,14 +141,49 @@ console.log('\n⑧ 아이템 카드는 따로 있다 — 뽑히면 경매품이 
 {
   const src = read('items.js');
   // 예전엔 경매에 질 때마다 나와 판당 5.6개씩 쌓였다. 그만큼 한 개가 시시했다.
-  // 이제 덱에 섞인 아이템 카드에서만 나온다 — 재 보니 판당 1.9개.
+  // 이제 덱에 넣은 아이템 카드에서만 나온다 — 재 보니 판당 2.9개.
   ok('아이템 카드를 덱에 섞는다', /function mixItemCards\(deck\)/.test(srv));
-  ok('보너스 2 · 덤 2', /item: 'bonus', id: 'it_b'[\s\S]{0,160}item: 'tip', id: 'it_t'/.test(srv));
+  ok('보너스 2 · 덤 2', /shuffle\(\['bonus', 'tip', 'bonus', 'tip'\]\)/.test(srv));
   ok('아이템전에서만 섞는다', /game\.itemMode = true;\s*\n\s*mixItemCards\(game\.centerDeck\);/.test(srv));
   // 세트에 쓰이는 카드에 표시를 붙이지 않는다 —
   // 2종은 덱에 두 장뿐이라 그중 하나가 아이템 카드가 되면 2세트가 막힌다
   ok('보통 카드에 표시를 붙이지 않는다', !/\.sp = /.test(srv) && !/card\.sp ===/.test(srv));
-  ok('아이템 카드에는 종류·등급이 없다', /\{ item: 'bonus', id: 'it_b' \+ i \}/.test(srv));
+  ok('아이템 카드에는 종류·등급이 없다', /\{ item: kinds\[w\], id: 'it_' \+ kinds\[w\]\[0\] \+ w \}/.test(srv));
+
+  // 판은 평균 6.3턴에 끝나 12장짜리 중앙 덱의 절반만 뒤집힌다. 통째로 섞으면
+  // 아이템 카드가 안 뒤집히는 뒤쪽에 몰려, 한 판에 0~1장만 나오는 판이 37% 였다.
+  // 보통 카드 두 장마다 창 하나 — 창마다 한 장씩 꽂아 두 턴에 한 번은 반드시 나온다.
+  ok('통째로 섞지 않는다', !/deck\.push\(\.\.\.extra\);/.test(srv));
+  ok('창마다 한 장씩 꽂는다', /const WIN = 2;/.test(srv)
+     && /deck\.slice\(w \* WIN, \(w \+ 1\) \* WIN\)/.test(srv)
+     && /seg\.splice\(Math\.floor\(Math\.random\(\) \* \(seg\.length \+ 1\)\), 0,/.test(srv));
+  ok('보너스 2 · 덤 2 는 그대로', /shuffle\(\['bonus', 'tip', 'bonus', 'tip'\]\)/.test(srv));
+  ok('아이템 카드는 넉 장 · 덱은 16장 · 보통 카드 순서 유지', (() => {
+    const fn = new Function('return ' + srv.match(/function mixItemCards[\s\S]*?\n\}/)[0])();
+    for (let t = 0; t < 400; t++) {
+      const d = []; for (let k = 0; k < 12; k++) d.push({ n: k });
+      fn(d);
+      if (d.length !== 16) return false;
+      const its = d.filter(c => c.item);
+      if (its.length !== 4) return false;
+      if (its.filter(c => c.item === 'bonus').length !== 2) return false;
+      const ns = d.filter(c => !c.item).map(c => c.n);
+      for (let k = 0; k < 12; k++) if (ns[k] !== k) return false;
+    }
+    return true;
+  })());
+  // 두 턴에 한 번은 반드시 — 앞쪽 6장(=6턴) 안에 최소 두 장
+  ok('6턴이면 최소 두 장은 나온다', (() => {
+    const fn = new Function('return ' + srv.match(/function mixItemCards[\s\S]*?\n\}/)[0])();
+    for (let t = 0; t < 400; t++) {
+      const d = []; for (let k = 0; k < 12; k++) d.push({ n: k });
+      fn(d);
+      let normals = 0, items = 0;
+      for (const c of d) { if (c.item) { items++; continue; } normals++; if (normals >= 6) break; }
+      if (items < 2) return false;
+    }
+    return true;
+  })());
 
   // 아이템 카드가 나오면 그 자리에서 한 장 더 뽑는다
   ok('한 장 더 뽑는다', /while \(game\.centerDeck\.length && guard\+\+ < 12\)[\s\S]{0,900}continue;/.test(srv));
@@ -170,6 +205,19 @@ console.log('\n⑧ 아이템 카드는 따로 있다 — 뽑히면 경매품이 
   // 앞면 공개 — 무엇이 걸렸는지 봐야 "저것 때문에 져 준다" 가 성립한다.
   // 보여 준 것과 실제로 주는 것이 달라지면 안 되므로, 뽑기는 공개 때 한 번뿐이다.
   ok('보여 준 그 아이템을 준다', /items\.give\(g, loser, tipCard\.itemId\)/.test(srv));
+  // 덤은 공개 시점에 받을 사람이 아직 없다 — 전설 조건을 '누가 뒤처졌나' 로 잰다.
+  // 무조건 true 로 넘기면 동률인 초반부터 전설이 쏟아진다.
+  ok('전설은 격차가 벌어진 뒤에만', /const gap = items\.isBehind\(game, 1\) \|\| items\.isBehind\(game, 2\);/.test(srv)
+     && /items\.pick\(null, gap\)/.test(srv));
+  ok('열세 가지가 다 나온다', (() => {
+    const seen = new Set();
+    for (let i = 0; i < 200000; i++) seen.add(items.pick(null, true).id);
+    return Object.keys(items.ITEMS).every(id => seen.has(id));
+  })());
+  ok('동률이면 전설이 안 나온다', (() => {
+    for (let i = 0; i < 20000; i++) if (items.pick(null, false).tier === 'legend') return false;
+    return true;
+  })());
   ok('정해만 두고 주지는 않는다', /function pick\(tier, behind\)/.test(src)
      && !/function pick\(tier, behind\) \{[\s\S]{0,300}g\.items/.test(src));
   ok('덤은 패자에게', /if \(g\.itemMode && tipCard\) \{\s*\n\s*const loser = p1Wins \? 2 : 1;/.test(srv));
