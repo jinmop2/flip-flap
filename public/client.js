@@ -3202,8 +3202,17 @@ const VIBE = {
   got: [0, 12, 45, 20],         // 낙찰 — 무언가를 가져왔다
   warn: [0, 10, 60, 10],        // 시간이 얼마 없다
 };
+// 브라우저는 사람이 한 번이라도 화면을 건드리기 전의 진동을 막고, 막을 때마다
+// 콘솔에 오류를 남긴다 — try/catch 로는 안 잡힌다(호출 자체가 거부되는 거라서).
+// 진짜 오류를 그 소음에 묻지 않으려면 애초에 부르지 않는 게 맞다. 사람이 손대기
+// 전의 진동은 어차피 뜻도 없다.
+let userTouched = false;
+for (const ev of ['pointerdown', 'touchstart', 'keydown']) {
+  window.addEventListener(ev, () => { userTouched = true; }, { once: true, capture: true });
+}
 function vibe(kind) {
-  if (vibeOff) return;
+  if (vibeOff || !userTouched) return;
+  if (!Object.prototype.hasOwnProperty.call(VIBE, kind)) return;
   const p = VIBE[kind]; if (!p) return;
   try { if (navigator.vibrate) navigator.vibrate(p); } catch (_) {}
 }

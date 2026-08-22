@@ -486,7 +486,11 @@
       background:linear-gradient(180deg,#ffd97a,#c8912e);
       border:1px solid #8a5a12; border-radius:8px; padding:1px 7px;
       box-shadow:0 1px 4px rgba(0,0,0,.5); }
-    .pb-login { margin-left:auto; flex-shrink:0; background:rgba(200,160,0,.15); border:1.5px solid var(--gold); color:#ffe9a8; border-radius:10px; padding:8px 14px; font-family:'Fredoka'; font-size:.8rem; font-weight:700; cursor:pointer; }
+    /* 톱니(#setBtn)는 프로필 바 오른쪽 끝에 절대 배치라 흐름에서 빠져 있다.
+       .pb-right 는 margin-right 로 그 자리를 비워 뒀는데 로그인 버튼은 안 비워 둬서,
+       로그아웃 상태에선 버튼 오른쪽 28px 이 톱니에 깔렸다 — 거기를 누르면 설정이 열렸다.
+       같은 폭만큼 비운다. */
+    .pb-login { margin-left:auto; margin-right:38px; flex-shrink:0; background:rgba(200,160,0,.15); border:1.5px solid var(--gold); color:#ffe9a8; border-radius:10px; padding:8px 14px; font-family:'Fredoka'; font-size:.8rem; font-weight:700; cursor:pointer; }
     #lobby { padding-top:calc(84px + var(--safe-t)); padding-bottom:calc(72px + var(--safe-b)); }   /* 위 프로필 바 · 아래 메뉴바에 안 가리게 */
 
     /* ── 하단 탭바 ── */
@@ -3444,7 +3448,9 @@
     .r-comp{ display:flex; flex-direction:column; gap:7px; margin:8px 0; }
     .r-comp-row{ display:flex; align-items:center; gap:11px; font-size:.85rem; color:#c8bcc4; }
     .r-comp-row b{ color:#ffe9a8; }
-    .r-comp-g{ color:#6a5a70; font-size:.76rem; }
+    /* 설명서 배경(#080204) 위에서 #6a5a70 은 명암비 3.2:1 로, 12px 글씨 기준(4.5:1)에
+       한참 못 미쳐 잘 안 읽혔다. 회색 느낌은 그대로 두고 밝기만 올려 5.2:1 로. */
+    .r-comp-g{ color:#8a7a96; font-size:.76rem; }
     .rules-box .r-arrow{ color:#8a7a80; font-size:1.1rem; font-weight:700; margin:0 2px; }
     .rules-box .r-win{ color:#5cd69c; font-weight:700; font-size:.82rem; }
     .rules-box .r-eq{ color:#ffe9a8; font-weight:700; }
@@ -3733,7 +3739,13 @@
     }
     .card.item-card .ic-face { width:60%; max-width:44px; line-height:0; }
     .card.item-card .ic-face svg { width:100%; height:auto; display:block; }
-    .card.item-card .ic-name { font-size:.54rem; letter-spacing:0; font-weight:800; color:#bfe9d4; text-align:center; }
+    /* '도둑고양이' 처럼 긴 이름은 좁은 카드(가로 모드에선 31px)에 한 줄로 안 들어간다.
+       두 줄로 접히는 건 어쩔 수 없으니, 줄 간격을 좁혀 접힌 티가 안 나게 한다.
+       예전엔 기본 줄 간격이라 글자가 카드 밖으로 밀려 나온 것처럼 보였다. */
+    .card.item-card .ic-name {
+      font-size:.54rem; letter-spacing:0; font-weight:800; color:#bfe9d4; text-align:center;
+      line-height:1.05; width:100%; padding:0 1px; word-break:keep-all; overflow-wrap:anywhere;
+    }
     .card.item-card.ic-bonus .ic-name { color:#ffe9a8; }
     /* 보너스냐 덤이냐는 모서리 딱지로 — 가운데는 아이템 그림 몫이다 */
     .card.item-card .ic-tag {
@@ -3742,6 +3754,14 @@
       color:rgba(255,255,255,.55);
     }
     .card.item-card.ic-bonus .ic-tag { color:rgba(255,233,168,.7); }
+    /* 카드가 아주 작아지는 자리(가로 모드·획득 더미)에선 딱지를 접고 그림을 줄인다.
+       보너스냐 덤이냐는 카드 위 이름표가 이미 말해 준다. */
+    body.land .card.item-card .ic-tag,
+    .pile-group .card.item-card .ic-tag { display:none; }
+    body.land .card.item-card .ic-name,
+    .pile-group .card.item-card .ic-name { font-size:.46rem; }
+    body.land .card.item-card .ic-face,
+    .pile-group .card.item-card .ic-face { width:52%; }
     /* 등급이 보이면 "저건 전설이다" 가 읽혀 배팅이 달라진다 */
     .card.item-card.t-rare { border-color:#b98fe0; box-shadow:0 0 0 2px rgba(185,143,224,.35), 0 3px 10px rgba(0,0,0,.5); }
     .card.item-card.t-legend { border-color:#ffd94a; box-shadow:0 0 0 2px rgba(255,217,74,.45), 0 0 14px rgba(255,215,80,.35), 0 3px 10px rgba(0,0,0,.5); }

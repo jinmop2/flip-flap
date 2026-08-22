@@ -12,7 +12,10 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++,
 console.log('① 통로');
 ok('진동 함수가 있다', /function vibe\(kind\)/.test(cli));
 ok('없는 기기에서는 조용히 지나간다', /try \{ if \(navigator\.vibrate\) navigator\.vibrate\(p\); \} catch \(_\) \{\}/.test(cli));
-ok('끄면 안 울린다', /if \(vibeOff\) return;/.test(cli));
+// 손대기 전 진동은 브라우저가 막고 콘솔에 오류를 남기므로 같은 줄에서 걸러낸다
+ok('끄면 안 울린다', /if \(vibeOff \|\| !userTouched\) return;/.test(cli));
+ok('사람이 손대기 전엔 안 울린다', /let userTouched = false;/.test(cli)
+   && /\{ once: true, capture: true \}/.test(cli));
 ok('설정에 남는다', /localStorage\.setItem\('ff_vibe'/.test(cli) && /localStorage\.getItem\('ff_vibe'\) === 'off'/.test(cli));
 ok('기본은 켜짐', !/ff_vibe'\) !== 'on'/.test(cli));
 
