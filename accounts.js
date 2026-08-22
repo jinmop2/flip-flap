@@ -1348,14 +1348,21 @@ const SLOT = {
   stamp:   'winStamp',    // 낙찰 도장 모양
   place:   'placeFx',     // 카드를 내려놓을 때 파티클
 };
+// itemId·kind 는 /api/equip 로 클라이언트가 그대로 보내는 값이다.
+// SLOT[kind] 를 그냥 찾으면 kind='constructor' 에 Object 생성자가 잡혀
+// u['function Object() { [native code] }'] = null 이 계정 기록에 박히고 저장된다.
+// 프로토타입을 더럽히진 못하지만, 남의 입력으로 만든 쓰레기 키가 영구 기록에
+// 쌓인다 — 이 파일 다른 곳처럼 hasOwnProperty 로 막는다.
+const hasKey = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
 function equipItem(token, itemId, kind) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
   if (itemId) {
+    if (!hasKey(SHOP, itemId)) return { error: '보유하지 않은 아이템이에요.' };
     const it = SHOP[itemId];
-    if (!it || !SLOT[it.type] || !(u.items || {})[itemId]) return { error: '보유하지 않은 아이템이에요.' };
+    if (!hasKey(SLOT, it.type) || !hasKey(u.items || {}, itemId)) return { error: '보유하지 않은 아이템이에요.' };
     u[SLOT[it.type]] = itemId;
-  } else if (SLOT[kind]) {
+  } else if (hasKey(SLOT, kind)) {
     u[SLOT[kind]] = null;
   }
   persist(idl);

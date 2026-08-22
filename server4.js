@@ -127,6 +127,14 @@ function attach4(io, hooks = {}) {
     st.myHand = [];
     st.me = null;
     st.watching = true;
+    // 자리 0 을 빌려 왔다는 게 함정이다. 진행자가 마침 0 번이면 stateFor 가
+    // "내가 진행자니까" 하고 클로즈 출품 카드를 열어 준다 — 그게 그대로
+    // 관전자 전원에게 나간다. 관전자는 어느 자리도 아니므로 여기서 다시 덮는다.
+    if (st.auction && g.auction) {
+      const open = g.auction.type === 'open'
+                || g.phase === 'reveal' || g.phase === 'settled' || g.phase === 'game_over';
+      if (!open) st.auction.offered = null;
+    }
     return st;
   }
 
