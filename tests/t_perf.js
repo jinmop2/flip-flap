@@ -169,5 +169,27 @@ console.log('\n⑪ 접속하는 첫 순간 — 로비가 스쳐 보이지 않게
   ok('8초 뒤에는 무조건 보여 준다', /setTimeout\(\(\) => document\.documentElement\.classList\.remove\('booting'\), 8000\)/.test(cli));
 }
 
+console.log('\n⑧ 첫 화면에서 소리 파일을 미리 받지 않는다');
+// 브라우저는 사람이 화면을 건드리기 전엔 소리를 안 내준다. 그런데 코드는
+// 곧바로 오디오를 만들고 play() 를 불러, 로비 곡 2.5MB 를 "받아 놓고 못 트는"
+// 상태로 버리고 있었다. 음악을 꺼 둔 사람에게도 똑같이 받았다.
+// 실측: 첫 화면 전송량 2,700KB → 166KB.
+{
+  const cliSrc = fs.readFileSync(src + '/public/client.js', 'utf8');
+  ok('음악을 꺼 뒀으면 아예 안 만든다', /if \(bgmOff\) return;/.test(cliSrc)
+     && /bgmOn = true; bgmTrack = track;/.test(cliSrc));
+  ok('껐다 켜면 그때 시작한다',
+     /if \(bgmOff\) stopBGM\(\);\s*\n\s*else if \(!bgmOn\) startBGM\(inGameNow\(\) \? 'game' : 'lobby'\);/.test(cliSrc));
+  ok('src 를 걸어도 미리 받지 않는다', /bgmAudio\.preload = 'none';/.test(cliSrc));
+  ok('손대기 전엔 play() 를 안 부른다',
+     /const ua = navigator\.userActivation;\s*\n\s*if \(ua && ua\.hasBeenActive === false\) armKick\(true\);\s*\n\s*else tryPlay\(\);/.test(cliSrc));
+  ok('효과음도 손짓 뒤에 받는다',
+     /function loadSamplesOnce\(\)/.test(cliSrc)
+     && /hasBeenActive === false\) \{\s*\n\s*for \(const t of \['pointerdown', 'keydown', 'touchend'\]\)\s*\n\s*window\.addEventListener\(t, loadSamplesOnce/.test(cliSrc));
+  // 손짓이 이미 있었던 경우(재접속 등)에는 곧바로 받아야 한다 — 안 그러면 소리가 영영 안 난다
+  ok('이미 손댄 뒤라면 곧바로 받는다', /\} else loadSamplesOnce\(\);/.test(cliSrc));
+  ok('음악 상태를 밖에서 확인할 수 있다', /window\.__bgm = \(\) =>/.test(cliSrc));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

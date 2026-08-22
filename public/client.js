@@ -2960,8 +2960,17 @@ function loadSample(key, url) {
   fetch(url).then(r => r.arrayBuffer()).then(b => AC.decodeAudioData(b))
     .then(buf => { samples[key] = buf; }).catch(() => {});
 }
-loadSample('cardPlace', '/card-place.mp3?v=1');
-loadSample('chips', '/chips.mp3?v=1');      // 트웰브 — 칩이 쌓이고 오가는 소리
+// 효과음도 손짓 뒤에 받는다. 어차피 브라우저는 사람이 건드리기 전엔 소리를
+// 안 내주므로, 먼저 받아 봐야 70KB 를 못 쓰고 버리는 셈이다. 첫 카드 소리가
+// 나기까지는 한참 남아 있어 늦지 않다.
+function loadSamplesOnce() {
+  loadSample('cardPlace', '/card-place.mp3?v=1');
+  loadSample('chips', '/chips.mp3?v=1');    // 트웰브 — 칩이 쌓이고 오가는 소리
+}
+if (navigator.userActivation && navigator.userActivation.hasBeenActive === false) {
+  for (const t of ['pointerdown', 'keydown', 'touchend'])
+    window.addEventListener(t, loadSamplesOnce, { once: true, capture: true });
+} else loadSamplesOnce();
 function playSample(key, vol = 0.9, rate = 1) {
   if (keepOtherAudio) return true;   // 다른 앱 음악 유지 중 — 소리를 내지 않는다
   const buf = samples[key]; if (!buf) return false;
@@ -3051,6 +3060,11 @@ function setBgmVolume(v, ramp = 0.2) {
 // 어느 곡이 돌고 있는지 들고 있어야 "같은 곡이면 그대로 두기" 를 할 수 있다.
 // (판을 오갈 때마다 처음부터 다시 틀면 뚝뚝 끊긴다)
 const BGM_SRC = { lobby: '/lobby.m4a?v=3', game: '/bgm.m4a?v=3' };
+// 음악이 실제로 흐르는지 밖에서 확인할 창구 (테스트·문제 확인용, 화면에는 안 쓴다)
+window.__bgm = () => ({ on: bgmOn, track: bgmTrack, off: bgmOff,
+  playing: !!(bgmAudio && !bgmAudio.paused && bgmAudio.currentTime > 0),
+  t: bgmAudio ? Math.round(bgmAudio.currentTime * 10) / 10 : null,
+  ready: bgmAudio ? bgmAudio.readyState : null, preload: bgmAudio ? bgmAudio.preload : null });
 let bgmTrack = null;
 function startBGM(track = 'game') {
   if (bgmOn && bgmTrack === track) return;      // 같은 곡이 이미 돌고 있다
@@ -3058,9 +3072,17 @@ function startBGM(track = 'game') {
   // 다른 앱 음악을 듣는 중이면 우리 음악을 아예 안 켠다.
   // 웹에서는 "섞어서 재생" 을 지시할 방법이 없어서, 켜는 순간 상대 음악이 끊긴다.
   if (keepOtherAudio) return;
+  // 음악을 끈 사람에게는 아예 만들지 않는다. 예전엔 만들어 두고 볼륨만 0으로
+  // 뒀는데, 그러면 안 들을 곡을 2.5MB 받는다(로비 곡). 켜면 그때 시작한다.
+  if (bgmOff) return;
   bgmOn = true; bgmTrack = track;
   // AAC(m4a) 한 벌만 쓴다. 지금 쓰는 브라우저는 전부 AAC 를 재생한다.
-  bgmAudio = new Audio(BGM_SRC[track] || BGM_SRC.game);
+  bgmAudio = new Audio();
+  // preload='none' 이 핵심이다. src 만 걸어 두면 브라우저가 곧바로 받기
+  // 시작하는데, 첫 방문은 대개 자동재생이 막혀 "받아 놓고 못 트는" 상태가 된다.
+  // 로비 곡 2.5MB 가 그렇게 통째로 낭비됐다. 실제로 play() 가 통할 때 받는다.
+  bgmAudio.preload = 'none';
+  bgmAudio.src = BGM_SRC[track] || BGM_SRC.game;
   bgmAudio.loop = true;
   bgmAudio.crossOrigin = 'anonymous';
   try {
@@ -3095,7 +3117,13 @@ function startBGM(track = 'game') {
     try { AC.resume(); } catch (_) {}
     tryPlay();
   }
-  tryPlay();
+  // 아직 아무도 화면을 안 건드렸으면 play() 를 부르지 않는다.
+  // preload='none' 을 걸어 둬도 play() 를 부르는 순간 브라우저가 받기 시작하는데,
+  // 첫 방문은 대개 자동재생이 막혀 "받아 놓고 못 트는" 상태가 된다 — 로비 곡
+  // 2.5MB 가 통째로 버려진다. 손짓을 기다렸다가 그때 부르면 한 바이트도 안 쓴다.
+  const ua = navigator.userActivation;
+  if (ua && ua.hasBeenActive === false) armKick(true);
+  else tryPlay();
 }
 // 배경음악을 멈춘다. 2인전은 나갈 때 페이지를 통째로 새로고침해서 저절로
 // 꺼졌는데, 다인전은 화면만 숨기므로 로비로 돌아가도 계속 흘렀다.
@@ -3180,6 +3208,10 @@ function toggleSettings(force) {
 }
 function toggleBgm() {
   bgmOff = !bgmOff; localStorage.setItem('ff_bgm', bgmOff ? 'off' : 'on');
+  // 꺼져 있는 동안은 곡을 아예 안 만들어 두므로(내려받지 않는다),
+  // 켤 때 지금 화면에 맞는 곡으로 새로 시작해 준다.
+  if (bgmOff) stopBGM();
+  else if (!bgmOn) startBGM(inGameNow() ? 'game' : 'lobby');
   setBgmVolume(bgmOff ? 0 : BGM_VOL); applySettings();
 }
 function toggleSfx() {
