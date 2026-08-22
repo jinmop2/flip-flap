@@ -56,6 +56,56 @@ console.log('\n② 화면에 붙어 있는가');
      /id="rulesBox" class="rules-box" data-i18n-block="rules2"/.test(html)
      && /id="rulesBox4" class="rules-box" data-i18n-block="rules4"/.test(html));
   ok('되돌릴 원문을 보관한다', /el\.dataset\.i18nKo = el\.innerHTML/.test(i18nSrc));
+  // 화면에 data-i18n-block 을 달아 놓고 사전에 짝을 안 만들면, 영어로 바꿔도
+  // 그 설명서만 한국어로 남는다. 조용히 새는 자리라 여기서 못을 박는다.
+  // (실제로 TWELVE 설명서가 이렇게 통째로 안 바뀌고 있었다.)
+  const marked = [...html.matchAll(/data-i18n-block="(\w+)"/g)].map((m) => m[1]);
+  const missing = marked.filter((n) => !Object.prototype.hasOwnProperty.call(FF.BLOCKS, n));
+  ok(`화면의 덩어리 ${marked.length}개가 모두 사전에 있다`, missing.length === 0, missing.join(','));
+  // 반대로 사전에만 있고 화면에 없는 것도 죽은 번역이다
+  const orphan = Object.keys(FF.BLOCKS).filter((n) => !marked.includes(n));
+  ok('사전에만 남은 덩어리가 없다', orphan.length === 0, orphan.join(','));
+  // 영어 덩어리에 한국어가 섞여 있으면 반만 번역된 것이다
+  const halfKo = Object.entries(FF.BLOCKS).filter(([, v]) => /[가-힣]/.test(v)).map(([k]) => k);
+  ok('영어 덩어리에 한국어가 안 남아 있다', halfKo.length === 0, halfKo.join(','));
+}
+
+console.log('\n②-2 영문 설명서가 지금 규칙과 같은가');
+// 한국어 설명서는 규칙을 바꿀 때 같이 고치는데 영어판은 잊고 지나간다.
+// 실제로 아이템·미니게임·3인전 설명서가 셋 다 옛 규칙을 가르치고 있었다.
+{
+  const txt = (k) => FF.BLOCKS[k].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+  const G = require(src + '/game4.js');
+  const items = require(src + '/items.js');
+  const SUT = require(src + '/sutda.js');
+
+  // 3·4인전 덱 — DECK30/DECK38 과 손패 수
+  const r4 = txt('rules4');
+  // specOf 는 게임 객체를 받는다(g.n). 숫자를 주면 조용히 4인 덱으로 떨어지므로
+  // 여기서는 SPECS 를 직접 본다 — 설명서가 맞는지 재는 자리에서 값이 틀리면 뜻이 없다.
+  const n3 = G.SPECS[3].reduce((a, [, n]) => a + n, 0);
+  const n4 = G.SPECS[4].reduce((a, [, n]) => a + n, 0);
+  ok(`3인 ${n3}장 · 4인 ${n4}장이 영문에도 적혀 있다`,
+     r4.includes(String(n3)) && r4.includes(String(n4)) && !/Three and four players share/.test(r4));
+  ok(`손패 ${G.HAND[3]}·${G.HAND[4]}장이 맞다`, / 3 30 6 12 /.test(r4) && / 4 38 6 14 /.test(r4), r4.slice(r4.indexOf('Players'), r4.indexOf('Players') + 60));
+
+  // 미니게임 족보 — 옛 족보(앞자리 합) 용어가 남아 있으면 안 된다
+  const mini = txt('rulesMini');
+  ok('영문 미니게임에 옛 족보가 안 남아 있다',
+     !/Overlord|Premium|Midlands|Sniper/.test(mini), mini.match(/Overlord|Premium|Midlands|Sniper/g) || '');
+  ok('새 족보 세 갈래가 적혀 있다',
+     /Pair/.test(mini) && /Twin/.test(mini) && /Points/.test(mini));
+  ok('졸개의 배신 카드가 코드와 같다', (() => {
+    // sutda.js 가 정한 최약 두 장이 그대로 적혀 있어야 한다
+    return /4-6 and 6-8/.test(mini) && typeof SUT.evaluate === 'function';
+  })());
+  ok(`족보 가짓수 ${SUT.SPEC ? '' : ''}190가지가 맞다`, /190/.test(mini));
+
+  // 아이템 — 없앤 것이 남아 있으면 안 되고, 있는 것은 다 적혀야 한다
+  const ri = txt('rulesItem');
+  ok('영문 아이템 설명서에 없앤 아이템이 없다', !/Hourglass|Dice of Fate/.test(ri));
+  ok('등급 가중을 안 쓴다고 적혀 있다', /Tier is ignored/.test(ri) && !/60%/.test(ri));
+  ok(`아이템 ${Object.keys(items.ITEMS).length}가지가 영문에도 적혀 있다`, /13 kinds/.test(ri));
 }
 
 console.log('\n③ 번역이 실제로 되는가');

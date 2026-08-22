@@ -18,9 +18,121 @@
   // 한국어 원문 → 영어. 순서는 화면 순서를 따른다.
   const EN = {
 
+    // ── 뒤늦게 채운 것들 (설명서 밖에서 화면에 그대로 뜨던 문구) ──
+    // ── 미니게임 족보 — 족보를 새로 짜면서 영어 짝을 안 만들어 뒀다 ──
+    '2땡': 'Pair of 2s',
+    '3땡': 'Pair of 3s',
+    '4땡': 'Pair of 4s',
+    '6땡': 'Pair of 6s',
+    '같은 2 두 장': 'two 2s',
+    '같은 3 두 장': 'two 3s',
+    '같은 4 두 장': 'two 4s',
+    '같은 6 두 장': 'two 6s',
+    '5끗': '5 points',
+    '6끗': '6 points',
+    '7끗': '7 points',
+    '8끗': '8 points',
+    '9끗': '9 points',
+    '10끗': '10 points',
+    '첫 번째 걸기': 'First to bet',
+    '모두 접었습니다': 'Everyone folded',
+    '완전히 같은 패입니다': 'Identical hands',
+    '졸개의 배신 — 땡은 전부 잡습니다. 땡이 아니면 가장 약한 패예요.':
+      "The runt's betrayal \u2014 it beats every pair. Against anything else it is the weakest hand.",
+    '내 패': 'My hand',
+    '선': 'First',
+
+    // ── 아이템 — 개편하면서 새로 생긴 문구들 ──
+    '부적': 'Charm',
+    '보너스': 'Bonus',
+    '아이템': 'Item',
+    '덤 (진 쪽)': 'Tip (to the loser)',
+    '보너스 (': 'Bonus (',
+    '내 것': 'mine',
+    '경매품에 폭탄을 얹는다 — 먹는 쪽이 손패 1장을 버린다':
+      'Straps a bomb to the lot \u2014 whoever wins it discards a card',
+    '상대의 다음 아이템 1개를 이번 턴 동안 막는다': "Blocks their next item for this turn",
+    '진 경매를 무효로 하고 다시 배팅한다 — 방금 낸 카드는 둘 다 못 쓴다':
+      'Voids a lost auction and bids again \u2014 neither card just played may be used',
+    '덱 맨 위 3장 중 하나를 이번 중앙 카드로 고른다':
+      'Look at the top three and choose this turn\u2019s centre card',
+    '\ud83d\udd04 반전 — 약한 카드가 이긴다': '\ud83d\udd04 Reversal \u2014 the weaker card wins',
+    '\ud83e\uddff 부적 — 상대의 다음 아이템을 막는다': '\ud83e\uddff Charm \u2014 blocks their next item',
+    '\ud83d\udca8 연막 — 경매품이 안 보인다': '\ud83d\udca8 Smoke \u2014 the lot is hidden',
+    '\ud83d\udca8 상대 시야를 가림': '\ud83d\udca8 Their view is blocked',
+    '\ud83d\udca3 폭탄 — 먹는 쪽이 손패 1장을 버린다': '\ud83d\udca3 Bomb \u2014 the winner discards a card',
+    '\ud83d\udce2 방금 낸 카드는 못 낸다': '\ud83d\udce2 The card just played is barred',
+    '\ud83d\udccf 상대에겐 별 쓸모 없다': '\ud83d\udccf Not much use to them',
+    '\ud83d\udccf 상대에게 쓸 만하다': '\ud83d\udccf Useful to them',
+    '\ud83d\udccf 상대가 간절히 원한다': '\ud83d\udccf They badly want it',
+    '경매 결과가 공개된 뒤, 진 쪽만': 'After the result is shown \u2014 the loser only',
+    '진행자가 카드를 뽑기 전에 (손패 2장 이상)': 'Before the auctioneer flips (needs 2+ cards in hand)',
+    '경매 방식이 정해진 뒤부터 배팅 전까지': 'Once the type is set, until you bid',
+    '경매품이 나온 뒤부터 배팅 전까지': 'Once the lot is out, until you bid',
+    '내 차례에, 배팅을 내기 전까지': 'On your turn, before you play your bid',
+    '바꿀 카드를 고르세요': 'Choose a card to swap',
+    '폭탄이 터졌다': 'The bomb went off',
+    '버릴 카드를 고르세요 — 되돌릴 수 없어요': 'Choose a card to discard \u2014 this cannot be undone',
+    '고른 카드': 'Chosen card',
+
+    // ── 경매 배지·상태 ──
+    '\ud83d\ude48 클로즈(배팅 공개)': '\ud83d\ude48 Closed (bids shown)',
+    '\ud83d\udc41 오픈(배팅 비밀)': '\ud83d\udc41 Open (bids secret)',
+    '— 손패에서 배팅 카드 선택!': '\u2014 pick your bid card from your hand!',
+    '\ud83d\udc41 선공 뽑는 중…': '\ud83d\udc41 Drawing for first turn\u2026',
+    '\ud83d\udc41 배팅 중…': '\ud83d\udc41 Bidding\u2026',
+    '\ud83d\udc41 관전 중': '\ud83d\udc41 Watching',
+
+    // ── TWELVE 조작 ──
+    '안 살래요': "Don't buy",
+    '물러설게요': 'Step back',
+    '살게요': 'Buy it',
+    '내가 낙찰': 'You won it',
+    '상대가 낙찰': 'They won it',
+    '짝수 개를 부르세요 (상대는 무엇인지 모른 채 삽니다)':
+      'Name an even number (they buy without seeing what it is)',
+    '칩이 모자라요': 'Not enough chips',
+
+    // ── 나가기 확인 ──
+    '판을 나갈까요?': 'Leave this game?',
+    '지금 나가면 이 판은 집니다.': 'Leaving now counts as a loss.',
+
+    // ── 상점·뽑기 ──
+    '희귀': 'Rare',
+    '고급': 'Fine',
+    '대박!': 'Jackpot!',
+    '되돌리기': 'Undo',
+    '되돌리지 못했어요': "Couldn't undo that",
+    '\u2728골드\u2728': '\u2728Gold\u2728',
+    '\ud83c\udf08무지개\ud83c\udf08': '\ud83c\udf08Rainbow\ud83c\udf08',
+    '랭크점수': 'Rank points',
+    '카드백': 'Card back',
+    '(\ud83c\udf40 명패 포함)': '(nameplate included)',
+    '을(를) 받았어요!': ' received!',
+    '은(는) 로그인하면 이용할 수 있어요!': ' is available once you sign in!',
+
+    // ── 소셜 ──
+    '친구 대전': 'Friendly match',
+    '· 접속 중': '\u00b7 online',
+    '· 코인 +10%': '\u00b7 coins +10%',
+    '· 코인 +5%': '\u00b7 coins +5%',
+    '\ud83d\udea9 신고했어요. 확인 후 조치할게요.': "\ud83d\udea9 Reported. We'll take a look.",
+    '닉네임 바꾸기': 'Change nickname',
+    '내보내기': 'Kick',
+    '공지 수정': 'Edit notice',
+
+    // ── 설치 안내 ──
+    '홈 화면에 추가': 'Add to Home Screen',
+    '현재 페이지 추가': 'Add current page',
+    '홈 화면': 'Home screen',
+    '앱 설치': 'Install app',
+
     // ── TWELVE ──
     'AI는 쉬움·보통·전문가 세 급이에요. 전문가는 남은 카드를 세고,\n         칩을 0까지 쓰지 않으며, 클로즈로 상대 칩을 말리는 수까지 씁니다.': 'The AI comes in three grades. Expert counts the unseen cards, never spends its last chip, and uses closed auctions to drain yours.',
     '카드가 아니라 칩으로 값을 부르는 경매예요': 'An auction where you bid chips, not cards',
+    '칩 경매': 'Chip auction',
+    '은행': 'Bank',
+    '눌러서 뒤집기': 'Tap to flip',
     '덱을 눌러 카드를 뒤집으세요': 'Tap the deck to flip a card',
     '상대가 카드를 뒤집는 중…': 'They are flipping a card…',
     '손패에서 한 장을 내놓으세요': 'Put up one card from your hand',
@@ -175,6 +287,8 @@
     '배경음악': 'Music',
     '효과음': 'Sound Effects',
     '턴 안내': 'Turn Hints',
+    '\ud83d\udcf3 진동': '\ud83d\udcf3 Vibration',
+    '메뉴': 'Menu',
     '언어': 'Language',
     '한국어': '한국어',
     'English': 'English',
@@ -1373,6 +1487,59 @@
        item first to burn it. Knowing when to place it is the whole game.</p>
     <p style="color:#8a7a80;font-size:.78rem">You cannot place one when there is nothing to block \u2014 if they already used an item this turn, or hold none.</p>
     `,
+    // TWELVE 설명서 — 영어판. 화면에는 data-i18n-block="rulesTwelve" 로 붙어
+    // 있는데 여기 짝이 없어서, 영어로 바꿔도 이 설명서만 한국어로 남아 있었다.
+    rulesTwelve: `
+      <span class="close-x" onclick="rulesClose()">\u00d7</span>
+      <h2>TWELVE</h2>
+      <p style="color:#8a7a80">Same cards as Classic. What changes is <b style="color:#ffe9a8">what you pay with</b> \u2014
+         instead of cards you bid <b style="color:#8fd8ff">20 chips</b>.</p>
+
+      <h3><span data-ico="\ud83d\udd35"></span> Why it plays differently</h3>
+      <p>In Classic a strong card wins the lot but ends up in their hand. In TWELVE the chips
+         <b>vanish into the bank</b> \u2014 the winner pays everything they bid, and the loser still pays
+         <b>half</b>. <b>Losing burns chips too.</b> Knowing when to step back is the whole skill.</p>
+
+      <h3><span data-ico="\ud83d\udd04"></span> How a turn goes</h3>
+      <div class="r4-steps">
+        <div class="r4-step"><b>1</b><span>The auctioneer <b>flips one card</b> off the centre deck</span></div>
+        <div class="r4-step"><b>2</b><span>The auctioneer <b>adds one from hand</b> \u2014 those two are the lot</span></div>
+        <div class="r4-step"><b>3</b><span>The auctioneer picks <b>open or closed</b></span></div>
+        <div class="r4-step"><b>4</b><span>Settle, then <b>pass the auctioneer's seat</b></span></div>
+      </div>
+
+      <h3><span data-ico="\ud83d\udc41"></span> Open auction</h3>
+      <p>Bids are <b>in the open</b> and you raise in turn. Beat the last bid or step back \u2014 it goes on
+         until one of you steps back.</p>
+      <p style="color:#8a7a80;font-size:.78rem">Whoever bids first <b>cannot simply step back</b> \u2014 they must
+         stake at least one chip. Backing out with nothing on the table is not an auction, it is a gift.</p>
+
+      <h3><span data-ico="\ud83d\ude48"></span> Closed auction</h3>
+      <p>The auctioneer names an <b>even number</b>, once. They can see the number but the
+         <b>offered card stays hidden</b> \u2014 you know the price, not what you are buying.
+         They may <b>add one chip</b> and take it, or pass. <b>Pass and the auctioneer keeps the lot.</b></p>
+      <p style="color:#8a7a80;font-size:.78rem">With fewer than 2 chips you cannot choose closed \u2014 there is no even number to name.</p>
+
+      <h3><span data-ico="\ud83c\udfe6"></span> Settling \u2014 this is the heart of it</h3>
+      <div class="etc-table">
+        <div class="etc-row etc-head"><span>Who</span><span>Pays</span></div>
+        <div class="etc-row"><span>Winner</span><span><b>all</b> of their bid</span></div>
+        <div class="etc-row"><span>Loser</span><span><b>half</b> their bid (rounded down)</span></div>
+      </div>
+      <p><b>Both cards go to the winner.</b> The loser takes no card and still loses half their chips.
+         Bid 7 and win, you pay 7; bid 4 and lose, you pay 2.</p>
+
+      <h3><span data-ico="\ud83c\udfc1"></span> How to win</h3>
+      <ul>
+        <li><b>Complete a set</b> in front of you and you win on the spot (two 2s \u00b7 three 3s \u00b7 four 4s \u00b7 six 6s)</li>
+        <li>Drop to <b>zero chips</b> and you lose, unless that auction completed your set</li>
+        <li>If the deck runs out, <b>whoever is closer to a set</b> wins</li>
+        <li><b>Five minutes each</b>, as in the two-player game \u2014 your clock runs only on your turn, and running out loses</li>
+      </ul>
+      <p style="color:#8a7a80;font-size:.78rem">The AI comes in three grades. Expert counts the unseen cards,
+         never spends its last chip, and uses closed auctions to drain yours.</p>
+      <p style="color:#8a7a80;font-size:.78rem">TWELVE does not affect your rank (RP) \u2014 only coins and experience.</p>
+    `,
     // 미니게임 설명서 — 영어판. 본 게임과 규칙이 달라 따로 둔다.
     // 미니게임 설명서 — 영어판. 본 게임과 규칙이 달라 따로 둔다.
     rulesMini: `
@@ -1419,28 +1586,30 @@
        back to you \u2014 but only to match or fold. The pot is never split, so a raise is capped at what
        the smallest stack at the table can cover.</p>
 
-    <h3><span data-ico="\ud83c\udfc5"></span> Who wins</h3>
-    <p>Add the two <b>big numbers</b> (front digits). <b>The smaller the sum, the stronger.</b></p>
-    <div class="r4-tbl">
-      <div class="r4-row r4-head"><span>Front sum</span><span>Name</span></div>
-      <div class="r4-row"><span>4</span><span>Overlord</span></div>
-      <div class="r4-row"><span>5</span><span>Premium</span></div>
-      <div class="r4-row"><span>6 \u00b7 7 \u00b7 8 \u00b7 9</span><span>Midlands</span></div>
-      <div class="r4-row"><span>10</span><span>Bottom</span></div>
-      <div class="r4-row"><span>12</span><span>Last</span></div>
+    <h3><span data-ico="\ud83c\udfc5"></span> Who wins \u2014 Pairs \u00b7 Twins \u00b7 Points</h3>
+    <p>Look first at how the two cards relate. <b>Same kind</b> is a <b>Pair</b>, <b>same grade</b> is a
+       <b>Twin</b>, anything else scores <b>Points</b>.</p>
+    <div class="etc-table">
+      <div class="etc-row etc-head"><span>Rank</span><span>What it is</span><span>Order</span></div>
+      <div class="etc-row"><span>Pair</span><span>two cards of the same kind</span><span>2s &gt; 3s &gt; 4s &gt; 6s</span></div>
+      <div class="etc-row"><span>Twin</span><span>two cards of the same grade</span><span>lower grade is stronger</span></div>
+      <div class="etc-row"><span>Points</span><span>everything else</span><span>kind sum 5 &gt; 6 &gt; 7 &gt; 8 &gt; 9 &gt; 10</span></div>
     </div>
-    <p>On a tie, the smaller <b>back-digit sum</b> wins; still tied, whoever holds the <b>single strongest card</b> wins.</p>
+    <p>Any <b>Pair</b> beats any <b>Twin</b>, and any Twin beats any <b>Points</b> hand.</p>
+    <p>Within the same rank the smaller <b>grade sum</b> wins; still level, whoever holds
+       the <b>single strongest card</b> takes it.</p>
 
-    <h3><span data-ico="\ud83c\udfaf"></span> Snipers \u2014 the upset</h3>
-    <p>A front sum of 10 is normally near the bottom. But if the <b>back digits also add to exactly 10</b>, it eats the very top.</p>
+    <h3><span data-ico="\u2694\ufe0f"></span> The runt's betrayal \u2014 the upset</h3>
+    <p>The <b>two weakest cards in the deck</b> (4-6 and 6-8) are normally the bottom. That one
+       combination, though, <b>beats every Pair</b> \u2014 2s or 6s, it does not matter.</p>
     <ul>
-      <li><b>Mirror 10</b> (4-4 + 6-6) \u2014 beats <b>both Overlord and Premium</b>.</li>
-      <li><b>Plain 10-10</b> \u2014 beats <b>Premium</b> only; loses to Overlord.</li>
-      <li>Against anything else (sums 6\u20139) it is just a 10 and loses.</li>
+      <li>Same rule as the <b>runt's betrayal</b> in the main game (the weakest beats the strongest).</li>
+      <li>Against anything that is not a Pair (a Twin or Points) it counts as the <b>weakest Points hand</b> and loses.</li>
+      <li>One combination out of 190 \u2014 which is why it is an event when it lands.</li>
     </ul>
-    <p>Because snipers invert the order, three or more hands can form a loop \u2014 <b>A beats B, B beats C,
-       C beats A</b>. When that happens the pot goes to whoever <b>beat the most players</b>, and ties fall
-       back to the plain ranking.</p>
+    <p style="color:#8a7a80;font-size:.78rem">Because betrayal inverts the order, with three or more still in
+       you can get a loop \u2014 <b>A beats B, B beats C, C beats A</b>. Then the pot goes to whoever
+       <b>beat the most players</b>, and ties fall back to the plain ranking.</p>
 
     <h3><span data-ico="\ud83d\udc40"></span> Tips</h3>
     <ul>
@@ -1534,22 +1703,23 @@
     <span data-ico="\u26a0"></span> Only cards <b>won at auction and laid in front of you</b> count (cards in hand do not)<br>
     <span data-ico="\ud83c\udfc1"></span> When the deck runs out, <b>whoever is closest to a set</b> wins</span></p>
 
-    <h3><span data-ico="\ud83d\uddc2"></span> The deck <span style="color:#8a7a80;font-weight:400;font-size:.85rem">\u2014 38 cards</span></h3>
-    <p style="font-size:.78rem;margin-top:-2px">Thicker than the 2-player deck (24). Three and four players share <b>the same deck</b>; hand size does the balancing.</p>
+    <h3><span data-ico="\ud83d\uddc2"></span> The deck <span style="color:#8a7a80;font-weight:400;font-size:.85rem">\u2014 38 for four, 30 for three</span></h3>
+    <p style="font-size:.78rem;margin-top:-2px">Thicker than the 2-player deck (24). Three players start from the
+       same deck with <b>8 cards taken out</b> \u2014 the more cards there are, the less any one of them weighs.</p>
     <div class="r-comp">
       <div class="r-comp-row"><div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
-        <span><b>Kind 2</b> \u00b7 4 cards <span class="r-comp-g">(ranks 1\u20134)</span></span></div>
+        <span><b>Kind 2</b> \u00b7 4 cards <span class="r-comp-g">(3 players: 3)</span></span></div>
       <div class="r-comp-row"><div class="rc" data-kind="3"><span class="rc-rank">1</span><span class="rc-num">3</span></div>
-        <span><b>Kind 3</b> \u00b7 6 cards <span class="r-comp-g">(ranks 1\u20136)</span></span></div>
+        <span><b>Kind 3</b> \u00b7 6 cards <span class="r-comp-g">(3 players: 5)</span></span></div>
       <div class="r-comp-row"><div class="rc" data-kind="4"><span class="rc-rank">1</span><span class="rc-num">4</span></div>
-        <span><b>Kind 4</b> \u00b7 10 cards <span class="r-comp-g">(ranks 1\u201310)</span></span></div>
+        <span><b>Kind 4</b> \u00b7 10 cards <span class="r-comp-g">(3 players: 8)</span></span></div>
       <div class="r-comp-row"><div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
-        <span><b>Kind 6</b> \u00b7 18 cards <span class="r-comp-g">(ranks 1\u201318)</span></span></div>
+        <span><b>Kind 6</b> \u00b7 18 cards <span class="r-comp-g">(3 players: 14)</span></span></div>
     </div>
     <div class="r4-tbl">
-      <div class="r4-row r4-head"><span>Players</span><span>Hand</span><span>Deck</span></div>
-      <div class="r4-row"><span>3</span><span>7</span><span>17</span></div>
-      <div class="r4-row"><span>4</span><span>6</span><span>14</span></div>
+      <div class="r4-row r4-head"><span>Players</span><span>Deck</span><span>Hand</span><span>Centre deck</span></div>
+      <div class="r4-row"><span>3</span><span>30</span><span>6</span><span>12</span></div>
+      <div class="r4-row"><span>4</span><span>38</span><span>6</span><span>14</span></div>
     </div>
 
     <h3><span data-ico="\ud83d\udd04"></span> One auction</h3>
