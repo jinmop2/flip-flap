@@ -5159,22 +5159,6 @@ function makeCard(card, opts = {}) {
   num.className = 'c-num'; num.textContent = card.kind;   // 가운데 큰 숫자 = 종류
 
   el.appendChild(top); el.appendChild(num);
-  // 덤 카드 — 이 경매에 아이템이 얹혀 있다는 표시. 양쪽 다 보고 셈에 넣어야 하므로
-  // 카드 자체에 붙인다(따로 띄우면 못 보고 지나간다).
-  if (card.sp === 'bonus') {
-    el.classList.add('sp-bonus');
-    const tag = document.createElement('span');
-    tag.className = 'c-sp bonus'; tag.textContent = '🎁';
-    tag.title = '보너스 — 뒤집은 사람이 아이템을 얻는다';
-    el.appendChild(tag);
-  }
-  if (card.sp === 'tip') {
-    el.classList.add('sp-tip');
-    const tag = document.createElement('span');
-    tag.className = 'c-sp'; tag.textContent = '🏷';
-    tag.title = '덤 — 이 경매에서 진 쪽이 아이템을 얻는다';
-    el.appendChild(tag);
-  }
 
   if (opts.draw)          el.classList.add('anim-draw');
   else if (opts.acquire)  el.classList.add('anim-acquire');
@@ -5189,6 +5173,17 @@ function makeCard(card, opts = {}) {
     if (opts.tapOnSlot) el._tap = () => { playSound('select'); opts.onClick(card, el); };
     else onTap(el, () => { playSound('select'); opts.onClick(card, el); });
   }
+  return el;
+}
+// 아이템 카드 — 세트에 쓰이는 카드가 아니라 따로 있는 카드다.
+// 종류·등급이 없으니 숫자 대신 딱지를 크게 그린다.
+function makeItemCard(kind) {
+  const el = document.createElement('div');
+  el.className = 'card item-card ' + (kind === 'bonus' ? 'ic-bonus' : 'ic-tip');
+  el.innerHTML = `<div class="ic-face">${kind === 'bonus' ? '🎁' : '🏷'}</div>`
+               + `<div class="ic-name">${kind === 'bonus' ? '보너스' : '덤'}</div>`;
+  el.title = kind === 'bonus' ? '보너스 — 뒤집은 사람이 아이템을 얻는다'
+                              : '덤 — 이 경매에서 진 쪽이 아이템을 얻는다';
   return el;
 }
 function slotEl(label, card, opts = {}) {
@@ -5443,6 +5438,13 @@ function renderAuction(changed) {
   // 'draw' 단계엔 중앙 카드 미공개 (덱 스택이 초점)
   if (s.phase === 'draw') return;
 
+  // 아이템 카드가 뽑힌 판은 경매품이 세 장이다 — 아이템 카드 + 중앙 + 출품
+  if (a.tipCard) {
+    const w = document.createElement('div'); w.className = 'a-slot';
+    const l = document.createElement('div'); l.className = 'a-label'; l.textContent = '덤 (진 쪽)';
+    w.appendChild(l); w.appendChild(makeItemCard('tip'));
+    items.appendChild(w);
+  }
   items.appendChild(slotEl('중앙 카드', a.centerCard, { animate: drewNow, draw: drewNow }));
   if (s.phase !== 'offer') {
     // a.offeredCard 공개 여부는 서버가 결정 (choose_type엔 진행자만, 클로즈는 reveal 때 공개)

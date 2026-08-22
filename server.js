@@ -679,14 +679,19 @@ function announceBonus(room, bonus) {
   }
 }
 
-// 아이템전 덱에 표시 카드를 섞는다.
-// 12장 중 보너스 2 · 덤 2. 재 보니 이 비율에서 판당 아이템이 1.4개 —
-// 예전(5.6개)보다 훨씬 귀해지고, 판 길이·세트 완성률은 그대로였다.
-function markSpecials(deck) {
-  const idx = deck.map((_, i) => i);
-  for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
-  const pick = idx.slice(0, 4);
-  for (let k = 0; k < pick.length; k++) deck[pick[k]].sp = k < 2 ? 'bonus' : 'tip';
+// 아이템전 덱에 아이템 카드를 섞는다.
+// 세트에 쓰이는 카드에 표시를 붙이는 게 아니라, 아이템 카드가 따로 있다.
+//   · 종류·등급이 없으므로 세트 셈에 끼어들지 않는다
+//   · 뽑히면 그 자리에서 하나 더 뽑는다 — 그래서 경매품이 세 장이 된다
+//     (🏷 덤 카드 + 중앙 카드 + 출품 카드)
+// 넉 장(보너스 2 · 덤 2)을 섞는다. 재 보니 판당 아이템이 1.9개 —
+// 예전(질 때마다 5.6개)보다 훨씬 귀해지고, 판 길이·세트 완성률은 그대로였다.
+function mixItemCards(deck) {
+  const extra = [];
+  for (let i = 0; i < 2; i++) extra.push({ item: 'bonus', id: 'it_b' + i });
+  for (let i = 0; i < 2; i++) extra.push({ item: 'tip', id: 'it_t' + i });
+  deck.push(...extra);
+  for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
 }
 
 function createGame(itemMode = false) {
@@ -705,7 +710,7 @@ function createGame(itemMode = false) {
   };
   if (itemMode) {
     game.itemMode = true;
-    markSpecials(game.centerDeck);
+    mixItemCards(game.centerDeck);
     game.items = { 1: [], 2: [] };       // 보유 아이템 (최대 3)
     game.itemUsed = { 1: false, 2: false };  // 턴당 1개 제한
     game.fx = items.freshFx();           // 이번 경매에만 걸리는 효과
@@ -744,20 +749,27 @@ function activePlayer(g) {
 // 아이템 획득 경로를 이 둘로 좁혔다 — 예전엔 경매에 질 때마다 나와
 // 판당 5.6개씩 쌓였고, 그만큼 아이템 한 개가 시시했다.
 function drawCenter(game, room) {
-  const card = game.centerDeck.shift();
   const bonus = [];
-  // 보너스 카드는 경매품이면서 덤이다 — 뒤집은 진행자가 그 자리에서 아이템 하나.
-  // 카드를 덱에서 빼 버리면 안 된다. 2종은 덱에 두 장뿐이라, 그중 하나가
-  // 사라지면 2세트가 영영 불가능해진다.
-  if (card && game.itemMode && card.sp === 'bonus' && !card.spUsed) {
-    const got = items.grant(game, game.auctioneer, 'common');
-    if (got) bonus.push({ seat: game.auctioneer, item: got });
-    // 표시는 이번 경매 동안 남겨 둔다 — 지워 버리면 "무슨 카드였길래 받았지" 가 된다.
-    // 두 번 주지 않게 쓴 자리만 따로 찍어 둔다.
-    card.spUsed = true;
+  let guard = 0;
+  while (game.centerDeck.length && guard++ < 12) {
+    const card = game.centerDeck.shift();
+    if (!card.item) {                       // 보통 카드 — 이게 중앙 카드다
+      game.auction.centerCard = card;
+      game.phase = 'offer';
+      return bonus;
+    }
+    // 🎁 보너스 — 뒤집은 진행자가 그 자리에서 하나. 공짜라 일반 등급만 준다.
+    if (card.item === 'bonus') {
+      const got = items.grant(game, game.auctioneer, 'common');
+      if (got) bonus.push({ seat: game.auctioneer, item: got });
+      game.auction.bonusCard = { item: 'bonus', id: card.id, of: game.auctioneer };
+      continue;                             // 한 장 더 뽑아 경매를 연다
+    }
+    // 🏷 덤 — 경매품에 그대로 얹힌다. 정산 때 진 쪽이 가져간다.
+    game.auction.tipCard = { item: 'tip', id: card.id };
+    // 여기서 하나 더 뽑으므로 경매품이 세 장이 된다
   }
-  game.auction.centerCard = card || null;
-  if (card) game.phase = 'offer';
+  game.auction.centerCard = null;           // 아이템 카드만 남기고 덱이 말랐다
   return bonus;
 }
 
@@ -1230,6 +1242,9 @@ function stateFor(game, pi) {
     auction = {
       centerCard: smoked ? null : a.centerCard,
       offeredCard: showOffered ? a._offeredCard : null,
+      // 아이템 카드는 둘 다 본다 — 저 판에 아이템이 걸렸는지 알아야 얼마를 지를지 정한다
+      tipCard: a.tipCard || null,
+      bonusCard: a.bonusCard || null,
       smoked,
       auctionType: a.auctionType,
       myBid:           isP1 ? a.p1Bid : a.p2Bid,
@@ -2493,6 +2508,7 @@ function settle(roomId) {
   if (g.phase !== 'reveal' || !g.auction) return;   // 재경매 아이템으로 되돌아간 경우 등
   const p1Bid = g.auction.p1Bid, p2Bid = g.auction.p2Bid;
   const prize = [g.auction.centerCard, g.auction._offeredCard];
+  const tipCard = g.auction.tipCard || null;      // 🏷 덤 카드 — 진 쪽이 가져간다
 
   // 뒤집개(반전) — 이번 경매만 약한 카드가 이긴다. 배신 규칙은 무시하고 순수 강함으로 비교.
   const reversed = !!(g.itemMode && g.fx.reverse);
@@ -2553,7 +2569,7 @@ function settle(roomId) {
   // 덤 카드가 얹힌 경매에서만 아이템이 나온다 — 그리고 진 쪽이 가져간다.
   // 이긴 쪽에 주면 앞선 사람이 더 세져 눈덩이가 된다(재 보니 아이템의 86%가
   // 앞선 쪽으로 갔다). 진 쪽에 주면 79% 가 뒤진 쪽으로 간다.
-  if (g.itemMode && prize.some(c => c && c.sp === 'tip')) {
+  if (g.itemMode && tipCard) {
     const loser = p1Wins ? 2 : 1;
     const got = items.grant(g, loser);
     if (got) {
@@ -2562,8 +2578,7 @@ function settle(roomId) {
       if (room.cpuIndex === loser - 1) room.cpuItemPending = true;   // AI가 받음
     }
   }
-  // 표시는 이번 경매까지만 — 더미에 쌓인 뒤에도 딱지가 붙어 있으면 헷갈린다
-  if (g.itemMode) for (const c of prize) if (c) { delete c.sp; delete c.spUsed; }
+
 
   // AI가 경매를 이기면 가끔 이모트로 도발
   if (room.cpuIndex !== undefined) {

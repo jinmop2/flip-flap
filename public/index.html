@@ -3709,15 +3709,20 @@
     }
     .pile-count.done { color:#ffe9a8; }
 
-    /* 덤 카드 — 이 경매에 아이템이 얹혀 있다. 카드에 딱지를 붙여 둘 다 보게 한다. */
-    .card.sp-tip { box-shadow:0 0 0 2px #5cd69c, 0 3px 10px rgba(0,0,0,.5); }
-    .card.sp-bonus { box-shadow:0 0 0 2px #ffd94a, 0 3px 10px rgba(0,0,0,.5); }
-    .card .c-sp.bonus { background:#3a2a06; border-color:#ffd94a; }
-    .card .c-sp {
-      position:absolute; top:-7px; right:-6px; font-size:.78rem; line-height:1;
-      padding:3px 4px; border-radius:7px; background:#0f2a1e; border:1px solid #5cd69c;
-      box-shadow:0 2px 6px rgba(0,0,0,.5); pointer-events:none;
+    /* 아이템 카드 — 세트에 쓰이는 카드가 아니라 덱에 따로 섞여 있는 카드다.
+       종류·등급이 없으니 숫자 자리에 딱지를 크게 그려 한눈에 구분되게 한다. */
+    .card.item-card {
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+      background:linear-gradient(160deg,#123024,#0c1f18); border-color:#5cd69c;
+      box-shadow:0 0 0 2px rgba(92,214,156,.35), 0 3px 10px rgba(0,0,0,.5);
     }
+    .card.item-card.ic-bonus {
+      background:linear-gradient(160deg,#3a2a06,#241a04); border-color:#ffd94a;
+      box-shadow:0 0 0 2px rgba(255,217,74,.35), 0 3px 10px rgba(0,0,0,.5);
+    }
+    .card.item-card .ic-face { font-size:1.8rem; line-height:1; }
+    .card.item-card .ic-name { font-size:.56rem; letter-spacing:1px; font-weight:800; color:#bfe9d4; }
+    .card.item-card.ic-bonus .ic-name { color:#ffe9a8; }
 
     /* ─── 경매 (테이블 중앙 매트) — 골드 스티치 펠트 매트 ─── */
     #auctionMat {
@@ -5543,19 +5548,22 @@
     <div class="rules-box" data-i18n-block="rulesItem">
       <span class="close-x" onclick="toggleRulesItem(false)">×</span>
       <h2>아이템전</h2>
-      <p style="color:#8a7a80">2인전 규칙 그대로에, <b style="color:#ffe9a8">아이템</b>이 얹힌다. 아이템은 덱에 섞인 <b style="color:#ffe9a8">표시 카드</b>에서만 나온다.</p>
+      <p style="color:#8a7a80">2인전 규칙 그대로에, <b style="color:#ffe9a8">아이템</b>이 얹힌다. 아이템은 덱에 섞인 <b style="color:#ffe9a8">아이템 카드</b>에서만 나온다.</p>
 
-      <h3><span data-ico="🎁"></span> 아이템이 들어오는 법 — 표시 카드 두 가지</h3>
+      <h3><span data-ico="🎁"></span> 아이템이 들어오는 법 — 아이템 카드 두 가지</h3>
       <div class="r4-tbl">
         <div class="r4-row r4-head"><span>카드</span><span>누가 받나</span><span>무엇이 나오나</span></div>
         <div class="r4-row"><span>🎁 보너스</span><span>뒤집은 진행자</span><span>일반 등급만</span></div>
         <div class="r4-row"><span>🏷 덤</span><span>그 경매에서 <b>진 쪽</b></span><span>등급 굴리기</span></div>
+        <div class="r4-row"><span>보통 카드</span><span>—</span><span>아이템 없음</span></div>
       </div>
-      <p>중앙 덱 12장에 <b>보너스 2장 · 덤 2장</b>이 섞여 있다. 표시가 없는 경매에서는 아이템이 나오지 않는다.
-         두 카드 모두 <b>양쪽 다 보인다</b> — 저 판에 아이템이 걸렸는지 알아야 얼마를 지를지 정할 수 있다.</p>
+      <p><b>아이템 카드는 따로 있다.</b> 종류·등급이 없어 세트에는 안 쓰이고, 중앙 덱에 <b>보너스 2장 · 덤 2장</b>이
+         섞여 있다. 아이템 카드가 뽑히면 <b>그 자리에서 한 장을 더 뽑는다</b> — 그래서 그 판은
+         <b>경매품이 세 장</b>(🏷 덤 + 중앙 + 출품)이 된다. 아이템 카드가 안 나온 경매에서는 아이템도 안 나온다.</p>
       <div class="r4-steps">
-        <div class="r4-step"><b>1</b><span>🎁 보너스는 <b>공짜</b>라 일반 등급만 나온다. 카드 자체는 그대로 경매에 나간다.</span></div>
-        <div class="r4-step"><b>2</b><span>🏷 덤은 <b>진 쪽</b>이 가져간다. 그래서 "이 판은 져 주는 게 낫나" 를 저울질하게 된다.</span></div>
+        <div class="r4-step"><b>1</b><span>🎁 보너스는 뒤집는 즉시 <b>진행자</b>가 갖는다. 공짜라 일반 등급만 나온다.</span></div>
+        <div class="r4-step"><b>2</b><span>🏷 덤은 경매품에 얹혀 <b>양쪽 다 보이고</b>, 그 경매에서 <b>진 쪽</b>이 가져간다.
+           그래서 "이 판은 져 주는 게 낫나" 를 저울질하게 된다.</span></div>
         <div class="r4-step"><b>3</b><span>최대 <b>3개</b>까지만 들고, 한 턴에 <b>1개</b>만 쓴다. 배팅 카드를 낸 뒤에는 못 쓴다.</span></div>
       </div>
       <p>덤이 지는 쪽에 쌓이니 판이 저절로 붙는다. <b>전설은 세트 진행이 뒤진 쪽에게만</b> 나와서,
