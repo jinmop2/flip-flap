@@ -94,10 +94,15 @@ function quadLayTable() {
   const mat = r('q-mat'), opps = r('q-opps'), myhand = r('q-myhand'), mybid = r('q-mybid');
   if (!mat) { table.classList.remove('on'); return; }
   const h = host.getBoundingClientRect();
-  const RAIL = 25, padX = 10;
-  // 가로: 상대 줄과 경매대 중 넓은 쪽에 맞춘다
-  let left = Math.min(mat.left, opps ? opps.left : mat.left) - padX;
-  let right = Math.max(mat.right, opps ? opps.right : mat.right) + padX;
+  const RAIL = 25;
+  // 가로: 경매대에 맞춰 좁게 잡는다. 상대 줄까지 감싸면 판이 화면 폭을 다 먹어
+  // '둘러앉은' 게 아니라 '판 안에 갇힌' 모양이 된다 — 판을 좁히고 사람은
+  // 그 양옆 가장자리에 걸터앉힌다.
+  const h0 = host.getBoundingClientRect();
+  const wantW = Math.min(h0.width - (RAIL + 2) * 2, Math.max(mat.width + 46, h0.width * 0.62));
+  const cx = h0.left + h0.width / 2;
+  let left = cx - wantW / 2;
+  let right = cx + wantW / 2;
   // 세로: 상대 자리 한가운데에서 내 배팅 자리 아래까지 — 사람이 레일에 걸터앉는다
   let top = opps ? opps.top + opps.height * 0.55 : mat.top - RAIL;
   // 손패는 판 밖이다(손에 들고 있는 것이니까). 판은 그 바로 위까지.
@@ -871,6 +876,19 @@ fetch('/api/auth-config').then(r => r.json()).then(d => {
 // 랭크게임 — 무엇을 할지는 붙고 나서 서버가 정한다(클래식·아이템전·TWELVE).
 // 여기서 모드를 보내지 않는 것이 핵심이다. 클라이언트가 고르면 그게 곧
 // 모드 고르기가 되어 무작위의 뜻이 없어진다.
+// 기다리는 동안 아무 표시가 없으면 "안 되는 것" 으로 보인다. 남은 초를 센다 —
+// 10초 뒤에는 반드시 무슨 일이 일어난다는 걸 알면 기다림이 고장으로 안 읽힌다.
+let _mmTick = 0;
+function matchCountdown(sec, tail) {
+  clearInterval(_mmTick);
+  const h = document.getElementById('matchHint');
+  let left = sec;
+  const draw = () => { if (h) h.textContent = left > 0 ? `${left}초 안에 상대가 없으면 ${tail}` : tail; };
+  draw();
+  _mmTick = setInterval(() => { left -= 1; if (left < 0) { clearInterval(_mmTick); return; } draw(); }, 1000);
+}
+function matchCountdownStop() { clearInterval(_mmTick); }
+
 function quickMatch() {
   closeModePanels();
   isItemMode = false;
@@ -878,8 +896,7 @@ function quickMatch() {
   document.getElementById('matchModal').classList.add('show');
   const t = document.getElementById('matchTitle');
   if (t) t.textContent = '🏆 랭크게임';
-  const h = document.getElementById('matchHint');
-  if (h) h.textContent = '클래식 · 아이템전 · TWELVE 중 무작위 — 10초 안에 상대가 없으면 전문가 AI';
+  matchCountdown(10, '전문가 AI 와 붙습니다');
 }
 
 // ⚡ 빠른대전 — 모드를 안 가리고 지금 가장 빨리 시작될 방으로.
@@ -890,8 +907,7 @@ window.quickAny = function () {
   socket.emit('quick_any', { pid: PID, nick: getNick() });
   const t = document.getElementById('matchTitle');
   if (t) t.textContent = '⚡ 빠른대전';
-  const h = document.getElementById('matchHint');
-  if (h) h.textContent = '모드 상관없이 가장 빨리 시작하는 방으로 — 없으면 10초 뒤 전문가 AI';
+  matchCountdown(10, '전문가 AI 와 붙습니다');
 };
 // 방에 바로 들어간 경우 — 대기 창은 띄우지 않는다(이미 방 대기실이 열린다)
 socket.on('quick_any_found', () => {
@@ -936,8 +952,23 @@ function rankRoulette(mode, done) {
   }, dur + 40);
 }
 
-socket.on('ranked_mode', ({ mode, bot }) => {
+socket.on('ranked_mode', ({ mode, bot, room }) => {
   isItemMode = mode === 'item';
+  // 방에서 '랜덤' 으로 시작한 경우 — 매칭 창이 아니라 대기실 위에서 돌린다
+  if (room) {
+    const m = document.getElementById('matchModal');
+    if (m) m.classList.add('show');
+    const t0 = document.getElementById('matchTitle');
+    if (t0) t0.textContent = '🎲 랜덤';
+    const h0 = document.getElementById('matchHint');
+    if (h0) h0.textContent = '무엇을 할지 지금 정합니다…';
+    rankRoulette(mode, () => {
+      if (t0) t0.textContent = '🎲 ' + (RANK_LABEL[mode] || mode);
+      toast(`🎲 <b>${esc(RANK_LABEL[mode] || mode)}</b>`, 1800);
+    });
+    return;
+  }
+  matchCountdownStop();
   const h = document.getElementById('matchHint');
   if (h) h.textContent = bot ? '상대를 못 찾았어요 — 전문가 AI 와 붙습니다' : '상대를 찾았어요! 어떤 판일까요…';
   const t = document.getElementById('matchTitle');
@@ -960,6 +991,7 @@ window.quickJoin = function (mode) {
   socket.emit('quick_join', { mode, pid: PID, nick: getNick() });
 };
 function cancelMatch() {
+  matchCountdownStop();
   socket.emit('cancel_match');
   document.getElementById('matchModal').classList.remove('show');
   rkHide();
@@ -5116,7 +5148,7 @@ socket.on('room_kicked', () => {
   setTimeout(() => cancelWait(), 500);
 });
 
-const MODE_NAME = { classic: '클래식', item: '아이템전', twelve: 'TWELVE', quad: '다인전', mini: '미니게임' };
+const MODE_NAME = { classic: '클래식', item: '아이템전', twelve: 'TWELVE', quad: '다인전', mini: '미니게임', random: '랜덤' };
 
 let sharedCode = '';
 socket.on('room_created', ({ roomId, name }) => {

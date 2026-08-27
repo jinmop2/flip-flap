@@ -132,10 +132,6 @@
     '클래식 · 아이템전 · TWELVE 무작위 · RP 반영': 'Classic \u00b7 Item \u00b7 TWELVE at random \u00b7 counts for RP',
     '빠른대전': 'Quick match',
     '모드 상관없이 가장 빨리 · RP 미반영': 'Whatever starts soonest \u00b7 no RP',
-    '클래식 · 아이템전 · TWELVE 중 무작위 — 10초 안에 상대가 없으면 전문가 AI':
-      'Classic, Item or TWELVE at random \u2014 an Expert AI steps in after 10s',
-    '모드 상관없이 가장 빨리 시작하는 방으로 — 없으면 10초 뒤 전문가 AI':
-      'Into whichever room starts soonest \u2014 an Expert AI after 10s if there is none',
     '상대를 찾았어요!': 'Found an opponent!',
     '두 장 승부': 'Two-Card Duel',
     // ── 튜토리얼 고르기 ──
@@ -157,6 +153,11 @@
     '칩 경매': 'Chip auction',
     '상대를 못 찾았어요 — 전문가 AI 와 붙습니다': "No one turned up \u2014 you're up against an Expert AI",
     '상대를 찾았어요! 어떤 판일까요…': 'Found an opponent! Which game will it be\u2026',
+    '전문가 AI 와 붙습니다': "you're up against an Expert AI",
+    '무엇을 할지 지금 정합니다…': 'Deciding what you will play\u2026',
+    '🎲 랜덤': '\ud83c\udfb2 Random',
+    '클래식·아이템·TWELVE 중 하나': 'One of Classic, Item or TWELVE',
+    '랜덤': 'Random',
     '경매로 세트를 먼저 완성하면 승리': 'Complete a set first and you win',
     '모드 다시 고르기': 'Pick another mode',
     '두 장으로 겨루는 섯다식 판': 'A Sutda-style round decided by two cards',

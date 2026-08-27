@@ -1520,9 +1520,11 @@
        (4인: 왼·위·오른 / 3인: 왼·오른 — 가운데는 비운다) */
     #q-opps { display:flex; gap:5px; flex-shrink:0; justify-content:space-between; align-items:flex-start; }
     body.quad4 #q-opps { padding:0 2px; }
-    /* 왼쪽·오른쪽 자리는 판 가장자리로 조금 벌린다 — 둘러앉은 모양이 난다 */
-    body.quad4 #q-opps .q-opp:first-child { transform:translateY(14px); }
-    body.quad4 #q-opps .q-opp:last-child  { transform:translateY(14px); }
+    /* 판이 좁아진 만큼 양옆 사람은 바깥으로 나가 앉는다 — 판을 둘러싼 모양.
+       가운데 사람만 판 위쪽 레일에 걸터앉는다. */
+    body.quad4 #q-opps .q-opp:first-child { transform:translate(-6px, 30px); }
+    body.quad4 #q-opps .q-opp:last-child  { transform:translate(6px, 30px); }
+    body.quad4 #q-opps .q-opp { max-width:31%; }
     body.quad4.q-n3 #q-opps { justify-content:space-around; }
 
     .q-opp { flex:1; min-width:0; border-radius:11px; padding:6px 5px 5px;
@@ -3480,6 +3482,10 @@
     .wc-modes { display:grid; grid-template-columns:1fr 1fr; gap:6px; width:100%; margin:2px 0 4px; }
     /* 모드가 다섯이 되어 마지막 하나가 혼자 남는다 — 한 줄을 다 쓰게 해 빈칸을 없앤다 */
     .wc-modes .wc-mode:last-child:nth-child(odd) { grid-column:1 / -1; }
+    /* 랜덤은 모드가 아니라 '고르지 않기' 다 — 한 줄을 다 쓰고 색도 따로 준다 */
+    .wc-modes .wc-mode.wc-rand { grid-column:1 / -1;
+      background:linear-gradient(180deg,#3a2358,#241040); border-color:#8b6ad8; }
+    .wc-modes .wc-mode.wc-rand b { color:#e2d4ff; }
     .wc-mode {
       display:flex; flex-direction:column; align-items:center; gap:1px; cursor:pointer;
       padding:8px 4px; border-radius:11px; font-family:'Fredoka',system-ui,sans-serif;
@@ -4669,6 +4675,10 @@
 
     /* 존 — 2인전과 같은 배치 */
     #tv-oppZone, #tv-centerZone, #tv-myZone { position:relative; z-index:1; }
+    /* 다인전도 같다. 판(#quad-table)은 자리를 잡은 요소라 그냥 두면 흐름에 있는
+       구역들 위에 얹힌다 — 배팅 확정 버튼이 판 밑에 깔려 "버튼이 없다" 가 됐다.
+       구역을 한 겹 위로 올린다. */
+    #q-opps, #q-oppbids, #q-table, #q-me { position:relative; z-index:1; }
     /* 세로가 짧은 기기에서는 칸끼리 겹친다. 겹치는 쪽이 위(내 칸은 DOM 뒤라
        가운데 칸 위에 얹힌다)라, 빈 여백이 경매 버튼을 덮어 안 눌렸다.
        — 실제로 아이폰(375x667)에서 버튼 아래쪽이 #tv-myZone 에 먹혔다.
@@ -5134,6 +5144,9 @@
       </button>
       <button class="wc-mode" data-m="mini" onclick="roomMode('mini')">
         <b>미니게임</b><small>두 장 승부</small>
+      </button>
+      <button class="wc-mode wc-rand" data-m="random" onclick="roomMode('random')">
+        <b>🎲 랜덤</b><small>클래식·아이템·TWELVE 중 하나</small>
       </button>
     </div>
     </div><!-- /wc-scroll -->

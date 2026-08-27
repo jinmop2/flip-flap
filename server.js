@@ -1844,6 +1844,14 @@ io.on('connection', (socket) => {
       pushRoomLobby(roomId); broadcastRooms();
       return;
     }
+    // 랜덤 — 무엇을 할지는 시작을 누를 때 정해진다. 여기서 미리 뽑아 두면
+    // 방장이 결과를 보고 다시 고를 수 있어 랜덤이 아니게 된다.
+    // 다인전은 뺀다(엔진이 다르고 인원도 셋부터라 같은 줄에 못 세운다).
+    if (mode === 'random') {
+      room.mode = 'random'; room.itemMode = false;
+      pushRoomLobby(roomId); broadcastRooms();
+      return;
+    }
 
     room.itemMode = mode === 'item';
     room.mode = mode === 'twelve' ? 'twelve' : (room.itemMode ? 'item' : 'classic');
@@ -1874,8 +1882,17 @@ io.on('connection', (socket) => {
     const roomId = socket.roomId;
     const room = rooms[roomId];
     if (!room || room.game || socket.playerIndex !== 0) return;
-    if (['item', 'classic', 'quad', 'twelve', 'mini'].includes(mode)) {
+    if (['item', 'classic', 'quad', 'twelve', 'mini', 'random'].includes(mode)) {
       room.mode = mode; room.itemMode = mode === 'item';
+    }
+    // 랜덤이면 지금 뽑는다 — 자리에 앉은 사람들이 무엇을 할지는 이 순간 정해진다.
+    // 미리 뽑아 두면 방장이 결과를 보고 다시 고를 수 있어 랜덤이 아니게 된다.
+    let roomSpin = false;
+    if (room.mode === 'random') {
+      const picked = pickRankedMode();
+      room.mode = picked; room.itemMode = picked === 'item';
+      io.to(roomId).emit('ranked_mode', { mode: picked, room: true });
+      roomSpin = true;                     // 화면에서 룰렛이 도는 동안 기다린다
     }
     const here = room.players.filter(Boolean);
     // 다인전은 셋부터. 실제로 엔진을 갈아타는 것은 지금 이 순간이다 —
@@ -1895,6 +1912,16 @@ io.on('connection', (socket) => {
       return;
     }
     if (here.length < 2) return socket.emit('error', '상대가 아직 없어요.');
+    // 랜덤이었으면 화면에서 룰렛이 도는 동안 기다렸다 연다
+    if (roomSpin) { setTimeout(() => roomOpen(roomId, socket), RANK_SPIN_MS); return; }
+    roomOpen(roomId, socket);
+  });
+
+  // 방에서 실제로 판을 여는 부분. 랜덤이면 룰렛이 멈춘 뒤에 불린다.
+  function roomOpen(roomId, socket) {
+    const room = rooms[roomId]; if (!room || room.game || room.tv) return;
+    const here = room.players.filter(Boolean);
+    if (here.length < 2) return;
     // 미니게임 — 인원을 미리 나누지 않는다. 방에 앉은 사람 수가 곧 자리 수다.
     // 자리 넷을 다 안 채워도 둘만 있으면 둘이서 시작한다.
     if (room.mode === 'mini') {
@@ -1931,7 +1958,7 @@ io.on('connection', (socket) => {
     broadcast(roomId);
     startClock(roomId);
     broadcastRooms();
-  });
+  }
 
   // 새로고침/끊김 후 재접속
   socket.on('rejoin', ({ roomId, pid } = {}) => {

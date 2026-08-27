@@ -485,9 +485,15 @@ console.log('\n⑮ 다인전도 2인전과 같은 판 위에서 논다');
   ok('판 밖은 검게', /#game4::after \{[\s\S]{0,200}radial-gradient/.test(htm2));
 
   // 사람이 셋·넷이라 위아래로만 못 앉힌다 — 판 위쪽을 따라 둘러 앉는다
+  // 판을 좁히고 양옆 사람은 그 바깥으로 내보낸다 — 판을 둘러싼 모양
   ok('자리를 판에 둘러 앉힌다',
      /#q-opps \{ display:flex;[^}]*justify-content:space-between/.test(htm2)
-     && /body\.quad4 #q-opps \.q-opp:first-child \{ transform:translateY\(14px\); \}/.test(htm2));
+     && /body\.quad4 #q-opps \.q-opp:first-child \{ transform:translate\(-6px, 30px\); \}/.test(htm2)
+     && /body\.quad4 #q-opps \.q-opp:last-child  \{ transform:translate\(6px, 30px\); \}/.test(htm2));
+  // 판은 경매대에 맞춰 좁게 — 상대 줄까지 감싸면 화면 폭을 다 먹는다
+  ok('판을 좁게 잡는다', /const wantW = Math\.min\(h0\.width - \(RAIL \+ 2\) \* 2, Math\.max\(mat\.width \+ 46, h0\.width \* 0\.62\)\);/.test(cli2));
+  // 판은 자리를 잡은 요소라 흐름에 있는 구역들 위에 얹힌다 — 확정 버튼이 깔렸다
+  ok('구역이 판보다 위에 있다', /#q-opps, #q-oppbids, #q-table, #q-me \{ position:relative; z-index:1; \}/.test(htm2));
   ok('3인은 둘이 마주 본다', /body\.quad4\.q-n3 #q-opps \{ justify-content:space-around; \}/.test(htm2));
 
   ok('판 크기를 재는 함수가 있다', /function quadLayTable\(\)/.test(cli2)

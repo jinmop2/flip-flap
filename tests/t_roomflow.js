@@ -320,9 +320,13 @@ ok('안 쓰는 배경음 원본은 뺐다', !fs.existsSync(path.join(__dirname, 
 // 방 만들기에도 TWELVE 가 있어야 한다 — 모드가 넷이 됐다
 ok('대기실에 TWELVE 칸', /data-m="twelve" onclick="roomMode\('twelve'\)"/.test(htm));
 ok('넷이라 두 줄로 편다', /\.wc-modes \{ display:grid; grid-template-columns:1fr 1fr/.test(htm));
-ok('서버가 twelve 를 받는다', /\['item', 'classic', 'quad', 'twelve', 'mini'\]\.includes\(mode\)/.test(srv)
+ok('서버가 twelve 를 받는다', /\['item', 'classic', 'quad', 'twelve', 'mini', 'random'\]\.includes\(mode\)/.test(srv)
    && /room\.mode === 'twelve'\) \{ tvStart/.test(srv));
-ok('모드 이름표가 다섯 다 있다', /MODE_NAME = \{ classic: '클래식', item: '아이템전', twelve: 'TWELVE', quad: '다인전', mini: '미니게임' \}/.test(cli));
+// 랜덤이 붙어 여섯이 됐다 — 모드가 아니라 '고르지 않기' 지만 이름표는 필요하다
+ok('모드 이름표가 여섯 다 있다', /MODE_NAME = \{ classic: '클래식', item: '아이템전', twelve: 'TWELVE', quad: '다인전', mini: '미니게임', random: '랜덤' \}/.test(cli));
+ok('랜덤은 시작할 때 정해진다', /if \(room\.mode === 'random'\) \{[\s\S]{0,240}const picked = pickRankedMode\(\);/.test(srv)
+   && /roomSpin = true;/.test(srv));
+ok('랜덤에 다인전은 안 들어간다', /const RANKED_MODES = \['classic', 'item', 'twelve'\];/.test(srv));
 // 목록에서도 무슨 판인지 보인다
 ok('방 목록이 모드를 함께 보낸다', /mode: r\.mode \|\| 'classic'/.test(srv));
 ok('목록에 모드 딱지를 붙인다', /rl-mode m-\$\{esc\(r\.mode\)\}/.test(cli) && /\.rl-mode \{/.test(htm));
