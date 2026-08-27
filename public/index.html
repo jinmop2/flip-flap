@@ -2352,15 +2352,6 @@
     .tut-pk.t-mini { background:linear-gradient(180deg,#4a1030,#2c0820); border-color:#d06a9a; }
     .tut-pk.t-mini .tp-txt b { color:#ffd6e8; }
 
-    /* 차근차근 슬라이드 */
-    .ts-dots { display:flex; gap:5px; justify-content:center; margin:-2px 0 2px; }
-    .ts-dots i { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.18); transition:.2s; }
-    .ts-dots i.on { background:var(--gold); transform:scale(1.25); }
-    .ts-body { width:100%; min-height:208px; display:flex; flex-direction:column; justify-content:center;
-      text-align:center; font-size:.86rem; line-height:1.62; color:#e8dfc8; }
-    .ts-body b { color:#ffe9a8; }
-    .ts-nav { display:flex; gap:8px; width:100%; }
-    .ts-nav .btn { flex:1; }
 
     .tut-tag { font-size:.66rem; font-weight:700; color:var(--gold); letter-spacing:2px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; }
     #tutText { font-size:.84rem; line-height:1.55; color:#e8dfc8; }
@@ -5427,12 +5418,12 @@
   <div class="lb-box" style="width:340px">
     <div class="lb-title"><span data-ico="🎓"></span> 튜토리얼
       <span class="close-x" onclick="tutPickClose()">×</span></div>
-    <p class="mm-hint">어떤 판을 배워볼까요? 처음이면 클래식부터가 좋아요.</p>
+    <p class="mm-hint">직접 한 판 두면서 배웁니다. 처음이면 클래식부터가 좋아요.</p>
     <div class="tut-pick">
       <button class="tut-pk" onclick="tutStart('classic')">
         <span class="tp-ico">🃏</span>
-        <span class="tp-txt"><b>클래식</b><small>직접 한 판 두면서 배워요 · 처음이라면 여기</small></span>
-        <span class="tp-tag">실전</span>
+        <span class="tp-txt"><b>클래식</b><small>처음이라면 여기부터</small></span>
+        <span class="tp-tag">추천</span>
       </button>
       <button class="tut-pk t-item" onclick="tutStart('item')">
         <span class="tp-ico">🎪</span>
@@ -5452,20 +5443,6 @@
       </button>
     </div>
     <button class="btn btn-ink" onclick="tutPickClose()">닫기</button>
-  </div>
-</div>
-
-<!-- 차근차근 넘겨 보는 튜토리얼 (클래식 말고 나머지 모드) -->
-<div class="lb-modal" id="tutSlideModal">
-  <div class="lb-box" style="width:344px">
-    <div class="lb-title" id="tsTitle">튜토리얼
-      <span class="close-x" onclick="tutSlideClose()">×</span></div>
-    <div class="ts-dots" id="tsDots"></div>
-    <div class="ts-body" id="tsBody"></div>
-    <div class="ts-nav">
-      <button class="btn btn-outline btn-sm" id="tsPrev" onclick="tutSlide(-1)">← 이전</button>
-      <button class="btn btn-gold btn-sm" id="tsNext" onclick="tutSlide(1)">다음 →</button>
-    </div>
   </div>
 </div>
 

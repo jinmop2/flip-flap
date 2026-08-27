@@ -135,17 +135,14 @@
     '상대를 찾았어요!': 'Found an opponent!',
     '두 장 승부': 'Two-Card Duel',
     // ── 튜토리얼 고르기 ──
-    '어떤 판을 배워볼까요? 처음이면 클래식부터가 좋아요.':
-      'Which one shall we learn? Classic is the place to start.',
-    '직접 한 판 두면서 배워요 · 처음이라면 여기': 'Learn by playing a real hand \u00b7 start here',
-    '실전': 'Hands-on',
     '클래식에 아이템이 얹힌 판': 'Classic, with items on top',
+    '직접 한 판 두면서 배웁니다. 처음이면 클래식부터가 좋아요.':
+      'You learn by playing a real hand. Classic is the place to start.',
+    '처음이라면 여기부터': 'Start here if it is your first time',
+    '추천': 'Pick me',
     '카드가 아니라 칩으로 값을 부르는 경매': 'An auction where you bid chips, not cards',
     '셋·넷이서 · 지는 것도 수가 되는 판': 'Three or four players \u2014 losing can be a move',
     '두 장으로 겨루는 섯다식 판': 'A Sutda-style round decided by two cards',
-    '다음 →': 'Next \u2192',
-    '← 이전': '\u2190 Back',
-    '직접 해보기 ▶': 'Try it \u25b6',
     'AI 1명': '1 AI', 'AI 2명': '2 AI', 'AI 3명': '3 AI',
     '2인': '2P', '3인': '3P', '4인': '4P',
     '미니게임': 'Mini game',
@@ -1895,137 +1892,6 @@
   root.FF.applyI18n = apply;
   root.FF.DICT = EN;
 
-  // 튜토리얼 슬라이드 영어판. 본문에 <b> 가 섞여 있어 문장 단위로 못 짝짓는다 —
-  // 설명서(BLOCKS)와 같은 방식으로 한 벌을 통째로 둔다.
-  const C = (k, g, big) => `<span class="tcard k${k}${big ? ' big' : ''}"><i>${g}</i>${k}</span>`;
-  const TUT_EN = {
-    item: {
-      title: '\ud83c\udfaa Item Battle',
-      slides: [
-        { h: 'Classic, with one more layer',
-          t: 'The rules are the same as Classic \u2014 <b>complete a set first</b> and you win.<br>The only change is that <b>items</b> get involved.',
-          c: `<div class="tut-cards">${C(3,1)}${C(3,2)}${C(3,4)}<span class="tvs">=</span><span class="twin">three 3s wins \ud83c\udfc6</span></div>` },
-        { h: 'Items arrive as cards',
-          t: '<b>Four item cards</b> sit in the centre deck. Flip one and you <b>draw again</b> on the spot, so the auction goes on.',
-          c: `<div class="tut-two">
-               <div class="tt-p"><b>\ud83c\udf81 Bonus</b><br>the <b>auctioneer</b> who flipped it takes it<small>it flies from the deck into their hand</small></div>
-               <div class="tt-p"><b>\ud83c\udff7 Tip</b><br>the <b>loser</b> of that auction takes it<small>it rides on the lot, face up</small></div>
-             </div>` },
-        { h: 'Throwing a round can be a move',
-          t: 'A tip goes to whoever <b>loses</b>. Since you can <b>see what it is</b>,<br>you end up weighing "is that item worth losing this one?"',
-          c: `<div style="margin-top:10px;font-size:.78rem;color:#c8a86a">Tips pile up on whoever is behind, so the game pulls itself back together</div>` },
-        { h: 'You never know what turns up',
-          t: 'There are <b>13 items</b>. Tier is ignored \u2014 all of them are shuffled into one pile.<br>A common and a legendary have the <b>same odds</b>.',
-          c: `<div class="tut-steps">
-               <div>\ud83d\udd0d <b>Magnifier</b> \u2014 peek at two cards in their hand</div>
-               <div>\ud83d\udd04 <b>Reversal</b> \u2014 for this auction, the <b>weaker card wins</b></div>
-               <div>\ud83d\udca3 <b>Bomb</b> \u2014 whoever wins the lot discards a card</div>
-               <div>\ud83d\udc51 <b>Tyrant</b> \u2014 seize the auctioneer's seat this turn</div>
-             </div>` },
-        { h: 'There are rules for using them too',
-          t: 'Hold <b>three</b> at most, play <b>one per turn</b>.<br><b>Never after your bid card is down</b> \u2014 no taking it back once you see the result.',
-          c: `<div style="margin-top:10px;font-size:.78rem;color:#c8a86a">\ud83e\uddff Set a Charm and it swallows their next item</div>` },
-      ],
-    },
-    twelve: {
-      title: '\ud83d\udd35 TWELVE',
-      slides: [
-        { h: 'You buy with chips, not cards',
-          t: 'Same cards as Classic. What changes is <b>what you pay with</b>.<br>Instead of your hand you bid <b>20 chips</b>.',
-          c: `<div class="tut-cards" style="margin-top:14px;font-size:1.4rem">\ud83d\udd35\ud83d\udd35\ud83d\udd35\ud83d\udd35\ud83d\udd35 <span class="tvs">\u00d720</span></div>` },
-        { h: 'Losing burns chips too',
-          t: 'This is the heart of it. In Classic the card you played goes to them;<br>in TWELVE the chips <b>vanish into the bank</b>.',
-          c: `<div class="tut-two">
-               <div class="tt-p"><b>Winner</b><br><b>all</b> of their bid<small>and takes both cards of the lot</small></div>
-               <div class="tt-p"><b>Loser</b><br><b>half</b> their bid<small>no card, and still down half the chips</small></div>
-             </div>
-             <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">So <b>knowing when to step back</b> is the whole skill</div>` },
-        { h: 'How a turn goes',
-          t: '',
-          c: `<div class="tut-steps">
-               <div>1\ufe0f\u20e3 The auctioneer <b>flips one card</b> off the centre deck</div>
-               <div>2\ufe0f\u20e3 They <b>add one from hand</b> \u2014 those two are the lot</div>
-               <div>3\ufe0f\u20e3 They pick <b>open or closed</b></div>
-               <div>4\ufe0f\u20e3 Settle, then <b>pass the seat</b></div>
-             </div>` },
-        { h: 'Open and closed',
-          t: '',
-          c: `<div class="tut-two">
-               <div class="tt-p"><b>\ud83d\udc41 Open</b><br>bids are shown and you <b>raise in turn</b><small>it goes on until one of you steps back</small></div>
-               <div class="tt-p"><b>\ud83d\ude48 Closed</b><br>the auctioneer names an <b>even number</b>, once<small>you see the price, not what you are buying</small></div>
-             </div>
-             <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">In closed, they may <b>add one chip</b> and take it \u2014 or pass</div>` },
-        { h: 'Three ways to win',
-          t: '',
-          c: `<div class="tut-steps">
-               <div>\ud83c\udfc6 <b>Complete a set</b> in front of you \u2014 you win on the spot</div>
-               <div>\ud83d\udca7 Drop to <b>zero chips</b> and you lose</div>
-               <div>\ud83d\udcc9 If the deck runs out, <b>whoever is closer to a set</b> wins</div>
-             </div>
-             <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">Five minutes each \u2014 your clock runs only on your turn</div>` },
-      ],
-    },
-    quad: {
-      title: '\ud83d\udc65 3\u20134 Players',
-      slides: [
-        { h: 'Three or four of you',
-          t: 'The core is the two-player game \u2014 <b>complete a set first</b> and you win.<br>Here is only what changes with more players.',
-          c: `<div class="tut-cards" style="margin-top:12px">${C(4,1)}${C(4,2)}${C(4,5)}${C(4,8)}<span class="tvs">=</span><span class="twin">four 4s \ud83c\udfc6</span></div>` },
-        { h: 'The auctioneer bids too',
-          t: 'First difference. They do not just put a card up and step aside \u2014<br>they <b>play a bid card as well</b>.',
-          c: `<div style="margin-top:10px;font-size:.78rem;color:#c8a86a">Empty-handed players skip; if nobody can bid the lot is void and the auctioneer takes it back</div>` },
-        { h: 'Bid cards come back in reverse',
-          t: 'This is the heart of it. Played cards are not discarded \u2014 you <b>swap them</b>.<br><b>Whoever bid weakest takes the strongest card.</b>',
-          c: `<div class="tut-two">
-               <div class="tt-p"><b>Highest bid</b><br>takes both lot cards<small>but receives the weakest bid card</small></div>
-               <div class="tt-p"><b>Lowest bid</b><br>no lot cards<small>but receives the strongest bid card</small></div>
-             </div>
-             <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">So <b>losing can be a move</b> \u2014 bid low on purpose and stock your hand</div>` },
-        { h: 'Closed reveals in order',
-          t: 'Not all at once as in the two-player game. Starting from the auctioneer, <b>one at a time, clockwise</b>.',
-          c: `<div style="margin-top:10px;font-size:.78rem;color:#c8a86a">Whoever plays later has seen every card before them \u2014<br>so bidding first and hard, to scare the rest off, becomes a bluff worth making</div>` },
-        { h: 'The deck follows the count',
-          t: '',
-          c: `<div class="tut-steps">
-               <div>\ud83d\udc65 <b>3 players</b> \u2014 30-card deck \u00b7 6 in hand \u00b7 12 in the centre</div>
-               <div>\ud83d\udc6a <b>4 players</b> \u2014 38-card deck \u00b7 6 in hand \u00b7 14 in the centre</div>
-             </div>
-             <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">More cards means each one weighs less, so three players drop eight of them</div>` },
-      ],
-    },
-    mini: {
-      title: '\ud83c\udfb4 Two-Card Duel',
-      slides: [
-        { h: 'Two cards, and you bet',
-          t: 'The rules are nothing like the main game. This is not an auction but <b>Sutda-style betting</b>.<br>You hold two cards <b>hidden</b> and put money in.',
-          c: `<div class="tut-cards" style="margin-top:14px">${C(2,1,true)}${C(3,2,true)}</div>` },
-        { h: 'How a hand goes',
-          t: '',
-          c: `<div class="tut-steps">
-               <div>1\ufe0f\u20e3 Everyone puts in <b>40 Moons</b> and takes <b>one card</b></div>
-               <div>2\ufe0f\u20e3 The round closes once all but one have matched or folded</div>
-               <div>3\ufe0f\u20e3 If two or more remain, take <b>one more card</b> and bet again</div>
-               <div>4\ufe0f\u20e3 Hands are shown and ranked \u2014 the winner takes the pot</div>
-             </div>` },
-        { h: 'Three kinds of hand',
-          t: 'Look first at how the two cards <b>relate</b>.',
-          c: `<div class="tut-steps">
-               <div>\ud83d\udd25 <b>Pair</b> \u2014 same kind \u00b7 2s &gt; 3s &gt; 4s &gt; 6s</div>
-               <div>\ud83c\udfaf <b>Twin</b> \u2014 same grade \u00b7 lower grade is stronger</div>
-               <div>\ud83c\udccf <b>Points</b> \u2014 everything else \u00b7 <b>lower</b> kind sum is stronger</div>
-             </div>
-             <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">Any Pair beats any Twin, and any Twin beats any Points hand</div>` },
-        { h: "The runt's betrayal",
-          t: 'The <b>two weakest cards</b> in the deck (4-6 and 6-8) are normally the bottom.<br>That one combination, though, <b>beats every Pair</b>.',
-          c: `<div class="tut-cards" style="margin-top:12px">${C(4,6)}${C(6,8)}<span class="tvs">\u2694</span>${C(2,1)}${C(2,2)}<span class="tvs">\u2192</span><span class="twin">the runt wins!</span></div>
-             <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">One combination out of 190 \u2014 which is why it is an event<br>Against anything that is not a Pair it is the weakest hand</div>` },
-        { h: 'Moons and coins',
-          t: 'Sitting down converts coins into <b>Moons</b> (1 coin = 10 Moons).<br>When you stand up the rest goes <b>back into coins</b>.',
-          c: `<div style="margin-top:10px;font-size:.78rem;color:#c8a86a">Nothing is face up \u2014 all you can read is <b>how much they bet, and when</b>.<br>Chasing with a bad hand is the expensive mistake.</div>` },
-      ],
-    },
-  };
-  root.FF.TUT = TUT_EN;
   root.FF.BLOCKS = BLOCKS;
   root.FF.PATTERNS = PATTERNS;
 })(typeof window !== 'undefined' ? window : globalThis);

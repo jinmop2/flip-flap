@@ -29,8 +29,13 @@ console.log('① 아무 일 없을 때는 쉬어야 한다');
 
   // 남아 있는 타이머를 세어 둔다. 늘어나면 여기서 걸린다.
   // 미니게임 것 둘(차례 시계·다음 판 카운트다운)은 판이 도는 동안만 돌고 반드시 꺼진다.
+  // 매칭 대기 카운트다운이 하나 늘었다(8). 상시로 도는 게 아니라 대기 창이
+  // 열려 있는 동안만 돈다 — 매칭 성사·취소·판 시작 어디로 끝나든 꺼진다.
   const always = [...cli.matchAll(/setInterval\(/g)].length + [...c4.matchAll(/setInterval\(/g)].length;
-  ok('상시 타이머가 늘지 않았다', always <= 7, `${always}개`);
+  ok('상시 타이머가 늘지 않았다', always <= 8, `${always}개`);
+  ok('매칭 카운트다운은 반드시 꺼진다',
+     (cli.match(/matchCountdownStop\(\)/g) || []).length >= 4
+     && /function matchCountdownStop\(\) \{ clearInterval\(_mmTick\); \}/.test(cli));
   // 켜는 곳마다 끄는 곳이 있어야 한다 — 안 끄면 판을 나가도 계속 돈다
   for (const name of ['miniClock', 'miniNextTick']) {
     const on = [...cli.matchAll(new RegExp(`${name} = setInterval`, 'g'))].length;

@@ -997,7 +997,7 @@ function cancelMatch() {
   rkHide();
 }
 socket.on('queued', () => document.getElementById('matchModal').classList.add('show'));
-socket.on('unqueued', () => { document.getElementById('matchModal').classList.remove('show'); rkHide(); });
+socket.on('unqueued', () => { document.getElementById('matchModal').classList.remove('show'); rkHide(); matchCountdownStop(); });
 
 // ── 랭킹 ────────────────────────────────────────────────────
 function openLeaderboard() {
@@ -3755,6 +3755,7 @@ const MINI_ACT_KO = { check: '넘기기', ping: '판 열기', quarter: '살짝 �
 
 function miniPaint(v) {
   miniState = v;
+  tutTickWith(v);            // 실전 튜토리얼
   const box = document.getElementById('mini');
   if (!box.classList.contains('on')) { box.classList.add('on'); box.style.display = 'flex'; }
 
@@ -4755,9 +4756,153 @@ const TUT_STEPS = [
 ];
 function startTutorial() {
   tutorial = true; tutSeen = {};
+  tutSteps = TUT_STEPS;
   difficulty = 'easy';
   createRoom(true);
 }
+
+// ── 모드별 실전 튜토리얼 ────────────────────────────────────────────────
+// 넘겨 보는 안내는 읽고 나면 남는 게 없다. 클래식이 그랬듯 나머지도 실제 판을
+// 두면서 배운다 — 판이 그 상황에 닿는 순간 그 자리를 짚어 준다.
+// 엔진마다 상태 모양이 달라서 단계 목록만 따로 두고, 재는 방식은 같다.
+let tutSteps = TUT_STEPS;
+
+// 🎪 아이템전 — 엔진은 클래식과 같다. 아이템이 끼는 대목만 얹는다.
+const TUT_ITEM = [
+  { id: 'i_intro', when: s => s.phase === 'pick', big: true,
+    text: `<div class="tut-h">아이템전에 온 걸 환영해요! ${ico('🎪', 'tut-ico')}</div>
+      규칙은 <b>클래식과 똑같아요</b> — 세트를 먼저 완성하면 승리.<br>
+      달라지는 건 <b>아이템</b>이 끼어든다는 것 하나예요.` },
+  { id: 'i_cards', when: s => s.phase === 'pick', big: true,
+    text: `<div class="tut-h">아이템은 카드로 들어와요 🃏</div>
+      중앙 덱에 <b>아이템 카드 넉 장</b>이 섞여 있어요.<br>뽑히면 그 자리에서 <b>한 장 더</b> 뽑아 경매를 이어갑니다.`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>🎁 보너스</b><br>뒤집은 <b>진행자</b>가 바로<small>덱에서 손으로 날아갑니다</small></div>
+        <div class="tt-p"><b>🏷 덤</b><br>그 경매에서 <b>진 쪽</b>이<small>경매품에 얹혀 앞면으로 공개</small></div>
+      </div>` },
+  { id: 'i_draw', when: s => s.phase === 'draw' && s.auctioneer === s.myIndex,
+    pos: 'bot', target: '#deckStack',
+    text: '먼저 한 판 돌려볼까요? 아이템 카드가 언제 나올지는 아무도 몰라요.',
+    act: '왼쪽 <b>덱을 탭</b>!' },
+  { id: 'i_offer', when: s => s.phase === 'offer' && s.auctioneer === s.myIndex,
+    pos: 'top', target: '#myHand',
+    text: '클래식과 같아요 — <b>내 손패 1장</b>을 얹어 경매품 2장을 만듭니다.',
+    act: '내놓을 카드를 <b>탭</b>하세요' },
+  { id: 'i_bid', when: s => s.phase === 'bidding' && s.auction && !s.auction.myBid && (s.auctioneer === s.myIndex || s.auction.oppBidSubmitted),
+    pos: 'top', target: '#myHand',
+    text: '<b>배팅!</b> 여기까지는 클래식과 똑같습니다.',
+    act: '카드 탭 → <b>배팅 확정</b>' },
+  // 실제로 아이템이 손에 들어온 순간에만 뜬다
+  { id: 'i_got', when: s => (s.myItems || []).length > 0,
+    pos: 'top', target: '#itemSlots',
+    text: '🎉 <b>아이템이 들어왔어요!</b> 아래 칸에 쌓입니다.<br>최대 <b>3개</b>까지 들고, 한 턴에 <b>1개</b>만 써요.',
+    act: '아이템을 <b>탭</b>하면 무엇인지 볼 수 있어요' },
+  { id: 'i_use', when: s => (s.myItems || []).length > 0 && s.phase === 'bidding' && s.auction && !s.auction.myBid,
+    pos: 'top', target: '#itemSlots',
+    text: '⚠️ 아이템은 <b>배팅 카드를 내기 전에만</b> 쓸 수 있어요.<br>결과를 보고 무르는 건 안 됩니다.' },
+  { id: 'i_tip', when: s => s.auction && s.auction.tipCard, big: true,
+    text: `<div class="tut-h">🏷 덤이 걸렸어요!</div>
+      이 경매에서 <b>진 쪽</b>이 저 아이템을 가져갑니다.<br>
+      무엇인지 <b>앞면으로 보이니까</b> — "저것 때문에 이 판은 져 줄까?" 를 저울질하게 돼요.` },
+  { id: 'i_bonus', when: s => s.auction && s.auction.bonusCard, big: true,
+    text: `<div class="tut-h">🎁 보너스가 나왔어요!</div>
+      덱을 뒤집은 <b>진행자</b>가 그 자리에서 가져갑니다.<br>진행자는 턴마다 번갈아 맡으니 공짜라도 한쪽으로 안 기울어요.` },
+];
+
+// 🔵 TWELVE — 상태 모양이 다르다(tvView). 칩 경제가 핵심이라 거기에 집중한다.
+const TUT_TV = [
+  { id: 't_intro', when: v => v.turn === 1 && v.phase === 'draw', big: true,
+    text: `<div class="tut-h">TWELVE 에 온 걸 환영해요! ${ico('🔵', 'tut-ico')}</div>
+      카드는 클래식과 같아요. 다른 건 <b>무엇으로 사느냐</b>예요 —<br>손패 대신 <b>칩 20개</b>로 값을 부릅니다.` },
+  { id: 't_burn', when: v => v.turn === 1 && v.phase === 'draw', big: true,
+    text: `<div class="tut-h">지기만 해도 칩이 녹아요 💧</div>
+      여기가 핵심이에요. 클래식은 낸 카드가 상대에게 넘어가지만,<br>TWELVE 에서는 칩이 <b>은행으로 사라집니다</b>.`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>이긴 쪽</b><br>부른 값 <b>전부</b><small>대신 경매품 두 장을 다 가져갑니다</small></div>
+        <div class="tt-p"><b>진 쪽</b><br>부른 값의 <b>절반</b><small>카드는 못 받고 칩만 반 잃어요</small></div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">그래서 <b>언제 물러설지</b>가 곧 실력입니다</div>` },
+  { id: 't_draw', when: v => v.phase === 'draw' && v.auctioneer === v.me,
+    pos: 'bot', target: '#tv-deck',
+    text: '내가 진행자예요. 중앙 덱에서 한 장 뒤집어 봅시다.',
+    act: '<b>덱을 탭</b>!' },
+  { id: 't_offer', when: v => v.phase === 'offer' && v.auctioneer === v.me,
+    pos: 'top', target: '#tv-myHand',
+    text: '손패에서 <b>한 장을 더</b> 얹어요 — 이 둘이 경매품입니다.',
+    act: '내놓을 카드를 <b>탭</b>' },
+  { id: 't_type', when: v => v.phase === 'choose' && v.auctioneer === v.me, big: true,
+    text: `<div class="tut-h">오픈과 클로즈 🎭</div>`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>👁 오픈</b><br>값을 <b>서로 보이며</b> 번갈아 올려요<small>한 명이 물러설 때까지 계속</small></div>
+        <div class="tt-p"><b>🙈 클로즈</b><br><b>짝수</b>를 한 번 부릅니다<small>값은 보이지만 출품 카드는 가려져요</small></div>
+      </div>` },
+  { id: 't_bid', when: v => v.phase === 'bid' && v.lot && v.lot.turnToAct === v.me,
+    pos: 'top', target: '#tv-actions',
+    text: '값을 부를 차례예요. 앞사람보다 많이 부르거나 <b>물러섭니다</b>.',
+    act: '아래에서 <b>부르기</b> 또는 <b>물러서기</b>' },
+  { id: 't_chips', when: v => v.chips && v.chips.me < 20,
+    pos: 'top', target: '#tv-rail',
+    text: '💧 칩이 줄었죠? <b>이긴 쪽도 진 쪽도</b> 냅니다.<br>칩이 <b>0</b>이 되면 그 자리에서 져요 — 아껴 쓰세요.' },
+];
+
+// 👥 다인전 — 사람이 늘면서 달라지는 것만. 역순 회수가 이 판의 심장이다.
+const TUT_Q4 = [
+  { id: 'q_intro', when: s => s.turn === 1 && s.phase === 'draw', big: true,
+    text: `<div class="tut-h">다인전에 온 걸 환영해요! ${ico('👥', 'tut-ico')}</div>
+      기본은 2인전과 같아요 — <b>세트를 먼저 완성</b>하면 승리.<br>사람이 늘면서 달라지는 것만 짚어 볼게요.` },
+  { id: 'q_all', when: s => s.turn === 1 && s.phase === 'draw', big: true,
+    text: `<div class="tut-h">진행자도 같이 배팅해요</div>
+      2인전과 다른 첫 번째. 진행자는 출품만 하고 빠지는 게 아니라<br><b>자기도 배팅 카드를 냅니다</b>.` },
+  { id: 'q_rev', when: s => s.turn === 1 && s.phase === 'draw', big: true,
+    text: `<div class="tut-h">배팅 카드는 역순으로 돌아와요 ♻️</div>
+      여기가 이 판의 심장입니다. 낸 카드는 버려지지 않고 <b>서로 바꿔 갖습니다</b>.`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>1위로 부름</b><br>경매품 2장 획득<small>대신 가장 약한 배팅 카드를 받아요</small></div>
+        <div class="tt-p"><b>꼴등</b><br>경매품은 못 받음<small>대신 가장 강한 배팅 카드를 받아요</small></div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">그래서 <b>지는 것도 수가 됩니다</b></div>` },
+  { id: 'q_bid', when: s => s.phase === 'bidding' && !s.seats[s.me].bidded && s.bidders.includes(s.me),
+    pos: 'top', target: '#q-myhand',
+    text: '배팅할 차례예요. 이길지, 일부러 져서 <b>강한 카드를 챙길지</b> 고르세요.',
+    act: '카드 탭 → <b>배팅 확정</b>' },
+  { id: 'q_seq', when: s => s.phase === 'bidding' && s.auction && s.auction.closed,
+    pos: 'bot',
+    text: '🙈 클로즈는 <b>순서대로 한 명씩</b> 공개하며 냅니다.<br>뒤에 내는 사람은 앞사람 카드를 다 보고 정해요.' },
+  { id: 'q_got', when: s => (s.seats[s.me].acq || []).length > 0,
+    pos: 'top', target: '#q-myacq',
+    text: '🎯 딴 카드는 <b>내 앞에</b> 깔립니다. <b>이렇게 깔린 카드로만</b> 세트를 만들어요.' },
+];
+
+// 🎴 미니게임 — 경매가 아니라 배팅. 족보와 읽기 싸움만 짚는다.
+const TUT_MN = [
+  { id: 'm_intro', when: v => v.round === 1, big: true,
+    text: `<div class="tut-h">두 장 승부에 온 걸 환영해요! ${ico('🎴', 'tut-ico')}</div>
+      본 게임과 규칙이 아예 달라요. 경매가 아니라 <b>섯다식 배팅</b>입니다.<br>
+      카드 두 장을 <b>서로 안 보이게</b> 쥐고 돈을 겁니다.` },
+  { id: 'm_flow', when: v => v.round === 1, big: true,
+    text: `<div class="tut-h">한 판의 흐름 🔄</div>
+      <div class="tut-steps">
+        <div>1️⃣ 모두 <b>40달</b>을 걸고 카드를 <b>한 장</b>씩</div>
+        <div>2️⃣ 한 명 빼고 다 맞추거나 접으면 라운드가 닫혀요</div>
+        <div>3️⃣ 둘 이상 남으면 <b>한 장 더</b> 받고 두 번째 배팅</div>
+        <div>4️⃣ 패를 열고 <b>족보</b>로 가릅니다</div>
+      </div>` },
+  { id: 'm_act', when: v => v.turn === v.me && v.actions && v.actions.length,
+    pos: 'top', target: '#mnBtns',
+    text: '내 차례예요. 보이는 카드가 하나도 없죠? 읽을 것은 <b>남이 얼마를 언제 거는가</b> 뿐입니다.',
+    act: '아래에서 <b>걸기·맞추기·접기</b>를 고르세요' },
+  { id: 'm_two', when: v => v.round === 2, big: true,
+    text: `<div class="tut-h">족보는 세 갈래 🎴</div>
+      <div class="tut-steps">
+        <div>🔥 <b>땡</b> — 같은 종류 두 장 · 2땡 &gt; 3땡 &gt; 4땡 &gt; 6땡</div>
+        <div>🎯 <b>짝</b> — 등급이 같은 두 장 · 등급이 낮을수록 강함</div>
+        <div>🃏 <b>끗</b> — 나머지 · 종류 합이 <b>작을수록</b> 강함</div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">땡은 어떤 짝보다, 짝은 어떤 끗보다 강합니다</div>` },
+  { id: 'm_jol', when: v => v.myEval && v.myEval.jol, big: true,
+    text: `<div class="tut-h">졸개의 배신! ⚔️</div>
+      지금 쥔 <b>4-6 + 6-8</b> 은 덱에서 가장 약한 두 장인데,<br>이 조합만은 <b>땡을 전부 잡습니다</b>. 190가지 중 딱 하나예요.` },
+];
 
 // ══════════════════════════════════════════════════════════
 //  튜토리얼 고르기 · 모드별 차근차근 안내
@@ -4765,189 +4910,48 @@ function startTutorial() {
 // 클래식은 실제로 한 판을 두면서 배운다(TUT_STEPS). 나머지 넷은 엔진이 달라
 // 같은 방식으로 끼워 넣을 수 없어서, 넘겨 보는 안내로 만들고 마지막에 그 모드를
 // 바로 시작할 수 있게 했다 — 읽고 끝나면 남는 게 없다.
-const C = (kind, grade, big) => `<span class="tcard k${kind}${big ? ' big' : ''}"><i>${grade}</i>${kind}</span>`;
-
-const TUT_SLIDES = {
-  item: {
-    title: '🎪 아이템전',
-    go: () => startItemGame('easy'),
-    slides: [
-      { h: '클래식 위에 아이템 한 겹',
-        t: '규칙은 클래식과 똑같아요. <b>세트를 먼저 완성</b>하면 이깁니다.<br>달라지는 건 <b>아이템</b>이 끼어든다는 것 하나예요.',
-        c: `<div class="tut-cards">${C(3,1)}${C(3,2)}${C(3,4)}<span class="tvs">=</span><span class="twin">3짜리 3장이면 승리 🏆</span></div>` },
-      { h: '아이템은 카드로 들어와요',
-        t: '중앙 덱에 <b>아이템 카드 넉 장</b>이 섞여 있어요. 뽑히면 그 자리에서 <b>한 장을 더 뽑아</b> 경매를 이어갑니다.',
-        c: `<div class="tut-two">
-             <div class="tt-p"><b>🎁 보너스</b><br>뒤집은 <b>진행자</b>가 바로 가져가요<small>덱에서 손으로 날아갑니다</small></div>
-             <div class="tt-p"><b>🏷 덤</b><br>그 경매에서 <b>진 쪽</b>이 가져가요<small>경매품에 얹혀 앞면으로 공개</small></div>
-           </div>` },
-      { h: '져 주는 것도 수가 돼요',
-        t: '덤은 <b>진 사람</b>에게 갑니다. 무엇이 걸렸는지 <b>앞면으로 보이니까</b>,<br>“저 아이템 때문에 이 판은 져 줄까?” 를 저울질하게 돼요.',
-        c: `<div style="margin-top:10px;font-size:.78rem;color:#c8a86a">덤이 지는 쪽에 쌓이니 판이 저절로 붙습니다</div>` },
-      { h: '무엇이 나올지는 모릅니다',
-        t: '아이템은 <b>13가지</b>. 등급을 가리지 않고 한 벌로 섞어 놓고 뽑아요.<br>일반이든 전설이든 <b>같은 확률</b>입니다.',
-        c: `<div class="tut-steps">
-             <div>🔍 <b>돋보기</b> — 상대 손패 두 장을 훔쳐본다</div>
-             <div>🔄 <b>뒤집개</b> — 이번 경매만 <b>약한 카드가 이긴다</b></div>
-             <div>💣 <b>폭탄</b> — 먹는 쪽이 손패 한 장을 버린다</div>
-             <div>👑 <b>폭군</b> — 이번 턴 진행자 자리를 뺏는다</div>
-           </div>` },
-      { h: '쓰는 데도 규칙이 있어요',
-        t: '한 번에 <b>3개</b>까지 들고, 한 턴에 <b>1개</b>만 씁니다.<br><b>배팅 카드를 낸 뒤에는 못 써요</b> — 결과를 보고 무르는 건 안 됩니다.',
-        c: `<div style="margin-top:10px;font-size:.78rem;color:#c8a86a">🧿 부적을 걸어 두면 상대의 다음 아이템 하나를 삼킵니다</div>` },
-    ],
-  },
-  twelve: {
-    title: '🔵 TWELVE',
-    go: () => tvSolo('easy'),
-    slides: [
-      { h: '카드가 아니라 칩으로 삽니다',
-        t: '카드는 클래식과 같아요. 다른 건 <b>무엇으로 사느냐</b>예요.<br>손패 대신 <b>칩 20개</b>로 값을 부릅니다.',
-        c: `<div class="tut-cards" style="margin-top:14px;font-size:1.4rem">🔵🔵🔵🔵🔵 <span class="tvs">×20</span></div>` },
-      { h: '지기만 해도 칩이 녹아요',
-        t: '여기가 핵심이에요. 클래식은 낸 카드가 상대에게 넘어가지만,<br>TWELVE 에서는 칩이 <b>은행으로 사라집니다</b>.',
-        c: `<div class="tut-two">
-             <div class="tt-p"><b>이긴 쪽</b><br>부른 값 <b>전부</b><small>대신 경매품 두 장을 다 가져갑니다</small></div>
-             <div class="tt-p"><b>진 쪽</b><br>부른 값의 <b>절반</b><small>카드는 못 받고 칩만 반 잃어요</small></div>
-           </div>
-           <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">그래서 <b>언제 물러설지</b>가 곧 실력입니다</div>` },
-      { h: '한 턴은 이렇게 흘러가요',
-        t: '',
-        c: `<div class="tut-steps">
-             <div>1️⃣ 진행자가 중앙 덱에서 <b>한 장 공개</b></div>
-             <div>2️⃣ 진행자가 손패에서 <b>한 장 더</b> — 이 둘이 경매품</div>
-             <div>3️⃣ 진행자가 <b>오픈 / 클로즈</b> 를 고른다</div>
-             <div>4️⃣ 정산하고 <b>진행자를 넘긴다</b></div>
-           </div>` },
-      { h: '오픈과 클로즈',
-        t: '',
-        c: `<div class="tut-two">
-             <div class="tt-p"><b>👁 오픈</b><br>값을 서로 보이며 <b>번갈아 올려요</b><small>한 명이 물러설 때까지 계속 올릴 수 있어요</small></div>
-             <div class="tt-p"><b>🙈 클로즈</b><br>진행자가 <b>짝수</b>를 한 번 부릅니다<small>값은 보이지만 출품 카드는 가려져요</small></div>
-           </div>
-           <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">클로즈는 상대가 <b>하나를 더 얹어</b> 사거나, 안 삽니다</div>` },
-      { h: '이기는 법은 셋',
-        t: '',
-        c: `<div class="tut-steps">
-             <div>🏆 앞에 깐 카드로 <b>세트 완성</b> — 그 자리에서 승리</div>
-             <div>💧 <b>칩이 0</b> 이 되면 진다 (그 경매에서 세트를 못 냈을 때)</div>
-             <div>📉 덱이 마르면 <b>세트에 더 가까운 쪽</b>이 이긴다</div>
-           </div>
-           <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">제한 시간 5분씩 — 내 차례에만 줄어듭니다</div>` },
-    ],
-  },
-  quad: {
-    title: '👥 다인전',
-    go: () => q4Start(3),
-    slides: [
-      { h: '셋이나 넷이서',
-        t: '기본은 2인전과 같아요. <b>세트를 먼저 완성</b>하면 승리.<br>사람이 늘면서 달라지는 것만 짚어 볼게요.',
-        c: `<div class="tut-cards" style="margin-top:12px">${C(4,1)}${C(4,2)}${C(4,5)}${C(4,8)}<span class="tvs">=</span><span class="twin">4짜리 4장 🏆</span></div>` },
-      { h: '진행자도 같이 배팅해요',
-        t: '2인전과 다른 첫 번째. 진행자는 출품만 하고 빠지는 게 아니라<br><b>자기도 배팅 카드를 냅니다</b>.',
-        c: `<div style="margin-top:10px;font-size:.78rem;color:#c8a86a">손패가 비면 그 사람은 건너뛰고, 아무도 못 내면 유찰돼 진행자가 회수합니다</div>` },
-      { h: '배팅 카드는 역순으로 돌아와요',
-        t: '여기가 이 판의 심장입니다. 낸 카드는 버려지지 않고 <b>서로 바꿔 갖습니다</b>.<br><b>약하게 부른 사람이 가장 강한 카드</b>를 가져가요.',
-        c: `<div class="tut-two">
-             <div class="tt-p"><b>1위로 부름</b><br>경매품 2장 획득<small>대신 가장 약한 배팅 카드를 받아요</small></div>
-             <div class="tt-p"><b>꼴등</b><br>경매품은 못 받음<small>대신 가장 강한 배팅 카드를 받아요</small></div>
-           </div>
-           <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">그래서 <b>지는 것도 수가 됩니다</b> — 일부러 약하게 내서 손패를 챙기는 수</div>` },
-      { h: '클로즈는 순서대로 공개해요',
-        t: '2인전처럼 동시에 내는 게 아니라, 진행자부터 <b>시계방향으로 한 명씩</b> 공개하며 냅니다.',
-        c: `<div style="margin-top:10px;font-size:.78rem;color:#c8a86a">뒤에 내는 사람은 앞사람 카드를 다 보고 정해요 —<br>먼저 내는 사람이 세게 질러 뒤를 물러나게 만드는 허세가 생깁니다</div>` },
-      { h: '덱은 인원에 맞춰 달라요',
-        t: '',
-        c: `<div class="tut-steps">
-             <div>👥 <b>3인</b> — 덱 30장 · 손패 6장 · 중앙 12장</div>
-             <div>👪 <b>4인</b> — 덱 38장 · 손패 6장 · 중앙 14장</div>
-           </div>
-           <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">카드가 많으면 한 장의 무게가 가벼워져서, 3인은 여덟 장을 덜어냅니다</div>` },
-    ],
-  },
-  mini: {
-    title: '🎴 미니게임 — 두 장 승부',
-    go: () => miniGo(4, false),
-    slides: [
-      { h: '두 장을 쥐고 배팅해요',
-        t: '본 게임과 규칙이 아예 다릅니다. 경매가 아니라 <b>섯다식 배팅</b>이에요.<br>카드 두 장을 <b>서로 안 보이게</b> 쥐고 돈을 겁니다.',
-        c: `<div class="tut-cards" style="margin-top:14px">${C(2,1,true)}${C(3,2,true)}</div>` },
-      { h: '한 판의 흐름',
-        t: '',
-        c: `<div class="tut-steps">
-             <div>1️⃣ 모두 <b>40달</b>을 걸고 카드를 <b>한 장</b>씩 받아요</div>
-             <div>2️⃣ 한 명 빼고 다 맞추거나 접으면 그 라운드가 닫혀요</div>
-             <div>3️⃣ 둘 이상 남으면 <b>한 장 더</b> 받고 두 번째 배팅</div>
-             <div>4️⃣ 패를 열고 <b>족보</b>로 가릅니다 — 이긴 사람이 판돈 전부</div>
-           </div>` },
-      { h: '족보는 세 갈래',
-        t: '두 장의 <b>관계</b>를 먼저 봐요.',
-        c: `<div class="tut-steps">
-             <div>🔥 <b>땡</b> — 같은 종류 두 장 · 2땡 &gt; 3땡 &gt; 4땡 &gt; 6땡</div>
-             <div>🎯 <b>짝</b> — 등급이 같은 두 장 · 등급이 낮을수록 강함</div>
-             <div>🃏 <b>끗</b> — 나머지 · 종류 합이 <b>작을수록</b> 강함 (5끗이 최강)</div>
-           </div>
-           <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">땡은 어떤 짝보다, 짝은 어떤 끗보다 강합니다</div>` },
-      { h: '졸개의 배신',
-        t: '덱에서 <b>가장 약한 두 장</b>(4-6 + 6-8)은 평소엔 밑바닥이에요.<br>그런데 이 조합만은 <b>땡을 전부 잡습니다</b>.',
-        c: `<div class="tut-cards" style="margin-top:12px">${C(4,6)}${C(6,8)}<span class="tvs">⚔</span>${C(2,1)}${C(2,2)}<span class="tvs">→</span><span class="twin">졸개 승리!</span></div>
-           <div style="margin-top:9px;font-size:.78rem;color:#c8a86a">190가지 중 딱 하나 — 그래서 터지면 사건입니다<br>땡이 아닌 상대에게는 가장 약한 끗으로 집니다</div>` },
-      { h: '달과 코인',
-        t: '자리에 앉을 때 코인을 <b>달</b>로 바꿔 갑니다 (1코인 = 10달).<br>일어설 때 남은 달을 <b>코인으로 되돌려</b> 받아요.',
-        c: `<div style="margin-top:10px;font-size:.78rem;color:#c8a86a">보이는 카드가 하나도 없습니다 — 읽을 것은 <b>남이 얼마를 언제 거는가</b> 뿐이에요.<br>나쁜 패로 끝까지 따라가는 게 제일 비쌉니다.</div>` },
-    ],
-  },
-};
-
-// 솔로플레이 — 모드 하나만 펼친다. 여럿이 동시에 열리면 다시 열다섯 칸이 된다.
-window.soloPick = function (m) {
-  const items = document.querySelectorAll('#soloModal .sm-item');
-  // m 이 없으면(되돌아가기) 전부 덮는다
-  for (const el of items) el.classList.toggle('on', !!m && el.dataset.m === m && !el.classList.contains('on'));
-};
-
 window.tutPickOpen = function () {
   closeModePanels();
   document.getElementById('tutPickModal').classList.add('show');
 };
 window.tutPickClose = function () { document.getElementById('tutPickModal').classList.remove('show'); };
 
-let tsMode = null, tsAt = 0;
+// 다섯 모드 전부 실제 판을 두면서 배운다. 넘겨 보는 안내는 읽고 나면 남는 게
+// 없어서, 판이 그 상황에 닿는 순간 그 자리를 짚어 주는 쪽으로 바꿨다.
+const TUT_LAUNCH = {
+  classic: { steps: () => TUT_STEPS, go: () => { difficulty = 'easy'; createRoom(true); } },
+  item:    { steps: () => TUT_ITEM,  go: () => startItemGame('easy') },
+  twelve:  { steps: () => TUT_TV,    go: () => tvSolo('easy') },
+  quad:    { steps: () => TUT_Q4,    go: () => q4Start(3) },
+  mini:    { steps: () => TUT_MN,    go: () => miniGo(3, false) },
+};
 window.tutStart = function (mode) {
   tutPickClose();
-  if (mode === 'classic') return startTutorial();      // 클래식은 실제로 한 판 두면서
-  tsMode = mode; tsAt = 0;
-  tutSlideDraw();
-  document.getElementById('tutSlideModal').classList.add('show');
+  const L = TUT_LAUNCH[mode]; if (!L) return;
+  tutorial = true; tutSeen = {}; tutQueue = []; tutOpen = false;
+  tutSteps = L.steps();
+  L.go();
 };
-window.tutSlideClose = function () { document.getElementById('tutSlideModal').classList.remove('show'); };
-window.tutSlide = function (d) {
-  const set = TUT_SLIDES[tsMode]; if (!set) return;   // 장수는 두 벌이 같다
-  const next = tsAt + d;
-  if (next < 0) return;
-  // 마지막에서 한 번 더 누르면 그 모드를 바로 시작한다 — 읽고 끝나면 남는 게 없다
-  if (next >= set.slides.length) { tutSlideClose(); set.go(); return; }
-  tsAt = next;
-  tutSlideDraw();
-};
-function tutSlideDraw() {
-  // 본문에 <b> 가 섞여 있어 문장 단위로 못 짝짓는다 — 설명서와 같이 한 벌을 통째로 바꾼다
-  const en = (typeof FF !== 'undefined' && FF.lang && FF.lang() === 'en' && FF.TUT) ? FF.TUT[tsMode] : null;
-  const set = en || TUT_SLIDES[tsMode]; if (!set) return;
-  const sl = set.slides[tsAt];
-  document.getElementById('tsTitle').firstChild.textContent = set.title + ' ';
-  document.getElementById('tsDots').innerHTML = set.slides.map((_, i) => `<i class="${i === tsAt ? 'on' : ''}"></i>`).join('');
-  document.getElementById('tsBody').innerHTML =
-    (sl.h ? `<div class="tut-h">${sl.h}</div>` : '') + (sl.t || '') + (sl.c || '');
-  const prev = document.getElementById('tsPrev'), next = document.getElementById('tsNext');
-  prev.style.visibility = tsAt === 0 ? 'hidden' : '';
-  next.textContent = tsAt === set.slides.length - 1 ? '직접 해보기 ▶' : '다음 →';
-}
 // 읽는 도중 다음 설명이 밀고 들어오지 않게 — 열려 있으면 큐에 쌓고, '알겠어요' 후 표시
 let tutQueue = [], tutOpen = false;
+// 모드마다 상태 모양이 달라서 무엇을 재느냐만 바꾼다 — 재는 방식은 하나다.
+function tutTickWith(view) {
+  if (!tutorial || !view) return;
+  for (const st of tutSteps) {
+    if (tutSeen[st.id]) continue;
+    if (st.when(view)) {
+      tutSeen[st.id] = true;
+      if (tutOpen) { tutQueue.push(st); tutGlowFor(st); }
+      else tutShow(st, view);
+      return;
+    }
+  }
+}
+window.tutTickWith = tutTickWith;
+
 function tutTick() {
   if (!tutorial || !state) return;
-  for (const st of TUT_STEPS) {
+  for (const st of tutSteps) {
     if (tutSeen[st.id]) continue;
     if (st.when(state)) {
       tutSeen[st.id] = true;
@@ -4957,12 +4961,13 @@ function tutTick() {
     }
   }
 }
-function tutShow(st) {
+function tutShow(st, view) {
   const box = document.getElementById('tutBox');
+  const _v = view || state;
   // 튜토리얼은 한 문장 안에 <b> 가 섞여 있어, 글자 조각마다 번역하면 어순이 깨진다.
   // 문장을 통째로 바꾼 뒤 넣는다(사전에 문장 전체가 들어 있다).
   const T = (x) => (window.FF ? FF.t(x) : x);
-  const text = T(typeof st.text === 'function' ? st.text(state) : st.text);
+  const text = T(typeof st.text === 'function' ? st.text(_v) : st.text);
   document.getElementById('tutText').innerHTML = text
     + T(st.cards || '')
     + (st.act ? `<div class="tut-do">👉 ${T(st.act)}</div>` : '');
@@ -5315,6 +5320,7 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spe
   document.getElementById('gameOver').style.display = 'none';
   document.getElementById('matchModal').classList.remove('show');
   rkHide();            // 룰렛이 남아 있으면 다음 매칭에 지난 결과가 보인다
+  matchCountdownStop();
   closeModePanels();   // 열려 있던 솔로/멀티 팝업 닫기 (관전 진입 등)
   hideGrace();
   document.getElementById('rematchNote').textContent = '';
@@ -6492,6 +6498,7 @@ socket.on('tv_state', (v) => {
   tvReact(tvPrev, v);      // 바뀐 대목을 말풍선·움직임으로 먼저 알린다
   tvPrev = v; tvView = v;
   tvRender(v);
+  tutTickWith(v);            // 실전 튜토리얼 — 판이 그 상황에 닿으면 짚어 준다
   tvJustDrew = false;
 });
 socket.on('tv_over', ({ win, endBy, view }) => {
