@@ -1528,6 +1528,9 @@ const connByIp = new Map();
 // 랭크게임에서 나올 수 있는 판. 무엇이 걸릴지 모르니 세 가지를 다 익혀야 한다 —
 // 한 모드만 파고들어 점수를 쌓는 길을 막는 것이 이 무작위의 뜻이다.
 const RANKED_MODES = ['classic', 'item', 'twelve'];
+// 화면에서 모드 룰렛이 도는 시간. 이만큼은 판을 안 연다 — 클라이언트의
+// rankRoulette(1.5초 회전 + 0.7초 멈춤)과 맞춰 둔다.
+const RANK_SPIN_MS = 2300;
 const pickRankedMode = () => RANKED_MODES[Math.floor(Math.random() * RANKED_MODES.length)];
 
 let matchQueue = [];                  // 빠른 대전 대기열
@@ -1575,12 +1578,16 @@ function startBotMatch(entry, opts = {}) {
   s.leave('lobby'); s.join(roomId); s.roomId = roomId; s.playerIndex = 0; s.pid = entry.pid;
   rooms[roomId].startedAt = Date.now();
   s.emit('ranked_mode', { mode, bot: true });
-  if (mode === 'twelve') { if (tvRestart) tvRestart(roomId); return; }
-  rooms[roomId].game = createGame(rooms[roomId].itemMode);
-  io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles, itemMode: rooms[roomId].itemMode });
-  broadcast(roomId);
-  startClock(roomId);
-  setTimeout(() => maybeCpuAct(roomId), 800);
+  setTimeout(() => {
+    const room = rooms[roomId];
+    if (!room || room.game || room.tv) return;
+    if (mode === 'twelve') { if (tvRestart) tvRestart(roomId); return; }
+    room.game = createGame(room.itemMode);
+    io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: room.nicks, profiles: room.profiles, itemMode: room.itemMode });
+    broadcast(roomId);
+    startClock(roomId);
+    setTimeout(() => maybeCpuAct(roomId), 800);
+  }, RANK_SPIN_MS);
 }
 
 // ── 소켓 ───────────────────────────────────────────────────
@@ -2614,11 +2621,18 @@ function startMatch(a, b, opts = {}) {
   // 무엇이 걸렸는지 먼저 알린다 — 판이 열리기 전에 한 박자 보여 줘야
   // "왜 갑자기 칩 경매지" 가 안 된다.
   io.to(roomId).emit('ranked_mode', { mode });
-  if (mode === 'twelve') { if (tvRestart) tvRestart(roomId); return; }
-  rooms[roomId].game = createGame(itemMode);
-  io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles, itemMode });
-  broadcast(roomId);
-  startClock(roomId);
+  // 화면에서 룰렛이 돌아가는 동안(약 2.2초)은 판을 열지 않는다. 바로 열면
+  // 무엇이 걸렸는지 보기도 전에 판으로 넘어가 룰렛이 뜻을 잃는다.
+  setTimeout(() => {
+    const room = rooms[roomId];
+    if (!room || room.game || room.tv) return;              // 그 사이에 사라졌거나 이미 열렸다
+    if (mode === 'twelve') { if (tvRestart) tvRestart(roomId); return; }
+    room.game = createGame(itemMode);
+    room.startedAt = Date.now();
+    io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: room.nicks, profiles: room.profiles, itemMode });
+    broadcast(roomId);
+    startClock(roomId);
+  }, RANK_SPIN_MS);
 }
 
 function resolveBidding(roomId) {

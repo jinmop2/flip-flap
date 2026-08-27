@@ -853,16 +853,58 @@ window.quickAny = function () {
 socket.on('quick_any_found', () => {
   const m = document.getElementById('matchModal'); if (m) m.classList.remove('show');
 });
-// 랭크에서 무엇이 걸렸는지 — 판이 열리기 전에 한 박자 알려 준다
+// 랭크에서 무엇이 걸렸는지 — 판이 열리기 전에 한 박자 알려 준다.
+// 글자만 바뀌면 "처음부터 정해져 있었나" 싶다. 룰렛처럼 돌리다 멈춰야
+// 지금 뽑혔다는 게 보인다.
 const RANK_LABEL = { classic: '클래식', item: '아이템전', twelve: 'TWELVE' };
+const RANK_ICO = { classic: '🃏', item: '🎪', twelve: '🔵' };
+const RANK_ORDER = ['classic', 'item', 'twelve'];
+const SLOT_H = 46;          // .rk-slot 높이와 같아야 한다
+const RK_LOOPS = 6;         // 몇 바퀴 돌고 멈출까
+
+function rankRoulette(mode, done) {
+  const box = document.getElementById('rkRoulette');
+  const reel = document.getElementById('rkReel');
+  const win = box ? box.querySelector('.rk-window') : null;
+  if (!box || !reel) { done(); return; }
+  const slot = (m) => `<div class="rk-slot m-${m}"><i>${RANK_ICO[m]}</i>${RANK_LABEL[m]}</div>`;
+  // 돌 만큼 이어 붙이고, 마지막에 뽑힌 것이 창에 오도록 한 칸 더 둔다
+  const at = Math.max(0, RANK_ORDER.indexOf(mode));
+  let html = '';
+  for (let i = 0; i < RK_LOOPS; i++) for (const m of RANK_ORDER) html += slot(m);
+  html += slot(mode);
+  reel.innerHTML = html;
+  const end = (RK_LOOPS * RANK_ORDER.length) * SLOT_H;
+  box.classList.add('on');
+  win.classList.remove('landed');
+  reel.style.transition = 'none';
+  reel.style.transform = 'translateY(0px)';
+  void reel.offsetWidth;                                  // 시작 위치 확정
+  const dur = 1500;
+  reel.style.transition = `transform ${dur}ms cubic-bezier(.16,.9,.24,1)`;
+  reel.style.transform = `translateY(-${end}px)`;
+  // 돌아가는 동안 딸깍 — 소리가 있어야 '돌고 있다' 가 귀로도 잡힌다
+  for (let i = 0; i < 9; i++) setTimeout(() => playSound('tick'), 90 + i * (dur / 11));
+  setTimeout(() => {
+    win.classList.add('landed');
+    playSound('bell');
+    setTimeout(done, 700);                                // 멈춘 걸 볼 시간
+  }, dur + 40);
+}
+
 socket.on('ranked_mode', ({ mode, bot }) => {
   isItemMode = mode === 'item';
-  const t = document.getElementById('matchTitle');
-  if (t) t.textContent = (bot ? '👑 전문가 AI · ' : '🏆 ') + (RANK_LABEL[mode] || mode);
   const h = document.getElementById('matchHint');
-  if (h) h.textContent = bot ? '상대를 못 찾아 전문가 AI 가 들어왔어요' : '상대를 찾았어요!';
-  toast(`${bot ? '👑 전문가 AI · ' : '🎲 '}<b>${esc(RANK_LABEL[mode] || mode)}</b>`, 1800);
+  if (h) h.textContent = bot ? '상대를 못 찾았어요 — 전문가 AI 와 붙습니다' : '상대를 찾았어요! 어떤 판일까요…';
+  const t = document.getElementById('matchTitle');
+  if (t) t.textContent = bot ? '👑 전문가 AI' : '🏆 랭크게임';
+  rankRoulette(mode, () => {
+    if (t) t.textContent = (bot ? '👑 전문가 AI · ' : '🏆 ') + (RANK_LABEL[mode] || mode);
+    toast(`${bot ? '👑 전문가 AI · ' : '🎲 '}<b>${esc(RANK_LABEL[mode] || mode)}</b>`, 1800);
+  });
 });
+// 판이 열리면 룰렛은 걷는다 — 다음에 다시 열 때 지난 결과가 남아 있으면 안 된다
+function rkHide() { const b = document.getElementById('rkRoulette'); if (b) b.classList.remove('on'); }
 
 // 빠른 입장 — 그 모드로 열린 방이 있으면 바로 들어가고, 없으면 하나 열고 기다린다.
 // 랭크가 안 걸리므로 편하게 붙는 자리다.
@@ -876,9 +918,10 @@ window.quickJoin = function (mode) {
 function cancelMatch() {
   socket.emit('cancel_match');
   document.getElementById('matchModal').classList.remove('show');
+  rkHide();
 }
 socket.on('queued', () => document.getElementById('matchModal').classList.add('show'));
-socket.on('unqueued', () => document.getElementById('matchModal').classList.remove('show'));
+socket.on('unqueued', () => { document.getElementById('matchModal').classList.remove('show'); rkHide(); });
 
 // ── 랭킹 ────────────────────────────────────────────────────
 function openLeaderboard() {
@@ -4775,6 +4818,12 @@ const TUT_SLIDES = {
   },
 };
 
+// 솔로플레이 — 모드 하나만 펼친다. 여럿이 동시에 열리면 다시 열다섯 칸이 된다.
+window.soloPick = function (m) {
+  const items = document.querySelectorAll('#soloModal .sm-item');
+  for (const el of items) el.classList.toggle('on', el.dataset.m === m && !el.classList.contains('on'));
+};
+
 window.tutPickOpen = function () {
   closeModePanels();
   document.getElementById('tutPickModal').classList.add('show');
@@ -5183,6 +5232,7 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spe
   // 재대결/매칭/재접속 대비 초기화
   document.getElementById('gameOver').style.display = 'none';
   document.getElementById('matchModal').classList.remove('show');
+  rkHide();            // 룰렛이 남아 있으면 다음 매칭에 지난 결과가 보인다
   closeModePanels();   // 열려 있던 솔로/멀티 팝업 닫기 (관전 진입 등)
   hideGrace();
   document.getElementById('rematchNote').textContent = '';

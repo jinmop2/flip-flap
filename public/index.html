@@ -185,8 +185,75 @@
       border-color:#5cc8a8;
       box-shadow:inset 0 1px 0 rgba(180,255,230,.28), 0 3px 12px rgba(0,0,0,.35);
     }
+    /* 둘이 딱 붙어 있어 한 덩이로 읽혔다. 서로 다른 것을 고르는 자리라 띄운다. */
+    .mm-hero + .mm-hero.quick { margin-top:9px; }
     .mm-hero.quick .hh-name { color:#dffaef; font-size:.94rem; }
     .mm-hero.quick .hh-sub { color:rgba(210,250,235,.72); }
+
+    /* 랭크게임 모드 룰렛 — 세 판 중 무엇이 걸릴지 돌려서 보여 준다 */
+    .rk-roulette { display:none; flex-direction:column; align-items:center; gap:4px; width:100%; margin-top:2px; }
+    .rk-roulette.on { display:flex; }
+    .rk-window {
+      position:relative; width:100%; height:46px; overflow:hidden; border-radius:12px;
+      background:rgba(0,0,0,.35); border:1.5px solid rgba(200,160,0,.45);
+      box-shadow:inset 0 0 18px rgba(0,0,0,.55);
+    }
+    /* 위아래를 흐리게 덮어 '창 안에서 돌아가는' 느낌을 준다 */
+    .rk-window::before, .rk-window::after {
+      content:''; position:absolute; left:0; right:0; height:13px; pointer-events:none; z-index:2;
+    }
+    .rk-window::before { top:0; background:linear-gradient(180deg, rgba(20,8,12,.95), transparent); }
+    .rk-window::after { bottom:0; background:linear-gradient(0deg, rgba(20,8,12,.95), transparent); }
+    .rk-reel { display:flex; flex-direction:column; will-change:transform; }
+    .rk-slot {
+      height:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center; gap:7px;
+      font-family:'Fredoka'; font-size:1rem; font-weight:800; color:#f5e6c0; letter-spacing:1px;
+    }
+    .rk-slot i { font-style:normal; font-size:1.15rem; }
+    .rk-slot.m-item { color:#e2d4ff; }
+    .rk-slot.m-twelve { color:#bfe8ff; }
+    .rk-mark { color:var(--gold); font-size:.7rem; line-height:1; margin-top:-2px; }
+    /* 멈춘 뒤 한 번 튄다 — 여기서 멎었다는 표시 */
+    @keyframes rkLand { 0%{ transform:scale(1); } 45%{ transform:scale(1.06); } 100%{ transform:scale(1); } }
+    .rk-window.landed { animation:rkLand .34s ease-out; border-color:var(--gold);
+      box-shadow:inset 0 0 18px rgba(0,0,0,.55), 0 0 16px rgba(255,215,120,.45); }
+    @media (prefers-reduced-motion: reduce) { .rk-reel { transition:none !important; } }
+
+    /* 솔로플레이 — 모드를 먼저 고르고 그 안에서 난이도를 고른다 */
+    .sm-list { display:flex; flex-direction:column; gap:8px; width:100%; }
+    .sm-item { width:100%; }
+    .sm-head {
+      display:flex; align-items:center; gap:11px; width:100%; text-align:left; cursor:pointer;
+      padding:13px 14px; border-radius:14px; font-family:'Fredoka';
+      background:linear-gradient(180deg,#3a1018,#260a10); border:1.5px solid #b98d34;
+      box-shadow:inset 0 1px 0 rgba(255,215,120,.16); transition:.14s;
+    }
+    .sm-head:hover { filter:brightness(1.12); }
+    .sm-ico { font-size:1.5rem; line-height:1; flex-shrink:0; }
+    .sm-txt { flex:1; min-width:0; }
+    .sm-txt b { display:block; font-size:.98rem; color:#f5e6c0; }
+    .sm-txt small { display:block; font-size:.68rem; color:#a89880; margin-top:1px; line-height:1.35; }
+    .sm-arrow { flex-shrink:0; color:#c8a86a; font-size:.9rem; transition:transform .2s; }
+    /* 펼쳐진 칸은 머리를 조금 더 밝게 — 지금 무엇을 고르는 중인지 보이게 */
+    .sm-item.on .sm-head { border-color:var(--gold); filter:brightness(1.1); border-radius:14px 14px 0 0; }
+    .sm-item.on .sm-arrow { transform:rotate(180deg); }
+    /* 접힘/펼침 — grid 로 여닫으면 높이를 몰라도 부드럽게 움직인다 */
+    .sm-body {
+      display:grid; grid-template-rows:0fr; transition:grid-template-rows .22s ease, opacity .18s;
+      opacity:0; overflow:hidden;
+      background:rgba(0,0,0,.25); border:1.5px solid transparent; border-top:none; border-radius:0 0 14px 14px;
+    }
+    .sm-item.on .sm-body { grid-template-rows:1fr; opacity:1; border-color:var(--gold); }
+    .sm-body > * { min-height:0; overflow:hidden; }
+    .sm-item.on .sm-body > * { padding:10px; }
+    .sm-item.t-item .sm-head { background:linear-gradient(180deg,#3a2358,#241040); border-color:#8b6ad8; }
+    .sm-item.t-item .sm-txt b { color:#e2d4ff; }
+    .sm-item.t-tv .sm-head { background:linear-gradient(180deg,#173a55,#0d2233); border-color:#6ac0f0; }
+    .sm-item.t-tv .sm-txt b { color:#bfe8ff; }
+    .sm-item.t-quad .sm-head { background:linear-gradient(180deg,#123a30,#0c2620); border-color:#4a9a7a; }
+    .sm-item.t-quad .sm-txt b { color:#c8f0dc; }
+    .sm-item.t-mini .sm-head { background:linear-gradient(180deg,#4a1030,#2c0820); border-color:#d06a9a; }
+    .sm-item.t-mini .sm-txt b { color:#ffd6e8; }
 
     /* 나란한 칸들 */
     .mm-hint { font-size:.68rem; color:#8a7a80; text-align:center; margin:-2px 0 7px; }
@@ -4975,97 +5042,125 @@
     <div class="lb-title"><span data-ico="♠️"></span> 솔로플레이
       <span class="close-x" onclick="closeModePanels()">×</span></div>
 
-    <div class="mm-sec"><b>클래식</b><i></i></div>
-    <div class="mm-tiles c3">
-      <button class="mm-tile" onclick="soloPlay('easy')">
-        <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
-        <span class="mt-name">쉬움</span>
-        <span class="mt-sub">🪙 5</span>
-      </button>
-      <button class="mm-tile" onclick="soloPlay('hard')">
-        <span class="mt-ico">★★<span style="opacity:.28">★</span></span>
-        <span class="mt-name">보통</span>
-        <span class="mt-sub">🪙 15</span>
-      </button>
-      <button class="mm-tile d-expert" onclick="soloPlay('expert')">
-        <span class="mt-ico">👑</span>
-        <span class="mt-name">전문가</span>
-        <span class="mt-sub">🪙 40</span>
-      </button>
-    </div>
+    <!-- 모드를 먼저 고르고, 그 안에서 난이도를 고른다. 예전엔 다섯 모드의
+         난이도 칸이 한 번에 다 펼쳐져 있어 열다섯 개가 쏟아졌다 —
+         무엇부터 봐야 할지가 안 보였다. -->
+    <div class="sm-list">
+      <div class="sm-item" data-m="classic">
+        <button class="sm-head" onclick="soloPick('classic')">
+          <span class="sm-ico">🃏</span>
+          <span class="sm-txt"><b>클래식</b><small>경매로 세트를 먼저 완성하면 승리</small></span>
+          <span class="sm-arrow">▾</span>
+        </button>
+        <div class="sm-body">
+          <div class="mm-tiles c3">
+            <button class="mm-tile" onclick="soloPlay('easy')">
+              <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
+              <span class="mt-name">쉬움</span><span class="mt-sub">🪙 5</span>
+            </button>
+            <button class="mm-tile" onclick="soloPlay('hard')">
+              <span class="mt-ico">★★<span style="opacity:.28">★</span></span>
+              <span class="mt-name">보통</span><span class="mt-sub">🪙 15</span>
+            </button>
+            <button class="mm-tile d-expert" onclick="soloPlay('expert')">
+              <span class="mt-ico">👑</span>
+              <span class="mt-name">전문가</span><span class="mt-sub">🪙 40</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
-    <div class="mm-sec"><b>아이템전</b><span class="mc-tag">이벤트</span><i></i></div>
-    <p class="mm-hint">경매에서 지면 아이템이 들어와요</p>
-    <div class="mm-tiles c3">
-      <button class="mm-tile t-item" onclick="startItemGame('easy')">
-        <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
-        <span class="mt-name">쉬움</span>
-        <span class="mt-sub">🪙 5</span>
-      </button>
-      <button class="mm-tile t-item" onclick="startItemGame('hard')">
-        <span class="mt-ico">★★<span style="opacity:.28">★</span></span>
-        <span class="mt-name">보통</span>
-        <span class="mt-sub">🪙 15</span>
-      </button>
-      <button class="mm-tile t-item" onclick="startItemGame('expert')">
-        <span class="mt-ico">👑</span>
-        <span class="mt-name">전문가</span>
-        <span class="mt-sub">🪙 40</span>
-      </button>
-    </div>
+      <div class="sm-item t-item" data-m="item">
+        <button class="sm-head" onclick="soloPick('item')">
+          <span class="sm-ico">🎪</span>
+          <span class="sm-txt"><b>아이템전</b><small>경매에서 지면 아이템이 들어와요</small></span>
+          <span class="sm-arrow">▾</span>
+        </button>
+        <div class="sm-body">
+          <div class="mm-tiles c3">
+            <button class="mm-tile t-item" onclick="startItemGame('easy')">
+              <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
+              <span class="mt-name">쉬움</span><span class="mt-sub">🪙 5</span>
+            </button>
+            <button class="mm-tile t-item" onclick="startItemGame('hard')">
+              <span class="mt-ico">★★<span style="opacity:.28">★</span></span>
+              <span class="mt-name">보통</span><span class="mt-sub">🪙 15</span>
+            </button>
+            <button class="mm-tile t-item d-expert" onclick="startItemGame('expert')">
+              <span class="mt-ico">👑</span>
+              <span class="mt-name">전문가</span><span class="mt-sub">🪙 40</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
-    <div class="mm-sec"><b>TWELVE</b><span class="mc-tag">신규</span><i></i></div>
-    <p class="mm-hint">카드가 아니라 칩으로 값을 부르는 경매예요</p>
-    <div class="mm-tiles c3">
-      <button class="mm-tile t-twelve" onclick="tvSolo('easy')">
-        <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
-        <span class="mt-name">쉬움</span>
-        <span class="mt-sub">🪙 5</span>
-      </button>
-      <button class="mm-tile t-twelve" onclick="tvSolo('hard')">
-        <span class="mt-ico">★★<span style="opacity:.28">★</span></span>
-        <span class="mt-name">보통</span>
-        <span class="mt-sub">🪙 15</span>
-      </button>
-      <button class="mm-tile t-twelve d-expert" onclick="tvSolo('expert')">
-        <span class="mt-ico">👑</span>
-        <span class="mt-name">전문가</span>
-        <span class="mt-sub">🪙 40</span>
-      </button>
-    </div>
+      <div class="sm-item t-tv" data-m="twelve">
+        <button class="sm-head" onclick="soloPick('twelve')">
+          <span class="sm-ico">🔵</span>
+          <span class="sm-txt"><b>TWELVE</b><small>카드가 아니라 칩으로 값을 부르는 경매</small></span>
+          <span class="sm-arrow">▾</span>
+        </button>
+        <div class="sm-body">
+          <div class="mm-tiles c3">
+            <button class="mm-tile t-twelve" onclick="tvSolo('easy')">
+              <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
+              <span class="mt-name">쉬움</span><span class="mt-sub">🪙 5</span>
+            </button>
+            <button class="mm-tile t-twelve" onclick="tvSolo('hard')">
+              <span class="mt-ico">★★<span style="opacity:.28">★</span></span>
+              <span class="mt-name">보통</span><span class="mt-sub">🪙 15</span>
+            </button>
+            <button class="mm-tile t-twelve d-expert" onclick="tvSolo('expert')">
+              <span class="mt-ico">👑</span>
+              <span class="mt-name">전문가</span><span class="mt-sub">🪙 40</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
-    <div class="mm-sec"><b>다인전</b><span class="mc-tag beta">3·4인</span><i></i></div>
-    <div class="mm-tiles c2">
-      <button class="mm-tile t-quad" onclick="q4Start(3)">
-        <span class="mt-ico">👥</span>
-        <span class="mt-name">3인전</span>
-        <span class="mt-sub">AI 2명 · 손패 6장</span>
-      </button>
-      <button class="mm-tile t-quad" onclick="q4Start(4)">
-        <span class="mt-ico">👪</span>
-        <span class="mt-name">4인전</span>
-        <span class="mt-sub">AI 3명 · 손패 6장</span>
-      </button>
-    </div>
+      <div class="sm-item t-quad" data-m="quad">
+        <button class="sm-head" onclick="soloPick('quad')">
+          <span class="sm-ico">👥</span>
+          <span class="sm-txt"><b>다인전</b><small>셋·넷이서 · 지는 것도 수가 되는 판</small></span>
+          <span class="sm-arrow">▾</span>
+        </button>
+        <div class="sm-body">
+          <div class="mm-tiles c2">
+            <button class="mm-tile t-quad" onclick="q4Start(3)">
+              <span class="mt-ico">👥</span>
+              <span class="mt-name">3인전</span><span class="mt-sub">AI 2명 · 손패 6장</span>
+            </button>
+            <button class="mm-tile t-quad" onclick="q4Start(4)">
+              <span class="mt-ico">👪</span>
+              <span class="mt-name">4인전</span><span class="mt-sub">AI 3명 · 손패 6장</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
-    <div class="mm-sec"><b>미니게임</b><span class="mc-tag">두 장 승부</span><i></i></div>
-    <p class="mm-hint">카드 두 장을 쥐고 배팅하는 섯다식 판이에요</p>
-    <div class="mm-tiles c3">
-      <button class="mm-tile t-mini" onclick="miniGo(2, false)">
-        <span class="mt-ico">🃏</span>
-        <span class="mt-name">2인</span>
-        <span class="mt-sub">AI 1명</span>
-      </button>
-      <button class="mm-tile t-mini" onclick="miniGo(3, false)">
-        <span class="mt-ico">🃏</span>
-        <span class="mt-name">3인</span>
-        <span class="mt-sub">AI 2명</span>
-      </button>
-      <button class="mm-tile t-mini" onclick="miniGo(4, false)">
-        <span class="mt-ico">🃏</span>
-        <span class="mt-name">4인</span>
-        <span class="mt-sub">AI 3명</span>
-      </button>
+      <div class="sm-item t-mini" data-m="mini">
+        <button class="sm-head" onclick="soloPick('mini')">
+          <span class="sm-ico">🎴</span>
+          <span class="sm-txt"><b>미니게임</b><small>두 장으로 겨루는 섯다식 판</small></span>
+          <span class="sm-arrow">▾</span>
+        </button>
+        <div class="sm-body">
+          <div class="mm-tiles c3">
+            <button class="mm-tile t-mini" onclick="miniGo(2, false)">
+              <span class="mt-ico">🃏</span>
+              <span class="mt-name">2인</span><span class="mt-sub">AI 1명</span>
+            </button>
+            <button class="mm-tile t-mini" onclick="miniGo(3, false)">
+              <span class="mt-ico">🃏</span>
+              <span class="mt-name">3인</span><span class="mt-sub">AI 2명</span>
+            </button>
+            <button class="mm-tile t-mini" onclick="miniGo(4, false)">
+              <span class="mt-ico">🃏</span>
+              <span class="mt-name">4인</span><span class="mt-sub">AI 3명</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -5243,6 +5338,12 @@
     <div class="thinking-dots" style="font-size:.9rem; color:#8a7a80;">상대를 찾는 중<span>.</span><span>.</span><span>.</span></div>
     <!-- 무엇이 걸렸는지·언제 AI 가 오는지를 여기에 적는다 — 기다리는 동안 알아야 할 건 그 둘이다 -->
     <p class="auth-hint" id="matchHint" style="margin:0;text-align:center;line-height:1.6"></p>
+    <!-- 어느 판이 걸리는지 룰렛으로 돌린다. 그냥 글자만 바뀌면 "정해져 있었나" 싶은데,
+         돌아가다 멈추면 지금 뽑혔다는 게 보인다. -->
+    <div class="rk-roulette" id="rkRoulette">
+      <div class="rk-window"><div class="rk-reel" id="rkReel"></div></div>
+      <div class="rk-mark">▲</div>
+    </div>
     <button class="btn btn-outline" onclick="cancelMatch()">취소</button>
   </div>
 </div>
