@@ -182,7 +182,7 @@
        금색을 그대로 쓰면 둘이 같은 무게로 읽혀, 한 단계 낮은 청록으로 낸다. */
     .mm-hero.quick {
       background:linear-gradient(135deg,#14413a 0%,#1b5a4c 45%,#0e2f2a 100%);
-      border-color:#5cc8a8; margin-top:-3px;
+      border-color:#5cc8a8;
       box-shadow:inset 0 1px 0 rgba(180,255,230,.28), 0 3px 12px rgba(0,0,0,.35);
     }
     .mm-hero.quick .hh-name { color:#dffaef; font-size:.94rem; }
@@ -195,6 +195,11 @@
     .mm-tiles.c3 { grid-template-columns:repeat(3, 1fr); }
     .mm-tiles.c4 { grid-template-columns:repeat(4, 1fr); }
     .mm-tiles.c4 .mt-name { font-size:.74rem; }
+    /* 빠른 입장은 다섯 모드가 됐다 — 좁은 폰에서도 한 줄에 들어가게 더 줄인다 */
+    .mm-tiles.c5 { grid-template-columns:repeat(5, 1fr); gap:6px; }
+    .mm-tiles.c5 .mt-name { font-size:.62rem; letter-spacing:-.3px; }
+    .mm-tiles.c5 .mt-ico { font-size:1.05rem; }
+    .mm-tiles.c5 .mm-tile { padding:10px 3px 8px; border-radius:11px; }
     .mm-tile.t-tv { background:linear-gradient(180deg,#1c4a6b,#0d2a44); border-color:#4aa8dd; }
     .mm-tile.t-tv .mt-name { color:#bfe8ff; }
     .mm-tile {
@@ -3227,6 +3232,8 @@
     /* 대기 카드의 모드 고르기 */
     /* 넷을 한 줄에 우겨넣으면 글자가 깨진다 — 두 칸씩 두 줄로 편다 */
     .wc-modes { display:grid; grid-template-columns:1fr 1fr; gap:6px; width:100%; margin:2px 0 4px; }
+    /* 모드가 다섯이 되어 마지막 하나가 혼자 남는다 — 한 줄을 다 쓰게 해 빈칸을 없앤다 */
+    .wc-modes .wc-mode:last-child:nth-child(odd) { grid-column:1 / -1; }
     .wc-mode {
       display:flex; flex-direction:column; align-items:center; gap:1px; cursor:pointer;
       padding:8px 4px; border-radius:11px; font-family:'Fredoka',system-ui,sans-serif;
@@ -4871,6 +4878,9 @@
       <button class="wc-mode" data-m="quad" onclick="roomMode('quad')">
         <b>다인전</b><small>3·4인</small>
       </button>
+      <button class="wc-mode" data-m="mini" onclick="roomMode('mini')">
+        <b>미니게임</b><small>두 장 승부</small>
+      </button>
     </div>
 
     <button class="btn btn-gold" id="wcStart" onclick="roomStart()" disabled>게임 시작</button>
@@ -4970,21 +4980,16 @@
 
     <div class="mm-sec"><b>미니게임</b><span class="mc-tag">두 장 승부</span><i></i></div>
     <p class="mm-hint">카드 두 장을 쥐고 배팅하는 섯다식 판이에요</p>
-    <div class="mm-tiles c3">
-      <button class="mm-tile t-mini" onclick="miniGo(2, false)">
-        <span class="mt-ico">🃏</span>
-        <span class="mt-name">2인</span>
-        <span class="mt-sub">AI 1명</span>
-      </button>
-      <button class="mm-tile t-mini" onclick="miniGo(3, false)">
-        <span class="mt-ico">🃏</span>
-        <span class="mt-name">3인</span>
-        <span class="mt-sub">AI 2명</span>
-      </button>
+    <div class="mm-tiles c2">
       <button class="mm-tile t-mini" onclick="miniGo(4, false)">
         <span class="mt-ico">🃏</span>
-        <span class="mt-name">4인</span>
-        <span class="mt-sub">AI 3명</span>
+        <span class="mt-name">미니게임</span>
+        <span class="mt-sub">AI 3명 · 자리 4</span>
+      </button>
+      <button class="mm-tile t-mini" onclick="quickJoin('mini')">
+        <span class="mt-ico">🌐</span>
+        <span class="mt-name">온라인</span>
+        <span class="mt-sub">방에 모여서 시작</span>
       </button>
     </div>
     <div class="lb-btns">
@@ -5022,7 +5027,7 @@
     </button>
 
     <div class="mm-sec"><b>빠른 입장</b><i></i></div>
-    <div class="mm-tiles c4">
+    <div class="mm-tiles c5">
       <button class="mm-tile" onclick="quickJoin('classic')">
         <span class="mt-ico">🃏</span>
         <span class="mt-name">클래식</span>
@@ -5039,22 +5044,9 @@
         <span class="mt-ico">👥</span>
         <span class="mt-name">다인전</span>
       </button>
-    </div>
-
-    <div class="mm-sec"><b>미니게임</b><span class="mc-tag">두 장 승부</span><i></i></div>
-    <p class="mm-hint">같은 인원을 기다리는 사람과 붙어요 · 20초 안에 안 차면 AI 가 채웁니다</p>
-    <div class="mm-tiles c3">
-      <button class="mm-tile t-mini" onclick="miniGo(2, true)">
+      <button class="mm-tile t-mini" onclick="quickJoin('mini')">
         <span class="mt-ico">🃏</span>
-        <span class="mt-name">2인</span>
-      </button>
-      <button class="mm-tile t-mini" onclick="miniGo(3, true)">
-        <span class="mt-ico">🃏</span>
-        <span class="mt-name">3인</span>
-      </button>
-      <button class="mm-tile t-mini" onclick="miniGo(4, true)">
-        <span class="mt-ico">🃏</span>
-        <span class="mt-name">4인</span>
+        <span class="mt-name">미니게임</span>
       </button>
     </div>
 

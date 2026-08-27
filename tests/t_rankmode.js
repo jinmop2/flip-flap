@@ -52,14 +52,40 @@ ok('버튼이 랭크 바로 아래', (() => {
   return a > 0 && b > a && (b - a) < 700;
 })());
 
-console.log('\n⑤ 미니게임 — 솔로·멀티 안으로');
+console.log('\n⑤-0 랭크·빠른대전 버튼이 안 겹친다');
+// margin-top 을 음수로 당겨 두 버튼이 3px 겹쳐 있었다 — 아래 버튼 윗줄을
+// 누르면 위 버튼이 잡힌다. 사이는 flex gap 이 이미 벌려 준다.
+ok('음수 여백으로 당기지 않는다',
+   /\.mm-hero\.quick \{[\s\S]{0,220}\}/.test(htm)
+   && !/\.mm-hero\.quick \{[\s\S]{0,220}margin-top:-/.test(htm));
+
+console.log('\n⑤ 미니게임 — 다른 모드와 같은 자리에');
 ok('로비 카드에서 뺐다', !/onclick="miniOpen\(\)"[\s\S]{0,120}미니게임/.test(htm));
-ok('솔로 패널에 있다', /soloModal[\s\S]*?miniGo\(2, false\)[\s\S]*?miniGo\(4, false\)/.test(htm));
-ok('멀티 패널에 있다', /multiModal[\s\S]*?miniGo\(2, true\)[\s\S]*?miniGo\(4, true\)/.test(htm));
-ok('어디서 눌렀는지가 곧 답이다', /window\.miniGo = function \(seats, online\)/.test(cli)
-   && /if \(online\) \{[\s\S]{0,260}socket\.emit\('mini_quick', \{ seats \}\);[\s\S]{0,60}socket\.emit\('mini_sit', \{ seats \}\);/.test(cli));
 ok('곁들이 격자는 한 칸이 됐다', /<div class="mode-grid sub one">/.test(htm)
    && /\.mode-grid\.sub\.one \{ grid-template-columns:1fr; \}/.test(htm));
+// 다른 모드와 같은 통로로 — 빠른 입장·방 모드 고르기에 나란히 선다
+ok('빠른 입장에 있다', /quickJoin\('mini'\)/.test(htm)
+   && /\['classic', 'item', 'quad', 'twelve', 'mini'\]\.includes\(mode\)/.test(srv));
+ok('빠른 입장이 다섯 칸이 됐다', /<div class="mm-tiles c5">/.test(htm)
+   && /\.mm-tiles\.c5 \{ grid-template-columns:repeat\(5, 1fr\); gap:6px; \}/.test(htm));
+ok('방 모드 고르기에 있다', /data-m="mini" onclick="roomMode\('mini'\)"/.test(htm)
+   && /mini: '미니게임'/.test(cli));
+ok('다섯 번째 칸이 한 줄을 다 쓴다', /\.wc-modes \.wc-mode:last-child:nth-child\(odd\) \{ grid-column:1 \/ -1; \}/.test(htm));
+
+console.log('\n⑥ 인원을 미리 안 나눈다 — 자리 넷, 앉은 대로');
+ok('자리가 넷이다', /room\.mode === 'quad' \|\| room\.mode === 'mini'\) \? 4 : 2/.test(srv));
+ok('둘이면 선다', /const ready = room\.mode === 'mini' \? n >= 2 :/.test(srv));
+ok('앉은 사람 수가 곧 자리 수', /miniOpenTable\(socks\.length, socks, 'multi'\)/.test(srv));
+// 방을 먼저 지우고 열면 못 앉는 사람이 있을 때 방도 판도 없는 자리에 남는다
+ok('앉을 수 있는지 먼저 본다', (() => {
+  const at = srv.indexOf("if (room.mode === 'mini') {");
+  const blk = srv.slice(at, at + 1400);
+  return at > 0 && blk.indexOf('const bad = socks.filter') < blk.indexOf('delete rooms[roomId]');
+})());
+ok('못 앉으면 방이 그대로 남는다', /if \(bad\.length\) \{[\s\S]{0,420}return socket\.emit\('error'/.test(srv));
+ok('빈자리는 AI 라고 적어 준다', /if \(roomReady && roomModeCur === 'mini'\) btn\.textContent = '게임 시작 \(빈자리는 AI\)';/.test(cli));
+ok('솔로는 자리 넷으로 한 번에', /miniGo\(4, false\)/.test(htm)
+   && !/miniGo\(2, false\)/.test(htm) && !/miniGo\(3, false\)/.test(htm));
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

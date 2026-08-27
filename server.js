@@ -1488,15 +1488,17 @@ function leaveWaitingRoom(socket, roomId, slot) {
 // 방장·손님이 서로 다른 것을 봐야 해서 사람마다 따로 보낸다.
 // 이 방이 몇 자리짜리인가. 다인전을 고르면 넷으로 늘어난다 —
 // 방을 닫고 옮기는 게 아니라 슬롯만 늘어난다.
-function capOf(room) { return room && room.mode === 'quad' ? 4 : 2; }
+// 미니게임도 자리가 넷이다. 인원을 미리 나누지 않고, 앉은 사람 수 그대로 판을 연다.
+function capOf(room) { return room && (room.mode === 'quad' || room.mode === 'mini') ? 4 : 2; }
 
 function pushRoomLobby(roomId) {
   const room = rooms[roomId];
   if (!room || room.game) return;
   const cap = capOf(room);
   const n = room.players.filter(Boolean).length;
-  // 다인전은 셋부터 할 수 있다 (넷이 차면 더 못 들어온다)
-  const ready = cap === 4 ? n >= 3 : n >= 2;
+  // 다인전은 셋부터 할 수 있다 (넷이 차면 더 못 들어온다).
+  // 미니게임은 자리가 넷이어도 둘이면 선다 — 남은 자리는 AI 가 채운다.
+  const ready = room.mode === 'mini' ? n >= 2 : (cap === 4 ? n >= 3 : n >= 2);
   const seats = [];
   for (let i = 0; i < cap; i++) {
     const sid = room.players[i];
@@ -1865,7 +1867,7 @@ io.on('connection', (socket) => {
     const roomId = socket.roomId;
     const room = rooms[roomId];
     if (!room || room.game || socket.playerIndex !== 0) return;
-    if (['item', 'classic', 'quad', 'twelve'].includes(mode)) {
+    if (['item', 'classic', 'quad', 'twelve', 'mini'].includes(mode)) {
       room.mode = mode; room.itemMode = mode === 'item';
     }
     const here = room.players.filter(Boolean);
@@ -1886,6 +1888,31 @@ io.on('connection', (socket) => {
       return;
     }
     if (here.length < 2) return socket.emit('error', '상대가 아직 없어요.');
+    // 미니게임 — 인원을 미리 나누지 않는다. 방에 앉은 사람 수가 곧 자리 수다.
+    // 자리 넷을 다 안 채워도 둘만 있으면 둘이서 시작한다.
+    if (room.mode === 'mini') {
+      const socks = here.map((sid) => io.sockets.sockets.get(sid)).filter(Boolean);
+      if (socks.length < 2) return socket.emit('error', '상대가 아직 없어요.');
+      // 앉을 수 있는지 먼저 본다. 방을 먼저 지우고 테이블을 열면, 못 앉는 사람이
+      // 있을 때 방도 없고 판도 없는 자리에 남는다 — 실제로 게스트가 그렇게 갇혔다.
+      // (미니게임은 코인을 달로 바꿔 앉으므로 로그인·코인이 있어야 한다)
+      const bad = socks.filter((sk) => {
+        if (!sk.token) return true;
+        const u = accounts.byToken(sk.token);
+        return !u || (u.coins || 0) < MINI_MIN_COIN;
+      });
+      if (bad.length) {
+        for (const sk of bad) sk.emit('mini_error', `미니게임은 로그인하고 코인이 ${MINI_MIN_COIN} 이상 있어야 앉을 수 있어요.`);
+        return socket.emit('error', bad.length === socks.length
+          ? `미니게임은 로그인하고 코인이 ${MINI_MIN_COIN} 이상 있어야 해요.`
+          : '아직 앉을 수 없는 사람이 있어요.');
+      }
+      for (const sk of socks) { sk.leave(roomId); sk.roomId = null; sk.playerIndex = undefined; }
+      delete rooms[roomId];
+      broadcastRooms();
+      miniOpenTable(socks.length, socks, 'multi');
+      return;
+    }
     if (room.mode === 'twelve') { tvStart(roomId); return; }
     // createGame 에 모드를 넘겨야 한다. 손으로 items/itemUsed 만 채웠더니
     // fx(이번 경매 한정 효과)가 없어서 아이템을 쓰는 순간 전부 튕겼다 —
@@ -2150,7 +2177,7 @@ io.on('connection', (socket) => {
   socket.on('quick_join', ({ mode, pid, nick } = {}) => {
     if (socket.roomId && rooms[socket.roomId]) return;
     dequeue(socket.id);
-    if (!['classic', 'item', 'quad', 'twelve'].includes(mode)) return socket.emit('error', '알 수 없는 모드예요.');
+    if (!['classic', 'item', 'quad', 'twelve', 'mini'].includes(mode)) return socket.emit('error', '알 수 없는 모드예요.');
     const item = mode === 'item';
 
     // 들어갈 만한 방: 같은 모드 · 비밀방 아님 · AI전 아님 · 아직 안 시작 · 자리 남음
@@ -2181,7 +2208,8 @@ io.on('connection', (socket) => {
     const prof = myProfile(nick);
     const roomId = makeRoomId();
     const NAME = { classic: '클래식 빠른 입장', item: '아이템전 빠른 입장',
-                   quad: '다인전 빠른 입장', twelve: 'TWELVE 빠른 입장' };
+                   quad: '다인전 빠른 입장', twelve: 'TWELVE 빠른 입장',
+                   mini: '미니게임 빠른 입장' };
     rooms[roomId] = {
       players: [socket.id, null], pids: [pid || null, null], nicks: [prof.nick, null],
       profiles: [prof, null], tokens: [socket.token || null, null],

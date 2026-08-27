@@ -4816,6 +4816,9 @@ socket.on('room_lobby', (r) => {
     btn.disabled = !roomReady;
     btn.textContent = roomReady ? '게임 시작'
       : (roomModeCur === 'quad' ? '세 명부터 시작할 수 있어요' : '상대를 기다려요');
+    // 미니게임은 자리가 넷이어도 둘이면 선다 — 남은 자리는 AI 가 채운다.
+    // 그걸 안 적어 두면 넷을 다 기다려야 하는 줄 안다.
+    if (roomReady && roomModeCur === 'mini') btn.textContent = '게임 시작 (빈자리는 AI)';
   }
   const note = document.getElementById('wcGuestNote');
   if (note) note.style.display = roomIsHost ? 'none' : '';
@@ -4833,7 +4836,7 @@ socket.on('room_kicked', () => {
   setTimeout(() => cancelWait(), 500);
 });
 
-const MODE_NAME = { classic: '클래식', item: '아이템전', twelve: 'TWELVE', quad: '다인전' };
+const MODE_NAME = { classic: '클래식', item: '아이템전', twelve: 'TWELVE', quad: '다인전', mini: '미니게임' };
 
 let sharedCode = '';
 socket.on('room_created', ({ roomId, name }) => {

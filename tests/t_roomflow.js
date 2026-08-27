@@ -91,13 +91,15 @@ ok('클라이언트에 빠른 입장 버튼 셋', (htm.match(/quickJoin\('(class
 ok('랭크게임 버튼', /onclick="quickMatch\(\)"[\s\S]{0,200}랭크게임/.test(htm));
 ok('랭크게임 칸에 내 등급이 보인다', /id="mmRank"/.test(htm) && /mmRank/.test(cli));
 ok('다인전 빠른 입장도 같은 대기실을 쓴다',
-   !/q4Quick/.test(cli) && /\['classic', 'item', 'quad', 'twelve'\]\.includes\(mode\)/.test(srv));
+   !/q4Quick/.test(cli) && /\['classic', 'item', 'quad', 'twelve', 'mini'\]\.includes\(mode\)/.test(srv));
 ok('빠른 입장이 자리 남은 방을 찾는다', /n > 0 && n < capOf\(r\)/.test(srv));
 ok('다인전 빠른 입장 방 이름이 있다', /다인전 빠른 입장/.test(srv));
 ok('코드 로그인은 화면에서 사라졌다', !/코드로 시작/.test(htm) && !/codeLogin/.test(htm) && !/submitCode/.test(cli));
 
 // 다인전 = 자리 늘리기
-ok('방마다 자리 수가 있다', /function capOf\(room\)[\s\S]{0,80}'quad' \? 4 : 2/.test(srv));
+// 미니게임도 자리가 넷이다 — 인원을 미리 나누지 않고 앉은 대로 시작한다
+ok('방마다 자리 수가 있다',
+   /function capOf\(room\)[\s\S]{0,140}room\.mode === 'quad' \|\| room\.mode === 'mini'\) \? 4 : 2/.test(srv));
 ok('다인전을 골라도 방을 안 옮긴다',
    /if \(mode === 'quad'\) \{[\s\S]{0,200}pushRoomLobby/.test(srv));
 ok('엔진을 갈아타는 것은 시작할 때', /room\.mode === 'quad'[\s\S]{0,600}g4\.startGroup/.test(srv));
@@ -318,9 +320,9 @@ ok('안 쓰는 배경음 원본은 뺐다', !fs.existsSync(path.join(__dirname, 
 // 방 만들기에도 TWELVE 가 있어야 한다 — 모드가 넷이 됐다
 ok('대기실에 TWELVE 칸', /data-m="twelve" onclick="roomMode\('twelve'\)"/.test(htm));
 ok('넷이라 두 줄로 편다', /\.wc-modes \{ display:grid; grid-template-columns:1fr 1fr/.test(htm));
-ok('서버가 twelve 를 받는다', /\['item', 'classic', 'quad', 'twelve'\]\.includes\(mode\)/.test(srv)
+ok('서버가 twelve 를 받는다', /\['item', 'classic', 'quad', 'twelve', 'mini'\]\.includes\(mode\)/.test(srv)
    && /room\.mode === 'twelve'\) \{ tvStart/.test(srv));
-ok('모드 이름표가 넷 다 있다', /MODE_NAME = \{ classic: '클래식', item: '아이템전', twelve: 'TWELVE', quad: '다인전' \}/.test(cli));
+ok('모드 이름표가 다섯 다 있다', /MODE_NAME = \{ classic: '클래식', item: '아이템전', twelve: 'TWELVE', quad: '다인전', mini: '미니게임' \}/.test(cli));
 // 목록에서도 무슨 판인지 보인다
 ok('방 목록이 모드를 함께 보낸다', /mode: r\.mode \|\| 'classic'/.test(srv));
 ok('목록에 모드 딱지를 붙인다', /rl-mode m-\$\{esc\(r\.mode\)\}/.test(cli) && /\.rl-mode \{/.test(htm));
