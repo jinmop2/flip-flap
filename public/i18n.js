@@ -130,6 +130,21 @@
     // ── TWELVE ──
     'AI는 쉬움·보통·전문가 세 급이에요. 전문가는 남은 카드를 세고,\n         칩을 0까지 쓰지 않으며, 클로즈로 상대 칩을 말리는 수까지 씁니다.': 'The AI comes in three grades. Expert counts the unseen cards, never spends its last chip, and uses closed auctions to drain yours.',
     '카드가 아니라 칩으로 값을 부르는 경매예요': 'An auction where you bid chips, not cards',
+    '클래식 · 아이템전 · TWELVE 무작위 · RP 반영': 'Classic \u00b7 Item \u00b7 TWELVE at random \u00b7 counts for RP',
+    '빠른대전': 'Quick match',
+    '모드 상관없이 가장 빨리 · RP 미반영': 'Whatever starts soonest \u00b7 no RP',
+    '클래식 · 아이템전 · TWELVE 중 무작위 — 10초 안에 상대가 없으면 전문가 AI':
+      'Classic, Item or TWELVE at random \u2014 an Expert AI steps in after 10s',
+    '모드 상관없이 가장 빨리 시작하는 방으로 — 없으면 10초 뒤 전문가 AI':
+      'Into whichever room starts soonest \u2014 an Expert AI after 10s if there is none',
+    '상대를 찾았어요!': 'Found an opponent!',
+    '상대를 못 찾아 전문가 AI 가 들어왔어요': 'No one turned up \u2014 an Expert AI stepped in',
+    '카드 두 장을 쥐고 배팅하는 섯다식 판이에요': 'A Sutda-style round \u2014 two cards each, hidden, and bet',
+    '같은 인원을 기다리는 사람과 붙어요 · 20초 안에 안 차면 AI 가 채웁니다':
+      'Matched with others waiting for the same table size \u00b7 AI fills empty seats after 20s',
+    '두 장 승부': 'Two-Card Duel',
+    'AI 1명': '1 AI', 'AI 2명': '2 AI', 'AI 3명': '3 AI',
+    '2인': '2P', '3인': '3P', '4인': '4P',
     '칩 경매': 'Chip auction',
     '은행': 'Bank',
     '눌러서 뒤집기': 'Tap to flip',
@@ -189,9 +204,6 @@
     '대화': 'Chat',
     '보내기': 'Send',
     '경매에서 지면 아이템이 들어와요': 'Lose an auction and an item arrives',
-
-
-    '무작위 매칭 · RP 반영': 'Random matching · counts for RP',
     '기록 안 됨': 'Not recorded',
     '방': 'Rooms',
     'AI 2명 · 손패 6장': '2 AI · 6 cards',

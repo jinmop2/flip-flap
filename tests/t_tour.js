@@ -250,7 +250,9 @@ console.log('\n⑨ 서버가 붙여 놓은 길');
   ok('시리즈 다음 판을 연다', /if \(r\.seriesGame\)/.test(srv)
      && /tourMakeMatch\(index, m\.a, m\.b\)/.test(srv));
   ok('방 기록을 비워야 다시 만든다', /delete tour\.rooms\[roundKey\(b\.round, index\)\]/.test(srv));
-  ok('대회 경기는 RP 미반영', /noRank: !room\.ranked \|\| !!room\.itemMode \|\| !!room\.noRank/.test(srv));
+  // 대회 방은 스스로 noRank 를 달고 온다 — 랭크 규칙이 어떻게 바뀌든 안 걸린다
+  ok('대회 경기는 RP 미반영', /noRank: !room\.ranked \|\| !!room\.noRank/.test(srv)
+     && /noRank: true,                                  \/\/ 대회는 RP 를 건드리지 않는다/.test(srv));
   // 모든 종료 경로가 finishStats 를 지난다 — 거기 한 곳에서만 보고한다
   ok('끝난 판을 대진표에 적는다', /if \(room\.tour && tour && room\.tour\.id === tour\.id\)/.test(srv));
   ok('나가면 그 자리는 진다', /tourForfeitSeat\(seat\)/.test(srv));

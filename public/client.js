@@ -824,14 +824,45 @@ fetch('/api/auth-config').then(r => r.json()).then(d => {
 
 // ── 빠른 대전 (자동 매칭) ───────────────────────────────────
 // 랭크게임 — 무작위 매칭. RP 가 오가는 유일한 길이다.
+// 랭크게임 — 무엇을 할지는 붙고 나서 서버가 정한다(클래식·아이템전·TWELVE).
+// 여기서 모드를 보내지 않는 것이 핵심이다. 클라이언트가 고르면 그게 곧
+// 모드 고르기가 되어 무작위의 뜻이 없어진다.
 function quickMatch() {
   closeModePanels();
   isItemMode = false;
-  socket.emit('quick_match', { pid: PID, nick: getNick(), itemMode: false });
+  socket.emit('quick_match', { pid: PID, nick: getNick() });
   document.getElementById('matchModal').classList.add('show');
   const t = document.getElementById('matchTitle');
   if (t) t.textContent = '🏆 랭크게임';
+  const h = document.getElementById('matchHint');
+  if (h) h.textContent = '클래식 · 아이템전 · TWELVE 중 무작위 — 10초 안에 상대가 없으면 전문가 AI';
 }
+
+// ⚡ 빠른대전 — 모드를 안 가리고 지금 가장 빨리 시작될 방으로.
+// 등급(RP)은 안 걸린다. 고르지 않는 대신 걸지도 않는 자리다.
+window.quickAny = function () {
+  closeModePanels();
+  isItemMode = false;
+  socket.emit('quick_any', { pid: PID, nick: getNick() });
+  const t = document.getElementById('matchTitle');
+  if (t) t.textContent = '⚡ 빠른대전';
+  const h = document.getElementById('matchHint');
+  if (h) h.textContent = '모드 상관없이 가장 빨리 시작하는 방으로 — 없으면 10초 뒤 전문가 AI';
+};
+// 방에 바로 들어간 경우 — 대기 창은 띄우지 않는다(이미 방 대기실이 열린다)
+socket.on('quick_any_found', () => {
+  const m = document.getElementById('matchModal'); if (m) m.classList.remove('show');
+});
+// 랭크에서 무엇이 걸렸는지 — 판이 열리기 전에 한 박자 알려 준다
+const RANK_LABEL = { classic: '클래식', item: '아이템전', twelve: 'TWELVE' };
+socket.on('ranked_mode', ({ mode, bot }) => {
+  isItemMode = mode === 'item';
+  const t = document.getElementById('matchTitle');
+  if (t) t.textContent = (bot ? '👑 전문가 AI · ' : '🏆 ') + (RANK_LABEL[mode] || mode);
+  const h = document.getElementById('matchHint');
+  if (h) h.textContent = bot ? '상대를 못 찾아 전문가 AI 가 들어왔어요' : '상대를 찾았어요!';
+  toast(`${bot ? '👑 전문가 AI · ' : '🎲 '}<b>${esc(RANK_LABEL[mode] || mode)}</b>`, 1800);
+});
 
 // 빠른 입장 — 그 모드로 열린 방이 있으면 바로 들어가고, 없으면 하나 열고 기다린다.
 // 랭크가 안 걸리므로 편하게 붙는 자리다.
@@ -3759,6 +3790,22 @@ window.miniOpen = function () {
   if (!myAccount) { alert('미니게임은 로그인하면 즐길 수 있어요!'); openAuth('login'); return; }
   closeModePanels();
   document.getElementById('miniModal').classList.add('show');
+};
+// 솔로·멀티 패널에서 바로 앉는다. 예전엔 로비에 미니게임 카드를 따로 두고
+// 그 안에서 다시 "AI와 / 온라인" 을 골랐는데, 카드만 보고는 어느 쪽인지 알 수
+// 없었다. 이제 어디서 눌렀는지가 곧 답이다 — 인원만 고르면 된다.
+window.miniGo = function (seats, online) {
+  if (!myAccount) { alert('미니게임은 로그인하면 즐길 수 있어요!'); openAuth('login'); return; }
+  miniPickSeats(seats);
+  closeModePanels();
+  if (online) {
+    document.getElementById('mnQCount').textContent = '1';
+    document.getElementById('mnQNeed').textContent = `/ ${seats}`;
+    document.getElementById('miniWaitModal').classList.add('show');
+    socket.emit('mini_quick', { seats });
+  } else {
+    socket.emit('mini_sit', { seats });
+  }
 };
 window.miniClose = function () { document.getElementById('miniModal').classList.remove('show'); };
 window.miniSit = function () {

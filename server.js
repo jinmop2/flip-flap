@@ -1523,6 +1523,11 @@ const g4 = attach4(io, { notifyIdl, sidOfIdl: (idl) => accountSockets.get(idl) |
 const MAX_ROOMS = 800;               // 서버 전체 방 상한
 const MAX_CONN_PER_IP = 8;           // IP당 소켓 연결 상한
 const connByIp = new Map();
+// 랭크게임에서 나올 수 있는 판. 무엇이 걸릴지 모르니 세 가지를 다 익혀야 한다 —
+// 한 모드만 파고들어 점수를 쌓는 길을 막는 것이 이 무작위의 뜻이다.
+const RANKED_MODES = ['classic', 'item', 'twelve'];
+const pickRankedMode = () => RANKED_MODES[Math.floor(Math.random() * RANKED_MODES.length)];
+
 let matchQueue = [];                  // 빠른 대전 대기열
 const MATCH_BOT_WAIT = 10000;         // 이 시간 안에 상대 없으면 위장 전문가봇 투입 (빈손 이탈 방지)
 const BOT_NICKS = ['달빛여우', '카드요정', '조용한상어', '느긋한거북', '불꽃토끼', '새벽부엉이', '미소천사', '포커페이스',
@@ -1540,26 +1545,36 @@ function dequeue(sid) {
   });
 }
 // 15초 매칭 실패 → 전문가봇이 일반 유저처럼 입장 (멀티 보상 그대로)
-function startBotMatch(entry) {
+// 10초 안에 사람이 안 잡히면 전문가 AI 가 들어온다. 빈손으로 나가느니
+// 한 판 두는 편이 낫다 — 모드는 사람과 붙었을 때와 같은 규칙으로 무작위다.
+// ranked=false 로 부르면 RP 가 안 걸리는 '빠른대전' 쪽에서도 같은 길을 쓴다.
+function startBotMatch(entry, opts = {}) {
   dequeue(entry.sid);
   const s = io.sockets.sockets.get(entry.sid);
   if (!s || (s.roomId && rooms[s.roomId])) return;
   if (Object.keys(rooms).length >= MAX_ROOMS) return s.emit('error', '서버가 혼잡해요.');
   const u = entry.token && accounts.byToken(entry.token);
   const prof = u ? accounts.profileOf(u) : { nick: cleanNick(entry.nick), guest: true };
+  const mode = opts.mode || pickRankedMode();
+  const ranked = opts.ranked !== false;
   const roomId = makeRoomId();
+  const LABEL = { classic: '클래식', item: '아이템전', twelve: 'TWELVE' };
   rooms[roomId] = {
     players: [entry.sid, null], pids: [entry.pid || null, null], nicks: [prof.nick, randomBotNick()],
     profiles: [prof, null], tokens: [entry.token || null, null],
-    name: entry.itemMode ? '아이템전' : '빠른 대전', game: null, vsBot: false, difficulty: 'expert',   // 보상은 멀티 기준
-    secret: false, password: '', cpuIndex: 1, botMatch: true, itemMode: !!entry.itemMode,
-    ranked: true,                                  // 랭크게임 대기 중 봇이 들어온 판
+    name: (ranked ? '랭크게임 · ' : '빠른대전 · ') + (LABEL[mode] || mode),
+    game: null, vsBot: false, difficulty: 'expert',   // 보상은 멀티 기준
+    secret: false, password: '', cpuIndex: 1, botMatch: true,
+    itemMode: mode === 'item', mode,
+    ranked,                                        // 랭크게임 대기 중 봇이 들어온 판
     aiMem: expert3.createMem(),
   };
   rooms[roomId].profiles[1] = { nick: rooms[roomId].nicks[1], guest: true };   // 게스트 유저처럼 보이게
   s.leave('lobby'); s.join(roomId); s.roomId = roomId; s.playerIndex = 0; s.pid = entry.pid;
-  rooms[roomId].game = createGame(rooms[roomId].itemMode);
   rooms[roomId].startedAt = Date.now();
+  s.emit('ranked_mode', { mode, bot: true });
+  if (mode === 'twelve') { if (tvRestart) tvRestart(roomId); return; }
+  rooms[roomId].game = createGame(rooms[roomId].itemMode);
   io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles, itemMode: rooms[roomId].itemMode });
   broadcast(roomId);
   startClock(roomId);
@@ -1572,7 +1587,7 @@ function startBotMatch(entry) {
 // 스크립트로 몰아치는 것만 걸린다.
 const SOCKET_GAP = {
   // 방·매칭 — 하나 만드는 데 방 목록 방송까지 딸려 온다
-  create_room: 1500, quick_join: 1200, quick_match: 1200, join_room: 800,
+  create_room: 1500, quick_join: 1200, quick_match: 1200, quick_any: 1200, join_room: 800,
   tv_solo: 1200, mini_sit: 1000, mini_quick: 1200, tour_join: 1000,
   room_start: 800, room_mode: 300, room_kick: 500, rematch: 800,
   challenge_friend: 1000, spec_challenge: 1000, challenge_accept: 800, spectate: 800,
@@ -1903,24 +1918,26 @@ io.on('connection', (socket) => {
   });
 
   // 빠른 대전 (자동 매칭)
-  socket.on('quick_match', ({ pid, nick, itemMode } = {}) => {
+  socket.on('quick_match', ({ pid, nick } = {}) => {
     if (socket.roomId && rooms[socket.roomId]) return;
     dequeue(socket.id);
-    const want = !!itemMode;
-    // 클래식과 아이템전은 규칙이 다르므로 같은 모드끼리만 붙인다.
+    // 예전엔 클래식·아이템전이 각자 줄을 서서, 사람이 적을 때 양쪽 다 안 잡혔다.
+    // 이제 무엇을 할지는 붙고 나서 서버가 정하므로 줄은 하나면 된다 — 매칭도 그만큼 빨라진다.
+    // 한 줄에 서지만 랭크와 빠른대전은 섞지 않는다 — 등급을 안 걸겠다고 누른
+    // 사람을 랭크 판에 넣으면 약속을 어기는 것이다.
     let opp = null;
     for (let i = 0; i < matchQueue.length; i++) {
       const c = matchQueue[i];
       if (c.sid === socket.id || !io.sockets.sockets.get(c.sid)) {   // 끊긴 대기자는 정리
         clearTimeout(c.botTimer); matchQueue.splice(i, 1); i--; continue;
       }
-      if (!!c.itemMode !== want) continue;
+      if (c.casual) continue;
       opp = c; matchQueue.splice(i, 1); break;
     }
-    const me = { sid: socket.id, pid, nick, token: socket.token, itemMode: want };
+    const me = { sid: socket.id, pid, nick, token: socket.token };
     if (opp) { clearTimeout(opp.botTimer); startMatch(opp, me); }
     else {
-      me.botTimer = setTimeout(() => startBotMatch(me), MATCH_BOT_WAIT);   // 15초 후 위장봇 투입
+      me.botTimer = setTimeout(() => startBotMatch(me), MATCH_BOT_WAIT);   // 10초 뒤 전문가 AI
       matchQueue.push(me); socket.emit('queued');
     }
   });
@@ -1968,7 +1985,9 @@ io.on('connection', (socket) => {
       const me = i + 1;
       io.to(sid).emit('tv_over', { win: g.winner === me, endBy: g.endBy, view: twelve.viewFor(g, me) });
     });
-    // 보상은 클래식 멀티와 같은 표를 쓰되 RP 는 안 건드린다(모드 규칙).
+    // 보상은 클래식 멀티와 같은 표를 쓴다. RP 는 랭크게임으로 걸린 판에서만
+    // 움직인다 — 랭크는 세 모드가 무작위로 나오므로 트웰브라고 빼면 그 판만
+    // 점수가 안 걸리는 셈이 되어, 트웰브가 뜨길 기다리는 사람이 생긴다.
     const turns = g.turn, playtimeSec = Math.round((Date.now() - (room.startedAt || Date.now())) / 1000);
     room.players.forEach((sid, i) => {
       const tok = room.tokens && room.tokens[i]; if (!tok) return;
@@ -1976,7 +1995,7 @@ io.on('connection', (socket) => {
       const out = accounts.recordResult(tok, g.winner === me ? 'win' : 'loss', {
         vsBot: !!room.vsBot, difficulty: room.difficulty || 'hard',
         oppLabel: room.vsBot ? 'AI' : (room.nicks ? room.nicks[1 - i] : '상대'),
-        turns, playtimeSec, noRank: true,          // 트웰브는 RP 미반영
+        turns, playtimeSec, noRank: !room.ranked,  // 랭크로 걸린 판만 RP 반영
       });
       if (out) io.to(sid).emit('profile', { profile: out.profile, result: g.winner === me ? 'win' : 'loss', rewards: out.rewards });
     });
@@ -2072,6 +2091,62 @@ io.on('connection', (socket) => {
   // 빠른 입장 — 랭크가 안 걸린 판. 그 모드로 열려 있는 방이 있으면 거기로
   // 들어가고, 없으면 하나 열어 두고 기다린다(다음 사람이 들어오면 바로 시작).
   // 매칭 대기열이 아니라 "방" 이라 무엇을 기다리는지가 방 목록에 보인다.
+  // ⚡ 빠른대전 — 모드를 안 가리고 "지금 가장 빨리 시작될 방" 으로 들여보낸다.
+  // 빠른 입장(quick_join)은 모드를 골라 그 모드의 방만 찾는데, 사람이 적을 땐
+  // 고른 모드에 아무도 없어 하염없이 기다리게 된다. 여기서는 열린 방 전부를
+  // 보고 가장 많이 찬 방부터 넣는다 — 한 자리만 채우면 바로 시작하는 방이다.
+  socket.on('quick_any', ({ pid, nick } = {}) => {
+    if (socket.roomId && rooms[socket.roomId]) return;
+    dequeue(socket.id);
+    const joinable = Object.keys(rooms).filter((id) => {
+      const r = rooms[id];
+      if (!r || r.game || r.tv || r.secret || r.vsBot || r.tutorial || r.ranked) return false;
+      const n = r.players.filter(Boolean).length;
+      return n > 0 && n < capOf(r);
+    });
+    // 빈자리가 적게 남은 방이 먼저 — 그 방이 가장 빨리 찬다
+    joinable.sort((x, y) => {
+      const left = (id) => capOf(rooms[id]) - rooms[id].players.filter(Boolean).length;
+      return left(x) - left(y);
+    });
+    const openId = joinable[0];
+    if (openId) {
+      const room = rooms[openId];
+      const cap = capOf(room);
+      let seat = -1;
+      for (let i = 0; i < cap; i++) if (!room.players[i]) { seat = i; break; }
+      if (seat >= 0) {
+        const prof = myProfile(nick);
+        room.players[seat] = socket.id; room.pids[seat] = pid || null; room.nicks[seat] = prof.nick;
+        room.profiles[seat] = prof; room.tokens[seat] = socket.token || null;
+        socket.leave('lobby');
+        socket.join(openId); socket.roomId = openId; socket.playerIndex = seat; socket.pid = pid;
+        socket.emit('quick_any_found', { mode: room.mode || 'classic', name: room.name || '' });
+        pushRoomLobby(openId);
+        broadcastRooms();
+        return;
+      }
+    }
+    // 들어갈 방이 하나도 없다 — 그래도 가장 빠른 길은 판을 여는 것이다.
+    // 같은 버튼을 누른 사람끼리 먼저 붙이고, 10초 안에 없으면 전문가 AI 가 온다.
+    // 어느 쪽이든 RP 는 안 걸린다 — 모드를 안 고른 대신 등급도 안 거는 것이
+    // 이 버튼의 약속이다.
+    let mate = null;
+    for (let i = 0; i < matchQueue.length; i++) {
+      const c = matchQueue[i];
+      if (c.sid === socket.id || !io.sockets.sockets.get(c.sid)) {
+        clearTimeout(c.botTimer); matchQueue.splice(i, 1); i--; continue;
+      }
+      if (!c.casual) continue;
+      mate = c; matchQueue.splice(i, 1); break;
+    }
+    const me = { sid: socket.id, pid, nick, token: socket.token, casual: true };
+    if (mate) { clearTimeout(mate.botTimer); return startMatch(mate, me, { ranked: false }); }
+    me.botTimer = setTimeout(() => startBotMatch(me, { ranked: false }), MATCH_BOT_WAIT);
+    matchQueue.push(me);
+    socket.emit('queued', { casual: true });
+  });
+
   socket.on('quick_join', ({ mode, pid, nick } = {}) => {
     if (socket.roomId && rooms[socket.roomId]) return;
     dequeue(socket.id);
@@ -2485,23 +2560,33 @@ function restartGame(roomId) {
 }
 
 // 빠른 대전 매칭된 두 소켓으로 방 생성·시작
-function startMatch(a, b) {
+function startMatch(a, b, opts = {}) {
   const sa = io.sockets.sockets.get(a.sid), sb = io.sockets.sockets.get(b.sid);
   if (!sa || !sb) { if (sa) matchQueue.push(a); if (sb) matchQueue.push(b); return; }
   if (Object.keys(rooms).length >= MAX_ROOMS) { sa.emit('error', '서버가 혼잡해요.'); sb.emit('error', '서버가 혼잡해요.'); return; }
   const profOf = e => { const u = e.token && accounts.byToken(e.token); return u ? accounts.profileOf(u) : { nick: cleanNick(e.nick), guest: true }; };
   const pA = profOf(a), pB = profOf(b);
-  const itemMode = !!(a.itemMode && b.itemMode);   // 같은 모드끼리만 매칭되므로 둘 다 참
+  // 무엇을 할지는 붙고 나서 서버가 정한다. 클라이언트가 고르게 두면 그게 곧
+  // 모드 고르기가 되어 무작위의 뜻이 없어진다.
+  const mode = pickRankedMode();
+  const itemMode = mode === 'item';
+  const ranked = opts.ranked !== false;
   const roomId = makeRoomId();
+  const LABEL = { classic: '클래식', item: '아이템전', twelve: 'TWELVE' };
   rooms[roomId] = {
     players: [a.sid, b.sid], pids: [a.pid || null, b.pid || null], nicks: [pA.nick, pB.nick],
     profiles: [pA, pB], tokens: [a.token || null, b.token || null],
-    name: '랭크게임', game: null, vsBot: false, difficulty: 'hard',
-    secret: false, password: '', itemMode,
-    ranked: true,          // RP 가 오가는 판은 오직 여기서만 만들어진다
+    name: (ranked ? '랭크게임 · ' : '빠른대전 · ') + (LABEL[mode] || mode),
+    game: null, vsBot: false, difficulty: 'hard',
+    secret: false, password: '', itemMode, mode,
+    ranked,                // RP 가 오가는 판은 랭크로 잡힌 것만
   };
   sa.leave('lobby'); sa.join(roomId); sa.roomId = roomId; sa.playerIndex = 0; sa.pid = a.pid;
   sb.leave('lobby'); sb.join(roomId); sb.roomId = roomId; sb.playerIndex = 1; sb.pid = b.pid;
+  // 무엇이 걸렸는지 먼저 알린다 — 판이 열리기 전에 한 박자 보여 줘야
+  // "왜 갑자기 칩 경매지" 가 안 된다.
+  io.to(roomId).emit('ranked_mode', { mode });
+  if (mode === 'twelve') { if (tvRestart) tvRestart(roomId); return; }
   rooms[roomId].game = createGame(itemMode);
   io.to(roomId).emit('game_start', { vsBot: false, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles, itemMode });
   broadcast(roomId);
@@ -2923,13 +3008,16 @@ function finishStats(room, winner, forfeit = false, setKind = null) {
     const out = accounts.recordResult(tok, result, {
       vsBot: room.vsBot, difficulty: room.difficulty, oppLabel,
       sameIp, friendly, turns, playtimeSec, oppUid, forfeit, setKind,
-      // 위장 봇 매치(15초 매칭 실패 → 전문가봇 입장)도 RP 를 준다.
+      // 위장 봇 매치(10초 매칭 실패 → 전문가봇 입장)도 RP 를 준다.
       // 유저 입장에서는 사람과 붙은 것과 구별되지 않는데 보상만 다르면 억울하다.
       // 대가로 RP 는 더 이상 유저끼리 제로섬이 아니게 된다 — 봇은 잃지 않으니
-      // 이긴 만큼이 새로 생긴다. 아이템전은 그대로 제외(코인·XP만).
-      // RP 는 랭크게임(무작위 매칭)에서만 오간다. 빠른 입장·방 만들기·친구방은
-      // 코인과 경험치만 준다 — 이겨도 잃어도 등급이 안 움직이니 편하게 붙는다.
-      noRank: !room.ranked || !!room.itemMode || !!room.noRank,
+      // 이긴 만큼이 새로 생긴다.
+      // RP 는 랭크게임(무작위 매칭)에서만 오간다. 빠른대전·빠른 입장·방 만들기·
+      // 친구방은 코인과 경험치만 준다 — 등급이 안 움직이니 편하게 붙는다.
+      // 랭크 안에서는 세 모드를 가리지 않는다. 예전엔 아이템전만 빼 뒀는데,
+      // 이제 랭크가 세 모드를 무작위로 돌리므로 하나만 빼면 "아이템전이 뜨면
+      // 점수가 안 걸리는 판" 이 되어, 그게 뜨길 기다리는 사람이 생긴다.
+      noRank: !room.ranked || !!room.noRank,
     });
     if (out && room.players[i]) io.to(room.players[i]).emit('profile', { profile: out.profile, result, rewards: out.rewards });
   });

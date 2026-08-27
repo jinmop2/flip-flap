@@ -139,7 +139,10 @@ console.log('\n⑤ 위장 봇 매치도 사람과 같은 보상');
   // 이건 생성된 값이 아니라 불러지는 자리라 소스로 본다.
   const srv = fs.readFileSync(src + '/server.js', 'utf8');
   ok('위장 봇 매치는 RP 제외 목록에 없다', !/noRank:[^,\n]*room\.botMatch/.test(srv));
-  ok('아이템전은 그대로 제외', /noRank:[^\n]*!!room\.itemMode/.test(srv));
+  // 랭크게임이 세 모드(클래식·아이템전·TWELVE)를 무작위로 돌리게 되면서
+  // 아이템전만 빼 두는 것은 앞뒤가 안 맞는다 — 그게 뜨길 기다리는 사람이 생긴다.
+  ok('모드로 가르지 않는다', !/noRank:[^\n]*!!room\.itemMode/.test(srv));
+  ok('랭크로 걸린 판만 RP', /noRank: !room\.ranked \|\| !!room\.noRank,/.test(srv));
 
   // noRank 를 주면 여전히 RP 가 안 붙어야 한다 (아이템전 경로)
   const t2 = player();

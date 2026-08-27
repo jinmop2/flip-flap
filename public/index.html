@@ -178,6 +178,15 @@
     .mm-hero .hh-sub { display:block; font-size:.66rem; color:rgba(255,240,205,.75); margin-top:1px; }
     .mm-hero .hh-side { flex-shrink:0; text-align:right; font-size:.66rem; font-weight:800; color:#fff0c8; }
     .mm-hero .hh-side b { display:block; font-size:.86rem; }
+    /* ⚡ 빠른대전 — 랭크 바로 아래에 오지만 등급이 안 걸리는 자리다.
+       금색을 그대로 쓰면 둘이 같은 무게로 읽혀, 한 단계 낮은 청록으로 낸다. */
+    .mm-hero.quick {
+      background:linear-gradient(135deg,#14413a 0%,#1b5a4c 45%,#0e2f2a 100%);
+      border-color:#5cc8a8; margin-top:-3px;
+      box-shadow:inset 0 1px 0 rgba(180,255,230,.28), 0 3px 12px rgba(0,0,0,.35);
+    }
+    .mm-hero.quick .hh-name { color:#dffaef; font-size:.94rem; }
+    .mm-hero.quick .hh-sub { color:rgba(210,250,235,.72); }
 
     /* 나란한 칸들 */
     .mm-hint { font-size:.68rem; color:#8a7a80; text-align:center; margin:-2px 0 7px; }
@@ -205,6 +214,9 @@
     .mm-tile.t-item .mt-name { color:#e2d4ff; }
     .mm-tile.t-quad { background:linear-gradient(180deg,#123a30,#0c2620); border-color:#4a9a7a; }
     .mm-tile.t-quad .mt-name { color:#c8f0dc; }
+    /* 미니게임은 본 게임과 규칙이 아예 달라서 색도 따로 준다 */
+    .mm-tile.t-mini { background:linear-gradient(180deg,#4a1030,#2c0820); border-color:#d06a9a; }
+    .mm-tile.t-mini .mt-name { color:#ffd6e8; }
 
     .sec-title { display:flex; justify-content:space-between; align-items:center; font-size:.72rem; font-weight:600; color:#6a5a70; letter-spacing:1px; padding:0 2px; }
     .qenter-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:8px; }
@@ -2077,6 +2089,8 @@
     .mode-card.mini.sut  { background:radial-gradient(ellipse at 50% 35%, #6b2434 0%, #45141f 70%, #2c0c14 100%); }
     /* 곁들이 모드는 둘 — 다인전은 방에서 모드로 고른다 */
     .mode-grid.sub { grid-template-columns:1fr 1fr; }
+    /* 미니게임이 솔로·멀티 안으로 들어가 곁들이 격자에는 토너먼트만 남았다 */
+    .mode-grid.sub.one { grid-template-columns:1fr; }
     .mc-tag {
       position:relative; font-size:.54rem; font-weight:800; letter-spacing:.04em;
       border-radius:5px; padding:1px 6px; background:rgba(255,212,121,.9); color:#5a2a10;
@@ -4752,15 +4766,13 @@
       </button>
     </div>
 
-    <!-- 곁들이 모드 — 같은 격자, 크기만 작게 -->
-    <div class="mode-grid sub">
+    <!-- 곁들이 모드 — 같은 격자, 크기만 작게.
+         미니게임은 솔로·멀티 안으로 들어갔다. 밖에 따로 두면 "AI랑 하는 건지
+         사람이랑 하는 건지" 를 카드만 보고는 알 수 없었다. -->
+    <div class="mode-grid sub one">
       <button class="mode-card mini tour" onclick="tourOpen()">
         <span class="mc-title">토너먼트</span>
         <span class="mc-tag">8강 · 🪙200</span>
-      </button>
-      <button class="mode-card mini sut" onclick="miniOpen()">
-        <span class="mc-title">미니게임</span>
-        <span class="mc-tag">두 장 승부</span>
       </button>
     </div>
 
@@ -4956,6 +4968,29 @@
       </button>
     </div>
 
+    <div class="mm-sec"><b>미니게임</b><span class="mc-tag">두 장 승부</span><i></i></div>
+    <p class="mm-hint">카드 두 장을 쥐고 배팅하는 섯다식 판이에요</p>
+    <div class="mm-tiles c3">
+      <button class="mm-tile t-mini" onclick="miniGo(2, false)">
+        <span class="mt-ico">🃏</span>
+        <span class="mt-name">2인</span>
+        <span class="mt-sub">AI 1명</span>
+      </button>
+      <button class="mm-tile t-mini" onclick="miniGo(3, false)">
+        <span class="mt-ico">🃏</span>
+        <span class="mt-name">3인</span>
+        <span class="mt-sub">AI 2명</span>
+      </button>
+      <button class="mm-tile t-mini" onclick="miniGo(4, false)">
+        <span class="mt-ico">🃏</span>
+        <span class="mt-name">4인</span>
+        <span class="mt-sub">AI 3명</span>
+      </button>
+    </div>
+    <div class="lb-btns">
+      <button class="btn btn-outline btn-sm" onclick="miniRank(true)">족보 보기</button>
+      <button class="btn btn-outline btn-sm" onclick="toggleRulesMini(true)">설명서</button>
+    </div>
 
   </div>
 </div>
@@ -4971,9 +5006,19 @@
       <span class="hh-ico">🏆</span>
       <span class="hh-txt">
         <span class="hh-name">랭크게임</span>
-        <span class="hh-sub">무작위 매칭 · RP 반영</span>
+        <span class="hh-sub">클래식 · 아이템전 · TWELVE 무작위 · RP 반영</span>
       </span>
       <span class="hh-side" id="mmRank"></span>
+    </button>
+
+    <!-- ⚡ 빠른대전 — 랭크 바로 아래. 모드를 안 고르는 대신 등급도 안 건다.
+         "뭐라도 좋으니 지금 바로" 를 누르는 자리다. -->
+    <button class="mm-hero quick" onclick="quickAny()">
+      <span class="hh-ico">⚡</span>
+      <span class="hh-txt">
+        <span class="hh-name">빠른대전</span>
+        <span class="hh-sub">모드 상관없이 가장 빨리 · RP 미반영</span>
+      </span>
     </button>
 
     <div class="mm-sec"><b>빠른 입장</b><i></i></div>
@@ -4993,6 +5038,23 @@
       <button class="mm-tile t-quad" onclick="quickJoin('quad')">
         <span class="mt-ico">👥</span>
         <span class="mt-name">다인전</span>
+      </button>
+    </div>
+
+    <div class="mm-sec"><b>미니게임</b><span class="mc-tag">두 장 승부</span><i></i></div>
+    <p class="mm-hint">같은 인원을 기다리는 사람과 붙어요 · 20초 안에 안 차면 AI 가 채웁니다</p>
+    <div class="mm-tiles c3">
+      <button class="mm-tile t-mini" onclick="miniGo(2, true)">
+        <span class="mt-ico">🃏</span>
+        <span class="mt-name">2인</span>
+      </button>
+      <button class="mm-tile t-mini" onclick="miniGo(3, true)">
+        <span class="mt-ico">🃏</span>
+        <span class="mt-name">3인</span>
+      </button>
+      <button class="mm-tile t-mini" onclick="miniGo(4, true)">
+        <span class="mt-ico">🃏</span>
+        <span class="mt-name">4인</span>
       </button>
     </div>
 
@@ -5069,6 +5131,8 @@
   <div class="lb-box" style="align-items:center; text-align:center;">
     <div class="lb-title" id="matchTitle">⚡ 빠른 대전</div>
     <div class="thinking-dots" style="font-size:.9rem; color:#8a7a80;">상대를 찾는 중<span>.</span><span>.</span><span>.</span></div>
+    <!-- 무엇이 걸렸는지·언제 AI 가 오는지를 여기에 적는다 — 기다리는 동안 알아야 할 건 그 둘이다 -->
+    <p class="auth-hint" id="matchHint" style="margin:0;text-align:center;line-height:1.6"></p>
     <button class="btn btn-outline" onclick="cancelMatch()">취소</button>
   </div>
 </div>

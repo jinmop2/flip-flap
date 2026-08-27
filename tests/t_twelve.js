@@ -327,7 +327,10 @@ console.log('\n⑰ 서버·화면에 제대로 물렸는가');
   ok('규칙 검사는 모듈이 한다',
      ['draw', 'offer', 'chooseType', 'raise', 'fold', 'closeBet', 'closeTake', 'closeDecline', 'nextTurn']
        .every((f) => srv.includes('twelve.' + f + '(')));
-  ok('RP 는 안 건드린다', /noRank: true,\s*\/\/ 트웰브는 RP 미반영/.test(srv));
+  // 랭크게임이 세 모드를 무작위로 돌리게 되면서, 트웰브도 랭크로 걸린 판이면
+  // RP 가 움직인다. 하나만 빼 두면 그 모드가 뜨길 기다리는 사람이 생긴다.
+  // 랭크가 아닌 트웰브(혼자 하기·빠른 입장·방)는 예전대로 RP 미반영이다.
+  ok('랭크로 걸린 판만 RP', /noRank: !room\.ranked,  \/\/ 랭크로 걸린 판만 RP 반영/.test(srv));
   ok('방 모드로도 열린다', /room\.mode === 'twelve'\) \{ tvStart/.test(srv));
   ok('빠른 입장에 있다', /'classic', 'item', 'quad', 'twelve'/.test(srv));
   ok('화면이 있다', /id="tv"/.test(htm) && /body\.twelve #tv \{ display:flex/.test(htm));

@@ -63,8 +63,21 @@ ok('랭킹은 전체화면', /\.lb-box\.rank-box \{[\s\S]{0,120}height:100%/.tes
 
 // 랭크게임 · 빠른 입장 · 코드 로그인 제거
 ok('RP 는 랭크게임에서만', /noRank: !room\.ranked/.test(srv));
-ok('랭크 표시는 무작위 매칭에서만 붙는다',
-   (srv.match(/ranked: true/g) || []).length === 2 && !/ranked: true[\s\S]{0,200}quick_join/.test(srv));
+// 랭크 딱지는 매칭 두 길(사람끼리 · 10초 뒤 AI)에서만 붙는다.
+// 이제 그 둘이 빠른대전과 코드를 함께 쓰므로 ranked 는 변수로 넘어온다 —
+// 리터럴 true 를 세는 대신 "그 두 곳 말고는 안 붙는다" 를 본다.
+ok('랭크 표시는 매칭에서만 붙는다',
+   (srv.match(/^ {4}ranked,/gm) || []).length === 2
+   && !/ranked: true/.test(srv)
+   // 빠른 입장이 만드는 방에는 랭크가 안 붙는다 (그 처리기 안만 본다)
+   && (() => {
+     const at = srv.indexOf("socket.on('quick_join'");
+     const body = srv.slice(at, srv.indexOf('\n  });', at));
+     // r.ranked 를 '읽어서 거르는' 것은 정상 — 방에 랭크를 '다는' 것만 본다
+     return at > 0 && !/^\s*ranked[,:]/m.test(body);
+   })());
+ok('빠른대전은 랭크가 아니다', /startMatch\(mate, me, \{ ranked: false \}\)/.test(srv)
+   && /startBotMatch\(me, \{ ranked: false \}\)/.test(srv));
 ok('빠른 입장 통로가 있다', /socket\.on\('quick_join'/.test(srv));
 ok('빠른 입장 방은 랭크 방을 안 집는다', /r\.tutorial \|\| r\.ranked/.test(srv));
 // 방이 없으면 그냥 방을 만든 것과 똑같아야 한다 — 자리도 보이고 시작도 방장이 누른다
