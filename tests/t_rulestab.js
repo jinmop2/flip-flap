@@ -155,7 +155,8 @@ console.log('\n⑦ 방 만들기 · 모드 고르기');
   // 대기실로 들어가면 화면을 켜고, 큰 로고를 접는 표시도 같이 건다
   ok('들어온 사람 모두 대기실 화면으로',
      /waitCard'\)\.style\.display = 'flex';\s*\n\s*document\.body\.classList\.add\('waiting'\)[\s\S]{0,80}roomIsHost/.test(cli));
-  ok('나갈 때 서버에도 알린다', /function cancelWait\(\) \{\s*\n\s*socket\.emit\('leave_room'\)/.test(cli));
+  // toHome 은 '홈' 으로 나가는지 '나가기' 로 나가는지를 가른다(멀티 창을 다시 열지 여부)
+  ok('나갈 때 서버에도 알린다', /function cancelWait\(toHome\) \{\s*\n\s*socket\.emit\('leave_room'\)/.test(cli));
   // 다인전은 엔진이 다르지만, 쓰는 사람 눈엔 자리가 늘어난 것으로만 보여야 한다.
   // 고르는 순간에는 아무 데도 안 간다 — 자리만 넷이 되고 화면은 대기실 그대로.
   ok('다인전은 방을 닫지 않는다', !/다인전으로 바꿀까요/.test(cli) && !/q4Open\(\)/.test(cli));

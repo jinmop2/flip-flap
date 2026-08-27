@@ -2557,7 +2557,10 @@ function dealOrder() {
 // 미션·상점·친구·클랜을 로비 본문에서 빼내 여기로 모았다. 각 탭은 기존 모달을
 // 그대로 연다 — 화면을 새로 만들지 않아 동작이 바뀌지 않는다.
 const NAV_ACTIONS = {
-  home:    () => { closeAllNavModals(); },
+  // 홈은 "무조건 홈" 이다. 방을 만들어 놓고 기다리는 중이라면 그 방에서
+  // 나가는 것까지가 홈이다 — 예전엔 창만 닫혀서, 홈을 눌렀는데 대기실에
+  // 그대로 남아 갇힌 것처럼 보였다.
+  home:    () => { closeAllNavModals(); if (document.body.classList.contains('waiting')) cancelWait(true); },
   mission: () => openMissions(),
   shop:    () => openShop(),
   gacha:   () => openGacha(),
@@ -5121,13 +5124,16 @@ function shareInvite(btn) {
     setTimeout(() => alert('공유를 지원하지 않는 브라우저예요. 링크를 복사했으니 카톡에 붙여넣어 보내세요!'), 100);
   }
 }
-function cancelWait() {
+// toHome=true 면 로비로만 나간다. '나가기' 로 나온 사람은 대개 다른 방을
+// 고르려는 것이라 멀티 창을 다시 열어 주지만, '홈' 을 누른 사람은 홈을 보려는
+// 것이다 — 거기서도 멀티 창이 뜨면 홈을 눌렀는데 홈이 아닌 셈이다.
+function cancelWait(toHome) {
   socket.emit('leave_room');
   roomIsHost = false; roomReady = false; roomModeCur = 'classic';
-  // 방을 나온 사람은 대개 다른 방을 고르려는 것이지 로비를 보려는 게 아니다.
   // 여기서 창을 열어 봐야 바로 아래 새로고침에 쓸려 나가므로, 표시만 남기고
   // 새로 뜬 화면에서 연다.
-  sessionStorage.setItem('ff_openmulti', '1');
+  if (toHome) sessionStorage.removeItem('ff_openmulti');
+  else sessionStorage.setItem('ff_openmulti', '1');
   clearSession(); fastReload();
 }
 

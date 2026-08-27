@@ -2436,7 +2436,22 @@
       display:none; flex-direction:column; align-items:center; gap:12px; width:280px;
       background:#16101c; border:1px solid #2a1c30; border-radius:16px; padding:22px 20px;
       animation:slideDown .35s cubic-bezier(.34,1.4,.64,1);
+      /* 모드가 다섯이 되면서 카드가 556px 까지 자랐다. 화면이 짧으면 위아래가
+         잘리는데 하필 아래가 '시작'·'나가기' 라 갇힌 것처럼 보인다.
+         화면 안에 들어오게 묶고, 넘치는 것은 가운데만 스크롤한다. */
+      max-height:calc(var(--app-h, 100vh) - 96px);
     }
+    #waitCard .wc-scroll {
+      display:flex; flex-direction:column; align-items:center; gap:12px;
+      width:100%; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+      -webkit-overflow-scrolling:touch;
+    }
+    /* 시작·나가기는 늘 바닥에 붙어 있다 — 스크롤과 상관없이 보여야 하는 둘이다 */
+    #waitCard .wc-foot {
+      display:flex; flex-direction:column; align-items:center; gap:8px;
+      width:100%; flex-shrink:0; padding-top:2px;
+    }
+    #waitCard .wc-foot .btn { width:100%; }
     .wc-label { font-size:.8rem; color:#8a7a80; }
     .wc-code {
       display:flex; align-items:center; gap:10px;
@@ -4889,6 +4904,9 @@
       <span class="wc-code"><span id="waitCode">-----</span><button class="code-copy" onclick="copyCodeIcon(this)" title="코드 복사"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button></span>
     </div>
 
+    <!-- 가운데만 스크롤된다. 카드가 화면보다 길어지면 아래 버튼부터 잘리는데,
+         하필 그게 '시작' 과 '나가기' 라 갇힌 것처럼 보였다 — 둘은 늘 바닥에 붙여 둔다. -->
+    <div class="wc-scroll">
     <!-- 자리 — 누가 들어와 있는지 보인다 -->
     <div class="wc-seats" id="wcSeats"></div>
 
@@ -4916,10 +4934,13 @@
         <b>미니게임</b><small>두 장 승부</small>
       </button>
     </div>
+    </div><!-- /wc-scroll -->
 
-    <button class="btn btn-gold" id="wcStart" onclick="roomStart()" disabled>게임 시작</button>
-    <div class="wc-sub" id="wcGuestNote" style="display:none">방장이 시작하길 기다리는 중…</div>
-    <button class="lobby-rules-link" onclick="cancelWait()">← 나가기</button>
+    <div class="wc-foot">
+      <button class="btn btn-gold" id="wcStart" onclick="roomStart()" disabled>게임 시작</button>
+      <div class="wc-sub" id="wcGuestNote" style="display:none">방장이 시작하길 기다리는 중…</div>
+      <button class="lobby-rules-link" onclick="cancelWait()">← 나가기</button>
+    </div>
   </div>
 </div>
 

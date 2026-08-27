@@ -363,5 +363,31 @@ ok('끊겨서 방이 지워지기 전에도 부른다',
 ok('트웰브도 남긴다', /room\.tv && !room\.tv\.over && !room\.tvDone[\s\S]{0,200}tvFinish\(roomId\)/.test(srv));
 ok('튜토리얼은 전적에 안 남긴다', /if \(room\.tutorial\) return false;/.test(srv));
 
+console.log('\n⑫ 대기실 — 짧은 화면에서도 시작·나가기가 보인다');
+// 모드가 다섯이 되면서 카드가 556px 까지 자랐다. 화면이 짧으면 위아래가 잘리는데
+// 하필 아래가 '시작'·'나가기' 라, 방에 갇힌 것처럼 보였다.
+ok('카드를 화면 안에 묶는다', /#waitCard \{[\s\S]{0,520}max-height:calc\(var\(--app-h, 100vh\) - 96px\);/.test(htm));
+ok('가운데만 스크롤한다', /#waitCard \.wc-scroll \{[\s\S]{0,200}overflow-y:auto;/.test(htm)
+   && /<div class="wc-scroll">/.test(htm) && /<\/div><!-- \/wc-scroll -->/.test(htm));
+ok('시작·나가기는 바닥에 붙는다', /#waitCard \.wc-foot \{[\s\S]{0,180}flex-shrink:0;/.test(htm)
+   && /<div class="wc-foot">[\s\S]{0,400}id="wcStart"[\s\S]{0,300}cancelWait\(\)/.test(htm));
+// 스크롤되는 쪽에 시작·나가기가 들어가면 다시 같은 문제가 된다
+ok('시작·나가기가 스크롤 안에 없다', (() => {
+  const a = htm.indexOf('<div class="wc-scroll">');
+  const b = htm.indexOf('</div><!-- /wc-scroll -->');
+  const inner = htm.slice(a, b);
+  return a > 0 && b > a && !/id="wcStart"/.test(inner) && !/cancelWait\(/.test(inner);
+})());
+
+console.log('\n⑬ 대기실에서도 홈은 홈이다');
+// 예전엔 창만 닫혀서, 홈을 눌렀는데 대기실에 그대로 남아 갇힌 것처럼 보였다
+ok('홈이 방에서 나가게 한다',
+   /home:    \(\) => \{ closeAllNavModals\(\); if \(document\.body\.classList\.contains\('waiting'\)\) cancelWait\(true\); \},/.test(cli));
+// '나가기' 는 다른 방을 고르려는 것이라 멀티 창을 다시 열지만, '홈' 은 홈이어야 한다
+ok('홈으로 나가면 멀티 창을 안 연다',
+   /function cancelWait\(toHome\)/.test(cli)
+   && /if \(toHome\) sessionStorage\.removeItem\('ff_openmulti'\);\s*\n\s*else sessionStorage\.setItem\('ff_openmulti', '1'\);/.test(cli));
+ok('나가기 버튼은 예전 그대로', /onclick="cancelWait\(\)"/.test(htm));
+
 console.log(`결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
