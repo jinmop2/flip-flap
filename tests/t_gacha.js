@@ -37,7 +37,9 @@ console.log('\n① 확률표가 화면에 내려간다 (법적으로 표시 의�
 
 console.log('\n② 코인이 실제로 빠지고 물건이 들어온다');
 {
-  const t = rich(5000);
+  // 값이 오를 수 있으므로 넉넉히 쥐어 준다 — 잔액이 모자라 실패하면
+  // '뽑기가 깨졌다' 가 아니라 '테스트가 값에 매여 있다' 는 뜻이다
+  const t = rich(info.cost + info.cost10 + 1000);
   const before = a.byToken(t).coins;
   const r = a.rollGacha(t, 1);
   ok('뽑기 성공', r.ok && r.results.length === 1);

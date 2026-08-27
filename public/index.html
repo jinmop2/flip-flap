@@ -765,6 +765,10 @@
     .win-stamp.st-crown, .q-winstamp.st-crown { font-family:sans-serif; font-size:1.8rem; color:#ffd45e;
       -webkit-text-stroke:1.4px #7a4e10; }
 
+    /* 불꽃 도장 — 낙찰 자리에 불도장 */
+    .win-stamp.st-flame, .q-winstamp.st-flame { font-family:sans-serif; font-size:1.7rem; color:#ff9d3a;
+      text-shadow:0 0 10px rgba(255,120,40,.9), 0 0 22px rgba(255,60,0,.55); }
+
     /* ── 카드 놓을 때 파티클 ── */
     .place-fx { position:absolute; inset:0; pointer-events:none; z-index:6; overflow:visible; }
     .place-fx i {
@@ -778,6 +782,9 @@
     .pf-dust  i { background:#b8a890; }
     .pf-spark i { background:#ffe9a8; box-shadow:0 0 6px rgba(255,220,120,.9); }
     .pf-ember i { background:#ff8c2a; box-shadow:0 0 8px rgba(255,120,40,.95); }
+    /* 꽃잎 — 불티보다 크고 느리게, 분홍으로 */
+    .pf-petal i { background:#ffb3d1; width:5px; height:7px; border-radius:60% 0 60% 0;
+      box-shadow:0 0 7px rgba(255,150,200,.8); }
     @media (prefers-reduced-motion:reduce) { .place-fx { display:none; } }
 
     /* ── 승리 연출 — 이길 때 화면 전체 ── */
@@ -812,6 +819,20 @@
       from { opacity:1; transform:translate(0,0) scale(1.2); }
       to   { opacity:0; transform:translate(var(--fx), var(--fy)) scale(.25); }
     }
+    /* 오로라 — 하늘에 드리운 커튼. 점이 아니라 띠라서 느리게 흔들린다. */
+    .vx-aurora i {
+      top:-8%; height:70vh; border-radius:50% / 14%; width:120px; opacity:0;
+      background:linear-gradient(180deg, rgba(120,255,205,.55) 0%, rgba(90,190,255,.35) 45%, transparent 100%);
+      filter:blur(9px);
+      animation:vxAurora 2.8s ease-in-out forwards;
+    }
+    @keyframes vxAurora {
+      0%   { opacity:0; transform:translateX(-14px) scaleY(.6); }
+      25%  { opacity:.95; }
+      60%  { opacity:.8;  transform:translateX(16px) scaleY(1.05); }
+      100% { opacity:0;   transform:translateX(-8px) scaleY(.9); }
+    }
+    .shop-vfxprev.vx-aurora { background:linear-gradient(180deg,#7effcd,#5ab8ff 60%,#12203a); }
     /* 파편 폭발 — 유리 조각이 사방으로. 모서리를 깎아 조각처럼 보이게 한다. */
     .vx-shard i { top:auto; border-radius:1px; background:linear-gradient(140deg,#eaf9ff,#6ab4e0 55%,#2a72a4);
       clip-path:polygon(18% 0, 100% 26%, 74% 100%, 0 62%);
@@ -833,6 +854,7 @@
     .shop-placeprev.pf-dust  { box-shadow:inset 0 0 0 2px #b8a890, 0 0 10px rgba(184,168,144,.6); }
     .shop-placeprev.pf-spark { box-shadow:inset 0 0 0 2px #ffe9a8, 0 0 12px rgba(255,220,120,.85); }
     .shop-placeprev.pf-ember { box-shadow:inset 0 0 0 2px #ff8c2a, 0 0 14px rgba(255,120,40,.9); }
+    .shop-placeprev.pf-petal { box-shadow:inset 0 0 0 2px #ffb3d1, 0 0 14px rgba(255,150,200,.85); }
     .shop-vfxprev { width:44px; height:30px; border-radius:6px; display:inline-block; }
     .shop-vfxprev.vx-confetti { background:linear-gradient(115deg,#e8544a 0 20%,#ffd94a 20% 40%,#5fbdd8 40% 60%,#7cc45a 60% 80%,#c88bff 80%); }
     .shop-vfxprev.vx-coin { background:radial-gradient(circle at 30% 30%, #fff3c8, #e0a82a 60%, #8a5a12); }
@@ -1191,6 +1213,39 @@
     .np-hanji { background:linear-gradient(135deg,#f0e3c8,#ddc9a2);
       border:1px solid #8a6a3a; color:#3a2a16 !important;
       box-shadow:0 1px 4px rgba(90,60,20,.35); }
+    /* ── 새벽 세트 — 해 뜨기 직전. 입문용이라 요란하지 않게 ── */
+    .card.back.cb-dawn {
+      background:linear-gradient(170deg,#2b2f5c 0%,#48407a 45%,#8a5f7e 78%,#d59a72 100%) !important;
+      border-color:#8a7ab0 !important;
+      box-shadow:0 3px 12px rgba(20,20,60,.5), inset 0 0 14px rgba(255,200,160,.14) !important;
+    }
+    .card.back.cb-dawn .bf { -webkit-text-fill-color:#ffe6cf; color:#ffe6cf; }
+    .np-dawn { background:linear-gradient(135deg,#3a3f74,#7d5f8e 60%,#d59a72);
+      border:1px solid #b79ad0; color:#fff0e2 !important;
+      box-shadow:0 1px 5px rgba(20,20,60,.4), inset 0 1px 0 rgba(255,220,190,.3); }
+    .shop-tblprev.tp-dawn { background:radial-gradient(ellipse at 50% 45%, #4a4a86, #221f42); }
+
+    /* ── 용린 세트 — 파편으로만 닿는 자리. 이 판에서 가장 화려해야 한다 ── */
+    .card.back.cb-dragon {
+      background:
+        repeating-radial-gradient(circle at 50% 0, rgba(255,225,140,.14) 0 6px, transparent 6px 13px),
+        radial-gradient(ellipse at 50% 20%, rgba(120,255,205,.22), transparent 62%),
+        linear-gradient(165deg,#0d3a2e 0%,#12523c 42%,#0a2a24 100%) !important;
+      border-color:#6ee7b0 !important;
+      box-shadow:0 0 14px rgba(110,231,176,.45), inset 0 0 18px rgba(255,215,120,.16) !important;
+    }
+    .card.back.cb-dragon .bf { -webkit-text-fill-color:#ffe9a8; color:#ffe9a8;
+      text-shadow:0 0 8px rgba(110,231,176,.7); }
+    .np-dragon {
+      background:
+        repeating-linear-gradient(122deg, rgba(255,225,140,.16) 0 3px, transparent 3px 8px),
+        linear-gradient(135deg,#0f4a38,#0a2a24);
+      border:1px solid #6ee7b0; color:#ffe9a8 !important;
+      box-shadow:0 0 12px rgba(110,231,176,.55), inset 0 1px 0 rgba(255,225,150,.28); }
+    .shop-tblprev.tp-dragon { background:
+      repeating-radial-gradient(circle at 50% 10%, rgba(255,225,140,.13) 0 5px, transparent 5px 11px),
+      radial-gradient(ellipse at 50% 45%, #13543f, #08241d); }
+
     /* 크리스탈 테이블 — 살얼음 */
     .shop-tblprev.tp-crystal { background:radial-gradient(ellipse at 50% 45%, #2d6d8c, #14384c); }
     .shop-tblprev.tp-shard { background:
@@ -1201,7 +1256,7 @@
     .shop-tblprev.tp-hanji { background:radial-gradient(ellipse at 50% 45%, #d9c6a0, #b39c72); }
 
     /* ── 명패 (닉네임 장식) ── */
-    .np-wood, .np-neon, .np-gold, .np-daily, .np-lv50, .np-ruby, .np-crystal, .np-obsidian, .np-hanji, .np-shard, .np-hwatu { padding:1px 9px; border-radius:8px; display:inline-block; }
+    .np-wood, .np-neon, .np-gold, .np-daily, .np-lv50, .np-ruby, .np-crystal, .np-obsidian, .np-hanji, .np-shard, .np-hwatu, .np-dawn, .np-dragon { padding:1px 9px; border-radius:8px; display:inline-block; }
     /* 파편 명패 — 갈라진 결정. 금 간 자리로 빛이 샌다. */
     .np-shard { background:
         linear-gradient(112deg, rgba(255,255,255,.5) 0 22%, transparent 22.5%),
@@ -2679,6 +2734,16 @@
       repeating-linear-gradient(92deg, rgba(120,90,50,.05) 0 1px, transparent 1px 6px),
       radial-gradient(ellipse 90% 70% at 50% 50%, #6a5a42 0%, #46392a 78%, #2a2118 100%);
       border-color:#7a6242; }
+    /* 새벽 테이블 — 해 뜨기 전 하늘 */
+    #game.tbl-dawn #game-table , #game4.tbl-dawn #quad-table , #mini.tbl-dawn , #tv.tbl-dawn #tv-table { background:
+      radial-gradient(ellipse 90% 70% at 50% 30%, #4a4a86 0%, #2e2b58 62%, #171436 100%);
+      border-color:#5a5490; }
+    /* 용린 테이블 — 비늘이 겹친 판 */
+    #game.tbl-dragon #game-table , #game4.tbl-dragon #quad-table , #mini.tbl-dragon , #tv.tbl-dragon #tv-table { background:
+      repeating-radial-gradient(circle at 50% 8%, rgba(255,225,140,.075) 0 7px, transparent 7px 15px),
+      radial-gradient(ellipse 90% 70% at 50% 50%, #12563f 0%, #0b3227 76%, #06201a 100%);
+      border-color:#2f6f52; }
+
     /* ── 카드 앞면 스킨 (내 시야 카드 숫자 테마) ── */
     .cf-neon .card .c-num{ color:#6ffcff; text-shadow:0 0 8px rgba(90,240,255,.8),0 0 2px rgba(90,240,255,.9); }
     .cf-neon .card .c-rank{ color:#ff8ef0; }
@@ -2698,6 +2763,10 @@
     .cf-obsidian .card .c-num{ color:#e8c98a; text-shadow:0 0 8px rgba(200,160,70,.7), 0 1px 2px rgba(0,0,0,.7); }
     .cf-obsidian .card .c-rank{ color:#f0dca8; }
     .shop-cfprev.cfp-obsidian { color:#e8c98a; text-shadow:0 0 8px rgba(200,160,70,.7); }
+    /* 용린 카드 — 금빛 비늘 글씨 */
+    .cf-dragon .card .c-num{ color:#ffe9a8; text-shadow:0 0 9px rgba(110,231,176,.85), 0 1px 0 rgba(60,40,0,.6); }
+    .cf-dragon .card .c-rank{ color:#bfffe0; background:rgba(10,42,34,.6); }
+    .shop-cfprev.cfp-dragon { color:#ffe9a8; text-shadow:0 0 9px rgba(110,231,176,.85); }
     /* 먹글씨 — 붓으로 쓴 느낌이라 세리프에 살짝 기울인다 */
     .cf-hanji .card .c-num{ font-family:Georgia,'Times New Roman',serif; color:#2a1d10;
       text-shadow:0 1px 0 rgba(255,250,235,.35); transform:skewX(-4deg); }

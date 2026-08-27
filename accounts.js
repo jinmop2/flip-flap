@@ -839,53 +839,53 @@ function setNick(token, nick) {
 
 // ── 상점 ──
 const SHOP = {
-  dye_random:  { name: '랜덤 닉네임 염색약', icon: '🎨', price: 300,  type: 'dye',
+  dye_random:  { name: '랜덤 닉네임 염색약', icon: '🎨', price: 400,  type: 'dye',
                  desc: '닉네임 색을 랜덤으로! 골드 8%·무지개 2%' },
-  nick_change: { name: '닉네임 변경권',       icon: '✏️', price: 500,  type: 'ticket',
+  nick_change: { name: '닉네임 변경권',       icon: '✏️', price: 700,  type: 'ticket',
                  desc: '닉네임을 한 번 바꿀 수 있어요' },
-  back_night:  { name: '미드나잇 카드백',     icon: '🌙', price: 500,  type: 'cardback',
+  back_night:  { name: '미드나잇 카드백',     icon: '🌙', price: 550,  type: 'cardback',
                  desc: '깊은 밤하늘 카드 뒷면 (상대에게도 보여요)' },
-  back_gold:   { name: '황금 카드백',         icon: '🎖', price: 800,  type: 'cardback',
+  back_gold:   { name: '황금 카드백',         icon: '🎖', price: 1400,  type: 'cardback',
                  desc: '번쩍이는 황금 카드 뒷면' },
-  back_obang:  { name: '오방색 카드백',       icon: '🎏', price: 1200, type: 'cardback',
+  back_obang:  { name: '오방색 카드백',       icon: '🎏', price: 1900, type: 'cardback',
                  desc: '전통 오방색 카드 뒷면' },
-  back_ruby:   { name: '루비 카드백',         icon: '❤️‍🔥', price: 700,  type: 'cardback',
+  back_ruby:   { name: '루비 카드백',         icon: '❤️‍🔥', price: 900,  type: 'cardback',
                  desc: '와인빛으로 물든 카드 뒷면' },
-  back_galaxy: { name: '은하수 카드백',       icon: '🌌', price: 1500, type: 'cardback',
+  back_galaxy: { name: '은하수 카드백',       icon: '🌌', price: 2400, type: 'cardback',
                  desc: '별이 흐르는 프리미엄 카드 뒷면' },
-  emote_party: { name: '파티 이모트 팩',      icon: '🎉', price: 400,  type: 'emotes',
+  emote_party: { name: '파티 이모트 팩',      icon: '🎉', price: 450,  type: 'emotes',
                  desc: '광대·악마·해골 등 장난스러운 8종' },
-  emote_animal:{ name: '동물 이모트 팩',      icon: '🐾', price: 400,  type: 'emotes',
+  emote_animal:{ name: '동물 이모트 팩',      icon: '🐾', price: 450,  type: 'emotes',
                  desc: '강아지·고양이·여우 등 동물 8종' },
-  emote_battle:{ name: '승부사 이모트 팩',    icon: '⚔️', price: 400,  type: 'emotes',
+  emote_battle:{ name: '승부사 이모트 팩',    icon: '⚔️', price: 500,  type: 'emotes',
                  desc: '칼·방패·트로피 등 승부용 8종' },
-  np_wood:  { name: '나무 명패',   icon: '🪵', price: 400,  type: 'plate', desc: '닉네임을 감싸는 소박한 나무 명패' },
-  np_neon:  { name: '네온 명패',   icon: '💜', price: 800,  type: 'plate', desc: '보랏빛 네온 명패 · 경험치 +5%' },
-  np_gold:  { name: '황금 명패',   icon: '🏅', price: 1000, type: 'plate', desc: '번쩍이는 황금 명패 · 코인 획득 +4%' },
-  np_daily: { name: '행운의 명패', icon: '🍀', price: 1500, type: 'plate', desc: '장착 중이면 매일 출석 보상 +50🪙' },
+  np_wood:  { name: '나무 명패',   icon: '🪵', price: 350,  type: 'plate', desc: '닉네임을 감싸는 소박한 나무 명패' },
+  np_neon:  { name: '네온 명패',   icon: '💜', price: 1000,  type: 'plate', desc: '보랏빛 네온 명패 · 경험치 +5%' },
+  np_gold:  { name: '황금 명패',   icon: '🏅', price: 1600, type: 'plate', desc: '번쩍이는 황금 명패 · 코인 획득 +4%' },
+  np_daily: { name: '행운의 명패', icon: '🍀', price: 2200, type: 'plate', desc: '장착 중이면 매일 출석 보상 +50🪙' },
   np_lv50:  { name: '레벨50 한정 명패', icon: '🎖️', price: 0, type: 'plate', milestone: true, desc: '레벨 50 달성자 한정 · 코인·경험치 각 +3%' },
   dye_rare: { name: '희귀 염색약 확정권', icon: '💎', price: 0, type: 'dye_rare', milestone: true, desc: '희귀 색상(청록·핑크·라임) 확정 — 레벨20 보상' },
   // 스포이드 — 염색약은 눌러 보기 전엔 무슨 색이 나올지 모른다. 마음에 드는
   // 색을 들고 있으면 새 염색약이 무섭다. 그 색을 담아 두었다가 한 번 되돌린다.
   dye_pipette: { name: '염색 스포이드', icon: '🧪', price: 0, type: 'pipette', shard: 350,
                  desc: '지금 닉네임 색을 담아 둔다 · 언제든 한 번 그 색으로 되돌린다 (1회용)' },
-  tbl_blue:  { name: '블루 테이블',   icon: '🔵', price: 600,  type: 'table', desc: '차분한 심해 블루 테이블' },
-  tbl_purple:{ name: '퍼플 테이블',   icon: '🟣', price: 700,  type: 'table', desc: '고급스러운 자주빛 테이블' },
-  tbl_gold:  { name: '골드 테이블',   icon: '🟡', price: 1200, type: 'table', desc: '럭셔리 카지노 골드 테이블' },
-  tbl_forest:{ name: '그린 펠트 테이블', icon: '🟢', price: 600, type: 'table', desc: '클래식 카지노 그린 펠트' },
-  face_neon: { name: '네온 카드',     icon: '🃏', price: 700,  type: 'cardface', desc: '숫자가 네온으로 빛나는 카드 앞면' },
-  face_classic:{ name: '클래식 카드', icon: '♠️', price: 900,  type: 'cardface', desc: '트럼프풍 세리프 숫자 카드 앞면' },
-  face_gold: { name: '황금 숫자 카드', icon: '👑', price: 1000, type: 'cardface', desc: '숫자가 황금빛으로 빛나는 카드 앞면' },
-  np_ruby:   { name: '루비 명패',     icon: '❤️‍🔥', price: 1200, type: 'plate', desc: '와인빛 루비 명패 · 연승 보너스 1.25배' },
+  tbl_blue:  { name: '블루 테이블',   icon: '🔵', price: 500,  type: 'table', desc: '차분한 심해 블루 테이블' },
+  tbl_purple:{ name: '퍼플 테이블',   icon: '🟣', price: 900,  type: 'table', desc: '고급스러운 자주빛 테이블' },
+  tbl_gold:  { name: '골드 테이블',   icon: '🟡', price: 1800, type: 'table', desc: '럭셔리 카지노 골드 테이블' },
+  tbl_forest:{ name: '그린 펠트 테이블', icon: '🟢', price: 450, type: 'table', desc: '클래식 카지노 그린 펠트' },
+  face_neon: { name: '네온 카드',     icon: '🃏', price: 950,  type: 'cardface', desc: '숫자가 네온으로 빛나는 카드 앞면' },
+  face_classic:{ name: '클래식 카드', icon: '♠️', price: 1300,  type: 'cardface', desc: '트럼프풍 세리프 숫자 카드 앞면' },
+  face_gold: { name: '황금 숫자 카드', icon: '👑', price: 1600, type: 'cardface', desc: '숫자가 황금빛으로 빛나는 카드 앞면' },
+  np_ruby:   { name: '루비 명패',     icon: '❤️‍🔥', price: 1600, type: 'plate', desc: '와인빛 루비 명패 · 연승 보너스 1.25배' },
 
   // ── 크리스탈 세트 — 카드백·명패·테이블·카드앞면을 맞춰 쓰면 한 벌이 된다 ──
-  back_crystal: { name: '크리스탈 카드백', icon: '🔮', price: 1600, type: 'cardback',
+  back_crystal: { name: '크리스탈 카드백', icon: '🔮', price: 2600, type: 'cardback',
                   desc: '빛을 쪼개는 수정 결정면 뒷면' },
-  np_crystal:   { name: '크리스탈 명패',   icon: '🔮', price: 1300, type: 'plate',
+  np_crystal:   { name: '크리스탈 명패',   icon: '🔮', price: 2200, type: 'plate',
                   desc: '얼음처럼 맑은 명패 · 경험치 +8%' },
-  tbl_crystal:  { name: '크리스탈 테이블', icon: '🧊', price: 1400, type: 'table',
+  tbl_crystal:  { name: '크리스탈 테이블', icon: '🧊', price: 2300, type: 'table',
                   desc: '살얼음이 낀 듯한 서늘한 테이블' },
-  face_crystal: { name: '크리스탈 카드',   icon: '💠', price: 1100, type: 'cardface',
+  face_crystal: { name: '크리스탈 카드',   icon: '💠', price: 2000, type: 'cardface',
                   desc: '숫자가 수정처럼 맑게 비치는 앞면' },
 
   // ── 파편 세트 — 파편으로만 얻는다 ──
@@ -906,71 +906,103 @@ const SHOP = {
                  desc: '이기면 화면이 조각나 흩어진다 · 파편으로만' },
 
   // ── 단품 ──
-  back_obsidian:{ name: '흑요석 카드백',   icon: '🌑', price: 1800, type: 'cardback',
+  back_obsidian:{ name: '흑요석 카드백',   icon: '🌑', price: 3000, type: 'cardback',
                   desc: '검은 유리에 금이 흐르는 뒷면' },
-  back_hanji:   { name: '한지 카드백',     icon: '📜', price: 900,  type: 'cardback',
+  back_hanji:   { name: '한지 카드백',     icon: '📜', price: 1200,  type: 'cardback',
                   desc: '닥종이 결에 먹으로 친 뒷면' },
-  emote_taunt:  { name: '도발 이모트 팩',  icon: '🫖', price: 500,  type: 'emotes',
+  emote_taunt:  { name: '도발 이모트 팩',  icon: '🫖', price: 650,  type: 'emotes',
                   desc: '티백·느린박수·하품 등 약올리기 8종' },
 
   // ── 승리 연출 — 이길 때 화면에 터진다. 상대에게도 보인다 ──
-  vfx_confetti: { name: '색종이 축포',   icon: '🎊', price: 900,  type: 'victory',
+  vfx_confetti: { name: '색종이 축포',   icon: '🎊', price: 1300,  type: 'victory',
                   desc: '승리하면 색종이가 쏟아진다' },
-  vfx_coinrain: { name: '금화비',        icon: '💰', price: 1400, type: 'victory',
+  vfx_coinrain: { name: '금화비',        icon: '💰', price: 2200, type: 'victory',
                   desc: '승리하면 금화가 떨어진다' },
-  vfx_thunder:  { name: '벼락',          icon: '⚡', price: 1400, type: 'victory',
+  vfx_thunder:  { name: '벼락',          icon: '⚡', price: 2200, type: 'victory',
                   desc: '승리하면 벼락이 내리친다' },
-  vfx_firework: { name: '불꽃놀이',      icon: '🎆', price: 2200, type: 'victory',
+  vfx_firework: { name: '불꽃놀이',      icon: '🎆', price: 3400, type: 'victory',
                   desc: '승리하면 밤하늘에 불꽃이 터진다' },
 
   // ── 아바타 — 프로필·랭킹·게임 화면에 계속 보인다 ──
-  ava_rookie:   { name: '초심자 아바타', icon: '🙂', price: 300,  type: 'avatar', desc: '이제 막 시작한 얼굴' },
-  ava_gambler:  { name: '승부사 아바타', icon: '🎩', price: 800,  type: 'avatar', desc: '중절모를 눌러쓴 승부사' },
-  ava_fox:      { name: '여우 아바타',   icon: '🦊', price: 800,  type: 'avatar', desc: '속내를 알 수 없는 여우' },
-  ava_dealer:   { name: '딜러 아바타',   icon: '🃏', price: 1300, type: 'avatar', desc: '판을 굴리는 딜러' },
-  ava_cat:      { name: '도둑고양이 아바타', icon: '🐱', price: 1300, type: 'avatar', desc: '남의 패를 노리는 고양이' },
-  ava_king:     { name: '왕 아바타',     icon: '👑', price: 2000, type: 'avatar', desc: '경매장의 왕' },
-  ava_phantom:  { name: '괴도 아바타',   icon: '🎭', price: 2000, type: 'avatar', desc: '정체를 감춘 괴도' },
+  ava_rookie:   { name: '초심자 아바타', icon: '🙂', price: 250,  type: 'avatar', desc: '이제 막 시작한 얼굴' },
+  ava_gambler:  { name: '승부사 아바타', icon: '🎩', price: 1000,  type: 'avatar', desc: '중절모를 눌러쓴 승부사' },
+  ava_fox:      { name: '여우 아바타',   icon: '🦊', price: 1000,  type: 'avatar', desc: '속내를 알 수 없는 여우' },
+  ava_dealer:   { name: '딜러 아바타',   icon: '🃏', price: 1700, type: 'avatar', desc: '판을 굴리는 딜러' },
+  ava_cat:      { name: '도둑고양이 아바타', icon: '🐱', price: 1700, type: 'avatar', desc: '남의 패를 노리는 고양이' },
+  ava_king:     { name: '왕 아바타',     icon: '👑', price: 3000, type: 'avatar', desc: '경매장의 왕' },
+  ava_phantom:  { name: '괴도 아바타',   icon: '🎭', price: 3000, type: 'avatar', desc: '정체를 감춘 괴도' },
 
   // ── 낙찰 도장 — 이겼을 때 배팅 카드에 찍힌다 ──
   stamp_win:    { name: 'WIN 도장',      icon: '🏷', price: 0,    type: 'stamp', basic: true, desc: '기본 낙찰 도장' },
-  stamp_seal:   { name: '붉은 인장',     icon: '🔴', price: 700,  type: 'stamp', desc: '옛 도장처럼 붉게 찍힌다' },
-  stamp_star:   { name: '별 도장',       icon: '⭐', price: 1100, type: 'stamp', desc: '별이 박히듯 찍힌다' },
-  stamp_crown:  { name: '왕관 도장',     icon: '👑', price: 1800, type: 'stamp', desc: '왕관이 내려앉는다' },
+  stamp_seal:   { name: '붉은 인장',     icon: '🔴', price: 900,  type: 'stamp', desc: '옛 도장처럼 붉게 찍힌다' },
+  stamp_star:   { name: '별 도장',       icon: '⭐', price: 1400, type: 'stamp', desc: '별이 박히듯 찍힌다' },
+  stamp_crown:  { name: '왕관 도장',     icon: '👑', price: 2600, type: 'stamp', desc: '왕관이 내려앉는다' },
 
   // ── 카드 놓는 이펙트 — 내가 카드를 낼 때 ──
   place_dust:   { name: '먼지',          icon: '💨', price: 0,    type: 'place', basic: true, desc: '기본 — 옅은 먼지가 인다' },
-  place_spark:  { name: '반짝임',        icon: '✨', price: 600,  type: 'place', desc: '카드를 낼 때 반짝인다' },
-  place_ember:  { name: '불티',          icon: '🔥', price: 1200, type: 'place', desc: '카드를 낼 때 불티가 튄다' },
+  place_spark:  { name: '반짝임',        icon: '✨', price: 750,  type: 'place', desc: '카드를 낼 때 반짝인다' },
+  place_ember:  { name: '불티',          icon: '🔥', price: 1500, type: 'place', desc: '카드를 낼 때 불티가 튄다' },
 
   // ── 흑요석 세트 (명패·테이블·앞면) ──
-  np_obsidian:  { name: '흑요석 명패',     icon: '🌑', price: 2000, type: 'plate',
+  np_obsidian:  { name: '흑요석 명패',     icon: '🌑', price: 3200, type: 'plate',
                   desc: '금이 흐르는 검은 명패 · 코인 획득 +6%' },
-  tbl_obsidian: { name: '흑요석 테이블',   icon: '🌑', price: 1700, type: 'table',
+  tbl_obsidian: { name: '흑요석 테이블',   icon: '🌑', price: 2800, type: 'table',
                   desc: '검은 유리를 깐 듯한 테이블' },
-  face_obsidian:{ name: '흑요석 카드',     icon: '🌑', price: 1300, type: 'cardface',
+  face_obsidian:{ name: '흑요석 카드',     icon: '🌑', price: 2400, type: 'cardface',
                   desc: '숫자가 금빛으로 새겨진 앞면' },
 
   // ── 화투 에디션 (카드백·명패·테이블·앞면) ──
   // 우리 카드 종류가 2·3·4·6 인데 화투 월과 그대로 맞아떨어진다.
   //   2 → 2월 매조(홍매화) · 3 → 3월 벚꽃 · 4 → 4월 흑싸리 · 6 → 6월 모란
   // 가운데 큰 숫자가 곧 "몇 월" 이라 새로 외울 것이 없다.
-  back_hwatu:   { name: '화투 카드백',     icon: '🎴', price: 1600, type: 'cardback',
+  back_hwatu:   { name: '화투 카드백',     icon: '🎴', price: 2800, type: 'cardback',
                   desc: '붉은 등 · 화투짝을 엎어 놓은 뒷면' },
-  np_hwatu:     { name: '화투 명패',       icon: '🎴', price: 1600, type: 'plate',
+  np_hwatu:     { name: '화투 명패',       icon: '🎴', price: 2800, type: 'plate',
                   desc: '붉은 판에 검은 테 · 골드 획득 +5%' },
-  tbl_hwatu:    { name: '화투 담요',       icon: '🎴', price: 1500, type: 'table',
+  tbl_hwatu:    { name: '화투 담요',       icon: '🎴', price: 2600, type: 'table',
                   desc: '붉은 담요를 깔았다' },
-  face_hwatu:   { name: '화투 카드',       icon: '🎴', price: 2400, type: 'cardface',
+  face_hwatu:   { name: '화투 카드',       icon: '🎴', price: 3200, type: 'cardface',
                   desc: '숫자가 곧 월 — 2월 매조·3월 벚꽃·4월 흑싸리·6월 모란' },
 
   // ── 한지 세트 (명패·테이블·앞면) ──
-  np_hanji:     { name: '한지 명패',       icon: '📜', price: 900,  type: 'plate',
+  np_hanji:     { name: '한지 명패',       icon: '📜', price: 1200,  type: 'plate',
                   desc: '먹으로 쓴 이름표 · 경험치 +3%' },
-  tbl_hanji:    { name: '한지 테이블',     icon: '📜', price: 800,  type: 'table',
+  tbl_hanji:    { name: '한지 테이블',     icon: '📜', price: 1100,  type: 'table',
                   desc: '닥종이를 깐 차분한 테이블' },
-  face_hanji:   { name: '먹글씨 카드',     icon: '📜', price: 800,  type: 'cardface',
+  face_hanji:   { name: '먹글씨 카드',     icon: '📜', price: 1250,  type: 'cardface',
                   desc: '붓으로 쓴 듯한 숫자 앞면' },
+
+  // ── 새벽 세트 — 갓 시작한 사람이 첫 목표로 삼을 자리.
+  //    값을 낮게 둔 건 인심이 아니라 "모으면 산다" 를 한 번 겪게 하려는 것이다.
+  back_dawn:    { name: '새벽 카드백',     icon: '🌅', price: 400,  type: 'cardback',
+                  desc: '해 뜨기 직전의 남보라 — 첫 카드백으로' },
+  np_dawn:      { name: '새벽 명패',       icon: '🌅', price: 500,  type: 'plate',
+                  desc: '트인 하늘빛 이름표 · 경험치 +2%' },
+  tbl_dawn:     { name: '새벽 테이블',     icon: '🌅', price: 600,  type: 'table',
+                  desc: '해 뜨기 전 하늘을 깐 판' },
+
+  // ── 개별 신품 ──
+  emote_night:  { name: '밤하늘 이모트 팩', icon: '🌙', price: 550,  type: 'emotes',
+                  desc: '달·별·수정 — 조용한 여덟 개' },
+  emote_luck:   { name: '행운 이모트 팩',   icon: '🍀', price: 700,  type: 'emotes',
+                  desc: '네잎클로버·주사위·수정구 — 운을 비는 여덟 개' },
+  ava_owl:      { name: '올빼미 아바타',   icon: '🦉', price: 1200, type: 'avatar', desc: '밤새 판을 읽는 눈' },
+  ava_wolf:     { name: '늑대 아바타',     icon: '🐺', price: 1900, type: 'avatar', desc: '무리를 이끄는 쪽' },
+  stamp_flame:  { name: '불꽃 도장',       icon: '🔥', price: 1600, type: 'stamp', desc: '낙찰에 불도장을 찍는다' },
+  place_petal:  { name: '꽃잎',            icon: '🌸', price: 1100, type: 'place', desc: '카드를 낼 때 꽃잎이 흩날린다' },
+  vfx_aurora:   { name: '오로라 연출',     icon: '🌌', price: 2600, type: 'victory', desc: '이기면 하늘에 오로라가 뜬다' },
+
+  // ── 용린 세트 — 파편으로만. 이 판에서 가장 비싼 자리다.
+  //    코인으로는 못 산다. 뽑기를 돌려 중복으로 쌓인 파편으로만 닿는다 —
+  //    "돈이 아니라 시간" 으로 사는 것이 하나쯤은 있어야 값이 값답다.
+  back_dragon:  { name: '용린 카드백',     icon: '🐉', price: 0, shard: 900, type: 'cardback',
+                  desc: '비늘이 겹친 뒷면 · 파편으로만' },
+  np_dragon:    { name: '용린 명패',       icon: '🐉', price: 0, shard: 1000, type: 'plate',
+                  desc: '비늘을 두른 이름표 · 코인 +6% · 파편으로만' },
+  tbl_dragon:   { name: '용린 테이블',     icon: '🐉', price: 0, shard: 850, type: 'table',
+                  desc: '용이 서린 판 · 파편으로만' },
+  face_dragon:  { name: '용린 카드',       icon: '🐉', price: 0, shard: 800, type: 'cardface',
+                  desc: '비늘무늬 숫자 앞면 · 파편으로만' },
 };
 
 // ── 명패 효과 ──────────────────────────────────────────────────────────────
@@ -991,6 +1023,8 @@ const SHOP = {
 const PLATE_FX = {
   np_wood:     {},                              // 입문용 — 장식만
   np_hanji:    { xp: 0.03 },
+  np_dawn:     { xp: 0.02 },                    // 입문용 — 아주 작게
+  np_dragon:   { coin: 0.06 },                  // 파편으로만 닿는 자리 — 코인 명패 중 가장 세다
   np_neon:     { xp: 0.05 },
   np_gold:     { coin: 0.04 },                  // 황금 = 돈
   np_ruby:     { streak: 0.25 },                // 연승 보너스 1.25배
@@ -1065,8 +1099,11 @@ function bonusOf(u) {
 // 뭘 사든 손해라서 상점이 통째로 죽는다 — 뽑기만 돌리는 게 늘 정답이 된다.
 // 기대값보다 아주 조금 싸게 잡아, 뽑기가 여전히 매력적이되 상점을
 // 무의미하게 만들지는 않는 선에 둔다. (원하는 걸 못 고르는 게 그 차액의 값이다)
-const GACHA_COST = 500;          // 1회 — 기대 상점가치 566보다 조금 아래
-const GACHA_COST10 = 4500;       // 10연 (10% 할인)
+// 상점가를 전반적으로 올리면서 뽑기 한 번의 기대 상점가치도 같이 올랐다.
+// 그대로 두면 500코인에 740어치가 나와 1.48배 — 뭘 사든 상점이 손해라서
+// 상점이 통째로 죽는다. 뽑기 값도 같이 올려 "조금 싼" 자리로 되돌린다.
+const GACHA_COST = 600;          // 1회 — 기대 상점가치보다 조금 아래
+const GACHA_COST10 = 5400;       // 10연 (10% 할인)
 const GACHA_RATE = { common: 0.60, rare: 0.28, epic: 0.10, legend: 0.02 };
 const SHARD_ON_DUP = { common: 5, rare: 15, epic: 40, legend: 100 };
 const PITY_LEGEND = 50;          // 이 횟수 안에 전설 하나는 반드시
@@ -1095,17 +1132,20 @@ for (const id of Object.keys(SHOP)) {
 // 어떤 상품이 어느 등급인지. 여기 없는 상품은 뽑기에 안 나온다
 // (닉네임 변경권·확정권처럼 기능성인 것, 마일스톤 한정품).
 const GACHA_TIER = {
-  common: ['np_wood', 'tbl_forest', 'tbl_blue', 'stamp_win', 'place_dust', 'ava_rookie'],
+  common: ['np_wood', 'tbl_forest', 'tbl_blue', 'stamp_win', 'place_dust', 'ava_rookie',
+           'back_dawn', 'np_dawn', 'tbl_dawn'],
   rare:   ['back_night', 'back_ruby', 'back_hanji', 'face_neon', 'face_classic',
            'tbl_purple', 'tbl_hanji', 'np_neon', 'np_hanji',
-           'stamp_seal', 'place_spark', 'ava_gambler', 'ava_fox', 'vfx_confetti'],
+           'stamp_seal', 'place_spark', 'ava_gambler', 'ava_fox', 'vfx_confetti',
+           'emote_night', 'place_petal', 'ava_owl'],
   epic:   ['back_obang', 'back_galaxy', 'back_crystal', 'face_gold', 'face_crystal',
            'tbl_gold', 'tbl_crystal', 'np_gold', 'np_ruby', 'np_crystal',
            'back_hwatu', 'tbl_hwatu', 'np_hwatu',
            'emote_party', 'emote_animal', 'emote_battle', 'emote_taunt',
-           'stamp_star', 'place_ember', 'ava_dealer', 'ava_cat', 'vfx_coinrain', 'vfx_thunder'],
+           'stamp_star', 'place_ember', 'ava_dealer', 'ava_cat', 'vfx_coinrain', 'vfx_thunder',
+           'emote_luck', 'stamp_flame', 'ava_wolf'],
   legend: ['back_obsidian', 'face_obsidian', 'tbl_obsidian', 'np_obsidian', 'face_hwatu',
-           'stamp_crown', 'ava_king', 'ava_phantom', 'vfx_firework'],
+           'stamp_crown', 'ava_king', 'ava_phantom', 'vfx_firework', 'vfx_aurora'],
 };
 const TIERS = ['common', 'rare', 'epic', 'legend'];
 // 상품 → 등급 역인덱스

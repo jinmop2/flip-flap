@@ -343,6 +343,28 @@ const AVATAR_ART = {
     <ellipse cx="16.5" cy="25.5" rx="3.4" ry="2.6" fill="${FS}"/>
     <ellipse cx="31.5" cy="25.5" rx="3.4" ry="2.6" fill="${FS}"/>
     <path d="M19 37 a6 3 0 0 0 10 0" stroke="${FS}" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`,
+  // 올빼미 — 밤새 판을 읽는 눈. 큰 눈 두 개가 성격이다.
+  ava_owl: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9 18 l-3 -9 8 4 z" fill="#8a6a3a" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M39 18 l3 -9 -8 4 z" fill="#8a6a3a" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <ellipse cx="24" cy="27" rx="16" ry="15" fill="#a8763f" stroke="${FS}" stroke-width="2.2"/>
+    <path d="M12 32 a12 9 0 0 0 24 0 a12 12 0 0 1-24 0 z" fill="#c99a5e" opacity=".8"/>
+    <circle cx="17.5" cy="24" r="6.2" fill="#fff3d6" stroke="${FS}" stroke-width="2"/>
+    <circle cx="30.5" cy="24" r="6.2" fill="#fff3d6" stroke="${FS}" stroke-width="2"/>
+    <circle cx="17.5" cy="24" r="2.8" fill="${FS}"/><circle cx="30.5" cy="24" r="2.8" fill="${FS}"/>
+    <circle cx="18.6" cy="22.9" r=".9" fill="#fff"/><circle cx="31.6" cy="22.9" r=".9" fill="#fff"/>
+    <path d="M24 29 l-2.6 3.4 h5.2 z" fill="#e0a82a" stroke="${FS}" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
+  // 늑대 — 무리를 이끄는 쪽. 귀와 주둥이로 실루엣을 세운다.
+  ava_wolf: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9 12 l2 12 8 -6 z" fill="#6b7280" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M39 12 l-2 12 -8 -6 z" fill="#6b7280" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M24 12 c9 0 14 7 14 14 c0 8 -6 13 -14 13 c-8 0 -14 -5 -14 -13 c0 -7 5 -14 14 -14 z"
+          fill="#8d95a3" stroke="${FS}" stroke-width="2.2"/>
+    <path d="M24 22 c4 0 7 3 7 7 c0 5 -3 8 -7 8 c-4 0 -7 -3 -7 -8 c0 -4 3 -7 7 -7 z" fill="#e6e9ee" opacity=".9"/>
+    <circle cx="18" cy="24" r="2.4" fill="#ffd45e" stroke="${FS}" stroke-width="1.3"/>
+    <circle cx="30" cy="24" r="2.4" fill="#ffd45e" stroke="${FS}" stroke-width="1.3"/>
+    <path d="M24 30 l-2.2 2.6 h4.4 z" fill="${FS}"/>
+    <path d="M21 35 l3 2 3 -2" fill="none" stroke="${FS}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 };
 const avatarArt = (id) => (id && Object.prototype.hasOwnProperty.call(AVATAR_ART, id)) ? AVATAR_ART[id] : null;
 

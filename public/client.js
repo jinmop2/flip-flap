@@ -349,7 +349,7 @@ const ncClass = c => (c && c !== 'rainbow') ? ' nc-' + c : '';
 const nickHTML = (nick, color) => color === 'rainbow'
   ? `<i class="nc-rainbow">${esc(nick)}</i>`
   : esc(nick);
-const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby', np_crystal: 'np-crystal', np_obsidian: 'np-obsidian', np_hanji: 'np-hanji', np_shard: 'np-shard', np_hwatu: 'np-hwatu' };
+const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby', np_crystal: 'np-crystal', np_obsidian: 'np-obsidian', np_hanji: 'np-hanji', np_shard: 'np-shard', np_hwatu: 'np-hwatu', np_dawn: 'np-dawn', np_dragon: 'np-dragon' };
 const xpPct = p => Math.max(0, Math.min(100, Math.round((p.xpInLevel || 0) / (p.xpNeeded || 100) * 100)));
 const npClass = p => p && NP_CLASS[p] ? ' ' + NP_CLASS[p] : '';   // 명패 클래스
 // 이모지 → 직접 그린 SVG (art.js). 매핑에 없으면 원래 이모지 그대로.
@@ -432,6 +432,16 @@ function playVictoryFx() {
       b.style.setProperty('--fy', Math.round(Math.sin(ang) * d) + 'px');
       b.style.setProperty('--spin', Math.round((Math.random() - .5) * 900) + 'deg');
       b.style.animationDelay = Math.round(Math.random() * 220) + 'ms';
+      host.appendChild(b);
+    }
+  } else if (cls === 'vx-aurora') {
+    // 오로라 — 파티클이 아니라 커튼이다. 폭이 다른 띠 넷을 겹쳐 느리게 흔든다.
+    for (let i = 0; i < 4; i++) {
+      const b = document.createElement('i');
+      b.style.left = (6 + i * 24 + Math.random() * 8) + '%';
+      b.style.width = (90 + Math.random() * 80) + 'px';
+      b.style.animationDelay = (i * 220) + 'ms';
+      b.style.animationDuration = (2.4 + Math.random() * 0.9) + 's';
       host.appendChild(b);
     }
   } else if (cls === 'vx-firework') {
@@ -2371,9 +2381,10 @@ async function openShop() {
 }
 function closeShop() { document.getElementById('shopModal').classList.remove('show'); }
 const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang', back_ruby: 'cb-ruby', back_galaxy: 'cb-galaxy',
-              back_crystal: 'cb-crystal', back_obsidian: 'cb-obsidian', back_hanji: 'cb-hanji' , back_shard: 'cb-shard', back_hwatu: 'cb-hwatu' };
-const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest', tbl_crystal: 'tp-crystal', tbl_obsidian: 'tp-obsidian', tbl_hanji: 'tp-hanji', tbl_shard: 'tp-shard', tbl_hwatu: 'tp-hwatu' };
-const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold', face_crystal: 'cfp-crystal', face_obsidian: 'cfp-obsidian', face_hanji: 'cfp-hanji', face_shard: 'cfp-shard', face_hwatu: 'cfp-hwatu' };
+              back_crystal: 'cb-crystal', back_obsidian: 'cb-obsidian', back_hanji: 'cb-hanji' , back_shard: 'cb-shard', back_hwatu: 'cb-hwatu',
+              back_dawn: 'cb-dawn', back_dragon: 'cb-dragon' };
+const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest', tbl_crystal: 'tp-crystal', tbl_obsidian: 'tp-obsidian', tbl_hanji: 'tp-hanji', tbl_shard: 'tp-shard', tbl_hwatu: 'tp-hwatu', tbl_dawn: 'tp-dawn', tbl_dragon: 'tp-dragon' };
+const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold', face_crystal: 'cfp-crystal', face_obsidian: 'cfp-obsidian', face_hanji: 'cfp-hanji', face_shard: 'cfp-shard', face_hwatu: 'cfp-hwatu', face_dragon: 'cfp-dragon' };
 // 상점 아이콘 = 게임 안 실물 미리보기 (카드백/테이블/카드앞면/명패/이모트/염색)
 const shopIcon = it => {
   if (CBP[it.id])  return `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`;
@@ -2417,12 +2428,12 @@ const SHOP_GROUPS = [
 ];
 // 서버(accounts.js SLOT)와 짝이 맞아야 한다. 한쪽만 고치면 장착이 안 된다.
 // 낙찰 도장 — 모양마다 다른 클래스와 글자를 쓴다
-const STAMP_CLS = { stamp_win: 'st-win', stamp_seal: 'st-seal', stamp_star: 'st-star', stamp_crown: 'st-crown' };
-const STAMP_TEXT = { stamp_win: 'WIN', stamp_seal: '落札', stamp_star: '★', stamp_crown: '♔' };
+const STAMP_CLS = { stamp_win: 'st-win', stamp_seal: 'st-seal', stamp_star: 'st-star', stamp_crown: 'st-crown', stamp_flame: 'st-flame' };
+const STAMP_TEXT = { stamp_win: 'WIN', stamp_seal: '落札', stamp_star: '★', stamp_crown: '♔', stamp_flame: '🔥' };
 const stampLabel = (id) => STAMP_TEXT[id] || 'WIN';
 // 카드 놓을 때 파티클 · 승리 연출
-const PLACE_CLS = { place_dust: 'pf-dust', place_spark: 'pf-spark', place_ember: 'pf-ember' };
-const VFX_CLS = { vfx_confetti: 'vx-confetti', vfx_coinrain: 'vx-coin', vfx_thunder: 'vx-thunder', vfx_firework: 'vx-firework', vfx_shard: 'vx-shard' };
+const PLACE_CLS = { place_dust: 'pf-dust', place_spark: 'pf-spark', place_ember: 'pf-ember', place_petal: 'pf-petal' };
+const VFX_CLS = { vfx_confetti: 'vx-confetti', vfx_coinrain: 'vx-coin', vfx_thunder: 'vx-thunder', vfx_firework: 'vx-firework', vfx_shard: 'vx-shard', vfx_aurora: 'vx-aurora' };
 
 const EQUIP_SLOT = {
   cardback: 'cardBack', plate: 'plate', table: 'table', cardface: 'cardFace',
@@ -2580,6 +2591,10 @@ const EMOTE_PACKS = {
   emote_animal: ['🐶','🐱','🐷','🐸','🦊','🐻','🐤','🦄'],
   // 도발 팩 — 약을 올리되 선은 넘지 않게. 티백은 위아래로 흔들린다.
   emote_taunt:  ['🫖','👏','🥱','👎','🙄','👋','⌚','🤏'],
+  // 이 게임은 이모지를 직접 그린 그림으로 바꿔 쓴다(art.js). 그림이 없는 이모지를
+  // 넣으면 기기 글꼴대로 제각각 나와 결이 깨진다 — 그려 둔 것 안에서 고른다.
+  emote_night:  ['🌙','🌌','⭐','✨','🌑','🔮','💠','🧊'],
+  emote_luck:   ['🍀','🎲','🔮','💎','✨','🎩','🏆','⭐'],
 };
 // data-ico="🎒" 같은 표식을 직접 그린 아이콘으로 채운다
 // ── 카드 딜 연출 ────────────────────────────────────────────────────────────
@@ -5616,8 +5631,8 @@ function screenFx(kind) {
 }
 
 // 내 테이블/카드앞면 스킨을 게임 화면에 적용 (내 시야 기준 코스메틱)
-const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal', tbl_obsidian: 'tbl-obsidian', tbl_hanji: 'tbl-hanji', tbl_shard: 'tbl-shard', tbl_hwatu: 'tbl-hwatu' };
-const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal', face_obsidian: 'cf-obsidian', face_hanji: 'cf-hanji', face_shard: 'cf-shard', face_hwatu: 'cf-hwatu' };
+const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal', tbl_obsidian: 'tbl-obsidian', tbl_hanji: 'tbl-hanji', tbl_shard: 'tbl-shard', tbl_hwatu: 'tbl-hwatu', tbl_dawn: 'tbl-dawn', tbl_dragon: 'tbl-dragon' };
+const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal', face_obsidian: 'cf-obsidian', face_hanji: 'cf-hanji', face_shard: 'cf-shard', face_hwatu: 'cf-hwatu', face_dragon: 'cf-dragon' };
 function applyMySkins() {
   // 경기장이 여럿이다(2인전·미니게임·트웰브). 하나만 칠하면 나머지가 맨 테이블이 된다.
   // 트웰브는 화면 전체가 아니라 가운데 테이블 판만 물든다(#tv.tbl-* #tv-table).
