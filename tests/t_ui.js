@@ -49,5 +49,46 @@ ok('가로면 테이블을 감춘다', /body\.land #game-table, body\.land #tv-t
 ok('회전 뒤 다시 잰다', /function scheduleRelayout/.test(cli)
    && /orientationchange/.test(cli));
 
+console.log('\n⑥ 2인전 가운데 — 덱·턴·경매품이 한 줄에 선다');
+// 덱 층은 .card 라서 제 크기를 들고 온다. 칸(#deckStack)은 그보다 작아서
+// 층이 칸 밖으로 삐져나왔고, 칸을 기준으로 잡은 것들(턴 표시·덱 장수)이
+// 전부 실제 덱과 어긋났다 — 장수는 덱 위에 12px 겹쳐 있었다.
+ok('덱 층을 칸 크기에 맞춘다',
+   /#deckStack \.deck-layer \{[\s\S]{0,160}width:100%; height:100%;/.test(htm));
+// 한쪽으로만 밀면 덱의 눈에 보이는 가운데가 칸 가운데에서 밀려난다
+ok('쌓인 티는 가운데를 축으로 벌린다',
+   /const mid = \(layers - 1\) \/ 2;/.test(cli)
+   && /const k = i - mid;/.test(cli)
+   && /translate\(\$\{\(k \* 2\)\.toFixed\(1\)\}px, \$\{\(-k \* 2\)\.toFixed\(1\)\}px\)/.test(cli));
+// 턴 표시는 덱과 같은 축·같은 폭이어야 한다. 따로 적어 두면 화면 폭마다 어긋난다.
+const axis = (w) => {
+  const m = htm.match(new RegExp(`@media \\(max-width:${w}px\\)([\\s\\S]*?)\\n    \\}`));
+  if (!m) return null;
+  const d = m[1].match(/#deckStack \{ left:(\d+)px; width:(\d+)px/);
+  const t = m[1].match(/#turnInfo \{ left:(\d+)px; width:(\d+)px/);
+  return d && t ? { deck: [d[1], d[2]], turn: [t[1], t[2]] } : null;
+};
+for (const w of [400]) {
+  const a = axis(w);
+  ok(`${w}px 이하에서 턴과 덱이 같은 축`, a && a.deck[0] === a.turn[0] && a.deck[1] === a.turn[1],
+     a ? JSON.stringify(a) : '못 찾음');
+}
+ok('덱 장수가 덱에 안 닿게 띄운다', /#deckStack \.deck-count \{ font-size:\.55rem; bottom:-19px; \}/.test(htm));
+
+// 트웰브에는 tvAlignRow 가 있는데 2인전에는 짝이 없어, 덱·레일이 경매품보다
+// 몇 픽셀 위에 떠 있었다(안내 문구가 아래에서 칸을 밀어 올린다).
+ok('2인전에도 줄 맞추는 함수가 있다', /function gAlignRow\(\)/.test(cli));
+ok('테이블을 깔기 전에 줄을 맞춘다',
+   /gAlignRow\(\);   \/\/ 줄을 맞춘 뒤라야/.test(cli));
+// 카드가 없을 때 맞추면 엉뚱한 값이 박히고 카드가 나온 뒤에도 남는다
+ok('카드가 없으면 건드리지 않는다',
+   /const slot = document\.querySelector\('#auctionItems \.a-slot'\);\s*\n\s*if \(!slot\) return;/.test(cli));
+// 카드는 딜·비행 중 transform 으로 움직인다 — 그때 재면 어긋난 값이 잡힌다
+ok('움직이지 않는 칸을 잰다',
+   /const lbl = slot\.querySelector\('\.a-label'\);/.test(cli)
+   && /const cy = s\.top \+ lh \+ \(s\.height - lh\) \/ 2;/.test(cli));
+ok('가로 모드에서는 밀어 둔 자리를 푼다',
+   /function gAlignRow\(\)[\s\S]{0,400}for \(const el of \[deck, rail, turn\]\) if \(el\) el\.style\.marginTop = '';\s*\n\s*return;/.test(cli));
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

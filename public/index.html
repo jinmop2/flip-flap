@@ -3479,6 +3479,9 @@
 
     /* HUD (테이블 상단 얇은 바) */
     /* 턴 표시 — 덱 바로 위 */
+    /* 턴 표시는 덱 바로 위다 — 덱 칸과 같은 left/width 를 써야 가운데가 맞는다.
+       예전엔 둘을 따로 적어 두고 화면 폭마다 따로 줄여서, 좁은 화면에서 12px 씩
+       어긋나 있었다. 이제 한 곳(#deckStack)만 고치면 같이 따라온다. */
     #turnInfo {
       position:absolute; left:calc(50% - 218px); top:calc(50% - 76px); width:64px;
       text-align:center; font-size:.74rem; color:rgba(255,255,255,.55); font-weight:700; z-index:3;
@@ -3660,7 +3663,16 @@
     #game .tv-seat { margin-bottom:14px; }
     /* 상대 손패는 부채꼴이라 제 칸 아래로 삐져나온다 — 프로필을 그만큼 내린다 */
     #game #oppSeat { margin-top:16px; margin-bottom:10px; }
-    #deckStack .deck-layer { position:absolute; top:0; left:0; box-shadow:0 2px 6px rgba(0,0,0,.55); }
+    /* 덱 층은 .card 라서 제 크기(56x80 등)를 그대로 들고 온다. 칸(#deckStack)은
+       46x65 인데 층이 더 크니 칸 밖으로 삐져나왔다 — 그래서 칸을 기준으로 잡은
+       것들(턴 표시·덱 장수)이 전부 실제 덱과 어긋났고, 장수는 덱 위에 겹쳤다.
+       층을 칸에 맞춘다. 이 한 줄이 아래 세 정렬의 뿌리다. */
+    #deckStack .deck-layer {
+      position:absolute; top:0; left:0; width:100%; height:100%; margin:0;
+      box-shadow:0 2px 6px rgba(0,0,0,.55);
+    }
+    /* 쌓인 티는 살짝 어긋나게 겹쳐서 낸다. 한쪽으로만 밀면 덱의 눈에 보이는
+       가운데가 칸 가운데에서 밀려나므로, 가운데를 축으로 좌우로 벌린다. */
     #deckStack .deck-count {
       position:absolute; bottom:-24px; left:50%; transform:translateX(-50%);
       font-size:.66rem; color:rgba(255,255,255,.55); font-weight:700; white-space:nowrap;
@@ -4028,7 +4040,8 @@
 
       /* 덱 스택: 가죽 테두리에 안 걸치게 안쪽으로 (트웰브와 같은 자리) */
       #deckStack { left:38px; width:46px; height:65px; }
-      #deckStack .deck-count { font-size:.55rem; bottom:-17px; }
+      /* 층이 가운데를 축으로 ±4px 벌어지므로 그만큼은 비워야 글자가 덱에 안 닿는다 */
+      #deckStack .deck-count { font-size:.55rem; bottom:-19px; }
       #g-rail { left:auto; right:34px; width:56px; gap:5px; }
       #g-rail .bid-area { min-height:70px; }
       #g-rail .bid-area .card { width:50px; height:70px; }
@@ -4061,7 +4074,8 @@
 
       /* 라벨·타이머 */
       #statusBar { font-size:.78rem; }
-      #turnInfo { left:8px; width:50px; font-size:.62rem; top:calc(50% - 58px); }
+      /* 덱과 같은 축·같은 폭 (#deckStack: left:38px; width:46px) */
+      #turnInfo { left:38px; width:46px; font-size:.62rem; top:calc(50% - 58px); }
       .zone-label { font-size:.56rem; }
       .timer { font-size:.82rem; padding:2px 8px; }
       .type-badge { font-size:.55rem; padding:2px 7px; }
@@ -4628,6 +4642,7 @@
       #auctionMat .a-card, #auctionMat .card { width:50px; height:70px; }
       .auction-row { height:78px; gap:7px; }
       #deckStack { left:24px; width:42px; height:59px; }
+      #turnInfo { left:24px; width:42px; }              /* 덱과 같은 축 */
       #g-rail { right:24px; width:52px; }
       #g-rail .bid-area { min-height:62px; }
       #g-rail .bid-area .card { width:44px; height:62px; }

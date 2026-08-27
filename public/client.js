@@ -5548,9 +5548,14 @@ function renderDeck() {
   if (n <= 0) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   const layers = Math.min(n, 5);
+  // 쌓인 티는 가운데를 축으로 좌우로 벌려서 낸다. 예전엔 한쪽으로만 밀어(i*2)
+  // 덱의 눈에 보이는 가운데가 칸 가운데에서 8px 밀렸다 — 위의 턴 표시와
+  // 아래의 장수가 그만큼 어긋나 보이던 이유다.
+  const mid = (layers - 1) / 2;
   for (let i = 0; i < layers; i++) {
     const b = makeCard(null); b.classList.add('deck-layer');
-    b.style.transform = `translate(${i * 2}px, ${-i * 2}px)`;
+    const k = i - mid;
+    b.style.transform = `translate(${(k * 2).toFixed(1)}px, ${(-k * 2).toFixed(1)}px)`;
     b.style.zIndex = String(i);
     el.appendChild(b);
   }
@@ -6423,8 +6428,47 @@ function tvLayTable() {
   });
 }
 // 2인전(클래식·아이템전)도 같은 판을 쓴다 — 이름만 다르다.
+// 덱·턴 표시·배팅 레일을 경매품 카드와 한 줄에 맞춘다.
+// 셋 다 가운데 칸의 50% 에 걸어 두었는데, 경매대 안에서는 카드가 딱지 아래에
+// 놓이고 칸 아래에는 안내 문구가 자리를 먹어, 실제로 그려진 카드는 그 축에서
+// 몇 픽셀 위에 있었다. 트웰브는 tvAlignRow 로 이미 이 일을 하고 있었는데
+// 2인전에는 짝이 없어서 눈에 띄게 어긋나 있었다.
+function gAlignRow() {
+  const deck = document.getElementById('deckStack');
+  const rail = document.getElementById('g-rail');
+  const turn = document.getElementById('turnInfo');
+  if (!deck) return;
+  if (document.body.classList.contains('land')) {          // 가로는 배치가 통째로 다르다
+    for (const el of [deck, rail, turn]) if (el) el.style.marginTop = '';
+    return;
+  }
+  // 카드가 아직 없는 단계(덱을 뒤집기 전)에는 맞출 대상이 없다. 그때 빈 칸에
+  // 맞춰 버리면 엉뚱한 값이 박히고, 카드가 나온 뒤에도 그대로 남는다 —
+  // 지난 정렬을 그대로 두고 물러난다.
+  const slot = document.querySelector('#auctionItems .a-slot');
+  if (!slot) return;
+  // 카드가 아니라 칸을 잰다. 카드는 딜·비행 중에 transform 으로 움직여서
+  // 그때 재면 어긋난 값이 잡힌다. 칸과 이름표는 안 움직인다.
+  const s = slot.getBoundingClientRect();
+  if (!s.height) return;
+  const lbl = slot.querySelector('.a-label');
+  const lh = lbl ? lbl.getBoundingClientRect().height : 0;
+  const cy = s.top + lh + (s.height - lh) / 2;             // 이름표를 뺀 카드 자리의 한가운데
+  const fix = (el) => {
+    if (!el) return;
+    el.style.marginTop = '0px';
+    const b = el.getBoundingClientRect();
+    if (!b.height) return;
+    el.style.marginTop = Math.round(cy - (b.top + b.height / 2)) + 'px';
+  };
+  fix(deck); fix(rail);
+  // 턴 표시는 덱과 함께 움직인다 — 덱 위에 붙어 있어야 한 덩이로 읽힌다
+  if (turn) turn.style.marginTop = deck.style.marginTop;
+}
+
 function gameLayTable() {
   if (!document.getElementById('game-table')) return;
+  gAlignRow();   // 줄을 맞춘 뒤라야 테이블이 제 자리를 잡는다
   layTable({
     table: 'game-table', host: 'game', zone: 'centerZone', mid: 'auctionItems',
     wide: ['deckStack', 'auctionMat', 'g-rail'],
