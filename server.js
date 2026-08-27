@@ -1084,7 +1084,9 @@ function cpuMaybeUseItem(roomId) {
   const out = items.use(g, me, id, arg);
   if (out.error) return false;
   const human = room.players[room.cpuIndex === 0 ? 1 : 0];
-  if (human) io.to(human).emit('item_used', { byMe: false, itemId: id, name: out.name, icon: out.icon, msg: out.msg, blocked: !!out.blocked, reveal: null });
+  if (human) io.to(human).emit('item_used', { byMe: false, itemId: id, name: out.name, icon: out.icon,
+                                              msg: out.msg, blocked: !!out.blocked, reveal: null,
+                                              fx: out.fx || null, seat: me });
   broadcast(roomId);
   return true;
 }
@@ -1115,7 +1117,8 @@ function cpuMaybeRedo(roomId) {
   if (out.error) return;
   g.settleSeq = (g.settleSeq || 0) + 1;             // 이전 경매의 공개·정산 타이머 무효화
   const human = room.players[room.cpuIndex === 0 ? 1 : 0];
-  if (human) io.to(human).emit('item_used', { byMe: false, itemId: 'redo', name: out.name, icon: out.icon, msg: out.msg, reveal: null });
+  if (human) io.to(human).emit('item_used', { byMe: false, itemId: 'redo', name: out.name, icon: out.icon,
+                                              msg: out.msg, reveal: null, fx: out.fx || null, seat: me });
   broadcast(roomId);
   setTimeout(() => maybeCpuAct(roomId), 900);
 }
@@ -2250,7 +2253,10 @@ io.on('connection', (socket) => {
       io.to(sid).emit('item_used', {
         byMe: i + 1 === me, itemId, name: out.name, icon: out.icon,
         msg: out.msg, blocked: !!out.blocked,
+        // reveal 은 쓴 사람 몫(엿본 카드 등 감춰진 정보), fx 는 양쪽 몫이다.
+        // 무엇이 어떻게 바뀌었는지가 안 보이면 "당했다" 만 남고 무엇을 당했는지는 모른다.
         reveal: (i + 1 === me) ? out.reveal || null : null,
+        fx: out.fx || null, seat: me,
       });
     });
     // 재경매로 배팅 단계로 돌아갔다면 이전 경매의 공개·정산 타이머를 즉시 무효화한다

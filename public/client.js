@@ -1435,10 +1435,176 @@ function playItemFx(u) {
   if (tier === 'legend') { setTimeout(() => playSound('setwin'), 200); setTimeout(() => playSound('bell'), 340); }
 }
 
+// ── 아이템이 실제로 무엇을 바꿨는지 그 자리에서 보여 준다 ──────────────
+// 번쩍임과 아이콘만으로는 "뭔가 일어났다" 까지다. 카드가 오갔으면 그 카드가
+// 오가는 것이 보여야 무엇을 당했는지 알 수 있다. 아래는 전부 실제 DOM 을
+// 잡아 움직인다 — 화면에 없는 것(감춰진 손패 등)은 흉내 내지 않는다.
+
+// 임의의 두 지점 사이로 카드 한 장을 날린다. captureSettleFlight 의 그것과
+// 같은 방식(고스트 + transform)이라 무게도 같다.
+function flyBetween(fromRect, toRect, cardEl, o = {}) {
+  if (!fromRect || !toRect || !fromRect.width || !toRect.width) return 0;
+  const dur = o.duration || 520;
+  cardEl.classList.add('fly-card');
+  cardEl.style.transition = `transform ${dur}ms cubic-bezier(.4,.05,.35,1), opacity ${dur}ms ease`;
+  cardEl.style.left = fromRect.left + 'px'; cardEl.style.top = fromRect.top + 'px';
+  cardEl.style.width = fromRect.width + 'px'; cardEl.style.height = fromRect.height + 'px';
+  if (o.delay) cardEl.style.transitionDelay = o.delay + 'ms';
+  document.body.appendChild(cardEl);
+  void cardEl.offsetWidth;
+  const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2);
+  const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2);
+  const sc = o.scale === undefined ? Math.max(toRect.width / fromRect.width, .3) : o.scale;
+  cardEl.style.transform = `translate(${dx}px, ${dy}px) scale(${sc}) rotate(${o.spin || 0}deg)`;
+  if (o.fade) cardEl.style.opacity = '0';
+  const total = dur + (o.delay || 0);
+  setTimeout(() => { try { cardEl.remove(); } catch (_) {} }, total + 90);
+  return total;
+}
+const rectOfEl = (sel) => { const e = typeof sel === 'string' ? document.querySelector(sel) : sel;
+  if (!e) return null; const r = e.getBoundingClientRect(); return r.width ? r : null; };
+const cardRect = (pileSel, card) => card && rectOfEl(`${pileSel} .card[data-id="${card.id}"]`);
+// 한 번 반짝이고 마는 강조 — 어디가 바뀌었는지 눈이 따라가게
+function pulse(sel, cls = 'fx-pulse', ms = 700) {
+  const e = typeof sel === 'string' ? document.querySelector(sel) : sel;
+  if (!e) return;
+  e.classList.add(cls);
+  setTimeout(() => e.classList.remove(cls), ms);
+}
+// 자리(프로필) 위에 딱지를 얹는다 — 부적·폭군처럼 '사람' 에게 붙는 효과용
+function stampSeat(seatSel, html, ms = 1600) {
+  const seat = document.querySelector(seatSel); if (!seat) return;
+  const r = seat.getBoundingClientRect(); if (!r.width) return;
+  const el = document.createElement('div');
+  el.className = 'fx-stamp';
+  el.style.left = (r.left + r.width / 2) + 'px';
+  el.style.top = (r.top + r.height / 2) + 'px';
+  el.innerHTML = html;
+  document.body.appendChild(el);
+  setTimeout(() => { try { el.remove(); } catch (_) {} }, ms);
+}
+
+function playItemChangeFx(u) {
+  const f = u.fx; if (!f || document.hidden) return;
+  const mine = !!u.byMe;
+  const myPile = '#myAcq', opPile = '#oppAcq';
+  // 내 자리에서 본 '쓴 사람' 더미와 '당한 사람' 더미
+  const actorPile = mine ? myPile : opPile, targetPile = mine ? opPile : myPile;
+
+  switch (f.kind) {
+    // 🔀 손바꿈 — 버린 카드가 덱으로, 새 카드가 덱에서. 무엇인지는 쓴 사람만 안다.
+    case 'swapHand': {
+      const deck = rectOfEl('#deckStack');
+      const hand = rectOfEl(mine ? '#myHand' : '#oppHand');
+      if (!deck || !hand) return;
+      const out = makeCard(null); out.classList.add('fx-dim');
+      flyBetween(hand, deck, out, { duration: 380, spin: 14, fade: true });
+      const inc = makeCard(null);
+      flyBetween(deck, hand, inc, { duration: 420, delay: 300, spin: -10 });
+      setTimeout(() => pulse(mine ? '#myHand' : '#oppHand', 'fx-handswap', 700), 700);
+      break;
+    }
+    // 🔁 교환권 — 두 더미 사이로 카드 두 장이 엇갈려 날아간다 (양쪽 다 공개된 카드다)
+    case 'tradeAcq': {
+      const gave = mine ? f.mine : f.theirs;      // 쓴 사람이 내놓은 카드
+      const took = mine ? f.theirs : f.mine;
+      const a = rectOfEl(actorPile), b = rectOfEl(targetPile);
+      if (!a || !b) return;
+      if (gave) flyBetween(a, b, makeCard(gave), { duration: 560, spin: 10 });
+      if (took) flyBetween(b, a, makeCard(took), { duration: 560, delay: 90, spin: -10 });
+      setTimeout(() => { pulse(actorPile, 'fx-pile', 800); pulse(targetPile, 'fx-pile', 800); }, 560);
+      break;
+    }
+    // 🐈 도둑고양이 — 당한 사람 더미에서 카드가 덱으로 끌려간다
+    case 'stealAcq': {
+      const from = cardRect(targetPile, f.card) || rectOfEl(targetPile);
+      const deck = rectOfEl('#deckStack');
+      if (!from || !deck) return;
+      flyBetween(from, deck, makeCard(f.card), { duration: 600, spin: -22, fade: true });
+      pulse(targetPile, 'fx-loss', 900);
+      break;
+    }
+    // 📄 복사기 — 그 카드가 둘로 갈라져 한 장이 더 얹힌다
+    case 'copyAcq': {
+      const at = cardRect(actorPile, f.card) || rectOfEl(actorPile);
+      if (!at) return;
+      const ghost = makeCard(f.card);
+      const to = { left: at.left + at.width * 0.7, top: at.top - 14, width: at.width, height: at.height };
+      flyBetween(at, to, ghost, { duration: 520, scale: 1, spin: 8 });
+      setTimeout(() => pulse(actorPile, 'fx-gain', 900), 400);
+      break;
+    }
+    // 🃏 고르기 — 중앙 카드가 갈리는 것이 보인다. 옛 카드는 덱으로, 새 카드가 내려앉는다.
+    case 'pickCenter': {
+      const slot = rectOfEl('#auctionItems .a-slot .card') || rectOfEl('#auctionItems');
+      const deck = rectOfEl('#deckStack');
+      if (!slot || !deck) return;
+      if (f.oldCard) flyBetween(slot, deck, makeCard(f.oldCard), { duration: 420, spin: 18, fade: true });
+      if (f.card) flyBetween(deck, slot, makeCard(f.card), { duration: 480, delay: 340, spin: -8, scale: 1 });
+      setTimeout(() => pulse('#auctionItems', 'fx-pile', 800), 820);
+      break;
+    }
+    // 💣 폭탄 — 경매품에 붙는다. 붙었다는 것이 경매품 위에 남아야 한다(fxBanner 가 이어받는다)
+    case 'bombLot':
+      stampSeat('#auctionMat', '<span class="fx-bomb">💣</span>', 1500);
+      pulse('#auctionItems', 'fx-shakeit', 900);
+      break;
+    // 🧿 부적 — 건 사람 자리에 방패가 걸린다
+    case 'wardSeat':
+      stampSeat(mine ? '#mySeat' : '#oppSeat', '<span class="fx-shield">🧿</span>', 1500);
+      pulse(mine ? '#mySeat' : '#oppSeat', 'fx-ward', 1400);
+      break;
+    // 👑 폭군 — 진행자 표시가 옮겨 앉는다
+    case 'tyrantSeat': {
+      const from = rectOfEl(mine ? '#oppSeat' : '#mySeat'), to = rectOfEl(mine ? '#mySeat' : '#oppSeat');
+      if (from && to) {
+        const crown = document.createElement('div');
+        crown.className = 'fx-stamp fx-crown'; crown.textContent = '👑';
+        crown.style.left = (from.left + from.width / 2) + 'px';
+        crown.style.top = (from.top + from.height / 2) + 'px';
+        document.body.appendChild(crown);
+        void crown.offsetWidth;
+        crown.style.transform = `translate(${to.left + to.width / 2 - (from.left + from.width / 2)}px, ${to.top + to.height / 2 - (from.top + from.height / 2)}px)`;
+        setTimeout(() => { try { crown.remove(); } catch (_) {} }, 1100);
+      }
+      break;
+    }
+    // 📢 재경매 — 냈던 카드 두 장이 각자 손으로 돌아가고, 그 카드에 금지 딱지가 붙는다
+    case 'redoBids': {
+      const myCard = mine ? f.p1 : f.p2, opCard = mine ? f.p2 : f.p1;
+      const myBidR = rectOfEl('#myBid .card'), opBidR = rectOfEl('#oppBid .card');
+      const myHandR = rectOfEl('#myHand'), opHandR = rectOfEl('#oppHand');
+      if (myBidR && myHandR) flyBetween(myBidR, myHandR, makeCard(myCard || null), { duration: 520, spin: -12 });
+      if (opBidR && opHandR) flyBetween(opBidR, opHandR, makeCard(opCard || null), { duration: 520, delay: 80, spin: 12 });
+      setTimeout(() => stampSeat('#auctionMat', '<span class="fx-ban">🚫</span>', 1300), 420);
+      break;
+    }
+    // 🔍 돋보기 — 본 사람 화면에서만 상대 손패가 밝아진다(카드 자체는 renderOppHand 가 연다)
+    case 'peekHand':
+      if (mine) setTimeout(() => pulse('#oppHand', 'fx-peek', 1400), 260);
+      break;
+    // 📏 눈금자 — 경매품을 훑는 선이 지나간다
+    case 'scanLot':
+      pulse('#auctionItems', 'fx-scan', 1100);
+      break;
+    // 💨 연막 — 가려진 쪽에서만 자욱하다
+    case 'smokeLot':
+      if (!mine) pulse('#auctionItems', 'fx-smoked', 1600);
+      break;
+    // 🔄 뒤집개 — 경매품이 통째로 한 바퀴 돈다
+    case 'flipBoard':
+      pulse('#auctionItems', 'fx-flipit', 900);
+      break;
+  }
+}
+
 socket.on('item_get', it => showItemGet(it));
 socket.on('item_fail', msg => toast('⚠️ ' + esc(msg || '지금은 쓸 수 없어요.')));
 socket.on('item_used', u => {
   playItemFx(u);
+  // 번쩍임이 지나간 뒤에 '무엇이 바뀌었는지' 를 그 자리에서 보여 준다.
+  // 겹쳐 틀면 화면이 시끄러워 정작 카드가 어디로 갔는지가 안 보인다.
+  if (!u.blocked) setTimeout(() => { try { playItemChangeFx(u); } catch (_) {} }, 520);
   const tier = (ITEM_INFO[u.itemId] || {}).tier || 'common';
   // 연출이 지나간 뒤 무슨 일이 있었는지 글로 한 번 더 (뭘 당했는지 모르면 억울하다)
   setTimeout(() => toast(`${u.byMe ? '' : '상대가 '}<b>${esc(u.name)}</b> — ${esc(u.msg || '')}`, 2400), TIER_MS[tier] - 300);

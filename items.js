@@ -44,7 +44,9 @@ const ITEMS = {
       if (!hand.length) return { error: '상대 손패가 비어 있어요.' };
       const picked = shuffle(hand.slice()).slice(0, 2);
       g.fx.peek[me] = picked.map(c => ({ ...c }));   // 스냅샷 (이후 손패가 바뀌어도 그대로)
-      return { ok: true, msg: `상대 손패 ${picked.length}장을 엿봤다!` };
+      return { ok: true, msg: `상대 손패 ${picked.length}장을 엿봤다!`,
+               // 무엇을 봤는지는 안 싣는다 — 본 사람에게만 손패에 직접 드러난다
+               fx: { kind: 'peekHand', n: picked.length } };
     },
   },
   scan: {
@@ -64,7 +66,9 @@ const ITEMS = {
       }
       const lv = best >= 0.5 ? 2 : best >= 0.34 ? 1 : 0;
       g.fx.scan[me] = lv;
-      return { ok: true, msg: ['상대에겐 별 쓸모가 없다', '상대에게 쓸 만하다', '상대가 간절히 원한다'][lv] };
+      return { ok: true, msg: ['상대에겐 별 쓸모가 없다', '상대에게 쓸 만하다', '상대가 간절히 원한다'][lv],
+               // 몇 단계인지는 쓴 사람만 안다(state.fx.scan). 여기엔 "쟀다" 만 싣는다
+               fx: { kind: 'scanLot' } };
     },
   },
   swap: {
@@ -81,7 +85,10 @@ const ITEMS = {
       const out = hand[i];
       hand[i] = g.centerDeck.shift();
       g.centerDeck.push(out);            // 버린 카드는 덱 맨 아래로
-      return { ok: true, msg: '손패를 덱의 카드와 바꿨다!', reveal: { got: hand[i] } };
+      // fx 는 양쪽이 다 보는 값이다 — 바뀐 카드가 무엇인지는 넣지 않는다.
+      // 손패는 감춰져 있는 정보이고, 여기서 흘리면 아이템 하나가 정보 누출이 된다.
+      return { ok: true, msg: '손패를 덱의 카드와 바꿨다!', reveal: { got: hand[i] },
+               fx: { kind: 'swapHand', outId: out.id } };
     },
   },
 
@@ -93,7 +100,7 @@ const ITEMS = {
     apply({ g, opp }) {
       if (!g.auction) return { error: '지금은 쓸 수 없어요.' };
       g.fx.smokeAgainst = opp;
-      return { ok: true, msg: '상대의 시야를 가렸다!' };
+      return { ok: true, msg: '상대의 시야를 가렸다!', fx: { kind: 'smokeLot', against: opp } };
     },
   },
   flip: {
@@ -103,7 +110,7 @@ const ITEMS = {
     apply({ g }) {
       if (g.fx.reverse) return { error: '이미 뒤집혀 있어요.' };
       g.fx.reverse = true;
-      return { ok: true, msg: '이번 경매는 약한 카드가 이긴다!' };
+      return { ok: true, msg: '이번 경매는 약한 카드가 이긴다!', fx: { kind: 'flipBoard' } };
     },
   },
   trade: {
@@ -127,7 +134,9 @@ const ITEMS = {
       const take = [...pool].sort((x, y) => (y.kind === want ? 1 : 0) - (x.kind === want ? 1 : 0))[0];
       myAcq.splice(myAcq.indexOf(give), 1); opAcq.splice(opAcq.indexOf(take), 1);
       myAcq.push(take); opAcq.push(give);
-      return { ok: true, msg: '전리품을 맞바꿨다!', reveal: { got: take, gave: give } };
+      // 획득 더미는 양쪽 다 보는 자리라 카드를 그대로 실어도 된다
+      return { ok: true, msg: '전리품을 맞바꿨다!', reveal: { got: take, gave: give },
+               fx: { kind: 'tradeAcq', mine: give, theirs: take } };
     },
   },
   bomb: {
@@ -139,7 +148,7 @@ const ITEMS = {
       if (g.fx.bomb) return { error: '이미 폭탄이 얹혀 있어요.' };
       // 나도 이 경매를 이기면 버려야 한다 — 그래서 '이겨도 되나' 를 묻는 물건이다
       g.fx.bomb = me;
-      return { ok: true, msg: '경매품에 폭탄을 얹었다 — 먹는 쪽이 손해!' };
+      return { ok: true, msg: '경매품에 폭탄을 얹었다 — 먹는 쪽이 손해!', fx: { kind: 'bombLot' } };
     },
   },
   ward: {
@@ -148,7 +157,7 @@ const ITEMS = {
     phases: PRE_BID,
     apply({ g, me }) {
       g.fx.ward[me] = true;
-      return { ok: true, msg: '부적을 걸었다 — 상대의 다음 아이템을 막는다!' };
+      return { ok: true, msg: '부적을 걸었다 — 상대의 다음 아이템을 막는다!', fx: { kind: 'wardSeat', of: me } };
     },
   },
   redo: {
@@ -176,7 +185,9 @@ const ITEMS = {
       g.fx.banned[me] = myBid ? myBid.id : null;
       g.fx.reverse = false;      // 이번 경매에 걸려 있던 승부 효과는 초기화
       g.phase = 'bidding';
-      return { ok: true, msg: '경매를 다시 한다 — 방금 낸 카드는 둘 다 못 쓴다!', rebid: true };
+      return { ok: true, msg: '경매를 다시 한다 — 방금 낸 카드는 둘 다 못 쓴다!', rebid: true,
+               // 이미 공개된 배팅 카드 두 장이다 — 손으로 돌아가는 것이 보여야 한다
+               fx: { kind: 'redoBids', p1: myBid || null, p2: opBid || null, mine: me } };
     },
   },
 
@@ -200,7 +211,9 @@ const ITEMS = {
       // 재 보니 이 아이템 하나로 승률이 +42.9%p — 판을 혼자 정하는 수준이었다.
       // 덱 아래로 돌려보내는 것만으로도 상대의 세트는 충분히 무너진다.
       g.centerDeck.push(target);
-      return { ok: true, msg: '상대의 전리품을 덱으로 돌려보냈다!', reveal: { got: target } };
+      // 상대 획득 더미에서 나간 카드다 — 원래 양쪽 다 보던 자리
+      return { ok: true, msg: '상대의 전리품을 덱으로 돌려보냈다!', reveal: { got: target },
+               fx: { kind: 'stealAcq', card: target, from: opp } };
     },
   },
   copy: {
@@ -221,7 +234,8 @@ const ITEMS = {
       }
       const dup = { ...best, id: 'copy_' + best.id + '_' + myAcq.length, copied: true };
       myAcq.push(dup);
-      return { ok: true, msg: `${best.kind}번 카드를 복제했다!`, reveal: { got: dup } };
+      return { ok: true, msg: `${best.kind}번 카드를 복제했다!`, reveal: { got: dup },
+               fx: { kind: 'copyAcq', card: best, dupId: dup.id, of: me } };
     },
   },
   tyrant: {
@@ -234,7 +248,7 @@ const ITEMS = {
       const myHand = me === 1 ? g.p1Hand : g.p2Hand;
       if (myHand.length < 2) return { error: '손패가 2장 이상이어야 진행자를 뺏을 수 있어요.' };
       g.auctioneer = me;
-      return { ok: true, msg: '진행자 자리를 빼앗았다!' };
+      return { ok: true, msg: '진행자 자리를 빼앗았다!', fx: { kind: 'tyrantSeat', to: me } };
     },
   },
   pick3: {
@@ -258,9 +272,12 @@ const ITEMS = {
         if (score > bestScore) { bestScore = score; want = c; }
       }
       g.centerDeck.splice(g.centerDeck.indexOf(want), 1);
+      const was = a.centerCard;             // 무엇이 무엇으로 바뀌었는지 화면이 그리려면 둘 다 필요하다
       g.centerDeck.push(a.centerCard);      // 원래 중앙 카드는 덱 맨 아래로
       a.centerCard = want;
-      return { ok: true, msg: '덱을 훑어 원하는 카드를 골랐다!', reveal: { prize: [a.centerCard, a._offeredCard] } };
+      // 중앙 카드는 이미 양쪽에 공개된 카드다
+      return { ok: true, msg: '덱을 훑어 원하는 카드를 골랐다!', reveal: { prize: [a.centerCard, a._offeredCard] },
+               fx: { kind: 'pickCenter', oldCard: was, card: want } };
     },
   },
 };

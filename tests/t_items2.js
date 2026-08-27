@@ -253,5 +253,56 @@ console.log('\n⑧ 아이템 카드는 따로 있다 — 뽑히면 경매품이 
      && /io\.to\(s2\)\.emit\('bonus_card'/.test(srv));
 }
 
+console.log('\n⑦ 아이템이 무엇을 바꿨는지 그 자리에서 보인다');
+// 번쩍임과 아이콘만으로는 "뭔가 일어났다" 까지다. 카드가 오갔으면 그 카드가
+// 오가는 것이 보여야 무엇을 당했는지 안다. 열세 가지 전부 연출을 붙였다.
+{
+  const src = read('items.js');
+  // 모든 아이템이 공개용 fx 를 낸다
+  const ids = Object.keys(items.ITEMS);
+  const noFx = ids.filter((id) => {
+    const m = src.match(new RegExp('^  ' + id + ': \\{[\\s\\S]*?\\n  \\},', 'm'));
+    return !m || !/fx: \{ kind:/.test(m[0]);
+  });
+  ok(`열세 가지가 모두 fx 를 낸다`, noFx.length === 0, noFx.join(','));
+  // 서버는 fx 를 양쪽에 보낸다 — reveal(감춰진 정보)과 달리 공개다
+  ok('fx 는 양쪽에, reveal 은 쓴 사람에게만',
+     /reveal: \(i \+ 1 === me\) \? out\.reveal \|\| null : null,\s*\n\s*fx: out\.fx \|\| null, seat: me,/.test(srv));
+  ok('AI 가 쓴 것도 fx 가 실린다',
+     (srv.match(/fx: out\.fx \|\| null, seat: me/g) || []).length >= 3);
+
+  // 감춰진 정보는 fx 에 안 싣는다 — 손패는 남이 보면 안 된다
+  const swapBlk = src.match(/^  swap: \{[\s\S]*?\n  \},/m)[0];
+  ok('손바꿈은 무슨 카드였는지 안 흘린다',
+     /fx: \{ kind: 'swapHand', outId: out\.id \}/.test(swapBlk) && !/fx: \{[^}]*card:/.test(swapBlk));
+  const magBlk = src.match(/^  magnify: \{[\s\S]*?\n  \},/m)[0];
+  ok('돋보기는 무엇을 봤는지 안 흘린다', /fx: \{ kind: 'peekHand', n: picked\.length \}/.test(magBlk));
+  const scanBlk = src.match(/^  scan: \{[\s\S]*?\n  \},/m)[0];
+  ok('눈금자는 몇 단계인지 안 흘린다', /fx: \{ kind: 'scanLot' \}/.test(scanBlk));
+  // 반대로 원래 공개인 것은 그대로 실어야 그림을 그릴 수 있다
+  ok('획득 더미를 건드리는 것은 카드를 싣는다',
+     /fx: \{ kind: 'tradeAcq', mine: give, theirs: take \}/.test(src)
+     && /fx: \{ kind: 'stealAcq', card: target, from: opp \}/.test(src)
+     && /fx: \{ kind: 'copyAcq', card: best, dupId: dup\.id, of: me \}/.test(src));
+  ok('중앙 카드가 바뀌면 전후를 다 싣는다',
+     /const was = a\.centerCard;/.test(src) && /fx: \{ kind: 'pickCenter', oldCard: was, card: want \}/.test(src));
+
+  // 클라이언트가 열세 갈래를 다 그린다
+  const kinds = ['swapHand', 'tradeAcq', 'stealAcq', 'copyAcq', 'pickCenter', 'bombLot', 'wardSeat',
+                 'tyrantSeat', 'redoBids', 'peekHand', 'scanLot', 'smokeLot', 'flipBoard'];
+  const unhandled = kinds.filter((k) => !new RegExp(`case '${k}'`).test(cli));
+  ok(`화면이 ${kinds.length}갈래를 다 그린다`, unhandled.length === 0, unhandled.join(','));
+  ok('카드가 오가는 것은 실제로 날린다', /function flyBetween\(fromRect, toRect, cardEl/.test(cli));
+  ok('바뀐 자리를 짚어 준다', /function pulse\(sel, cls = 'fx-pulse'/.test(cli)
+     && /function stampSeat\(seatSel, html/.test(cli));
+  ok('번쩍임이 지나간 뒤에 그린다',
+     /if \(!u\.blocked\) setTimeout\(\(\) => \{ try \{ playItemChangeFx\(u\); \} catch \(_\) \{\} \}, 520\);/.test(cli));
+  ok('부적에 막힌 것은 안 그린다', /if \(!u\.blocked\)/.test(cli));
+  ok('배경 탭에서는 건너뛴다', /const f = u\.fx; if \(!f \|\| document\.hidden\) return;/.test(cli));
+  // 모션을 줄이라고 한 사람에게는 안 튼다
+  ok('모션 줄이기를 지킨다',
+     /@media \(prefers-reduced-motion: reduce\) \{\s*\n\s*\.fx-stamp, \.fx-scan::after, \.fx-smoked::after \{ display:none; \}/.test(htm));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
