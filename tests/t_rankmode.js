@@ -27,8 +27,12 @@ ok('10초로 잡혀 있다', /const MATCH_BOT_WAIT = 10000;/.test(srv));
 ok('전문가로 붙는다', /function startBotMatch\(entry, opts = \{\}\)[\s\S]{0,900}difficulty: 'expert'/.test(srv));
 ok('AI 도 같은 규칙으로 모드를 고른다',
    /const mode = opts\.mode \|\| pickRankedMode\(\);/.test(srv));
+// 룰렛이 도는 동안(RANK_SPIN_MS)은 판을 안 연다 — 그래서 setTimeout 안으로 들어갔다
 ok('AI 도 TWELVE 를 연다',
-   /function startBotMatch[\s\S]{0,1400}if \(mode === 'twelve'\) \{ if \(tvRestart\) tvRestart\(roomId\); return; \}/.test(srv));
+   /function startBotMatch[\s\S]{0,1600}if \(mode === 'twelve'\) \{ if \(tvRestart\) tvRestart\(roomId\); return; \}/.test(srv));
+ok('룰렛이 도는 동안은 판을 안 연다',
+   /const RANK_SPIN_MS = 2300;/.test(srv)
+   && (srv.match(/\}, RANK_SPIN_MS\);/g) || []).length === 2);
 
 console.log('\n③ RP 는 랭크에서만, 세 모드 다');
 // 랭크가 세 모드를 돌리는데 하나만 빼면 그게 뜨길 기다리는 사람이 생긴다

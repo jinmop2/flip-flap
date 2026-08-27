@@ -129,7 +129,6 @@
 
     // ── TWELVE ──
     'AI는 쉬움·보통·전문가 세 급이에요. 전문가는 남은 카드를 세고,\n         칩을 0까지 쓰지 않으며, 클로즈로 상대 칩을 말리는 수까지 씁니다.': 'The AI comes in three grades. Expert counts the unseen cards, never spends its last chip, and uses closed auctions to drain yours.',
-    '카드가 아니라 칩으로 값을 부르는 경매예요': 'An auction where you bid chips, not cards',
     '클래식 · 아이템전 · TWELVE 무작위 · RP 반영': 'Classic \u00b7 Item \u00b7 TWELVE at random \u00b7 counts for RP',
     '빠른대전': 'Quick match',
     '모드 상관없이 가장 빨리 · RP 미반영': 'Whatever starts soonest \u00b7 no RP',
@@ -138,8 +137,6 @@
     '모드 상관없이 가장 빨리 시작하는 방으로 — 없으면 10초 뒤 전문가 AI':
       'Into whichever room starts soonest \u2014 an Expert AI after 10s if there is none',
     '상대를 찾았어요!': 'Found an opponent!',
-    '상대를 못 찾아 전문가 AI 가 들어왔어요': 'No one turned up \u2014 an Expert AI stepped in',
-    '카드 두 장을 쥐고 배팅하는 섯다식 판이에요': 'A Sutda-style round \u2014 two cards each, hidden, and bet',
     '두 장 승부': 'Two-Card Duel',
     // ── 튜토리얼 고르기 ──
     '어떤 판을 배워볼까요? 처음이면 클래식부터가 좋아요.':
@@ -158,6 +155,10 @@
     '미니게임': 'Mini game',
     '게임 시작 (빈자리는 AI)': 'Start (AI fills empty seats)',
     '칩 경매': 'Chip auction',
+    '상대를 못 찾았어요 — 전문가 AI 와 붙습니다': "No one turned up \u2014 you're up against an Expert AI",
+    '상대를 찾았어요! 어떤 판일까요…': 'Found an opponent! Which game will it be\u2026',
+    '경매로 세트를 먼저 완성하면 승리': 'Complete a set first and you win',
+    '두 장으로 겨루는 섯다식 판': 'A Sutda-style round decided by two cards',
     '은행': 'Bank',
     '눌러서 뒤집기': 'Tap to flip',
     '덱을 눌러 카드를 뒤집으세요': 'Tap the deck to flip a card',
