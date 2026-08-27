@@ -40,18 +40,22 @@ function shuffle(arr, rand) {
 
 // 참가자: { key, nick, isBot, token }
 // key 는 사람이면 소켓 id, AI 면 'bot0' 같은 고정 문자열. 대진표는 key 로만 말한다.
-function createBracket(entrants, rand) {
+// bestOf — 라운드별 판수를 갈아끼운다. 솔로 대회는 결승도 단판이다:
+// 혼자 하는 대회에서 결승만 세 판이면 "세 판 이기면 우승" 이라는 약속이 깨진다.
+function createBracket(entrants, rand, bestOf) {
   const seats = shuffle(entrants, rand);
   while (seats.length < SIZE) {
     const i = seats.length;
     seats.push({ key: 'bot' + i, nick: null, isBot: true, token: null });
   }
+  const bo = Array.isArray(bestOf) ? bestOf : BEST_OF;
   return {
     size: SIZE,
     seats: seats.slice(0, SIZE),
     round: 0,                       // 0=8강, 1=4강, 2=결승
+    bestOf: bo,
     // rounds[r] = [{ a, b, winner }]  — a·b 는 seats 의 자리 번호
-    rounds: [pairsOf([...Array(SIZE).keys()], BEST_OF[0])],
+    rounds: [pairsOf([...Array(SIZE).keys()], bo[0])],
     over: false,
     rank: {},                       // seat → 등수 (1·2 만 상금)
   };
@@ -110,7 +114,7 @@ function reportWin(t, matchIndex, winnerSeat) {
     return { ok: true, advanced: false, finished: true, champion: winners[0] };
   }
   t.round++;
-  t.rounds.push(pairsOf(winners, BEST_OF[t.round]));
+  t.rounds.push(pairsOf(winners, (t.bestOf || BEST_OF)[t.round]));
   return { ok: true, advanced: true };
 }
 

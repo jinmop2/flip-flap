@@ -927,44 +927,28 @@ const RK_LOOPS = 6;         // 몇 바퀴 돌고 멈출까
 
 // 룰렛은 기다리는 내내 돈다. 상대를 찾는 동안 계속 돌다가, 정해지는 순간
 // 그 자리에서 멈춘다 — 기다림 자체가 "무엇이 걸릴까" 로 읽힌다.
-let _rkSpin = null;
 const rkSlot = (m) => `<div class="rk-slot m-${m}"><i>${RANK_ICO[m]}</i>${RANK_LABEL[m]}</div>`;
 
-// 대기 시작 — 끝없이 굴린다
+// 대기 시작 — 끝없이 굴린다. 도는 것은 CSS 가 한다.
 function rankSpinStart() {
   const box = document.getElementById('rkRoulette');
   const reel = document.getElementById('rkReel');
   const win = box ? box.querySelector('.rk-window') : null;
   if (!box || !reel) return;
   rankSpinStop();
-  // 한 바퀴 분량 + 한 칸. 한 바퀴 돌면 처음으로 되돌려 이어 붙인다 —
-  // 무한히 긴 띠를 만들면 메모리만 먹고 눈에는 똑같다.
+  // 한 바퀴 + 한 칸. 마지막 칸이 첫 칸과 같아서 되돌아가는 자리가 안 보인다.
   reel.innerHTML = RANK_ORDER.map(rkSlot).join('') + rkSlot(RANK_ORDER[0]);
   box.classList.add('on');
   win.classList.remove('landed');
-  const one = RANK_ORDER.length * SLOT_H;
-  let at = 0;
-  const step = () => {
-    at += 1;
-    reel.style.transition = `transform 260ms linear`;
-    reel.style.transform = `translateY(-${at * SLOT_H}px)`;
-    playSound('tick');
-    if (at >= RANK_ORDER.length) {
-      setTimeout(() => {
-        if (!_rkSpin) return;
-        reel.style.transition = 'none';
-        reel.style.transform = 'translateY(0px)';
-        at = 0;
-      }, 265);
-    }
-  };
   reel.style.transition = 'none';
-  reel.style.transform = 'translateY(0px)';
-  void reel.offsetWidth;
-  step();
-  _rkSpin = setInterval(step, 300);
+  reel.style.transform = '';
+  reel.style.setProperty('--rk-loop', `-${RANK_ORDER.length * SLOT_H}px`);
+  reel.classList.add('idle');
 }
-function rankSpinStop() { if (_rkSpin) { clearInterval(_rkSpin); _rkSpin = null; } }
+function rankSpinStop() {
+  const reel = document.getElementById('rkReel');
+  if (reel) reel.classList.remove('idle');
+}
 
 // 정해졌다 — 돌던 것을 그 모드에서 멈춘다
 function rankRoulette(mode, done) {
@@ -972,10 +956,11 @@ function rankRoulette(mode, done) {
   const reel = document.getElementById('rkReel');
   const win = box ? box.querySelector('.rk-window') : null;
   if (!box || !reel) { done(); return; }
+  // 지금 눈에 보이는 자리를 먼저 붙잡는다 — 그 자리에서 이어 돌아야 튀지 않는다
+  const now = getComputedStyle(reel).transform;
+  const m6 = now && now !== 'none' ? now.match(/matrix\(.*,\s*(-?[\d.]+)\)$/) : null;
+  const cur = m6 ? Math.abs(parseFloat(m6[1])) / SLOT_H : 0;
   rankSpinStop();
-  // 지금 보이는 자리에서 몇 바퀴 더 돌아 뽑힌 칸에 선다
-  const cur = Math.round(Math.abs(parseFloat((reel.style.transform.match(/-?[\d.]+/) || [0])[0])) / SLOT_H) || 0;
-  const idx = Math.max(0, RANK_ORDER.indexOf(mode));
   let html = '';
   for (let i = 0; i < RK_LOOPS; i++) for (const m of RANK_ORDER) html += rkSlot(m);
   html += rkSlot(mode);
@@ -983,7 +968,7 @@ function rankRoulette(mode, done) {
   box.classList.add('on');
   win.classList.remove('landed');
   reel.style.transition = 'none';
-  reel.style.transform = `translateY(-${cur * SLOT_H}px)`;
+  reel.style.transform = `translateY(-${Math.round(cur * SLOT_H)}px)`;
   void reel.offsetWidth;
   const end = (RK_LOOPS * RANK_ORDER.length) * SLOT_H;
   const dur = 1500;
@@ -7250,3 +7235,160 @@ function tvActions(v) {
     // 매번 버튼을 한 번 더 누르게 하면 그것대로 흐름이 끊긴다.
   }
 }
+
+// ── 솔로 토너먼트 ────────────────────────────────────────────
+// 혼자 여는 8강. 세 판을 이기면 우승이고, 매 경기 모드가 바뀐다.
+// 대진표·상금은 전부 서버가 쥐고 있고 여기서는 받아 그리기만 한다 —
+// 여기서 계산하면 우승을 만들어 낼 수 있다.
+let stour = null;                    // 서버가 내려준 마지막 view
+const ST_MODE_NAME = { classic: '🃏 클래식', item: '🎪 아이템전', twelve: '🔵 TWELVE' };
+const ST_DIFF_NAME = { easy: '쉬움', hard: '보통', expert: '전문가' };
+
+window.stourStart = function (diff) {
+  closeModePanels();
+  socket.emit('stour_start', { diff, nick: getNick() });
+};
+window.stourClose = function () {
+  const m = document.getElementById('stourModal');
+  if (m) m.classList.remove('show');
+};
+// 대회를 접는다 — 진행 중이면 서버 쪽도 버린다
+window.stourGiveUp = function () {
+  socket.emit('stour_quit');
+  stour = null; stourClose();
+};
+
+
+function stourShow() {
+  const m = document.getElementById('stourModal');
+  if (m) m.classList.add('show');
+}
+
+// 대진표를 그린다. 세 라운드를 가로로, 마지막에 우승컵.
+function stourRender(v, flash) {
+  if (!v) return;
+  const nameOf = (i) => {
+    const s = v.seats[i]; if (!s) return '—';
+    return s.me ? (s.nick || '나') : (s.nick || 'AI');
+  };
+  const rd = document.getElementById('stRound');
+  if (rd) rd.textContent = v.over ? '대회 종료' : v.roundName;
+
+  // 남은 판수 — 세 개를 채우면 우승
+  const pips = document.getElementById('stPips');
+  if (pips) pips.innerHTML = [0, 1, 2].map(i => `<div class="st-pip${i < v.wins ? ' on' : ''}"></div>`).join('');
+
+  const cols = document.getElementById('stCols');
+  if (!cols) return;
+  let html = '';
+  for (let r = 0; r < 3; r++) {
+    const rr = v.rounds[r];
+    html += `<div class="st-col"><h6>${['8강', '4강', '결승'][r]}</h6>`;
+    // 아직 안 열린 라운드도 빈 칸으로 그린다 — 안 그리면 대진표가 한 줄로 보여
+    // "여기서 몇 번을 더 이겨야 하는가" 가 안 잡힌다.
+    if (!rr) {
+      for (let k = 0; k < [4, 2, 1][r]; k++)
+        html += '<div class="st-m tbd"><div class="st-p"><span class="sp-n">?</span></div>' +
+                '<div class="st-p"><span class="sp-n">?</span></div></div>';
+      html += '</div>'; continue;
+    }
+    for (const m of rr.matches) {
+      const mine = m.a === v.mySeat || m.b === v.mySeat;
+      const live = mine && m.winner === null && r === v.round && !v.over;
+      html += `<div class="st-m${live ? ' live' : ''}">`;
+      for (const seat of [m.a, m.b]) {
+        const cls = [];
+        if (seat === v.mySeat) cls.push('me');
+        if (m.winner !== null) cls.push(m.winner === seat ? 'win' : 'lose');
+        if (flash && flash.some(f => f.round === r && (f.winner === seat || f.loser === seat))) cls.push('flash');
+        html += `<div class="st-p ${cls.join(' ')}"><span class="sp-n">${esc(nameOf(seat))}</span></div>`;
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+  const champ = v.over && v.myRank === 1;
+  html += `<div class="st-col"><h6>우승</h6><div class="st-cup${champ ? ' won' : ''}">🏆</div></div>`;
+  cols.innerHTML = html;
+}
+
+// 아래쪽 — 다음에 할 일
+function stourNextUI(html) {
+  const n = document.getElementById('stNext');
+  if (n) n.innerHTML = html;
+}
+
+socket.on('stour_state', (v) => {
+  stour = v; stourRender(v); stourShow();
+  if (v.done) return;
+  const foe = stourFoeName(v);
+  stourNextUI(
+    `<div class="st-foe">다음 상대 · <b style="color:#ffeec0">${esc(foe)}</b>` +
+    ` <span style="opacity:.6">(${ST_DIFF_NAME[v.diff] || v.diff})</span></div>` +
+    `<button class="btn btn-gold" onclick="stourGo()">경기 시작</button>` +
+    `<button class="btn btn-outline btn-sm" onclick="stourGiveUp()">대회 포기</button>`
+  );
+});
+
+function stourFoeName(v) {
+  const rr = v.rounds[v.round]; if (!rr) return 'AI';
+  const m = rr.matches.find(x => x.winner === null && (x.a === v.mySeat || x.b === v.mySeat));
+  if (!m) return 'AI';
+  const foe = m.a === v.mySeat ? m.b : m.a;
+  const s = v.seats[foe];
+  return (s && s.nick) || 'AI';
+}
+
+// 모드를 뽑아 달라고 한다. 무엇이 나올지는 서버가 정한다.
+window.stourGo = function () {
+  stourNextUI(`<div class="st-mode">🎲 모드를 뽑는 중…</div>`);
+  socket.emit('stour_next');
+};
+
+socket.on('stour_go', (d) => {
+  stourNextUI(`<div class="st-mode pop">${ST_MODE_NAME[d.mode] || d.mode}</div>`);
+  playSound('bell');
+  // 뽑힌 것을 보여 준 뒤에 판으로 넘어간다 — 바로 넘기면 무엇이 걸렸는지 못 본다
+  setTimeout(() => {
+    stourClose();
+    difficulty = d.diff;
+    if (d.mode === 'twelve') {
+      tvBot = true; tvDiff = d.diff;
+      socket.emit('tv_solo', { pid: PID, nick: getNick(), diff: d.diff, stour: true });
+    } else {
+      // 화면 전환에 쓰이는 깃발들 — createRoom·startItemGame 이 하던 것과 같아야
+      // 판이 열려도 로비에 남아 있는 일이 없다.
+      isVsBot = true; isItemMode = d.mode === 'item';
+      socket.emit('create_room', { vsBot: true, difficulty: d.diff, pid: PID, nick: getNick(),
+                                   itemMode: d.mode === 'item', stour: true });
+    }
+  }, 1100);
+});
+
+// 한 경기가 끝났다 — 대진표를 채우며 보여 준다
+socket.on('stour_result', (d) => {
+  stour = d.view;
+  stourShow();
+  stourRender(d.view, d.fills);
+  playSound(d.won ? 'setwin' : 'tick');
+  if (!d.view.over) {
+    stourNextUI(
+      `<div class="st-foe">${d.won ? '올라갔어요!' : ''}</div>` +
+      `<div class="st-foe">다음 상대 · <b style="color:#ffeec0">${esc(stourFoeName(d.view))}</b></div>` +
+      `<button class="btn btn-gold" onclick="stourGo()">다음 경기</button>` +
+      `<button class="btn btn-outline btn-sm" onclick="stourGiveUp()">대회 포기</button>`
+    );
+    return;
+  }
+  // 끝났다
+  const rank = d.rank;
+  const label = rank === 1 ? '🏆 우승!' : rank === 2 ? '🥈 준우승' : rank === 3 ? '4강 탈락' : '8강 탈락';
+  stourNextUI(
+    `<div class="st-prize">${esc(label)}</div>` +
+    (d.prize ? `<div class="st-foe">상금 <b style="color:#ffd94a">🪙${d.prize}</b></div>` : '') +
+    (d.guest ? `<div class="st-foe">로그인하면 상금을 받을 수 있어요</div>` : '') +
+    `<button class="btn btn-gold" onclick="stourGiveUp()">확인</button>`
+  );
+  playSound(rank === 1 ? 'victory' : 'defeat');
+  if (d.profile) { myAccount = d.profile; renderAccount(); }
+});

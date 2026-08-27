@@ -65,8 +65,12 @@ ok('음수 여백으로 당기지 않는다',
 
 console.log('\n⑤ 미니게임 — 다른 모드와 같은 자리에');
 ok('로비 카드에서 뺐다', !/onclick="miniOpen\(\)"[\s\S]{0,120}미니게임/.test(htm));
-ok('곁들이 격자는 한 칸이 됐다', /<div class="mode-grid sub one">/.test(htm)
-   && /\.mode-grid\.sub\.one \{ grid-template-columns:1fr; \}/.test(htm));
+// 로비 밖에 따로 서 있던 칸은 이제 하나도 없다. 토너먼트까지 솔로·멀티
+// 안으로 들어가면서 곁들이 격자 자체가 없어졌다 — 규칙도 같이 걷었다.
+ok('로비에 곁들이 격자가 없다', !/mode-grid sub/.test(htm) && !/mode-grid\.sub/.test(htm));
+ok('토너먼트는 솔로 안에 있다', /onclick="soloPick\('tour'\)"/.test(htm)
+   && /stourStart\('expert'\)/.test(htm));
+ok('사람 대회는 멀티 안에 있다', /class="mm-hero tour" onclick="tourOpen\(\)"/.test(htm));
 // 다른 모드와 같은 통로로 — 빠른 입장·방 모드 고르기에 나란히 선다
 ok('빠른 입장에 있다', /quickJoin\('mini'\)/.test(htm)
    && /\['classic', 'item', 'quad', 'twelve', 'mini'\]\.includes\(mode\)/.test(srv));

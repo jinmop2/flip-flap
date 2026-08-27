@@ -1762,7 +1762,7 @@ io.on('connection', (socket) => {
   socket.on('tut_hold',    () => { const r = rooms[socket.roomId]; if (r && r.tutorial) r.tutHold = true; });
   socket.on('tut_release', () => { const r = rooms[socket.roomId]; if (r) r.tutHold = false; });
 
-  socket.on('create_room', ({ vsBot = false, difficulty = 'hard', pid, name, nick, secret, password, tutorial, itemMode } = {}) => {
+  socket.on('create_room', ({ vsBot = false, difficulty = 'hard', pid, name, nick, secret, password, tutorial, itemMode, stour } = {}) => {
     if (Object.keys(rooms).length >= MAX_ROOMS) return socket.emit('error', '서버가 혼잡해요. 잠시 후 시도하세요.');
     leaveOldRoom();
     socket.leave('lobby');
@@ -1791,6 +1791,9 @@ io.on('connection', (socket) => {
       rooms[roomId].game = createGame(rooms[roomId].itemMode);
       rooms[roomId].startedAt = Date.now();
       rooms[roomId].aiMem = expert3.createMem();   // 전문가 AI 카운팅 메모리
+      // 대회 경기인지는 클라이언트 말이 아니라 서버가 쥔 대진으로 판정한다.
+      // 모드·난이도가 서버가 뽑아 둔 것과 맞아야 한다 — 아니면 그냥 솔로 판이다.
+      stourMark(socket, rooms[roomId], rooms[roomId].itemMode ? 'item' : 'classic', difficulty, stour);
       socket.emit('game_start', { vsBot: true, difficulty, roomId, nicks: rooms[roomId].nicks, profiles: rooms[roomId].profiles, itemMode: rooms[roomId].itemMode });
       broadcast(roomId);
       startClock(roomId);
@@ -2049,6 +2052,10 @@ io.on('connection', (socket) => {
     // 보상은 클래식 멀티와 같은 표를 쓴다. RP 는 랭크게임으로 걸린 판에서만
     // 움직인다 — 랭크는 세 모드가 무작위로 나오므로 트웰브라고 빼면 그 판만
     // 점수가 안 걸리는 셈이 되어, 트웰브가 뜨길 기다리는 사람이 생긴다.
+    if (room.stour) {
+      const i = room.players.indexOf(room.stour.sid);
+      setTimeout(() => stourResult(room, i >= 0 && g.winner === i + 1), 900);
+    }
     const turns = g.turn, playtimeSec = Math.round((Date.now() - (room.startedAt || Date.now())) / 1000);
     room.players.forEach((sid, i) => {
       const tok = room.tokens && room.tokens[i]; if (!tok) return;
@@ -2095,7 +2102,43 @@ io.on('connection', (socket) => {
   tvRestart = tvStart;   // 재대결(restartGame)에서 부를 수 있게
 
   // 혼자 하기 (AI 와)
-  socket.on('tv_solo', ({ pid, nick, diff } = {}) => {
+  // ── 솔로 토너먼트 ──────────────────────────────────────────
+  socket.on('stour_start', ({ diff, nick } = {}) => {
+    const level = ['easy', 'hard', 'expert'].includes(diff) ? diff : 'hard';
+    if (sTours.has(socket.id) && !sTours.get(socket.id).done)
+      return stourPush(socket, sTours.get(socket.id));      // 이미 열려 있으면 그걸 돌려준다
+    const prof = myProfile(nick);
+    const pool = TOUR._shuffle(STOUR_NAMES).slice(0, TOUR.SIZE - 1);
+    const entrants = [{ key: socket.id, nick: prof.nick, isBot: false, token: socket.token || null }];
+    for (const n of pool) entrants.push({ key: 'ai_' + n, nick: n, isBot: true, token: null });
+    const b = TOUR.createBracket(entrants, null, STOUR_BEST_OF);
+    const t = {
+      id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      b, diff: level, seat: b.seats.findIndex(x => x.key === socket.id),
+      wins: 0, mode: null, done: false, token: socket.token || null,
+    };
+    sTours.set(socket.id, t);
+    stourPush(socket, t);
+  });
+
+  // 다음 경기 모드를 뽑는다. 뽑는 것은 서버다 — 클라이언트가 고르면
+  // 자신 있는 모드만 골라 올라갈 수 있다.
+  socket.on('stour_next', () => {
+    const t = sTours.get(socket.id);
+    if (!t || t.b.over || t.done) return;
+    if (stourMyMatch(t) < 0) return;
+    // 이미 한 판을 띄웠으면 또 뽑지 않는다. 두 번 누르면 방이 두 개 열리고,
+    // 두 번째 방을 만들며 첫 방을 나가는 셈이 되어 몰수패로 적힌다.
+    if (t.pending && Date.now() - t.pending < 20000) return;
+    t.pending = Date.now();
+    t.mode = stourMode();
+    socket.emit('stour_go', { mode: t.mode, diff: t.diff, round: t.b.round,
+                              roundName: TOUR.roundName(t.b.round) });
+  });
+
+  socket.on('stour_quit', () => { sTours.delete(socket.id); });
+
+  socket.on('tv_solo', ({ pid, nick, diff, stour } = {}) => {
     const level = ['easy', 'hard', 'expert'].includes(diff) ? diff : 'hard';
     const label = level === 'easy' ? '쉬움' : level === 'expert' ? '전문가' : '보통';
     if (socket.roomId && rooms[socket.roomId]) return;
@@ -2111,6 +2154,7 @@ io.on('connection', (socket) => {
     };
     socket.leave('lobby');
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
+    stourMark(socket, rooms[roomId], 'twelve', level, stour);
     tvStart(roomId);
   });
 
@@ -2529,6 +2573,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    sTours.delete(socket.id);          // 대회는 접속과 함께 사라진다
     // 시작 전 대기실에서 끊긴 것이면 방을 남기고 자리만 비운다
     {
       const r = socket.roomId && rooms[socket.roomId];
@@ -2836,6 +2881,108 @@ function advanceTurn(roomId) {
 // 한 번에 하나만 연다. 여러 대회를 동시에 굴리면 정원이 쪼개져 아무 데도 안 찬다.
 // 첫 사람이 들어온 뒤 30초에 시작하고, 그때까지 안 찬 자리는 AI 가 메운다.
 const TOUR = require('./tournament');
+
+// ── 솔로 토너먼트 ────────────────────────────────────────────────
+// 혼자 여는 8강. 붙는 상대는 전부 AI 고, 매 경기 모드가 무작위로 바뀐다
+// (클래식·아이템전·트웰브). 세 판을 이기면 우승이다.
+//
+// 다른 자리의 AI 끼리 붙는 경기는 실제로 두지 않는다 — 서버가 여덟 판을
+// 돌릴 이유가 없고, 유저는 그 판을 보지도 않는다. 대진표만 그럴듯하게
+// 채운다. 대신 유저가 붙는 판은 전부 진짜 게임이다.
+//
+// 상태는 서버가 쥔다. 상금 계산이 클라이언트에 있으면 대진표를 조작해
+// 우승을 만들어 낼 수 있다.
+const STOUR_MODES = ['classic', 'item', 'twelve'];
+const STOUR_BEST_OF = [1, 1, 1];                     // 결승도 단판 — "세 판이면 우승"
+// 상금. 솔로 판 하나가 주는 코인(쉬움 5·보통 15·전문가 40)의 서너 배쯤이다.
+// 세 판을 내리 이겨야 하므로 판당으로 치면 크지 않은데, 한 번에 들어와서 크게 느껴진다.
+const STOUR_PRIZE = { easy: 60, hard: 200, expert: 500 };
+const STOUR_NAMES = ['까치', '흑조', '백랑', '여우', '두루미', '산군', '청설모',
+                     '노루', '수달', '부엉이', '살쾡이', '담비', '족제비', '해오라기'];
+const sTours = new Map();                            // socket.id → 진행 중인 대회
+
+const stourMode = () => STOUR_MODES[Math.floor(Math.random() * STOUR_MODES.length)];
+
+// 이 방이 대회 경기인지 표시한다. 서버가 뽑아 둔 모드·난이도와 맞을 때만 인정한다.
+function stourMark(socket, room, mode, diff, want) {
+  if (!want || !room) return;
+  const t = sTours.get(socket.id);
+  if (!t || t.b.over || t.done) return;
+  if (t.mode !== mode || t.diff !== diff) return;
+  if (stourMyMatch(t) < 0) return;
+  room.stour = { sid: socket.id, id: t.id, round: t.b.round };
+  t.pending = 0;                         // 판이 열렸다
+  room.noRank = true;                    // 대회 판은 등급에 안 걸린다 — 상대가 전부 AI 다
+}
+
+// 대회 경기가 끝났다. 유저 결과를 적고, 나머지 자리를 채우고, 상금까지 정산한다.
+// 모든 계산이 여기 한 곳에 있어야 클라이언트가 끼어들 자리가 없다.
+function stourResult(room, iWon) {
+  const mark = room && room.stour; if (!mark) return;
+  room.stour = null;                     // 한 판이 두 번 정산되지 않게
+  const t = sTours.get(mark.sid);
+  if (!t || t.id !== mark.id || t.b.over || t.done) return;
+  t.pending = 0;
+  const idx = stourMyMatch(t); if (idx < 0) return;
+  const m = TOUR.curRound(t.b)[idx];
+  const foe = m.a === t.seat ? m.b : m.a;
+  TOUR.reportWin(t.b, idx, iWon ? t.seat : foe);
+  if (iWon) t.wins++;
+  const fills = stourFillOthers(t);
+  // 유저가 떨어졌으면 남은 라운드는 AI 끼리 끝까지 간다 — 대진표가 완성돼야
+  // "내가 몇 등이었나" 가 보인다.
+  while (!t.b.over) { const more = stourFillOthers(t); if (!more.length) break; fills.push(...more); }
+
+  const sock = io.sockets.sockets.get(mark.sid);
+  const out = { won: iWon, fills, view: stourView(t) };
+  if (t.b.over) {
+    t.done = true;
+    const rank = t.b.rank[t.seat] || null;
+    const full = STOUR_PRIZE[t.diff] || 0;
+    // 우승만 전액, 준우승은 1/4. 8강·4강 탈락은 빈손이다 — 어디까지 갔든
+    // 같은 값을 주면 첫 판을 지고 나가는 게 가장 이득이 된다.
+    const amt = rank === 1 ? full : rank === 2 ? Math.round(full / 4) : 0;
+    out.rank = rank; out.prize = amt; out.view = stourView(t);
+    // 게스트는 받을 지갑이 없다. 액수를 그대로 띄우면 받은 줄 안다.
+    if (!t.token) { out.prize = 0; out.guest = amt > 0; }
+    else if (amt > 0) {
+      const r = accounts.tourPrize(t.token, t.id, rank, amt);
+      if (r && r.ok) { out.coins = r.coins; out.titles = r.titles; out.profile = r.profile; }
+      else out.prize = 0;
+    }
+  }
+  if (sock) sock.emit('stour_result', out);
+}
+
+// 내 자리의 이번 라운드 경기 번호
+function stourMyMatch(t) {
+  return TOUR.curRound(t.b).findIndex(m => m.winner === null && (m.a === t.seat || m.b === t.seat));
+}
+
+function stourView(t) {
+  const v = TOUR.view(t.b, t.seat);
+  v.diff = t.diff;
+  v.mode = t.mode || null;
+  v.wins = t.wins;
+  v.prize = STOUR_PRIZE[t.diff] || 0;
+  v.done = !!t.done;
+  return v;
+}
+const stourPush = (socket, t) => socket.emit('stour_state', stourView(t));
+
+// 유저가 붙지 않는 경기들을 채운다. 결과는 무작위 — 어차피 보여 주기용이다.
+function stourFillOthers(t) {
+  const list = TOUR.curRound(t.b);
+  const fills = [];
+  list.forEach((m, i) => {
+    if (m.winner !== null || m.a === t.seat || m.b === t.seat) return;
+    const w = Math.random() < 0.5 ? m.a : m.b;
+    TOUR.reportWin(t.b, i, w);
+    fills.push({ round: t.b.round, index: i, winner: w });
+  });
+  return fills;
+}
+
 const SUTDA = require('./sutda');   // 미니게임 족보·배팅 규칙
 let tour = null;                       // { id, bracket, rooms, done }
 let tourLobby = null;                  // { entrants:[], timer, startAt }
@@ -3092,6 +3239,13 @@ function finishStats(room, winner, forfeit = false, setKind = null) {
   });
   // 관전자에게 종료 알림
   (room.specs || []).forEach(sid => io.to(sid).emit('game_over', { winner, spec: true, nicks: room.nicks }));
+
+  // 솔로 토너먼트 경기였으면 대진표를 진행시킨다.
+  if (room.stour) {
+    const i = room.players.indexOf(room.stour.sid);
+    const iWon = i >= 0 && winner === i + 1;
+    setTimeout(() => stourResult(room, iWon), 900);
+  }
 
   // 토너먼트 경기였으면 대진표에 결과를 적는다.
   // 모든 종료 경로(세트승·시간패·탈주·진행도)가 이 함수를 지나므로 여기 한 곳이면 된다.

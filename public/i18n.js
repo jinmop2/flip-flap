@@ -132,7 +132,6 @@
     '클래식 · 아이템전 · TWELVE 무작위 · RP 반영': 'Classic \u00b7 Item \u00b7 TWELVE at random \u00b7 counts for RP',
     '빠른대전': 'Quick match',
     '모드 상관없이 가장 빨리 · RP 미반영': 'Whatever starts soonest \u00b7 no RP',
-    '상대를 찾았어요!': 'Found an opponent!',
     '두 장 승부': 'Two-Card Duel',
     // ── 튜토리얼 고르기 ──
     '클래식에 아이템이 얹힌 판': 'Classic, with items on top',
@@ -148,9 +147,6 @@
     '미니게임': 'Mini game',
     '게임 시작 (빈자리는 AI)': 'Start (AI fills empty seats)',
     '칩 경매': 'Chip auction',
-    '상대를 못 찾았어요 — 전문가 AI 와 붙습니다': "No one turned up \u2014 you're up against an Expert AI",
-    '상대를 찾았어요! 어떤 판일까요…': 'Found an opponent! Which game will it be\u2026',
-    '전문가 AI 와 붙습니다': "you're up against an Expert AI",
     '무엇을 할지 지금 정합니다…': 'Deciding what you will play\u2026',
     '🎲 랜덤': '\ud83c\udfb2 Random',
     '클래식·아이템·TWELVE 중 하나': 'One of Classic, Item or TWELVE',
@@ -256,6 +252,27 @@
     '이 작은 쪽, 그것도 같으면': ' wins; if those tie,',
     '더 강한 카드': 'the stronger single card',
     '를 쥔 쪽이 이깁니다.': ' takes it.',
+    // 솔로 토너먼트 — 혼자 여는 8강
+    '토너먼트': 'Tournament',
+    '8강 · 세 판을 이기면 우승 · 매 경기 모드가 바뀐다':
+      'Top 8 · win three to take it · the mode changes each match',
+    '사람 8강 · 정각·30분 개최 · 참가비 🪙200 · 우승 🪙1000':
+      '8 players · on the hour and half hour · 🪙200 to enter · 🪙1000 to win',
+    '대회': 'Tournament',
+    '대회 종료': 'Tournament over',
+    '우승': 'Champion',
+    '경기 시작': 'Start match',
+    '다음 경기': 'Next match',
+    '대회 포기': 'Withdraw',
+    '올라갔어요!': 'You advanced!',
+    '🎲 모드를 뽑는 중…': '🎲 Drawing a mode…',
+    '🏆 우승!': '🏆 Champion!',
+    '🥈 준우승': '🥈 Runner-up',
+    '4강 탈락': 'Out in the semis',
+    '8강 탈락': 'Out in the quarters',
+    '로그인하면 상금을 받을 수 있어요': 'Sign in to collect prize money',
+    '🃏 클래식': '🃏 Classic',
+    '🎪 아이템전': '🎪 Item Match',
     // 토너먼트
     '8강 · 4강은 단판,': 'Quarter- and semi-finals are single games,',
     '결승은 3판 2선승': 'the final is best of three',
@@ -1127,7 +1144,6 @@
 
     // ── 토너먼트 ──
     '토너먼트': 'Tournament',
-    '8강 · \ud83e\ude99200': 'Top 8 · \ud83e\ude99200',
     '곧 시작해요. 다음 회차에 참가해주세요.': 'Starting now — please join the next one.',
     '뒤 시작': 'until start',
 
