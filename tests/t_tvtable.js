@@ -10,12 +10,12 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++,
 
 console.log('① 테이블 판');
 ok('테이블 요소가 있다', /<div id="tv-table">/.test(htm));
-ok('두툼한 가죽 레일이 둘러 있다', /#tv-table, #game-table \{[\s\S]{0,900}0 0 0 22px #2b1d13/.test(htm));
-ok('위아래가 둥근 판이다', /#tv-table, #game-table \{[^}]*border-radius:46% \/ 20%/.test(htm));
-ok('레일 윗면에 빛이 있다', /#tv-table::before, #game-table::before \{[\s\S]{0,200}inset:-23px/.test(htm));
-ok('펠트 천이다', /#tv-table, #game-table \{[^}]*var\(--felt\)/.test(htm));
-ok('켜질 때만 보인다', /#tv-table\.on, #game-table\.on \{ opacity:1; \}/.test(htm));
-ok('탭을 먹지 않는다', /#tv-table, #game-table \{[^}]*pointer-events:none/.test(htm));
+ok('두툼한 가죽 레일이 둘러 있다', /#tv-table, #game-table, #quad-table \{[\s\S]{0,900}0 0 0 22px #2b1d13/.test(htm));
+ok('위아래가 둥근 판이다', /#tv-table, #game-table, #quad-table \{[^}]*border-radius:46% \/ 20%/.test(htm));
+ok('레일 윗면에 빛이 있다', /#tv-table::before, #game-table::before, #quad-table::before \{[\s\S]{0,200}inset:-23px/.test(htm));
+ok('펠트 천이다', /#tv-table, #game-table, #quad-table \{[^}]*var\(--felt\)/.test(htm));
+ok('켜질 때만 보인다', /#tv-table\.on, #game-table\.on, #quad-table\.on \{ opacity:1; \}/.test(htm));
+ok('탭을 먹지 않는다', /#tv-table, #game-table, #quad-table \{[^}]*pointer-events:none/.test(htm));
 ok('구역들이 테이블보다 위에 있다', /#tv-oppZone, #tv-centerZone, #tv-myZone \{ position:relative; z-index:1; \}/.test(htm));
 
 console.log('\n② 무엇이 테이블 위에 오르나');
@@ -124,7 +124,7 @@ ok('회전은 값이 늦게 확정되니 여러 번 잰다', /for \(const t of \
 console.log('\n⑥-2 가로 모드는 예전 그대로');
 // 가로는 배치가 통째로 다르다(왼쪽 상대 · 가운데 판 · 아래 손패). 세로용
 // 테이블을 그대로 얹으면 판이 한쪽에 쏠린 작은 타원이 된다 — 실제로 그랬다.
-ok('가로에서는 테이블을 안 그린다', /body\.land #game-table, body\.land #tv-table \{ display:none; \}/.test(htm));
+ok('가로에서는 테이블을 안 그린다', /body\.land #game-table, body\.land #tv-table, body\.land #quad-table \{ display:none; \}/.test(htm));
 ok('가로에서는 화면 전체가 펠트', /body\.land #game, body\.land #tv \{[\s\S]{0,200}var\(--felt\)/.test(htm));
 ok('가로에서는 자리 재기를 건너뛴다',
    /if \(document\.body\.classList\.contains\('land'\)\) \{\s*\n\s*table\.classList\.remove\('on'\);/.test(cli));

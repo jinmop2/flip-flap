@@ -45,7 +45,7 @@ ok('손대기 전엔 그냥 돌아간다', /if \(vibeOff \|\| !userTouched\) ret
 ok('진동 종류도 상속 키를 안 탄다', /hasOwnProperty\.call\(VIBE, kind\)/.test(cli));
 
 console.log('\n⑤ 회전 — 가로에서는 테이블을 접는다');
-ok('가로면 테이블을 감춘다', /body\.land #game-table, body\.land #tv-table \{ display:none; \}/.test(htm));
+ok('가로면 테이블을 감춘다', /body\.land #game-table, body\.land #tv-table, body\.land #quad-table \{ display:none; \}/.test(htm));
 ok('회전 뒤 다시 잰다', /function scheduleRelayout/.test(cli)
    && /orientationchange/.test(cli));
 

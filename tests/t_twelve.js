@@ -403,8 +403,9 @@ console.log('\n⑱ 화면 — 덱·칩·액수·흔들림');
      && /requestAnimationFrame\(tvAlignRow\)/.test(cli));
   ok('움직이는 카드 말고 칸을 잰다', /const card = document\.getElementById\('tv-center'\);/.test(cli));
   // 회전은 값이 늦게 확정된다 — 그 자리에서 바로 재면 돌리기 전 크기로 잡힌다
+  // 다인전이 끼면서 갈래가 셋이 됐다 (트웰브 · 다인전 · 나머지)
   ok('화면이 바뀌면 다시 맞춘다',
-     /function relayoutBoards\(\) \{[\s\S]{0,200}tvAlignRow\(\);\s*\n\s*else gameLayTable\(\);/.test(cli)
+     /function relayoutBoards\(\) \{[\s\S]{0,300}tvAlignRow\(\);[\s\S]{0,120}quadLayTable\(\);\s*\n\s*else gameLayTable\(\);/.test(cli)
      && /function scheduleRelayout\(\)/.test(cli));
   // 두 장 사이의 + 는 뺐다 (모든 모드)
   ok('가운데 + 를 지웠다', !/vs-tag/.test(htm) && !/vs-tag/.test(cli));
@@ -508,7 +509,7 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   const htm = read('public/index.html'), cli = read('public/client.js'), srv = read('server.js');
   // 겉모습 — 같은 펠트, 같은 컨트롤, 같은 프로필·시계 자리
   // 펠트는 이제 화면 전체가 아니라 테이블 판이 두른다 — 손패는 테이블 밖이다
-  ok('2인전과 같은 펠트', /#tv-table, #game-table \{[\s\S]{0,600}var\(--felt\)/.test(htm));
+  ok('2인전과 같은 펠트', /#tv-table, #game-table, #quad-table \{[\s\S]{0,600}var\(--felt\)/.test(htm));
   ok('같은 컨트롤 버튼', /id="tv-menuWrap"[\s\S]{0,1200}id="tv-menu"/.test(htm));
   ok('테이블 로고가 있다', /id="tableLogoTv"/.test(htm));
   ok('시계가 화면에 있다', /id="tv-myTimer"/.test(htm) && /id="tv-oppTimer"/.test(htm)
