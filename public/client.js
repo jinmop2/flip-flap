@@ -4691,6 +4691,18 @@ function openMode(m) {
       ? `<b>${esc(myAccount.rank)}</b>${myAccount.rp} RP`
       : '<b>게스트</b>기록 안 됨';
   }
+  // 대회 칸에 다음 개최 시각 — 눌러 보기 전에 "지금 되는지" 가 보여야 한다.
+  // 정각·30분 고정이라 서버에 묻지 않고 여기서 셈해도 정확하다.
+  if (m !== 'solo') {
+    const at = document.getElementById('mmTourAt');
+    if (at) {
+      const P = 30 * 60 * 1000;
+      const next = new Date(Math.floor(Date.now() / P) * P + P);
+      const hh = String(next.getHours()).padStart(2, '0');
+      const mm = String(next.getMinutes()).padStart(2, '0');
+      at.innerHTML = `<b>${hh}:${mm}</b>개최`;
+    }
+  }
   document.getElementById(m === 'solo' ? 'soloModal' : 'multiModal').classList.add('show');
 }
 function closeModePanels() {
@@ -4731,7 +4743,8 @@ const TUT_STEPS = [
         <div>2️⃣ 진행자가 손패 1장을 추가로 출품 → <b>경매품 2장</b></div>
         <div>3️⃣ 두 사람 모두 손패에서 1장씩 <b>배팅</b></div>
         <div>4️⃣ 더 <b>강한 카드</b>를 낸 사람이 경매품을 다 가져감!</div>
-        <div>5️⃣ 이렇게 <b>낙찰받은 카드로만</b> 세트 완성 (손패는 세트 불인정!)</div>
+        <div>5️⃣ 배팅에 쓴 카드는 <b>서로 맞바꿔</b> 상대 손으로 건너감</div>
+        <div>6️⃣ 이렇게 <b>낙찰받은 카드로만</b> 세트 완성 (손패는 세트 불인정!)</div>
       </div>
       <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">직접 해보면 금방 알아요. 시작!</div>` },
   // ── 2부: 실전 연계 (액션 안내) ──
@@ -4766,6 +4779,36 @@ const TUT_STEPS = [
   { id: 'reveal', when: s => s.phase === 'reveal',
     pos: 'top',
     text: '두구두구… 결과 공개! 이긴 쪽이 경매품을 <b>자기 앞에</b> 깔아요.' },
+  // 이 게임에서 제일 자주 놓치는 규칙. 낸 카드가 사라진다고 생각하면
+  // "센 카드를 아끼자" 라는 잘못된 감각이 자리잡는다. 방금 낸 두 장을
+  // 그대로 집어 보여 준다 — 예시 카드로는 실감이 안 난다.
+  { id: 'swap_rule',
+    when: s => s.phase === 'reveal' && s.auction && s.auction.myBid && s.auction.oppBid,
+    big: true,
+    text: s => {
+      const a = (s && s.auction) || {};
+      if (!a.myBid || !a.oppBid) return `<div class="tut-h">낸 카드는 어디로 갈까요? 🔁</div>배팅에 쓴 카드는 버려지지 않아요. 두 사람이 낸 카드를 <b>서로 맞바꿔</b> 각자 상대 손으로 건너갑니다.`;
+      const c = (x) => `<span class="tcard k${x.kind}"><i>${x.grade}</i>${x.kind}</span>`;
+      return `<div class="tut-h">낸 카드는 어디로 갈까요? 🔁</div>
+        방금 두 사람이 낸 배팅 카드는 <b>버려지지 않아요</b>.
+        <div class="tut-swap">
+          <div class="ts-row"><span class="ts-lbl">내가 낸</span>${c(a.myBid)}
+            <span class="ts-arw">→</span><span class="ts-dst">상대 손패로</span></div>
+          <div class="ts-row"><span class="ts-lbl">상대가 낸</span>${c(a.oppBid)}
+            <span class="ts-arw">→</span><span class="ts-dst mine">내 손패로</span></div>
+        </div>
+        <div class="tut-note">서로 <b>맞바꿉니다.</b> 그래서 센 카드를 내면 이기기는 쉬워도 <b>그 카드를 상대에게 쥐여 주는</b> 셈이에요.</div>`;
+    } },
+  // 손과 앞의 차이 — 위 규칙과 붙여 놓아야 "왜 맞바꿔도 괜찮은가" 가 이어진다
+  { id: 'where_rule', when: s => tutSeen.swap_rule, big: true,
+    text: `<div class="tut-h">카드가 놓이는 자리는 두 곳 🗺</div>
+      <div class="tut-two">
+        <div class="tt-p"><b>🖐 손패</b><br>배팅에 쓰는 카드<br>
+          <small>맞바꿔 오간다<br><b>세트로 안 쳐 줍니다</b></small></div>
+        <div class="tt-p"><b>🏅 내 앞</b><br>낙찰받은 경매품<br>
+          <small>여기 쌓인 것만<br><b>세트가 됩니다</b></small></div>
+      </div>
+      <div class="tut-note">손에 3짜리를 세 장 들고 있어도 이기지 못해요. <b>경매로 따내야</b> 합니다.</div>` },
   { id: 'acquired', when: s => tutSeen.reveal && ((s.myAcq || []).length > 0 || (s.oppAcq || []).length > 0) && s.phase !== 'reveal',
     pos: 'top',
     text: '🎯 방금 딴 카드가 <b>테이블 앞에</b> 깔렸죠? <b>이렇게 깔린 카드로만</b> 세트를 만들 수 있어요 — 손에 든 카드는 세트가 안 돼요!' },
@@ -4802,42 +4845,82 @@ let tutSteps = TUT_STEPS;
 const TUT_ITEM = [
   { id: 'i_intro', when: s => s.phase === 'pick', big: true,
     text: `<div class="tut-h">아이템전에 온 걸 환영해요! ${ico('🎪', 'tut-ico')}</div>
-      규칙은 <b>클래식과 똑같아요</b> — 세트를 먼저 완성하면 승리.<br>
+      규칙은 <b>클래식과 똑같아요</b> — 경매로 카드를 모아 세트를 먼저 완성하면 승리.<br>
       달라지는 건 <b>아이템</b>이 끼어든다는 것 하나예요.` },
+  // 무엇이 있는지를 먼저 보여 준다. 판에서 하나씩 만나기를 기다리면
+  // 열세 가지 중 두어 개만 보고 튜토리얼이 끝난다.
+  { id: 'i_kinds', when: s => s.phase === 'pick', big: true,
+    text: `<div class="tut-h">아이템은 13가지, 크게 세 갈래 🧰</div>
+      <div class="tut-kinds">
+        <div class="tk-row"><span class="tk-h">👀 엿보기</span>
+          <span class="tk-i">🔍 돋보기</span><span class="tk-i">📏 눈금자</span>
+          <span class="tk-d">상대 손패나 배팅을 미리 본다</span></div>
+        <div class="tk-row"><span class="tk-h">🌀 뒤흔들기</span>
+          <span class="tk-i">🔄 뒤집개</span><span class="tk-i">💨 연막탄</span>
+          <span class="tk-i">💣 폭탄</span><span class="tk-i">🧿 부적</span>
+          <span class="tk-d">이번 경매의 규칙 자체를 바꾼다</span></div>
+        <div class="tk-row"><span class="tk-h">💥 빼앗기</span>
+          <span class="tk-i">🐈 도둑고양이</span><span class="tk-i">👑 폭군</span>
+          <span class="tk-i">🖨️ 복사기</span><span class="tk-i">🎴 고르기</span>
+          <span class="tk-d">따 놓은 카드를 직접 건드린다</span></div>
+      </div>
+      <div class="tut-note">지금 다 외울 필요 없어요. 손에 들어오면 <b>탭해서 설명을 볼 수 있습니다.</b></div>` },
   { id: 'i_cards', when: s => s.phase === 'pick', big: true,
-    text: `<div class="tut-h">아이템은 카드로 들어와요 🃏</div>
-      중앙 덱에 <b>아이템 카드 넉 장</b>이 섞여 있어요.<br>뽑히면 그 자리에서 <b>한 장 더</b> 뽑아 경매를 이어갑니다.`,
-    cards: `<div class="tut-two">
-        <div class="tt-p"><b>🎁 보너스</b><br>뒤집은 <b>진행자</b>가 바로<small>덱에서 손으로 날아갑니다</small></div>
-        <div class="tt-p"><b>🏷 덤</b><br>그 경매에서 <b>진 쪽</b>이<small>경매품에 얹혀 앞면으로 공개</small></div>
-      </div>` },
+    text: `<div class="tut-h">아이템은 덱에서 카드로 들어와요 🃏</div>
+      중앙 덱에 <b>아이템 카드 넉 장</b>이 섞여 있어요.<br>
+      뽑히면 그 자리에서 <b>한 장 더</b> 뽑아 경매를 이어갑니다.
+      <div class="tut-two" style="margin-top:10px">
+        <div class="tt-p"><b>🎁 보너스</b><br>뒤집은 <b>진행자</b>가<br>바로 가져간다
+          <small>덱에서 손으로 날아감</small></div>
+        <div class="tt-p"><b>🏷 덤</b><br>그 경매에서 <b>진 쪽</b>이<br>가져간다
+          <small>앞면으로 공개돼 걸려 있음</small></div>
+      </div>
+      <div class="tut-note">둘 다 곧 나옵니다 — 직접 보면 금방 알아요.</div>` },
   { id: 'i_draw', when: s => s.phase === 'draw' && s.auctioneer === s.myIndex,
     pos: 'bot', target: '#deckStack',
-    text: '먼저 한 판 돌려볼까요? 아이템 카드가 언제 나올지는 아무도 몰라요.',
+    text: '첫 턴 진행자는 <b>나</b>. 덱을 뒤집어 볼까요?',
     act: '왼쪽 <b>덱을 탭</b>!' },
+  // 각본상 첫 장이 보너스다(server: createGame 의 tutorial 덱). 그래서 이 둘은 반드시 뜬다.
+  { id: 'i_bonus', when: s => s.auction && s.auction.bonusCard, big: true,
+    text: `<div class="tut-h">🎁 보너스가 나왔어요!</div>
+      덱을 뒤집은 <b>진행자</b>가 그 자리에서 가져갑니다.<br>
+      진행자는 턴마다 번갈아 맡으니, 공짜라도 한쪽으로만 기울지 않아요.` },
+  { id: 'i_got', when: s => (s.myItems || []).length > 0,
+    pos: 'bot', target: '#itemSlots',
+    text: s => {
+      const first = (s.myItems || [])[0];
+      const known = { magnify: ['🔍 돋보기', '상대 손패 두 장을 몰래 본다'],
+                      scan: ['📏 눈금자', '상대가 낸 배팅 카드의 세기를 잰다'] };
+      const k = first && known[typeof first === 'string' ? first : first.id];
+      return k
+        ? `🎉 <b>${k[0]}</b> 이(가) 손에 들어왔어요 — <i>${k[1]}</i>.<br>
+           아이템은 아래 칸에 쌓입니다. <b>최대 3개</b>까지 들고, 한 턴에 <b>1개</b>만 써요.`
+        : `🎉 <b>아이템이 들어왔어요!</b> 아래 칸에 쌓입니다.<br>최대 <b>3개</b>까지 들고, 한 턴에 <b>1개</b>만 써요.`;
+    },
+    act: '아이템을 <b>탭</b>하면 무엇인지, 언제 쓸 수 있는지 나와요' },
   { id: 'i_offer', when: s => s.phase === 'offer' && s.auctioneer === s.myIndex,
     pos: 'top', target: '#myHand',
     text: '클래식과 같아요 — <b>내 손패 1장</b>을 얹어 경매품 2장을 만듭니다.',
     act: '내놓을 카드를 <b>탭</b>하세요' },
-  { id: 'i_bid', when: s => s.phase === 'bidding' && s.auction && !s.auction.myBid && (s.auctioneer === s.myIndex || s.auction.oppBidSubmitted),
-    pos: 'top', target: '#myHand',
-    text: '<b>배팅!</b> 여기까지는 클래식과 똑같습니다.',
-    act: '카드 탭 → <b>배팅 확정</b>' },
-  // 실제로 아이템이 손에 들어온 순간에만 뜬다
-  { id: 'i_got', when: s => (s.myItems || []).length > 0,
-    pos: 'top', target: '#itemSlots',
-    text: '🎉 <b>아이템이 들어왔어요!</b> 아래 칸에 쌓입니다.<br>최대 <b>3개</b>까지 들고, 한 턴에 <b>1개</b>만 써요.',
-    act: '아이템을 <b>탭</b>하면 무엇인지 볼 수 있어요' },
   { id: 'i_use', when: s => (s.myItems || []).length > 0 && s.phase === 'bidding' && s.auction && !s.auction.myBid,
-    pos: 'top', target: '#itemSlots',
-    text: '⚠️ 아이템은 <b>배팅 카드를 내기 전에만</b> 쓸 수 있어요.<br>결과를 보고 무르는 건 안 됩니다.' },
+    pos: 'bot', target: '#itemSlots',
+    text: '지금이 <b>아이템을 쓸 수 있는 순간</b>이에요. 배팅 카드를 내기 전에만 씁니다 — 결과를 보고 무르는 건 안 돼요.',
+    act: '써 보고 싶으면 아이템을 <b>탭</b>, 아니면 그냥 배팅하세요' },
+  { id: 'i_bid', when: s => tutSeen.i_use && s.phase === 'bidding' && s.auction && !s.auction.myBid,
+    pos: 'top', target: '#myHand',
+    text: '<b>배팅!</b> 낸 카드를 서로 맞바꾸는 것도 클래식과 똑같습니다.',
+    act: '카드 탭 → <b>배팅 확정</b>' },
+  // 각본상 둘째 턴에 덤이 걸린다
   { id: 'i_tip', when: s => s.auction && s.auction.tipCard, big: true,
-    text: `<div class="tut-h">🏷 덤이 걸렸어요!</div>
-      이 경매에서 <b>진 쪽</b>이 저 아이템을 가져갑니다.<br>
-      무엇인지 <b>앞면으로 보이니까</b> — "저것 때문에 이 판은 져 줄까?" 를 저울질하게 돼요.` },
-  { id: 'i_bonus', when: s => s.auction && s.auction.bonusCard, big: true,
-    text: `<div class="tut-h">🎁 보너스가 나왔어요!</div>
-      덱을 뒤집은 <b>진행자</b>가 그 자리에서 가져갑니다.<br>진행자는 턴마다 번갈아 맡으니 공짜라도 한쪽으로 안 기울어요.` },
+    text: `<div class="tut-h">🏷 이번엔 덤이 걸렸어요!</div>
+      보너스와 반대예요 — 이 경매에서 <b>진 쪽</b>이 저 아이템을 가져갑니다.<br>
+      무엇인지 <b>앞면으로 보이니까</b>, "저걸 받으려고 이 판은 져 줄까?" 를 저울질하게 돼요.
+      <div class="tut-note">아이템전이 클래식과 갈리는 지점이 여기예요.
+      <b>지는 것이 이득일 때가 생깁니다.</b></div>` },
+  { id: 'i_wrap', when: s => tutSeen.i_tip && s.turn >= 3, big: true,
+    text: `<div class="tut-h">여기까지! 🎪</div>
+      아이템은 <b>세기보다 순서</b>예요 — 언제 쓰느냐가 무엇을 쓰느냐보다 큽니다.<br>
+      남은 판은 직접 해 보세요. 아이템 설명은 언제든 탭해서 볼 수 있어요.` },
 ];
 
 // 🔵 TWELVE — 상태 모양이 다르다(tvView). 칩 경제가 핵심이라 거기에 집중한다.
@@ -4951,7 +5034,14 @@ window.tutPickClose = function () { document.getElementById('tutPickModal').clas
 // 없어서, 판이 그 상황에 닿는 순간 그 자리를 짚어 주는 쪽으로 바꿨다.
 const TUT_LAUNCH = {
   classic: { steps: () => TUT_STEPS, go: () => { difficulty = 'easy'; createRoom(true); } },
-  item:    { steps: () => TUT_ITEM,  go: () => startItemGame('easy') },
+  item:    { steps: () => TUT_ITEM,  go: () => {
+      // 각본 덱이 걸린 방이어야 아이템이 첫 턴에 나온다. startItemGame 은
+      // 평범한 아이템전 방을 열어서, 아이템을 못 보고 끝나는 판이 있었다.
+      closeModePanels();
+      isVsBot = true; isItemMode = true; difficulty = 'easy';
+      socket.emit('create_room', { vsBot: true, difficulty: 'easy', pid: PID,
+                                   nick: getNick(), itemMode: true, tutorial: true });
+    } },
   twelve:  { steps: () => TUT_TV,    go: () => tvSolo('easy') },
   quad:    { steps: () => TUT_Q4,    go: () => q4Start(3) },
   mini:    { steps: () => TUT_MN,    go: () => miniGo(3, false) },
@@ -4972,7 +5062,7 @@ function tutTickWith(view) {
     if (tutSeen[st.id]) continue;
     if (st.when(view)) {
       tutSeen[st.id] = true;
-      if (tutOpen) { tutQueue.push(st); tutGlowFor(st); }
+      if (tutOpen) { tutQueue.push({ st, view }); tutGlowFor(st); }
       else tutShow(st, view);
       return;
     }
@@ -4986,7 +5076,7 @@ function tutTick() {
     if (tutSeen[st.id]) continue;
     if (st.when(state)) {
       tutSeen[st.id] = true;
-      if (tutOpen) { tutQueue.push(st); tutGlowFor(st); }   // 글씨는 기다리되, 반짝임은 바로 (막히지 않게)
+      if (tutOpen) { tutQueue.push({ st, view: state }); tutGlowFor(st); }   // 글씨는 기다리되, 반짝임은 바로 (막히지 않게)
       else tutShow(st);
       return;
     }
@@ -5039,7 +5129,9 @@ function tutClearGlow() {
 function tutConfirm() {
   if (!tutOpen) return;                                    // 중복 탭 방지
   tutOpen = false;
-  if (tutQueue.length) return tutShow(tutQueue.shift());   // 밀린 설명이 있으면 이어서 (보류 유지)
+  // 밀린 설명이 있으면 이어서 (보류 유지). 담아 둔 판으로 그린다 — 지금 판을
+  // 쓰면 경매가 이미 지나가 "방금 낸 카드" 를 못 집는다.
+  if (tutQueue.length) { const q = tutQueue.shift(); return tutShow(q.st, q.view); }
   document.getElementById('tutBox').style.display = 'none';
   tutBlock(false);
   socket.emit('tut_release');   // 체크포인트 통과 → 게임 진행 재개

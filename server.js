@@ -716,7 +716,10 @@ function mixItemCards(deck) {
   deck.push(...out);
 }
 
-function createGame(itemMode = false) {
+// tutorial — 각본대로 도는 판. 무엇이 언제 나올지를 정해 둔다.
+// 예전엔 아이템전 튜토리얼인데도 덱이 무작위라, 아이템 한 장 못 보고
+// 끝나는 판이 있었다. 배울 것을 우연에 맡기면 배우지 못하는 사람이 생긴다.
+function createGame(itemMode = false, tutorial = false) {
   const deck = initDeck();
   // 선공 뽑기용 카드 2장 (덱과 별개 컨셉 카드)
   const all = initDeck();
@@ -730,6 +733,11 @@ function createGame(itemMode = false) {
     time: { 1: 300, 2: 300 },   // 체스 시계: 각 5분(초)
     pick: { cards: pickCards, choices: [null, null], revealed: false },  // 선공 결정
   };
+  if (tutorial) {
+    // 선공은 늘 사람이다. 상대가 먼저 잡으면 "덱을 탭하세요" 가 첫 턴에 안 나와,
+    // 안내가 한 턴을 건너뛴 것처럼 보인다.
+    game.tutFirst = 1;
+  }
   if (itemMode) {
     game.itemMode = true;
     mixItemCards(game.centerDeck);
@@ -739,6 +747,20 @@ function createGame(itemMode = false) {
     game.items = { 1: [], 2: [] };       // 보유 아이템 (최대 3)
     game.itemUsed = { 1: false, 2: false };  // 턴당 1개 제한
     game.fx = items.freshFx();           // 이번 경매에만 걸리는 효과
+    if (tutorial) {
+      // 첫 턴에 보너스, 둘째 턴에 덤. 두 가지가 어떻게 다른지는 말로 설명하는
+      // 것보다 연달아 겪는 게 빠르다.
+      const plain = game.centerDeck.filter(c => !c.item);
+      game.centerDeck = [
+        { item: 'bonus', id: 'it_tut_b' }, plain[0],
+        { item: 'tip', id: 'it_tut_t' },   plain[1],
+        ...plain.slice(2),
+      ];
+      // 손에 들어올 아이템도 정해 둔다 — pop 이 뒤에서 꺼내므로 거꾸로 쌓는다.
+      // 돋보기부터: 효과가 눈에 바로 보이고, 져도 손해가 없다.
+      const rest = game.itemDeck.filter(k => k !== 'magnify' && k !== 'bomb');
+      game.itemDeck = [...rest, 'bomb', 'magnify'];
+    }
   }
   return game;
 }
@@ -747,7 +769,7 @@ function createGame(itemMode = false) {
 function resolvePick(game) {
   const p = game.pick;
   const c1 = p.cards[p.choices[0]], c2 = p.cards[p.choices[1]];
-  game.auctioneer = aBeatsB(c1, c2) ? 1 : 2;
+  game.auctioneer = game.tutFirst || (aBeatsB(c1, c2) ? 1 : 2);
   p.revealed = true;
   game.phase = 'pick_reveal';
 }
@@ -1774,11 +1796,13 @@ io.on('connection', (socket) => {
       name: String(name || '').trim().slice(0, 20), game: null, vsBot, difficulty,
       secret: !vsBot && !!secret, password: String(password || '').slice(0, 12),
       tutorial: vsBot && !!tutorial,   // 튜토리얼 모드: 확인 누를 때까지 진행 보류 + 시계 없음
-      itemMode: !!itemMode && !tutorial,   // 아이템전(이벤트 모드) — 솔로·매칭·친구방 공통
+      // 아이템전 튜토리얼이 필요하다. 예전엔 tutorial 이면 itemMode 를 껐는데,
+      // 그러면 아이템전을 배우겠다고 눌러도 클래식 판이 열렸다.
+      itemMode: !!itemMode,
       // 손으로 만든 사람 방은 방장이 모드를 고르고 눌러서 시작한다.
       // 빠른 매칭·AI 방은 예전처럼 바로 시작한다 — 거기서 기다리게 하면 뜻이 없다.
       hostStart: !vsBot,
-      mode: (!!itemMode && !tutorial) ? 'item' : 'classic',
+      mode: itemMode ? 'item' : 'classic',
     };
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = 0; socket.pid = pid;
     if (vsBot) {
@@ -1788,7 +1812,7 @@ io.on('connection', (socket) => {
       rooms[roomId].cpuIndex = 1;
       rooms[roomId].nicks[1] = 'AI';
       rooms[roomId].profiles[1] = { nick: 'AI', guest: true, bot: true };
-      rooms[roomId].game = createGame(rooms[roomId].itemMode);
+      rooms[roomId].game = createGame(rooms[roomId].itemMode, rooms[roomId].tutorial);
       rooms[roomId].startedAt = Date.now();
       rooms[roomId].aiMem = expert3.createMem();   // 전문가 AI 카운팅 메모리
       // 대회 경기인지는 클라이언트 말이 아니라 서버가 쥔 대진으로 판정한다.

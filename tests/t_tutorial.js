@@ -44,10 +44,32 @@ ok('모드마다 단계 목록이 있다',
    ['TUT_STEPS', 'TUT_ITEM', 'TUT_TV', 'TUT_Q4', 'TUT_MN'].every((n) => new RegExp('const ' + n + ' = \\[').test(cli)));
 ok('다섯 모드가 실제 판을 연다',
    /classic: \{ steps: \(\) => TUT_STEPS,[\s\S]{0,120}createRoom\(true\)/.test(cli)
-   && /item:    \{ steps: \(\) => TUT_ITEM,  go: \(\) => startItemGame\('easy'\) \}/.test(cli)
+   // 아이템전은 각본 덱이 걸린 방이어야 한다 — 평범한 방을 열면 아이템을
+   // 한 장도 못 보고 끝나는 판이 생긴다.
+   && /item:[\s\S]{0,420}itemMode: true, tutorial: true \}\);/.test(cli)
    && /twelve:  \{ steps: \(\) => TUT_TV,    go: \(\) => tvSolo\('easy'\) \}/.test(cli)
    && /quad:    \{ steps: \(\) => TUT_Q4,    go: \(\) => q4Start\(3\) \}/.test(cli)
    && /mini:    \{ steps: \(\) => TUT_MN,    go: \(\) => miniGo\(3, false\) \}/.test(cli));
+
+console.log('\n③-2 튜토리얼은 각본대로 돈다');
+{
+  const srv = fs.readFileSync(R + '/server.js', 'utf8');
+  // 배울 것을 우연에 맡기면 배우지 못하고 끝나는 사람이 생긴다.
+  ok('선공은 늘 사람이다', /game\.tutFirst = 1;/.test(srv)
+     && /game\.auctioneer = game\.tutFirst \|\|/.test(srv));
+  ok('첫 턴 보너스·둘째 턴 덤', /\{ item: 'bonus', id: 'it_tut_b' \}/.test(srv)
+     && /\{ item: 'tip', id: 'it_tut_t' \}/.test(srv));
+  ok('손에 들어올 아이템도 정해 둔다', /game\.itemDeck = \[\.\.\.rest, 'bomb', 'magnify'\]/.test(srv));
+  ok('아이템전 튜토리얼 방이 열린다', /itemMode: !!itemMode,/.test(srv)
+     && !/itemMode: !!itemMode && !tutorial/.test(srv));
+  // 배팅 카드가 어디로 가는지 — 제일 자주 놓치는 규칙이라 방금 낸 두 장을 집어 보여 준다
+  ok('낸 카드의 행방을 짚는다', /id: 'swap_rule'/.test(cli) && /id: 'where_rule'/.test(cli)
+     && /ts-dst/.test(cli));
+  // 밀린 안내는 그때의 판으로 그려야 "방금 낸 카드" 를 집을 수 있다
+  ok('밀린 안내는 그때 판을 담아 둔다', /tutQueue\.push\(\{ st, view/.test(cli)
+     && /const q = tutQueue\.shift\(\); return tutShow\(q\.st, q\.view\);/.test(cli));
+  ok('아이템 종류를 먼저 보여 준다', /id: 'i_kinds'/.test(cli) && /tut-kinds/.test(cli));
+}
 // 엔진마다 상태 모양이 달라서 재는 대상만 바꾼다
 ok('재는 방식은 하나다', /function tutTickWith\(view\)/.test(cli) && /window\.tutTickWith = tutTickWith;/.test(cli));
 ok('네 엔진에 다 물려 있다',

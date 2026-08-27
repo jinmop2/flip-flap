@@ -2460,6 +2460,25 @@
     .tut-two { display:flex; gap:10px; margin-top:12px; }
     .tt-p { flex:1; background:rgba(0,0,0,.28); border:1px solid rgba(200,160,0,.3); border-radius:12px; padding:10px 8px; font-size:.8rem; line-height:1.5; }
     .tt-p small { color:#c8a86a; font-size:.68rem; display:block; margin-top:4px; }
+    /* 안내 밑에 붙는 한 줄 — 규칙 자체가 아니라 "그래서 어떻다" 를 말한다 */
+    .tut-note { margin-top:10px; font-size:.76rem; line-height:1.55; color:#c8a86a; }
+    .tut-note b { color:#ffe9a8; }
+    /* 배팅 카드가 어디로 가는지 — 실제로 방금 낸 두 장을 집어 보여 준다 */
+    .tut-swap { display:flex; flex-direction:column; gap:7px; margin-top:12px; }
+    .ts-row { display:flex; align-items:center; gap:7px; justify-content:center; font-size:.78rem; }
+    .ts-lbl { color:#a89880; min-width:58px; text-align:right; }
+    .ts-arw { color:var(--gold); font-size:1.05rem; }
+    .ts-dst { font-weight:800; color:#e8d0a8; }
+    .ts-dst.mine { color:#ffe9a8; }
+    /* 아이템 세 갈래 */
+    .tut-kinds { display:flex; flex-direction:column; gap:7px; margin-top:11px; text-align:left; }
+    .tk-row { display:flex; align-items:center; flex-wrap:wrap; gap:5px;
+              background:rgba(0,0,0,.28); border:1px solid rgba(200,160,0,.28);
+              border-radius:11px; padding:7px 9px; }
+    .tk-h { font-size:.78rem; font-weight:800; color:#ffe9a8; width:100%; }
+    .tk-i { font-size:.68rem; color:#e8d0a8; background:rgba(255,215,120,.1);
+            border-radius:7px; padding:2px 6px; white-space:nowrap; }
+    .tk-d { width:100%; font-size:.66rem; color:#a89880; margin-top:2px; }
     /* 튜토리얼 미니 카드 (졸개의 배신 시연) */
     .tut-cards { display:flex; align-items:center; gap:9px; justify-content:center; margin-top:9px; }
     .tcard {

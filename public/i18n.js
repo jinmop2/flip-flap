@@ -259,6 +259,7 @@
     '사람 8강 · 정각·30분 개최 · 참가비 🪙200 · 우승 🪙1000':
       '8 players · on the hour and half hour · 🪙200 to enter · 🪙1000 to win',
     '대회': 'Tournament',
+    '개최': ' start',
     '대회 종료': 'Tournament over',
     '우승': 'Champion',
     '경기 시작': 'Start match',
@@ -1010,6 +1011,31 @@
     '<b>배팅!</b> 강한 카드를 낸 사람이 경매품 2장을 다 가져가요. \u26a0\ufe0f 배팅한 카드는 <b>서로 교환</b>돼요.':
       '<b>Bid!</b> The stronger card takes both cards of the lot. \u26a0\ufe0f The bid cards are then <b>swapped between you</b>.',
     '손패에서 카드 탭 → <b>배팅 확정</b>': 'Tap a card, then <b>Confirm bid</b>',
+    // 낸 카드의 행방 — 조각으로 나누면 어순이 깨져서 통째로 담는다
+    '방금 두 사람이 낸 배팅 카드는 <b>버려지지 않아요</b>.':
+      'The two bid cards you just played are <b>not discarded</b>.',
+    '내가 낸': 'You played', '상대가 낸': 'They played',
+    '상대 손패로': 'to their hand', '내 손패로': 'to your hand',
+    '서로 <b>맞바꿉니다.</b> 그래서 센 카드를 내면 이기기는 쉬워도 <b>그 카드를 상대에게 쥐여 주는</b> 셈이에요.':
+      'They <b>trade places.</b> So a strong bid wins the lot, but <b>hands that strong card to your opponent</b>.',
+    '배팅에 쓴 카드는 버려지지 않아요. 두 사람이 낸 카드를 <b>서로 맞바꿔</b> 각자 상대 손으로 건너갑니다.':
+      'Bid cards are not discarded. The two cards <b>trade places</b> and cross into each other\u2019s hands.',
+    '🖐 손패': '🖐 Your hand', '배팅에 쓰는 카드': 'What you bid with',
+    '맞바꿔 오간다': 'traded away each round', '<b>세트로 안 쳐 줍니다</b>': '<b>never counts as a set</b>',
+    '🏅 내 앞': '🏅 In front of you', '낙찰받은 경매품': 'Lots you have won',
+    '여기 쌓인 것만': 'Only what is here', '<b>세트가 됩니다</b>': '<b>makes a set</b>',
+    '손에 3짜리를 세 장 들고 있어도 이기지 못해요. <b>경매로 따내야</b> 합니다.':
+      'Three 3s in hand still wins you nothing. You have to <b>win them at auction</b>.',
+    '배팅에 쓴 카드는 <b>서로 맞바꿔</b> 상대 손으로 건너감':
+      'Bid cards <b>trade places</b> and cross into the other hand',
+    // 아이템 세 갈래
+    '아이템은 13가지, 크게 세 갈래 🧰': '13 items, in three families 🧰',
+    '👀 엿보기': '👀 Peek', '🌀 뒤흔들기': '🌀 Disrupt', '💥 빼앗기': '💥 Take',
+    '상대 손패나 배팅을 미리 본다': 'See their hand or bid before you commit',
+    '이번 경매의 규칙 자체를 바꾼다': 'Change the rules of this one auction',
+    '따 놓은 카드를 직접 건드린다': 'Reach into the cards already won',
+    '지금 다 외울 필요 없어요. 손에 들어오면 <b>탭해서 설명을 볼 수 있습니다.</b>':
+      'No need to memorize. When one lands, <b>tap it to read what it does.</b>',
     '두구두구… 결과 공개! 이긴 쪽이 경매품을 <b>자기 앞에</b> 깔아요.':
       'And the reveal! The winner lays the lot <b>in front of them</b>.',
     '\ud83c\udfaf 방금 딴 카드가 <b>테이블 앞에</b> 깔렸죠? <b>이렇게 깔린 카드로만</b> 세트를 만들 수 있어요 — 손에 든 카드는 세트가 안 돼요!':
