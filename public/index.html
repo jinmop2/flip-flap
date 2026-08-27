@@ -2164,6 +2164,40 @@
     #tutBox.pos-bot { top:auto; bottom:235px; }
     #tutBox.pop { animation:tutIn .3s cubic-bezier(.34,1.3,.64,1); }
     @keyframes tutIn { from { opacity:0; transform:translateX(-50%) translateY(8px) scale(.97); } to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }
+    /* 튜토리얼 고르기 */
+    .tut-pick { display:flex; flex-direction:column; gap:7px; width:100%; }
+    .tut-pk {
+      display:flex; align-items:center; gap:11px; width:100%; text-align:left; cursor:pointer;
+      padding:11px 13px; border-radius:13px; font-family:'Fredoka';
+      background:linear-gradient(180deg,#3a1018,#260a10); border:1.5px solid #b98d34;
+      box-shadow:inset 0 1px 0 rgba(255,215,120,.16); transition:.14s;
+    }
+    .tut-pk:hover { transform:translateY(-1px); filter:brightness(1.12); }
+    .tut-pk .tp-ico { font-size:1.5rem; line-height:1; flex-shrink:0; }
+    .tut-pk .tp-txt { flex:1; min-width:0; }
+    .tut-pk .tp-txt b { display:block; font-size:.92rem; color:#f5e6c0; }
+    .tut-pk .tp-txt small { display:block; font-size:.68rem; color:#a89880; margin-top:1px; line-height:1.35; }
+    .tut-pk .tp-tag { flex-shrink:0; font-size:.6rem; font-weight:800; letter-spacing:1px;
+      color:#1a1008; background:var(--gold); border-radius:6px; padding:2px 7px; }
+    .tut-pk.t-item { background:linear-gradient(180deg,#3a2358,#241040); border-color:#8b6ad8; }
+    .tut-pk.t-item .tp-txt b { color:#e2d4ff; }
+    .tut-pk.t-tv { background:linear-gradient(180deg,#173a55,#0d2233); border-color:#6ac0f0; }
+    .tut-pk.t-tv .tp-txt b { color:#bfe8ff; }
+    .tut-pk.t-quad { background:linear-gradient(180deg,#123a30,#0c2620); border-color:#4a9a7a; }
+    .tut-pk.t-quad .tp-txt b { color:#c8f0dc; }
+    .tut-pk.t-mini { background:linear-gradient(180deg,#4a1030,#2c0820); border-color:#d06a9a; }
+    .tut-pk.t-mini .tp-txt b { color:#ffd6e8; }
+
+    /* 차근차근 슬라이드 */
+    .ts-dots { display:flex; gap:5px; justify-content:center; margin:-2px 0 2px; }
+    .ts-dots i { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.18); transition:.2s; }
+    .ts-dots i.on { background:var(--gold); transform:scale(1.25); }
+    .ts-body { width:100%; min-height:208px; display:flex; flex-direction:column; justify-content:center;
+      text-align:center; font-size:.86rem; line-height:1.62; color:#e8dfc8; }
+    .ts-body b { color:#ffe9a8; }
+    .ts-nav { display:flex; gap:8px; width:100%; }
+    .ts-nav .btn { flex:1; }
+
     .tut-tag { font-size:.66rem; font-weight:700; color:var(--gold); letter-spacing:2px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; }
     #tutText { font-size:.84rem; line-height:1.55; color:#e8dfc8; }
     #tutText b { color:#ffe9a8; }
@@ -4753,7 +4787,7 @@
     <!-- 배우기 -->
     <div class="lobby-top learn">
       <button class="top-link" onclick="toggleRules(true)"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>게임방법</button>
-      <button class="top-link" onclick="startTutorial()"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/><path d="M22 10v6"/></svg></span>튜토리얼</button>
+      <button class="top-link" onclick="tutPickOpen()"><span class="tl-ico"><svg class="svgi" viewBox="0 0 24 24"><path d="M22 10L12 5 2 10l10 5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/><path d="M22 10v6"/></svg></span>튜토리얼</button>
     </div>
 
     <!-- 무엇을 할까 — 크기가 곧 우선순위 -->
@@ -4992,10 +5026,6 @@
         <span class="mt-sub">방에 모여서 시작</span>
       </button>
     </div>
-    <div class="lb-btns">
-      <button class="btn btn-outline btn-sm" onclick="miniRank(true)">족보 보기</button>
-      <button class="btn btn-outline btn-sm" onclick="toggleRulesMini(true)">설명서</button>
-    </div>
 
   </div>
 </div>
@@ -5115,6 +5145,53 @@
       <div id="gcShop" class="gc-stage"></div>
     </div>
 
+  </div>
+</div>
+
+<!-- 튜토리얼 고르기 — 어느 판을 배울지 먼저 정한다 -->
+<div class="lb-modal" id="tutPickModal" onclick="if(event.target===this)tutPickClose()">
+  <div class="lb-box" style="width:340px">
+    <div class="lb-title"><span data-ico="🎓"></span> 튜토리얼
+      <span class="close-x" onclick="tutPickClose()">×</span></div>
+    <p class="mm-hint">어떤 판을 배워볼까요? 처음이면 클래식부터가 좋아요.</p>
+    <div class="tut-pick">
+      <button class="tut-pk" onclick="tutStart('classic')">
+        <span class="tp-ico">🃏</span>
+        <span class="tp-txt"><b>클래식</b><small>직접 한 판 두면서 배워요 · 처음이라면 여기</small></span>
+        <span class="tp-tag">실전</span>
+      </button>
+      <button class="tut-pk t-item" onclick="tutStart('item')">
+        <span class="tp-ico">🎪</span>
+        <span class="tp-txt"><b>아이템전</b><small>클래식에 아이템이 얹힌 판</small></span>
+      </button>
+      <button class="tut-pk t-tv" onclick="tutStart('twelve')">
+        <span class="tp-ico">🔵</span>
+        <span class="tp-txt"><b>TWELVE</b><small>카드가 아니라 칩으로 값을 부르는 경매</small></span>
+      </button>
+      <button class="tut-pk t-quad" onclick="tutStart('quad')">
+        <span class="tp-ico">👥</span>
+        <span class="tp-txt"><b>다인전</b><small>셋·넷이서 · 지는 것도 수가 되는 판</small></span>
+      </button>
+      <button class="tut-pk t-mini" onclick="tutStart('mini')">
+        <span class="tp-ico">🎴</span>
+        <span class="tp-txt"><b>미니게임</b><small>두 장으로 겨루는 섯다식 판</small></span>
+      </button>
+    </div>
+    <button class="btn btn-ink" onclick="tutPickClose()">닫기</button>
+  </div>
+</div>
+
+<!-- 차근차근 넘겨 보는 튜토리얼 (클래식 말고 나머지 모드) -->
+<div class="lb-modal" id="tutSlideModal">
+  <div class="lb-box" style="width:344px">
+    <div class="lb-title" id="tsTitle">튜토리얼
+      <span class="close-x" onclick="tutSlideClose()">×</span></div>
+    <div class="ts-dots" id="tsDots"></div>
+    <div class="ts-body" id="tsBody"></div>
+    <div class="ts-nav">
+      <button class="btn btn-outline btn-sm" id="tsPrev" onclick="tutSlide(-1)">← 이전</button>
+      <button class="btn btn-gold btn-sm" id="tsNext" onclick="tutSlide(1)">다음 →</button>
+    </div>
   </div>
 </div>
 
