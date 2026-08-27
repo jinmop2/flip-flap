@@ -76,8 +76,42 @@ function fitBoard() {
 function relayoutBoards() {
   try {
     if (document.body.classList.contains('twelve')) tvAlignRow();
+    else if (document.body.classList.contains('quad4')) quadLayTable();
     else gameLayTable();
   } catch (_) {}
+}
+
+// 다인전도 2인전·트웰브와 같은 판 위에서 논다. 다만 사람이 셋·넷이라
+// 자리가 위아래가 아니라 판을 둘러 앉는다 — 판은 그 자리들을 다 품을 만큼 잡는다.
+window.quadLayTable = quadLayTable;
+function quadLayTable() {
+  const table = document.getElementById('quad-table');
+  const host = document.getElementById('game4');
+  if (!table || !host) return;
+  if (document.body.classList.contains('land')) { table.classList.remove('on'); return; }
+  const r = (id) => { const el = document.getElementById(id); const b = el && el.getBoundingClientRect();
+    return b && b.width ? b : null; };
+  const mat = r('q-mat'), opps = r('q-opps'), myhand = r('q-myhand'), mybid = r('q-mybid');
+  if (!mat) { table.classList.remove('on'); return; }
+  const h = host.getBoundingClientRect();
+  const RAIL = 25, padX = 10;
+  // 가로: 상대 줄과 경매대 중 넓은 쪽에 맞춘다
+  let left = Math.min(mat.left, opps ? opps.left : mat.left) - padX;
+  let right = Math.max(mat.right, opps ? opps.right : mat.right) + padX;
+  // 세로: 상대 자리 한가운데에서 내 배팅 자리 아래까지 — 사람이 레일에 걸터앉는다
+  let top = opps ? opps.top + opps.height * 0.55 : mat.top - RAIL;
+  // 손패는 판 밖이다(손에 들고 있는 것이니까). 판은 그 바로 위까지.
+  let bottom = myhand ? myhand.top - 6 : (mybid ? mybid.bottom + 10 : mat.bottom + RAIL);
+  left = Math.max(left, h.left + RAIL + 2);
+  right = Math.min(right, h.right - RAIL - 2);
+  top = Math.max(top, h.top + RAIL + 2);
+  bottom = Math.min(bottom, h.bottom - RAIL - 2);
+  if (right - left < 60 || bottom - top < 60) { table.classList.remove('on'); return; }
+  table.style.left = Math.round(left - h.left) + 'px';
+  table.style.top = Math.round(top - h.top) + 'px';
+  table.style.width = Math.round(right - left) + 'px';
+  table.style.height = Math.round(bottom - top) + 'px';
+  table.classList.add('on');
 }
 // 그 자리에서 바로 재면 안 된다. 판 높이는 --app-h 에 매여 있고 그 값은 다른
 // 리사이즈 처리에서 뒤늦게 들어온다 — 가로에서 세로로 돌아오면 아직 가로 높이가

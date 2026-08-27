@@ -1453,7 +1453,17 @@
     body.quad4 #lobby, body.quad4 #profileBar { display:none !important; }
 
     /* 상단 상대 3명 */
-    #q-opps { display:flex; gap:5px; flex-shrink:0; }
+    /* ── 다인전 자리 — 판을 둘러 앉는다 ──────────────────────────────
+       사람이 셋·넷이라 2인전처럼 위아래로만 못 앉힌다. 나는 늘 아래,
+       나머지는 판 위쪽을 따라 왼쪽·가운데·오른쪽에 앉힌다.
+       (4인: 왼·위·오른 / 3인: 왼·오른 — 가운데는 비운다) */
+    #q-opps { display:flex; gap:5px; flex-shrink:0; justify-content:space-between; align-items:flex-start; }
+    body.quad4 #q-opps { padding:0 2px; }
+    /* 왼쪽·오른쪽 자리는 판 가장자리로 조금 벌린다 — 둘러앉은 모양이 난다 */
+    body.quad4 #q-opps .q-opp:first-child { transform:translateY(14px); }
+    body.quad4 #q-opps .q-opp:last-child  { transform:translateY(14px); }
+    body.quad4.q-n3 #q-opps { justify-content:space-around; }
+
     .q-opp { flex:1; min-width:0; border-radius:11px; padding:6px 5px 5px;
       background:linear-gradient(170deg,rgba(255,255,255,.09),rgba(0,0,0,.28));
       border:1.5px solid rgba(255,255,255,.13); position:relative; transition:.18s; }
@@ -2634,26 +2644,26 @@
       outline:2px solid #3a281a;
     }
     /* ── 테이블 스킨 (배경 그라데만 교체) ── */
-    #game.tbl-blue #game-table , #game4.tbl-blue , #mini.tbl-blue , #tv.tbl-blue #tv-table   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #1a3a5a 0%, #0f2438 78%, #08131f 100%); }
-    #game.tbl-purple #game-table , #game4.tbl-purple , #mini.tbl-purple , #tv.tbl-purple #tv-table { background:radial-gradient(ellipse 90% 70% at 50% 50%, #3d2350 0%, #251533 78%, #140b1c 100%); }
-    #game.tbl-gold #game-table , #game4.tbl-gold , #mini.tbl-gold , #tv.tbl-gold #tv-table   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #5a4410 0%, #3a2c0a 78%, #1e1605 100%); border-color:#4a3410; }
-    #game.tbl-forest #game-table , #game4.tbl-forest , #mini.tbl-forest , #tv.tbl-forest #tv-table { background:radial-gradient(ellipse 90% 70% at 50% 50%, #14532d 0%, #0d3a20 78%, #061f10 100%); }
-    #game.tbl-crystal #game-table , #game4.tbl-crystal , #mini.tbl-crystal , #tv.tbl-crystal #tv-table { background:
+    #game.tbl-blue #game-table , #game4.tbl-blue #quad-table , #mini.tbl-blue , #tv.tbl-blue #tv-table   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #1a3a5a 0%, #0f2438 78%, #08131f 100%); }
+    #game.tbl-purple #game-table , #game4.tbl-purple #quad-table , #mini.tbl-purple , #tv.tbl-purple #tv-table { background:radial-gradient(ellipse 90% 70% at 50% 50%, #3d2350 0%, #251533 78%, #140b1c 100%); }
+    #game.tbl-gold #game-table , #game4.tbl-gold #quad-table , #mini.tbl-gold , #tv.tbl-gold #tv-table   { background:radial-gradient(ellipse 90% 70% at 50% 50%, #5a4410 0%, #3a2c0a 78%, #1e1605 100%); border-color:#4a3410; }
+    #game.tbl-forest #game-table , #game4.tbl-forest #quad-table , #mini.tbl-forest , #tv.tbl-forest #tv-table { background:radial-gradient(ellipse 90% 70% at 50% 50%, #14532d 0%, #0d3a20 78%, #061f10 100%); }
+    #game.tbl-crystal #game-table , #game4.tbl-crystal #quad-table , #mini.tbl-crystal , #tv.tbl-crystal #tv-table { background:
       linear-gradient(118deg, rgba(255,255,255,.05) 0 12%, transparent 12.4%),
       linear-gradient(-142deg, rgba(190,240,255,.06) 0 22%, transparent 22.4%),
       radial-gradient(ellipse 90% 70% at 50% 50%, #235a75 0%, #123a4e 78%, #08202c 100%);
       border-color:#2f6f8e; }
-    #game.tbl-obsidian #game-table , #game4.tbl-obsidian , #mini.tbl-obsidian , #tv.tbl-obsidian #tv-table { background:
+    #game.tbl-obsidian #game-table , #game4.tbl-obsidian #quad-table , #mini.tbl-obsidian , #tv.tbl-obsidian #tv-table { background:
       linear-gradient(72deg, transparent 0 48%, rgba(200,160,70,.10) 48.3% 48.9%, transparent 49.2%),
       radial-gradient(ellipse 90% 70% at 50% 50%, #1e1e28 0%, #101018 78%, #06060a 100%);
       border-color:#4a3a18; }
-    #game.tbl-shard #game-table , #game4.tbl-shard , #mini.tbl-shard , #tv.tbl-shard #tv-table { background:
+    #game.tbl-shard #game-table , #game4.tbl-shard #quad-table , #mini.tbl-shard , #tv.tbl-shard #tv-table { background:
       linear-gradient(124deg, rgba(255,255,255,.055) 0 10%, transparent 10.4%),
       linear-gradient(-66deg, rgba(170,230,255,.07) 0 20%, transparent 20.4%),
       linear-gradient(198deg, rgba(255,255,255,.04) 0 32%, transparent 32.4%),
       radial-gradient(ellipse 90% 70% at 50% 50%, #1e5776 0%, #103247 78%, #071a26 100%);
       border-color:#3d86ad; }
-    #game.tbl-hanji #game-table , #game4.tbl-hanji , #mini.tbl-hanji , #tv.tbl-hanji #tv-table { background:
+    #game.tbl-hanji #game-table , #game4.tbl-hanji #quad-table , #mini.tbl-hanji , #tv.tbl-hanji #tv-table { background:
       repeating-linear-gradient(92deg, rgba(120,90,50,.05) 0 1px, transparent 1px 6px),
       radial-gradient(ellipse 90% 70% at 50% 50%, #6a5a42 0%, #46392a 78%, #2a2118 100%);
       border-color:#7a6242; }
@@ -4373,7 +4383,7 @@
     /* 가로 모드는 배치가 통째로 다르다(왼쪽 상대 · 가운데 판 · 아래 손패).
        세로용 테이블을 그대로 얹으면 판이 한쪽에 쏠린 작은 타원이 된다 —
        가로에서는 예전처럼 화면 전체가 펠트다. */
-    body.land #game-table, body.land #tv-table { display:none; }
+    body.land #game-table, body.land #tv-table, body.land #quad-table { display:none; }
     body.land #game, body.land #tv {
       background:radial-gradient(ellipse 90% 70% at 50% 50%, var(--felt) 0%, var(--felt-d) 78%, #0d1e18 100%);
       border-radius:28px; border:10px solid #2a1c12; outline:2px solid #3a281a;
@@ -4446,7 +4456,7 @@
     }
     /* 테이블 — 덱·경매품·전리품이 놓이는 자리. 자리는 자바스크립트가
        실제로 그려진 것들을 감싸 잡는다(tvLayTable). */
-    #tv-table, #game-table {
+    #tv-table, #game-table, #quad-table {
       position:absolute; z-index:0; border-radius:46% / 20%; pointer-events:none;
       background:radial-gradient(ellipse 78% 62% at 50% 42%, var(--felt) 0%, var(--felt-d) 72%, #0c1c17 100%);
       /* 두툼한 가죽 레일. 팔을 얹는 그 테두리다 — 얇은 선 하나로는 '판때기'로
@@ -4462,29 +4472,34 @@
         0 26px 54px rgba(0,0,0,.68);
       opacity:0; transition:opacity .3s;
     }
-    #tv-table.on, #game-table.on { opacity:1; }
+    #tv-table.on, #game-table.on, #quad-table.on { opacity:1; }
     /* 레일 윗면의 빛 — 가죽이 둥글게 부풀어 보이게 한다 */
-    #tv-table::before, #game-table::before {
+    #tv-table::before, #game-table::before, #quad-table::before {
       content:''; position:absolute; inset:-23px; border-radius:inherit; pointer-events:none;
       background:linear-gradient(180deg, rgba(255,235,200,.13) 0%, rgba(255,235,200,0) 16%,
                  rgba(0,0,0,0) 78%, rgba(0,0,0,.3) 100%);
     }
     /* 펠트 안쪽 실선 — 판이 어디까지인지 눈에 잡힌다 */
-    #tv-table::after, #game-table::after {
+    #tv-table::after, #game-table::after, #quad-table::after {
       content:''; position:absolute; inset:14px; border-radius:inherit;
       border:1px solid rgba(200,160,0,.12);
+    }
+    /* 다인전도 2인전과 같은 판 위에서 논다. 테이블 밖은 검게 마감한다. */
+    #game4::after {
+      content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+      background:radial-gradient(ellipse 92% 74% at 50% 50%, transparent 42%, rgba(0,0,0,.55) 78%, #000 100%);
     }
     body.twelve #tv { display:flex; }
     body.twelve #lobby, body.twelve #navBar, body.twelve #profileBar { display:none !important; }
 
     /* 판에 찍힌 상표 — 화면이 아니라 테이블 한가운데다(테이블의 자식이다) */
-    #tableLogoTv, #tableLogo {
+    #tableLogoTv, #tableLogo, #tableLogoQ {
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
       text-align:center; line-height:.78; pointer-events:none; z-index:0; opacity:.05;
       width:max-content;
     }
-    #tableLogoTv .tl, #tableLogo .tl { font-family:'Bangers',cursive; font-size:5.5rem; letter-spacing:8px; color:#fff; display:block; }
-    #tableLogoTv .tl.flap, #tableLogo .tl.flap { transform:rotate(180deg); margin-top:-10px; }
+    #tableLogoTv .tl, #tableLogo .tl, #tableLogoQ .tl { font-family:'Bangers',cursive; font-size:5.5rem; letter-spacing:8px; color:#fff; display:block; }
+    #tableLogoTv .tl.flap, #tableLogo .tl.flap, #tableLogoQ .tl.flap { transform:rotate(180deg); margin-top:-10px; }
 
     /* 오른쪽 위 메뉴 — 아이콘 하나, 누르면 아래로 펼쳐진다 */
     .tv-menuWrap { position:absolute; top:calc(10px + var(--safe-t)); right:14px; z-index:9; }
@@ -6591,6 +6606,8 @@
 
 <!-- 결과 -->
 <div id="game4">
+  <!-- 판 — 2인전·트웰브와 같은 조각. 자리는 이 판을 둘러 앉는다. -->
+  <div id="quad-table"><div id="tableLogoQ"><span class="tl">FLIP</span><span class="tl flap">FLAP</span></div></div>
   <!-- 좌측 상단 조작 — 2인전과 같은 자리, 같은 모양 -->
   <!-- 오른쪽 위 메뉴 — 트웰브·2인전과 같은 줄 세 개 아이콘 -->
   <div class="tv-menuWrap" id="q-menuWrap">

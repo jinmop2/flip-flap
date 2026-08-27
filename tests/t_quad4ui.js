@@ -465,5 +465,41 @@ console.log('\n⑪ 낙찰 카드가 잘리지 않는다');
   ok('축소 기준점은 가운데', /transform-origin:center center/.test(acqin));
 }
 
+console.log('\n⑮ 다인전도 2인전과 같은 판 위에서 논다');
+// 예전엔 상대가 위에 일렬로 서고 가운데는 그냥 매트였다 — 판이 없으니
+// '테이블에 둘러앉았다' 가 아니라 '화면에 나열됐다' 로 보였다.
+{
+  const fs2 = require('fs'), path2 = require('path');
+  const rd = (f) => fs2.readFileSync(path2.join(__dirname, '..', f), 'utf8');
+  const htm2 = rd('public/index.html'), cli2 = rd('public/client.js'), c42 = rd('public/client4.js');
+
+  ok('판이 있다', /<div id="quad-table">/.test(htm2));
+  // 2인전·트웰브와 같은 조각을 쓴다 — 한 군데만 고치면 셋이 같이 따라온다
+  ok('2인전과 같은 테이블 조각', /#tv-table, #game-table, #quad-table \{/.test(htm2)
+     && /#tv-table\.on, #game-table\.on, #quad-table\.on \{ opacity:1; \}/.test(htm2));
+  ok('레일·안쪽 실선도 같이', /#tv-table::before, #game-table::before, #quad-table::before \{/.test(htm2)
+     && /#tv-table::after, #game-table::after, #quad-table::after \{/.test(htm2));
+  ok('판 한가운데 상표', /<div id="tableLogoQ">/.test(htm2)
+     && /#tableLogoTv, #tableLogo, #tableLogoQ \{/.test(htm2));
+  ok('테이블 색 스킨이 판에 칠해진다', /#game4\.tbl-blue #quad-table/.test(htm2));
+  ok('판 밖은 검게', /#game4::after \{[\s\S]{0,200}radial-gradient/.test(htm2));
+
+  // 사람이 셋·넷이라 위아래로만 못 앉힌다 — 판 위쪽을 따라 둘러 앉는다
+  ok('자리를 판에 둘러 앉힌다',
+     /#q-opps \{ display:flex;[^}]*justify-content:space-between/.test(htm2)
+     && /body\.quad4 #q-opps \.q-opp:first-child \{ transform:translateY\(14px\); \}/.test(htm2));
+  ok('3인은 둘이 마주 본다', /body\.quad4\.q-n3 #q-opps \{ justify-content:space-around; \}/.test(htm2));
+
+  ok('판 크기를 재는 함수가 있다', /function quadLayTable\(\)/.test(cli2)
+     && /window\.quadLayTable = quadLayTable;/.test(cli2));
+  ok('다시 그릴 때마다 판을 맞춘다', (c42.match(/window\.quadLayTable\(\)/g) || []).length >= 2);
+  ok('상대 줄부터 손패 바로 위까지', /let top = opps \? opps\.top \+ opps\.height \* 0\.55/.test(cli2)
+     && /let bottom = myhand \? myhand\.top - 6/.test(cli2));
+  // 가로는 배치가 통째로 다르다 — 2인전·트웰브와 같이 판을 접는다
+  ok('가로에서는 판을 접는다', /body\.land #game-table, body\.land #tv-table, body\.land #quad-table \{ display:none; \}/.test(htm2)
+     && /if \(document\.body\.classList\.contains\('land'\)\) \{ table\.classList\.remove\('on'\); return; \}/.test(cli2));
+  ok('회전해도 다시 잰다', /classList\.contains\('quad4'\)\) quadLayTable\(\);/.test(cli2));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

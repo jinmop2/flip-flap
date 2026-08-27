@@ -338,6 +338,7 @@
     $('q-mybid').innerHTML = ''; $('q-mybid').className = '';
     $('q-myacq').innerHTML = '';
     $('q-myhand').innerHTML = '';
+    try { if (window.quadLayTable) window.quadLayTable(); } catch (_) {}
     $('q-center').innerHTML = ''; $('q-offer').innerHTML = '';
     $('q-typeTag').textContent = '';
     $('q-typeBtns').classList.remove('show');
@@ -677,6 +678,8 @@
       else if (s.phase === 'draw' && s.turn !== prevTurn) sfx('tick');
       prevPhase = s.phase; prevTurn = s.turn;
     }
+    // 자리·경매대를 다 그린 뒤라야 판이 그것들을 품는 크기로 잡힌다
+    try { if (window.quadLayTable) window.quadLayTable(); } catch (_) {}
   }
 
   // 아직 안 나온 카드 — 내 손패·모든 획득 더미·공개된 경매품을 빼고 남은 것.
