@@ -670,12 +670,14 @@ function startTurn(game) {
 function announceBonus(room, bonus) {
   if (!room || !bonus || !bonus.length) return;
   for (const b of bonus) {
-    const sid = room.players[b.seat - 1];
-    if (sid) io.to(sid).emit('item_get', b.item);
-    if (room.cpuIndex === b.seat - 1) room.cpuItemPending = true;
-    room.players.forEach((s2, i) => {
-      if (s2 && i !== b.seat - 1) io.to(s2).emit('bonus_card', { seat: b.seat, item: { name: b.item.name, icon: b.item.icon, tier: b.item.tier } });
+    // 양쪽에 같은 것을 보낸다. 보너스는 "덱에서 뽑아 그 사람 손으로 간다" 가
+    // 눈에 보여야 하는데, 받는 쪽과 보는 쪽이 다른 신호를 받으면 같은 장면을
+    // 못 그린다. 아이템 이름·설명은 어차피 설명서에 다 있는 공개 정보다.
+    // (받았다는 팝업은 카드가 도착한 뒤에 클라이언트가 띄운다)
+    room.players.forEach((s2) => {
+      if (s2) io.to(s2).emit('bonus_card', { seat: b.seat, item: b.item });
     });
+    if (room.cpuIndex === b.seat - 1) room.cpuItemPending = true;
   }
 }
 

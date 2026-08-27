@@ -3826,6 +3826,12 @@
       will-change:transform;
     }
     @media (prefers-reduced-motion: reduce) { .fly-card { display:none; } }
+    /* 보너스 카드는 아이템 칸으로 빨려 들어가듯 — 조금 더 길고 크게 줄어든다 */
+    .fly-card.fly-bonus { transition:transform .62s cubic-bezier(.4,.02,.3,1), opacity .62s ease-in; }
+    /* 도착 지점이 한 번 튄다 — 어디로 들어갔는지가 안 보이면 날아간 뜻이 없다 */
+    @keyframes gotItem { 0%{ transform:scale(1); } 40%{ transform:scale(1.18); } 100%{ transform:scale(1); } }
+    .got-item { animation:gotItem .4s ease-out; }
+    #oppItemBadge.got-item { animation:gotItem .4s ease-out; }
 
     /* 공개 직전(showdown) 긴장 — 뒤집힌 배팅 카드가 살짝 맥동 */
     #game.showdown .bid-area .card { animation:showPulse .5s ease-in-out infinite alternate; }

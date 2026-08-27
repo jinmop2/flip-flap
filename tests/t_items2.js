@@ -232,7 +232,18 @@ console.log('\n⑧ 아이템 카드는 따로 있다 — 뽑히면 경매품이 
   // 둘 다 보여야 셈에 넣는다
   ok('양쪽에 보낸다', /tipCard: a\.tipCard \|\| null,/.test(srv) && /bonusCard: a\.bonusCard \|\| null,/.test(srv));
   ok('경매품 자리에 한 장 더 그린다', /if \(a\.tipCard\) \{[\s\S]{0,260}makeItemCard\(a\.tipCard\)/.test(cli));
-  ok('보너스로 뭘 얻었는지도 판에 남는다', /if \(a\.bonusCard\) \{[\s\S]{0,320}makeItemCard\(a\.bonusCard\)/.test(cli));
+  // 🎁 보너스는 판 가운데에 안 놓인다 — 뒤집는 순간 그 사람 아이템 칸으로 날아간다.
+  // 날아가고도 가운데에 남아 있으면 같은 것을 두 번 보여 주는 꼴이다.
+  ok('보너스는 판에 안 놓인다', !/if \(a\.bonusCard\) \{[\s\S]{0,200}makeItemCard/.test(cli));
+  ok('보너스는 뽑은 사람에게 날아간다',
+     /socket\.on\('bonus_card', \(\{ seat, item \}\) => \{[\s\S]{0,220}flyBonusCard\(item, mine\)/.test(cli)
+     && /function flyBonusCard\(item, mine\)/.test(cli));
+  ok('내 것이면 아이템 칸, 상대 것이면 상대 배지로',
+     /getElementById\(mine \? 'itemSlots' : 'oppItemBadge'\)/.test(cli));
+  ok('팝업·알림은 카드가 도착한 뒤에', /if \(mine\) setTimeout\(\(\) => showItemGet\(item\), ms\);/.test(cli)
+     && /setTimeout\(\(\) => toast\(`\ud83c\udf81 상대가 보너스/.test(cli));
+  ok('양쪽이 같은 신호를 받는다', /room\.players\.forEach\(\(s2\) => \{\s*\n\s*if \(s2\) io\.to\(s2\)\.emit\('bonus_card', \{ seat: b\.seat, item: b\.item \}\);/.test(srv));
+  ok('도착 지점이 튄다', /\.got-item \{ animation:gotItem/.test(htm));
   ok('아이템 카드를 따로 그린다', /function makeItemCard\(card\)/.test(cli));
   ok('아이템 그림을 앞면에 그린다', /itemArt\(card\.itemId\)/.test(cli)
      && /ic-name'; \S*\.textContent = card\.name/.test(cli));

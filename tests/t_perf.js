@@ -191,5 +191,27 @@ console.log('\n⑧ 첫 화면에서 소리 파일을 미리 받지 않는다');
   ok('음악 상태를 밖에서 확인할 수 있다', /window\.__bgm = \(\) =>/.test(cliSrc));
 }
 
+console.log('\n⑨ 딜 — 두 사람에게 한 장씩 번갈아');
+// 한쪽 여섯 장을 몰아서 뿌리면 '나눠 준다' 가 아니라 '펼쳐진다' 로 보인다.
+// 화투·포커처럼 한 장씩 오가야 카드가 어디서 왔는지가 읽힌다.
+{
+  const c = fs.readFileSync(src + '/public/client.js', 'utf8');
+  ok('끼워넣을 자리를 받는다', /const offset = o\.offset \|\| 0, step = o\.step \|\| 1;/.test(c)
+     && /el\.style\.animationDelay = \(\(offset \+ i \* step\) \* stagger\) \+ 'ms';/.test(c));
+  ok('진행자가 자기 것을 나중에 받는다', /function dealOrder\(\)/.test(c)
+     && /const iDeal = !!\(s && s\.auctioneer === s\.myIndex\);/.test(c)
+     && /return \{ me: iDeal \? 1 : 0, opp: iDeal \? 0 : 1, step: 2/.test(c));
+  ok('상대 손패도 덱에서 받는다',
+     /if \(needsDeal && n >= 6\) \{[\s\S]{0,260}offset: d\.opp, step: d\.step/.test(c));
+  ok('내 손패는 엇갈린 박자로', /offset: d\.me, step: d\.step/.test(c));
+  ok('소리도 열두 번 — 상대에게 가는 카드도 소리가 난다',
+     /const beats = hand\.length \* 2;/.test(c));
+  // 상대 쪽 딜이 needsDeal 을 먼저 꺼 버리면 내 손패는 그냥 나타난다
+  ok('상대 쪽은 깃발을 끄지 않는다',
+     !/if \(needsDeal && n >= 6\) \{[\s\S]{0,300}needsDeal = false/.test(c));
+  ok('끝나는 시각도 끼워넣기를 반영한다',
+     /return \(offset \+ \(cards\.length - 1\) \* step\) \* stagger \+ dur;/.test(c));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

@@ -1262,9 +1262,44 @@ function openBombPick(hand) {
 }
 socket.on('bomb_pick', ({ hand }) => openBombPick(hand));
 // 보너스 카드 — 상대가 뒤집어 얻었다. 무엇을 얻었는지는 둘 다 안다.
-socket.on('bonus_card', ({ item }) => {
-  toast(`🎁 상대가 보너스 카드로 <b>${esc(item.name)}</b> 를 얻었어요`, 2600);
+// 🎁 보너스는 경매에 안 올라간다 — 뒤집은 그 자리에서 그 사람 것이 된다.
+// 그러니 판 가운데 놓였다가 사라지는 게 아니라, 덱에서 그 사람 쪽으로 날아가야
+// "저 사람이 방금 하나 챙겼다" 가 보인다. 화투에서 패를 걷어 가는 그 동작이다.
+socket.on('bonus_card', ({ seat, item }) => {
+  const mine = !!(state && seat === state.myIndex);
+  const ms = flyBonusCard(item, mine);
+  if (mine) setTimeout(() => showItemGet(item), ms);
+  else setTimeout(() => toast(`🎁 상대가 보너스 카드로 <b>${esc(item.name)}</b> 를 얻었어요`, 2600), ms);
 });
+
+// 덱에서 아이템 칸으로 날아가는 카드 한 장. 도착까지 걸리는 시간을 돌려준다 —
+// 팝업·알림이 카드보다 먼저 뜨면 무엇이 어디서 왔는지가 안 읽힌다.
+const BONUS_FLY_MS = 620;
+function flyBonusCard(item, mine) {
+  const deck = document.getElementById('deckStack');
+  const dest = document.getElementById(mine ? 'itemSlots' : 'oppItemBadge');
+  if (!deck || !dest || document.hidden) return 120;
+  const from = deck.getBoundingClientRect(), to = dest.getBoundingClientRect();
+  if (!from.width || !to.width) return 120;
+  const ghost = makeItemCard({ kind: 'bonus', itemId: item.id, name: item.name, tier: item.tier });
+  ghost.classList.add('fly-card', 'fly-bonus');
+  ghost.style.left = from.left + 'px'; ghost.style.top = from.top + 'px';
+  ghost.style.width = from.width + 'px'; ghost.style.height = from.height + 'px';
+  document.body.appendChild(ghost);
+  void ghost.offsetWidth;                       // 시작 위치 확정
+  const dx = (to.left + to.width / 2) - (from.left + from.width / 2);
+  const dy = (to.top + to.height / 2) - (from.top + from.height / 2);
+  ghost.style.transform = `translate(${dx}px, ${dy}px) scale(.35) rotate(${mine ? -8 : 8}deg)`;
+  ghost.style.opacity = '0';
+  playSound('deal');
+  setTimeout(() => { try { ghost.remove(); } catch (_) {} }, BONUS_FLY_MS + 120);
+  // 도착 지점이 한 번 튀어 "여기 들어왔다" 를 알린다
+  setTimeout(() => {
+    dest.classList.add('got-item');
+    setTimeout(() => dest.classList.remove('got-item'), 420);
+  }, BONUS_FLY_MS - 120);
+  return BONUS_FLY_MS;
+}
 socket.on('bomb_blew', ({ seat, card }) => {
   _bombOn = false;
   const go = document.getElementById('iuGo'); if (go) go.style.display = '';
@@ -2277,10 +2312,15 @@ const EMOTE_PACKS = {
 // 덱에서 한 장씩 날아와 자리에 앉는다. 시작 위치를 덱의 실제 화면 좌표로 잡아야
 // "덱에서 나왔다"는 느낌이 나고, 고정 오프셋일 때처럼 뚝뚝 끊겨 보이지 않는다.
 // 카드가 이미 최종 위치에 놓인 뒤에 불러야 한다(부채꼴 transform 반영 후).
+// 덱에서 카드가 날아와 자리에 앉는 모션.
+// offset·step 은 두 사람에게 번갈아 돌리려고 있다 — 화투나 포커처럼 한 장씩
+// 오가야 '나눠 주는' 것으로 보인다. 한쪽 여섯 장을 몰아서 뿌리면 그냥 펼쳐지는
+// 것처럼 보일 뿐이다. offset=1, step=2 면 1·3·5·7… 박자에 들어간다.
 function dealFromDeck(deckEl, cardEls, opts) {
   const o = opts || {};
   const stagger = o.stagger === undefined ? 85 : o.stagger;
   const dur = o.duration === undefined ? 460 : o.duration;
+  const offset = o.offset || 0, step = o.step || 1;
   const cards = [...cardEls].filter(Boolean);
   if (!cards.length) return 0;
   let sx = null, sy = null;
@@ -2294,7 +2334,7 @@ function dealFromDeck(deckEl, cardEls, opts) {
       el.style.setProperty('--dx', Math.round(sx - (r.left + r.width / 2)) + 'px');
       el.style.setProperty('--dy', Math.round(sy - (r.top + r.height / 2)) + 'px');
     }
-    el.style.animationDelay = (i * stagger) + 'ms';
+    el.style.animationDelay = ((offset + i * step) * stagger) + 'ms';
     el.style.animationDuration = dur + 'ms';
     el.classList.add('dealing');
     el.addEventListener('animationend', () => {
@@ -2304,7 +2344,16 @@ function dealFromDeck(deckEl, cardEls, opts) {
       el.style.removeProperty('--dx'); el.style.removeProperty('--dy');
     }, { once: true });
   });
-  return (cards.length - 1) * stagger + dur;
+  return (offset + (cards.length - 1) * step) * stagger + dur;
+}
+
+// 딜은 진행자가 돌린다 — 화투·포커와 같이 자기는 맨 나중에 받는다.
+// 그래서 '누가 먼저 받는가' 는 이번 판 진행자가 누구냐로 갈린다.
+const DEAL_STAGGER = 85;
+function dealOrder() {
+  const s = state;
+  const iDeal = !!(s && s.auctioneer === s.myIndex);   // 내가 진행자면 내가 나중
+  return { me: iDeal ? 1 : 0, opp: iDeal ? 0 : 1, step: 2, stagger: DEAL_STAGGER };
 }
 
 // ── 하단 탭바 ──────────────────────────────────────────────────────────────
@@ -5385,6 +5434,14 @@ function renderOppHand(n, peek) {
     el.appendChild(slot);
   }
   fanRow(el, true);
+  // 판이 열릴 때는 상대도 덱에서 한 장씩 받는다. 예전엔 내 쪽만 딜 모션이 있고
+  // 상대 손패는 그냥 나타나서, 카드가 어디서 왔는지가 안 보였다.
+  // needsDeal 은 여기서 지우지 않는다 — 뒤이어 도는 renderHand 가 지운다.
+  if (needsDeal && n >= 6) {
+    const d = dealOrder();
+    dealFromDeck(document.getElementById('deckStack'), el.querySelectorAll('.card'),
+                 { stagger: d.stagger, offset: d.opp, step: d.step });
+  }
 }
 
 // 획득 카드 = 종류별로 겹쳐 쌓은 더미 (세트 진행도 표시)
@@ -5489,15 +5546,9 @@ function renderAuction(changed) {
   // 'draw' 단계엔 중앙 카드 미공개 (덱 스택이 초점)
   if (s.phase === 'draw') return;
 
-  // 아이템 카드가 뽑힌 판은 경매품이 세 장이다 — 아이템 카드 + 중앙 + 출품
-  // 보너스는 뒤집은 사람이 이미 가져갔지만, 무엇을 가져갔는지는 판에 남겨 둔다
-  if (a.bonusCard) {
-    const w = document.createElement('div'); w.className = 'a-slot';
-    const l = document.createElement('div'); l.className = 'a-label';
-    l.textContent = '보너스 (' + (a.bonusCard.of === s.myIndex ? '내 것' : '상대') + ')';
-    w.appendChild(l); w.appendChild(makeItemCard(a.bonusCard));
-    items.appendChild(w);
-  }
+  // 아이템 카드가 뽑힌 판은 경매품이 세 장이다 — 🏷 덤 + 중앙 + 출품.
+  // 🎁 보너스는 여기 안 놓인다 — 뒤집는 순간 그 사람 아이템 칸으로 날아가므로
+  // (bonus_card → flyBonusCard) 판 가운데에 남겨 두면 두 번 보여 주는 꼴이다.
   if (a.tipCard) {
     const w = document.createElement('div'); w.className = 'a-slot';
     const l = document.createElement('div'); l.className = 'a-label'; l.textContent = '덤 (진 쪽)';
@@ -5695,10 +5746,13 @@ function renderHand() {
   if (deal) {
     needsDeal = false;
     // 부채꼴을 잡은 뒤에 딜을 건다 — 그래야 각 카드의 최종 위치를 알 수 있다
-    const STAGGER = 85;
-    dealFromDeck(document.getElementById('deckStack'), el.querySelectorAll('.card'), { stagger: STAGGER });
-    // 사운드도 같은 간격으로 — 예전엔 75ms 라 화면(70ms)과 조금씩 어긋났다
-    for (let i = 0; i < hand.length; i++) setTimeout(() => playSound('deal'), 40 + i * STAGGER);
+    const d = dealOrder();
+    dealFromDeck(document.getElementById('deckStack'), el.querySelectorAll('.card'),
+                 { stagger: d.stagger, offset: d.me, step: d.step });
+    // 소리는 상대 것까지 합쳐 한 장마다 한 번 — 화면과 같은 박자로 12번 난다.
+    // 한쪽 것만 울리면 상대에게 가는 카드가 소리 없이 날아가 어색하다.
+    const beats = hand.length * 2;
+    for (let i = 0; i < beats; i++) setTimeout(() => playSound('deal'), 40 + i * d.stagger);
   }
 }
 function animateWinCards() {
