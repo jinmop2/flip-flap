@@ -896,7 +896,9 @@ function quickMatch() {
   document.getElementById('matchModal').classList.add('show');
   const t = document.getElementById('matchTitle');
   if (t) t.textContent = '🏆 랭크게임';
-  matchCountdown(10, '전문가 AI 와 붙습니다');
+  const h = document.getElementById('matchHint');
+  if (h) h.textContent = '';
+  rankSpinStart();
 }
 
 // ⚡ 빠른대전 — 모드를 안 가리고 지금 가장 빨리 시작될 방으로.
@@ -907,7 +909,8 @@ window.quickAny = function () {
   socket.emit('quick_any', { pid: PID, nick: getNick() });
   const t = document.getElementById('matchTitle');
   if (t) t.textContent = '⚡ 빠른대전';
-  matchCountdown(10, '전문가 AI 와 붙습니다');
+  const h = document.getElementById('matchHint');
+  if (h) h.textContent = '';
 };
 // 방에 바로 들어간 경우 — 대기 창은 띄우지 않는다(이미 방 대기실이 열린다)
 socket.on('quick_any_found', () => {
@@ -922,28 +925,70 @@ const RANK_ORDER = ['classic', 'item', 'twelve'];
 const SLOT_H = 46;          // .rk-slot 높이와 같아야 한다
 const RK_LOOPS = 6;         // 몇 바퀴 돌고 멈출까
 
+// 룰렛은 기다리는 내내 돈다. 상대를 찾는 동안 계속 돌다가, 정해지는 순간
+// 그 자리에서 멈춘다 — 기다림 자체가 "무엇이 걸릴까" 로 읽힌다.
+let _rkSpin = null;
+const rkSlot = (m) => `<div class="rk-slot m-${m}"><i>${RANK_ICO[m]}</i>${RANK_LABEL[m]}</div>`;
+
+// 대기 시작 — 끝없이 굴린다
+function rankSpinStart() {
+  const box = document.getElementById('rkRoulette');
+  const reel = document.getElementById('rkReel');
+  const win = box ? box.querySelector('.rk-window') : null;
+  if (!box || !reel) return;
+  rankSpinStop();
+  // 한 바퀴 분량 + 한 칸. 한 바퀴 돌면 처음으로 되돌려 이어 붙인다 —
+  // 무한히 긴 띠를 만들면 메모리만 먹고 눈에는 똑같다.
+  reel.innerHTML = RANK_ORDER.map(rkSlot).join('') + rkSlot(RANK_ORDER[0]);
+  box.classList.add('on');
+  win.classList.remove('landed');
+  const one = RANK_ORDER.length * SLOT_H;
+  let at = 0;
+  const step = () => {
+    at += 1;
+    reel.style.transition = `transform 260ms linear`;
+    reel.style.transform = `translateY(-${at * SLOT_H}px)`;
+    playSound('tick');
+    if (at >= RANK_ORDER.length) {
+      setTimeout(() => {
+        if (!_rkSpin) return;
+        reel.style.transition = 'none';
+        reel.style.transform = 'translateY(0px)';
+        at = 0;
+      }, 265);
+    }
+  };
+  reel.style.transition = 'none';
+  reel.style.transform = 'translateY(0px)';
+  void reel.offsetWidth;
+  step();
+  _rkSpin = setInterval(step, 300);
+}
+function rankSpinStop() { if (_rkSpin) { clearInterval(_rkSpin); _rkSpin = null; } }
+
+// 정해졌다 — 돌던 것을 그 모드에서 멈춘다
 function rankRoulette(mode, done) {
   const box = document.getElementById('rkRoulette');
   const reel = document.getElementById('rkReel');
   const win = box ? box.querySelector('.rk-window') : null;
   if (!box || !reel) { done(); return; }
-  const slot = (m) => `<div class="rk-slot m-${m}"><i>${RANK_ICO[m]}</i>${RANK_LABEL[m]}</div>`;
-  // 돌 만큼 이어 붙이고, 마지막에 뽑힌 것이 창에 오도록 한 칸 더 둔다
-  const at = Math.max(0, RANK_ORDER.indexOf(mode));
+  rankSpinStop();
+  // 지금 보이는 자리에서 몇 바퀴 더 돌아 뽑힌 칸에 선다
+  const cur = Math.round(Math.abs(parseFloat((reel.style.transform.match(/-?[\d.]+/) || [0])[0])) / SLOT_H) || 0;
+  const idx = Math.max(0, RANK_ORDER.indexOf(mode));
   let html = '';
-  for (let i = 0; i < RK_LOOPS; i++) for (const m of RANK_ORDER) html += slot(m);
-  html += slot(mode);
+  for (let i = 0; i < RK_LOOPS; i++) for (const m of RANK_ORDER) html += rkSlot(m);
+  html += rkSlot(mode);
   reel.innerHTML = html;
-  const end = (RK_LOOPS * RANK_ORDER.length) * SLOT_H;
   box.classList.add('on');
   win.classList.remove('landed');
   reel.style.transition = 'none';
-  reel.style.transform = 'translateY(0px)';
-  void reel.offsetWidth;                                  // 시작 위치 확정
+  reel.style.transform = `translateY(-${cur * SLOT_H}px)`;
+  void reel.offsetWidth;
+  const end = (RK_LOOPS * RANK_ORDER.length) * SLOT_H;
   const dur = 1500;
   reel.style.transition = `transform ${dur}ms cubic-bezier(.16,.9,.24,1)`;
   reel.style.transform = `translateY(-${end}px)`;
-  // 돌아가는 동안 딸깍 — 소리가 있어야 '돌고 있다' 가 귀로도 잡힌다
   for (let i = 0; i < 9; i++) setTimeout(() => playSound('tick'), 90 + i * (dur / 11));
   setTimeout(() => {
     win.classList.add('landed');
@@ -970,16 +1015,16 @@ socket.on('ranked_mode', ({ mode, bot, room }) => {
   }
   matchCountdownStop();
   const h = document.getElementById('matchHint');
-  if (h) h.textContent = bot ? '상대를 못 찾았어요 — 전문가 AI 와 붙습니다' : '상대를 찾았어요! 어떤 판일까요…';
+  if (h) h.textContent = '';
   const t = document.getElementById('matchTitle');
-  if (t) t.textContent = bot ? '👑 전문가 AI' : '🏆 랭크게임';
+  if (t) t.textContent = '🏆 랭크게임';
   rankRoulette(mode, () => {
-    if (t) t.textContent = (bot ? '👑 전문가 AI · ' : '🏆 ') + (RANK_LABEL[mode] || mode);
-    toast(`${bot ? '👑 전문가 AI · ' : '🎲 '}<b>${esc(RANK_LABEL[mode] || mode)}</b>`, 1800);
+    if (t) t.textContent = '🏆 ' + (RANK_LABEL[mode] || mode);
+    toast(`🎲 <b>${esc(RANK_LABEL[mode] || mode)}</b>`, 1800);
   });
 });
 // 판이 열리면 룰렛은 걷는다 — 다음에 다시 열 때 지난 결과가 남아 있으면 안 된다
-function rkHide() { const b = document.getElementById('rkRoulette'); if (b) b.classList.remove('on'); }
+function rkHide() { rankSpinStop(); const b = document.getElementById('rkRoulette'); if (b) b.classList.remove('on'); }
 
 // 빠른 입장 — 그 모드로 열린 방이 있으면 바로 들어가고, 없으면 하나 열고 기다린다.
 // 랭크가 안 걸리므로 편하게 붙는 자리다.
@@ -4666,6 +4711,7 @@ function openMode(m) {
 function closeModePanels() {
   document.getElementById('soloModal').classList.remove('show');
   document.getElementById('multiModal').classList.remove('show');
+  window.dispatchEvent(new Event('ff:panelclose'));
 }
 function soloPlay(d) { closeModePanels(); difficulty = d; createRoom(true); }
 

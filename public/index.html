@@ -5174,7 +5174,6 @@
         <button class="sm-head" onclick="soloPick('classic')">
           <span class="sm-ico">🃏</span>
           <span class="sm-txt"><b>클래식</b><small>경매로 세트를 먼저 완성하면 승리</small></span>
-          <span class="sm-arrow">▾</span>
         </button>
         <div class="sm-body">
           <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
@@ -5199,7 +5198,6 @@
         <button class="sm-head" onclick="soloPick('item')">
           <span class="sm-ico">🎪</span>
           <span class="sm-txt"><b>아이템전</b><small>경매에서 지면 아이템이 들어와요</small></span>
-          <span class="sm-arrow">▾</span>
         </button>
         <div class="sm-body">
           <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
@@ -5224,7 +5222,6 @@
         <button class="sm-head" onclick="soloPick('twelve')">
           <span class="sm-ico">🔵</span>
           <span class="sm-txt"><b>TWELVE</b><small>카드가 아니라 칩으로 값을 부르는 경매</small></span>
-          <span class="sm-arrow">▾</span>
         </button>
         <div class="sm-body">
           <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
@@ -5249,7 +5246,6 @@
         <button class="sm-head" onclick="soloPick('quad')">
           <span class="sm-ico">👥</span>
           <span class="sm-txt"><b>다인전</b><small>셋·넷이서 · 지는 것도 수가 되는 판</small></span>
-          <span class="sm-arrow">▾</span>
         </button>
         <div class="sm-body">
           <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
@@ -5270,7 +5266,6 @@
         <button class="sm-head" onclick="soloPick('mini')">
           <span class="sm-ico">🎴</span>
           <span class="sm-txt"><b>미니게임</b><small>두 장으로 겨루는 섯다식 판</small></span>
-          <span class="sm-arrow">▾</span>
         </button>
         <div class="sm-body">
           <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
@@ -5294,6 +5289,20 @@
 
   </div>
 </div>
+
+<script>
+// 모드 칸 하나만 열린다. 열린 칸은 자리를 그대로 두고 겉면이 걷히며
+// 그 자리에 난이도가 드러난다 — 아래로 밀어내면 다른 칸이 흔들린다.
+function soloPick(m) {
+  document.querySelectorAll('#soloModal .sm-item').forEach(el => {
+    el.classList.toggle('on', !!m && el.dataset.m === m);
+  });
+  if (m) playSound('click');
+}
+// 팝업을 닫을 때 접어 둔다 — 다시 열었을 때 지난번 고른 게 펼쳐져 있으면
+// 무엇을 누른 적이 있는지 기억을 되짚게 된다.
+window.addEventListener('ff:panelclose', () => soloPick(null));
+</script>
 
 <!-- 멀티플레이 팝업 -->
 <div class="lb-modal" id="multiModal" onclick="if(event.target===this)closeModePanels()">
