@@ -5018,6 +5018,212 @@ const TUT_MN = [
       지금 쥔 <b>4-6 + 6-8</b> 은 덱에서 가장 약한 두 장인데,<br>이 조합만은 <b>땡을 전부 잡습니다</b>. 190가지 중 딱 하나예요.` },
 ];
 
+// ── 튜토리얼 영문판 ──────────────────────────────────────────────
+// 안내판은 한 문장 안에 <b> 와 카드 그림이 섞여 있어, 조각으로 나눠 번역하면
+// 어순이 깨진다. 사전에 문장을 통째로 넣는 방법도 여러 줄 문자열과 안 맞았다.
+// 그래서 단계 id 로 짝지은 영문 표를 따로 둔다 — when 판정은 한 벌만 유지되고
+// (판정이 갈라지면 언어에 따라 안내가 다른 순간에 뜬다), 글만 갈아 끼운다.
+const TUT_EN = {
+  // ── 클래식 ──
+  intro: { text: `<div class="tut-h">Welcome to FLIP FLAP! ${ico('🎩', 'tut-ico')}</div>
+      Win cards at <b>auction</b>, and be first to complete a <b>set</b>.`,
+    cards: `<div class="tut-cards" style="margin-top:14px"><span class="tcard k3"><i>1</i>3</span><span class="tcard k3"><i>2</i>3</span><span class="tcard k3"><i>4</i>3</span><span class="tvs">=</span><span class="twin">Three 3s wins the game! ${ico('🏆', 'tut-ico')}</span></div>` },
+  cards1: { text: `<div class="tut-h">How to read a card 🃏</div>`,
+    cards: `<div class="tut-arrows">
+      <span class="ta-card">
+        <span class="tcard k6 big"><i>1</i>6</span>
+        <span class="ta-note ta-grade"><span class="ta-txt"><b>small number = grade</b><small>grade 1 is strongest</small></span></span>
+        <span class="ta-note ta-kind"><span class="ta-txt"><b>big number = kind</b><small>collect this many to win!</small></span></span>
+      </span></div>` },
+  cards2: { text: `<div class="tut-h">Four kinds, 24 cards in all 🗂</div>
+      The <b>smaller the number, the stronger and rarer</b>. A 2 needs only two cards to win — but only two exist in the world!`,
+    cards: `<div class="tut-cards" style="margin-top:12px">
+        <span class="tcard k2"><i>1</i>2</span><span class="tcard k3"><i>1</i>3</span><span class="tcard k4"><i>1</i>4</span><span class="tcard k6"><i>1</i>6</span></div>
+      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2 cards</span><span style="margin-left:18px">5</span><span style="margin-left:18px">7</span><span style="margin-left:18px">10</span></div>
+      <div class="tut-cards" style="margin-top:8px"><span class="tcard k2"><i>1</i>2</span><span class="tvs">&gt;</span><span class="tcard k6"><i>1</i>6</span><span class="twin">in a bid, a 2 beats a 6</span></div>` },
+  flow: { text: `<div class="tut-h">How a turn goes 🔄</div>
+      <div class="tut-steps">
+        <div>1️⃣ The <b>auctioneer</b> flips one card from the center deck</div>
+        <div>2️⃣ They add one card from hand → <b>a lot of two</b></div>
+        <div>3️⃣ Both players <b>bid</b> one card from hand</div>
+        <div>4️⃣ The <b>stronger card</b> takes the whole lot!</div>
+        <div>5️⃣ The two bid cards <b>trade places</b> and cross into the other hand</div>
+        <div>6️⃣ <b>Only cards won at auction</b> count toward a set (never your hand!)</div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">It clicks fast once you play. Let’s go!</div>` },
+  pick: { text: 'First, the <b>draw for first move</b>!',
+    act: '<b>Tap one</b> of the two glowing cards — the stronger card goes first!' },
+  pickr: { text: 'Cards revealed! Whoever drew stronger becomes the first <b>auctioneer</b>. (It alternates each turn.)' },
+  draw_me: { text: 'You are the <b>auctioneer</b> this turn. Let’s reveal the lot.',
+    act: '<b>Tap the deck</b> on the left!' },
+  offer_me: { text: 'The center card is out! Now add <b>one card from your hand</b> — those two become the lot.',
+    act: '<b>Tap the card you want to offer</b> from your hand below' },
+  type_big: { text: `<div class="tut-h">Pick the auction type 🎭</div>
+      <div class="tut-two">
+        <div class="tt-p"><b>👁 Open</b><br>the lot is <b>shown</b><br>bids are <b>hidden</b><br><small>neither knows what the other will pay</small></div>
+        <div class="tt-p"><b>🙈 Closed</b><br>the offered card is <b>hidden</b><br>bids are <b>shown</b><br><small>you gamble on what is in there</small></div>
+      </div>` },
+  type_me: { act: '<b>Tap</b> the type you want', text: '' },
+  bid_me: { text: '<b>Bid!</b> The stronger card takes both cards of the lot. ⚠️ The bid cards are then <b>swapped between you</b>.',
+    act: 'Tap a card, then <b>Confirm bid</b>' },
+  reveal: { text: 'And the reveal! The winner lays the lot <b>in front of them</b>.' },
+  swap_rule: { text: (s) => {
+      const a = (s && s.auction) || {};
+      if (!a.myBid || !a.oppBid) return `<div class="tut-h">Where do the bid cards go? 🔁</div>Bid cards are not discarded. The two cards <b>trade places</b> and cross into each other’s hands.`;
+      const c = (x) => `<span class="tcard k${x.kind}"><i>${x.grade}</i>${x.kind}</span>`;
+      return `<div class="tut-h">Where do the bid cards go? 🔁</div>
+        The two cards you just played are <b>not discarded</b>.
+        <div class="tut-swap">
+          <div class="ts-row"><span class="ts-lbl">you played</span>${c(a.myBid)}
+            <span class="ts-arw">→</span><span class="ts-dst">to their hand</span></div>
+          <div class="ts-row"><span class="ts-lbl">they played</span>${c(a.oppBid)}
+            <span class="ts-arw">→</span><span class="ts-dst mine">to your hand</span></div>
+        </div>
+        <div class="tut-note">They <b>trade places.</b> So a strong bid wins the lot, but <b>hands that strong card to your opponent</b>.</div>`;
+    } },
+  where_rule: { text: `<div class="tut-h">Cards live in two places 🗺</div>
+      <div class="tut-two">
+        <div class="tt-p"><b>🖐 Your hand</b><br>what you bid with<br>
+          <small>traded away each round<br><b>never counts as a set</b></small></div>
+        <div class="tt-p"><b>🏅 In front of you</b><br>lots you have won<br>
+          <small>only what is here<br><b>makes a set</b></small></div>
+      </div>
+      <div class="tut-note">Three 3s in hand still wins you nothing. You have to <b>win them at auction</b>.</div>` },
+  acquired: { text: '🎯 See the cards you just won laid <b>in front of you</b>? <b>Only those</b> count toward a set — cards in hand do not!' },
+  draw_opp: { text: 'Your <b>opponent</b> is auctioneer this turn. Your bid is coming up ☕' },
+  betray_rule: { text: `<div class="tut-h">One last secret ⚔️</div>
+      The weakest card, <b>6-10</b>, beats exactly one thing — the strongest card, <b>2-1</b>.<br>It is called <b>the pawn’s betrayal</b>!`,
+    cards: `<div class="tut-cards" style="margin-top:12px"><span class="tcard k6"><i>10</i>6</span><span class="tvs">⚔</span><span class="tcard k2"><i>1</i>2</span><span class="tvs">→</span><span class="twin">6-10 wins!</span></div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">Watch for the moment they reach for their ace 😏</div>` },
+  betray: { text: (s) => (s.myHand || []).some(c => c.kind === 6 && c.grade === 10)
+      ? '👀 You are holding <b>6-10</b> — if you think they will play 2-1, go for the <b>betrayal</b>!'
+      : '👀 You are holding <b>2-1</b> — the strongest card, but <b>6-10</b> beats it. Careful!' },
+
+  // ── 아이템전 ──
+  i_intro: { text: `<div class="tut-h">Welcome to the Item Match! ${ico('🎪', 'tut-ico')}</div>
+      The rules are <b>exactly the classic game</b> — win cards at auction, complete a set first.<br>
+      The one difference is that <b>items</b> get involved.` },
+  i_kinds: { text: `<div class="tut-h">13 items, in three families 🧰</div>
+      <div class="tut-kinds">
+        <div class="tk-row"><span class="tk-h">👀 Peek</span>
+          <span class="tk-i">🔍 Magnifier</span><span class="tk-i">📏 Ruler</span>
+          <span class="tk-d">See their hand or bid before you commit</span></div>
+        <div class="tk-row"><span class="tk-h">🌀 Disrupt</span>
+          <span class="tk-i">🔄 Flipper</span><span class="tk-i">💨 Smoke</span>
+          <span class="tk-i">💣 Bomb</span><span class="tk-i">🧿 Charm</span>
+          <span class="tk-d">Change the rules of this one auction</span></div>
+        <div class="tk-row"><span class="tk-h">💥 Take</span>
+          <span class="tk-i">🐈 Alley cat</span><span class="tk-i">👑 Tyrant</span>
+          <span class="tk-i">🖨️ Copier</span><span class="tk-i">🎴 Cherry-pick</span>
+          <span class="tk-d">Reach into the cards already won</span></div>
+      </div>
+      <div class="tut-note">No need to memorize. When one lands, <b>tap it to read what it does.</b></div>` },
+  i_cards: { text: `<div class="tut-h">Items arrive as cards from the deck 🃏</div>
+      <b>Four item cards</b> are shuffled into the center deck.<br>
+      When one turns up, another card is drawn straight away and the auction carries on.
+      <div class="tut-two" style="margin-top:10px">
+        <div class="tt-p"><b>🎁 Bonus</b><br>the <b>auctioneer</b> who<br>flipped it keeps it
+          <small>flies from deck to hand</small></div>
+        <div class="tt-p"><b>🏷 Consolation</b><br>whoever <b>loses</b><br>this auction takes it
+          <small>sits face up on the lot</small></div>
+      </div>
+      <div class="tut-note">Both are coming up — you will see them for yourself.</div>` },
+  i_draw: { text: 'You are auctioneer for the first turn. Shall we flip the deck?',
+    act: '<b>Tap the deck</b> on the left!' },
+  i_bonus: { text: `<div class="tut-h">🎁 A bonus turned up!</div>
+      The <b>auctioneer</b> who flipped it takes it on the spot.<br>
+      The role alternates every turn, so a freebie never favors one side.` },
+  i_got: { text: (s) => {
+      const first = (s.myItems || [])[0];
+      const known = { magnify: ['🔍 Magnifier', 'peek at two cards in their hand'],
+                      scan: ['📏 Ruler', 'measure the strength of their bid'] };
+      const k = first && known[typeof first === 'string' ? first : first.id];
+      return k
+        ? `🎉 <b>${k[0]}</b> landed in your hand — <i>${k[1]}</i>.<br>
+           Items stack in the slots below. You may hold <b>3</b>, and use <b>1</b> per turn.`
+        : `🎉 <b>An item!</b> It stacks in the slots below.<br>You may hold <b>3</b>, and use <b>1</b> per turn.`;
+    },
+    act: '<b>Tap an item</b> to read what it does and when you may use it' },
+  i_offer: { text: 'Same as classic — add <b>one card from your hand</b> to make a lot of two.',
+    act: '<b>Tap</b> the card you want to offer' },
+  i_use: { text: 'This is <b>the moment to use an item</b>. Only before you commit a bid card — you cannot see the result and take it back.',
+    act: 'Tap an item to try one, or just bid' },
+  i_bid: { text: '<b>Bid!</b> The bid cards trade places here too, exactly as in classic.',
+    act: 'Tap a card, then <b>Confirm bid</b>' },
+  i_tip: { text: `<div class="tut-h">🏷 This time a consolation is on the line!</div>
+      The opposite of a bonus — whoever <b>loses</b> this auction takes that item.<br>
+      You can see <b>exactly what it is</b>, so you start weighing: "is that worth throwing this one?"
+      <div class="tut-note">This is where the item match parts ways with classic.
+      <b>Sometimes losing is the better move.</b></div>` },
+  i_wrap: { text: `<div class="tut-h">That’s the lot! 🎪</div>
+      Items are about <b>timing more than power</b> — when you use one matters more than which one.<br>
+      Take the rest of the game yourself. You can tap any item to read it, any time.` },
+
+  // ── TWELVE ──
+  t_intro: { text: `<div class="tut-h">Welcome to TWELVE! ${ico('🔵', 'tut-ico')}</div>
+      Same cards as classic. What changes is <b>what you pay with</b> —<br>not cards from hand, but <b>20 chips</b>.` },
+  t_burn: { text: `<div class="tut-h">Chips burn even when you lose 💧</div>
+      This is the heart of it. In classic your bid card crosses to your opponent;<br>in TWELVE the chips <b>vanish into the bank</b>.`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>Winner</b><br>pays it <b>all</b><small>but takes both cards of the lot</small></div>
+        <div class="tt-p"><b>Loser</b><br>pays <b>half</b><small>no cards, and half the chips gone</small></div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">So <b>knowing when to fold</b> is the whole skill</div>` },
+  t_draw: { text: 'You are the auctioneer. Let’s flip one from the center deck.',
+    act: '<b>Tap the deck</b>!' },
+  t_offer: { text: 'Add <b>one more</b> from your hand — those two are the lot.',
+    act: '<b>Tap</b> the card you want to offer' },
+  t_type: { text: `<div class="tut-h">Open and closed 🎭</div>`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>👁 Open</b><br>raise in turn, <b>bids in view</b><small>until one of you folds</small></div>
+        <div class="tt-p"><b>🙈 Closed</b><br>one <b>even-numbered</b> call<small>the bid shows, the offered card does not</small></div>
+      </div>` },
+  t_bid: { text: 'Your call. Raise above the last bid, or <b>fold</b>.',
+    act: '<b>Raise</b> or <b>fold</b> below' },
+  t_chips: { text: '💧 See your chips drop? <b>Winner and loser both pay.</b><br>Hit <b>0</b> and you lose on the spot — spend carefully.' },
+
+  // ── 다인전 ──
+  q_intro: { text: `<div class="tut-h">Welcome to the multiplayer match! ${ico('👥', 'tut-ico')}</div>
+      The basics are the 1v1 game — <b>complete a set first</b> to win.<br>Here is only what changes with more players.` },
+  q_all: { text: `<div class="tut-h">The auctioneer bids too</div>
+      The first difference. The auctioneer does not just offer a card and step back —<br><b>they put in a bid card as well</b>.` },
+  q_rev: { text: `<div class="tut-h">Bid cards come back in reverse ♻️</div>
+      This is the heart of the game. Bid cards are not discarded — <b>you take each other’s</b>.`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>Highest bid</b><br>takes the two-card lot<small>but receives the weakest bid card</small></div>
+        <div class="tt-p"><b>Lowest bid</b><br>takes no lot<small>but receives the strongest bid card</small></div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">Which makes <b>losing a move of its own</b></div>` },
+  q_bid: { text: 'Your bid. Win it — or lose on purpose and <b>collect the strong card</b>.',
+    act: 'Tap a card, then <b>Confirm bid</b>' },
+  q_seq: { text: '🙈 In a closed auction players reveal and commit <b>one at a time, in order</b>.<br>Whoever goes last has seen every card before theirs.' },
+  q_got: { text: '🎯 Cards you win are laid <b>in front of you</b>. <b>Only those</b> can make a set.' },
+
+  // ── 미니게임 ──
+  m_intro: { text: `<div class="tut-h">Welcome to the two-card showdown! ${ico('🎴', 'tut-ico')}</div>
+      A completely different game. Not an auction — <b>betting, Sutda-style</b>.<br>
+      You hold two cards <b>hidden from everyone</b> and bet on them.` },
+  m_flow: { text: `<div class="tut-h">How a hand goes 🔄</div>
+      <div class="tut-steps">
+        <div>1️⃣ Everyone antes <b>40</b> and takes <b>one</b> card</div>
+        <div>2️⃣ The round closes once all but one have called or folded</div>
+        <div>3️⃣ If two or more remain, take <b>one more</b> card and bet again</div>
+        <div>4️⃣ Hands open and the <b>ranking</b> decides it</div>
+      </div>` },
+  m_act: { text: 'Your turn. Not a single card is visible, is it? All you can read is <b>who bets how much, and when</b>.',
+    act: 'Choose <b>bet, call or fold</b> below' },
+  m_two: { text: `<div class="tut-h">Three families of hands 🎴</div>
+      <div class="tut-steps">
+        <div>🔥 <b>Ttaeng</b> — two of the same kind · 2 &gt; 3 &gt; 4 &gt; 6</div>
+        <div>🎯 <b>Pair</b> — two of the same grade · lower grade is stronger</div>
+        <div>🃏 <b>Kkeut</b> — everything else · the <b>smaller</b> the sum of kinds, the stronger</div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">Any ttaeng beats any pair; any pair beats any kkeut</div>` },
+  m_jol: { text: `<div class="tut-h">The pawn’s betrayal! ⚔️</div>
+      The <b>4-6 + 6-8</b> in your hand is the two weakest cards in the deck,<br>
+      yet this one combination <b>beats every ttaeng</b>. One hand out of 190.` },
+};
+
 // ══════════════════════════════════════════════════════════
 //  튜토리얼 고르기 · 모드별 차근차근 안내
 // ══════════════════════════════════════════════════════════
@@ -5085,13 +5291,21 @@ function tutTick() {
 function tutShow(st, view) {
   const box = document.getElementById('tutBox');
   const _v = view || state;
-  // 튜토리얼은 한 문장 안에 <b> 가 섞여 있어, 글자 조각마다 번역하면 어순이 깨진다.
-  // 문장을 통째로 바꾼 뒤 넣는다(사전에 문장 전체가 들어 있다).
+  // 안내판은 한 문장 안에 <b> 와 카드 그림이 섞여 있어, 조각마다 번역하면
+  // 어순이 깨진다. 영어일 때는 같은 id 의 영문 단계를 통째로 갈아 끼운다.
+  // 없는 항목은 한국어 쪽을 그대로 쓴다 — 표에 빠진 게 있어도 안내가 사라지진 않는다.
+  const en = (window.FF && FF.lang() !== 'ko' && TUT_EN[st.id]) || null;
+  const pick = (k) => (en && en[k] !== undefined ? en[k] : st[k]);
   const T = (x) => (window.FF ? FF.t(x) : x);
-  const text = T(typeof st.text === 'function' ? st.text(_v) : st.text);
+  const raw = pick('text');
+  const cards = pick('cards');
+  const act = pick('act');
+  // 영문 단계를 쓴 경우엔 이미 영어다 — 사전을 한 번 더 태우지 않는다
+  const T2 = en ? ((x) => x) : T;
+  const text = T2(typeof raw === 'function' ? raw(_v) : raw);
   document.getElementById('tutText').innerHTML = text
-    + T(st.cards || '')
-    + (st.act ? `<div class="tut-do">👉 ${T(st.act)}</div>` : '');
+    + T2(typeof cards === 'function' ? cards(_v) : (cards || ''))
+    + (act ? `<div class="tut-do">👉 ${T2(act)}</div>` : '');
   box.classList.remove('pos-top', 'pos-bot', 'pop', 'big');
   if (st.big) box.classList.add('big');
   else box.classList.add('pos-' + (st.pos || 'top'));

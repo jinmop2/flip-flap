@@ -92,12 +92,38 @@ ok('모든 단계에 조건이 있다', (() => {
   return true;
 })());
 
+console.log('\n③-3 안내판이 영어로도 나온다');
+{
+  // 안내판은 한 문장 안에 <b> 와 카드 그림이 섞여 있어 조각 번역이 안 된다.
+  // 같은 id 의 영문 단계를 통째로 갈아 끼우는데, 하나라도 빠지면 그 자리만
+  // 한국어로 남아 영어 사용자가 문장 중간에서 막힌다.
+  const ids = [];
+  for (const name of ['TUT_STEPS', 'TUT_ITEM', 'TUT_TV', 'TUT_Q4', 'TUT_MN']) {
+    const i = cli.indexOf('const ' + name + ' = [');
+    const j = cli.indexOf('\n];', i);
+    ids.push(...[...cli.slice(i, j).matchAll(/\{ id: '([a-z0-9_]+)'/g)].map((m) => m[1]));
+  }
+  const ei = cli.indexOf('const TUT_EN = {');
+  const en = [...cli.slice(ei, cli.indexOf('\n};', ei)).matchAll(/^  ([a-z0-9_]+): \{/gm)].map((m) => m[1]);
+  ok('모든 단계에 영문 짝이 있다', ids.length > 40 && ids.every((x) => en.includes(x)),
+     ids.filter((x) => !en.includes(x)).join(',') || `${ids.length}단계`);
+  ok('짝 없는 영문이 없다', en.every((x) => ids.includes(x)),
+     en.filter((x) => !ids.includes(x)).join(','));
+  // 영문 단계를 쓸 때 사전을 한 번 더 태우면 엉뚱한 자리가 바뀐다
+  ok('영문 단계는 사전을 다시 안 태운다', /const T2 = en \? \(\(x\) => x\) : T;/.test(cli));
+  ok('빠진 항목은 한국어로 메운다', /en\[k\] !== undefined \? en\[k\] : st\[k\]/.test(cli));
+  // 판정은 한 벌만 — 갈라지면 언어에 따라 안내가 다른 순간에 뜬다
+  ok('when 판정은 한 벌뿐', !/TUT_EN[\s\S]{0,20000}when:/.test(cli.slice(ei, cli.indexOf('\n};', ei) + 3)));
+}
+
 console.log('\n④ 영어로도 배울 수 있다');
 {
   const FF = loadFF();
-  // 실전 튜토리얼 문구는 한 문장 안에 <b> 가 섞여 있어 조각으로 짝지으면 어순이
-  // 깨진다 — tutShow 가 문장을 통째로 바꾼 뒤 넣는다(사전에 문장 전체가 있다).
-  ok('문장을 통째로 바꾼다', /const text = T\(typeof st\.text === 'function' \? st\.text\(_v\) : st\.text\);/.test(cli));
+  // 사전에 문장을 통째로 넣는 방법은 여러 줄로 쓴 안내판과 안 맞았다(들여쓰기와
+  // 줄바꿈까지 열쇠에 들어가야 해서 실제로는 한 번도 안 걸렸다).
+  // 이제 같은 id 의 영문 단계를 갈아 끼운다 — 위 ③-3 이 짝을 지킨다.
+  ok('영문 단계를 갈아 끼운다',
+     /const en = \(window\.FF && FF\.lang\(\) !== 'ko' && TUT_EN\[st\.id\]\) \|\| null;/.test(cli));
   ok('넘겨 보던 영문 한 벌은 걷어냈다', !FF.TUT);
   ok('고르는 창은 번역된다',
      ['직접 한 판 두면서 배웁니다. 처음이면 클래식부터가 좋아요.', '처음이라면 여기부터', '추천',
