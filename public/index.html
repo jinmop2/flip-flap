@@ -5459,9 +5459,10 @@
 <div class="lb-modal" id="miniRankModal" onclick="if(event.target===this)miniRank(false)">
   <div class="lb-box" style="width:340px">
     <div class="lb-title"><span data-ico="📜"></span> 족보</div>
-    <p class="auth-hint" style="text-align:center;margin:0">위로 갈수록 강합니다. 앞자리(큰 숫자) 두 장의 합으로 정합니다.</p>
+    <!-- 한 문장을 <b>로 쪼개면 번역이 조각나서 어순이 깨진다 — 통문장으로 둔다 -->
+    <p class="auth-hint" style="text-align:center;margin:0">위로 갈수록 강합니다. 두 장이 같은 종류면 땡, 등급이 같으면 짝, 나머지는 끗입니다.</p>
     <div class="mn-tbl" id="mnTable"></div>
-    <p class="auth-hint" style="margin:0">같은 줄끼리 붙으면 <b style="color:#ffe9a8">뒷자리 합</b>이 작은 쪽, 그것도 같으면 <b style="color:#ffe9a8">더 강한 카드</b>를 쥔 쪽이 이깁니다.</p>
+    <p class="auth-hint" style="margin:0">같은 줄끼리 붙으면 <b style="color:#ffe9a8">등급 합</b>이 작은 쪽, 그것도 같으면 <b style="color:#ffe9a8">더 강한 카드</b>를 쥔 쪽이 이깁니다.</p>
     <button class="btn btn-outline" onclick="miniRank(false)">닫기</button>
   </div>
 </div>
@@ -5728,7 +5729,7 @@
     <ul>
       <li><b>보이는 카드가 하나도 없습니다.</b> 읽을 것은 남이 <b>얼마를 언제 거는가</b>뿐입니다.</li>
       <li>내 패도 <b>눌러야 열립니다.</b> 두 장을 다 열면 족보가 뜹니다.</li>
-      <li>첫 라운드는 카드가 한 장뿐이라 족보가 없습니다. 앞자리 하나로만 가늠하세요.</li>
+      <li>첫 라운드는 카드가 한 장뿐이라 족보가 없습니다. 종류 하나로만 가늠하세요.</li>
       <li>일찍 접으면 이미 건 돈만 잃습니다. 나쁜 패로 끝까지 따라가는 게 제일 비쌉니다.</li>
     </ul>
   </div>

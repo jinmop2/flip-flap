@@ -343,5 +343,41 @@ console.log('\n⑧ 영어판');
     ok(`도박판 말 ${k} 은 사전에 없다`, !i18n.includes(`'${k}':`), k);
 }
 
+console.log('\n⑫ 족보표가 실제 규칙과 같은가');
+// 표는 새 족보로 갈아 놓고 위아래 설명만 옛 규칙(앞자리 합)이 남아 있었다.
+// 설명서와 달리 이건 판 안에서 바로 보는 표라, 틀리면 그대로 잘못 배운다.
+{
+  const fs2 = require('fs'), path2 = require('path');
+  const rd = (f) => fs2.readFileSync(path2.join(__dirname, '..', f), 'utf8');
+  const htm2 = rd('public/index.html'), cli2 = rd('public/client.js');
+  const SUT = require(path2.join(__dirname, '..', 'sutda.js'));
+
+  ok('옛 규칙 설명이 안 남아 있다',
+     !/앞자리\(큰 숫자\) 두 장의 합으로 정합니다/.test(htm2) && !/뒷자리 합/.test(htm2));
+  ok('세 갈래를 적어 준다',
+     /두 장이 같은 종류면 땡, 등급이 같으면 짝, 나머지는 끗입니다\./.test(htm2));
+  ok('동점은 등급 합으로 가른다', /같은 줄끼리 붙으면 <b[^>]*>등급 합<\/b>이 작은 쪽/.test(htm2));
+  // 한 문장을 <b>로 쪼개면 번역 열쇠가 조각나 영어로 안 바뀐다
+  ok('위 설명은 통문장이다', /margin:0">위로 갈수록 강합니다\. 두 장이 같은 종류면 땡, 등급이 같으면 짝, 나머지는 끗입니다\.<\/p>/.test(htm2));
+
+  // 표에 그린 예시가 실제로 나올 수 있는 패이고, 이름도 판정과 같아야 한다
+  const tiers = eval('(' + cli2.match(/const MINI_TIERS = (\[[\s\S]*?\n\]);/)[1] + ')');
+  const C = ([k, g]) => ({ kind: k, grade: g, id: k * 100 + g });
+  const deck = new Set();
+  for (const [k, n] of SUT.SPEC) for (let g = 1; g <= n; g++) deck.add(k + '-' + g);
+  ok(`사다리 ${tiers.length}칸`, tiers.length === 11, String(tiers.length));
+  ok('예시가 전부 덱에 있는 카드다',
+     tiers.every((t) => t.ex.map(C).every((c) => deck.has(c.kind + '-' + c.grade))));
+  ok('예시의 족보 이름이 판정과 같다', tiers.every((t) => {
+    const ev = SUT.evaluate(t.ex.map(C));
+    return ev.name === t.name || (t.key === 'jjak' && ev.type === 1);
+  }));
+  // 졸개는 덱에서 가장 약한 두 장이어야 한다
+  ok('졸개 예시가 진짜 졸개다', (() => {
+    const ev = SUT.evaluate([C([4, 6]), C([6, 8])]);
+    return !!ev.jol && /miniCardOf\(\[4, 6\]\), miniCardOf\(\[6, 8\]\)/.test(cli2);
+  })());
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

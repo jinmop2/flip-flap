@@ -238,10 +238,12 @@
     '코인을 달로 바꿔 앉습니다 · 일어설 때 남은 달을 코인으로 돌려받습니다':
       'Coins become moons when you sit · leftover moons return as coins when you stand',
     '같은 줄끼리 붙으면': 'Within the same rank,',
-    '뒷자리 합': 'the lower back-digit sum',
-    '이 작은 쪽, 그것도 같으면': 'wins; if those tie,',
+    '등급 합': 'the lower grade sum',
+    // 한국어는 조사가 <b> 바로 뒤에 붙어 띄어쓰기가 없다. 영어는 그 자리에
+    // 공백이 있어야 해서 앞에 하나 넣어 둔다 — 안 그러면 "grade sumwins" 가 된다.
+    '이 작은 쪽, 그것도 같으면': ' wins; if those tie,',
     '더 강한 카드': 'the stronger single card',
-    '를 쥔 쪽이 이깁니다.': 'takes it.',
+    '를 쥔 쪽이 이깁니다.': ' takes it.',
     // 토너먼트
     '8강 · 4강은 단판,': 'Quarter- and semi-finals are single games,',
     '결승은 3판 2선승': 'the final is best of three',
@@ -1091,22 +1093,25 @@
     '맞추기': 'Match',
     '접기': 'Fold',
     '접음': 'Folded',
+    // 설명서·족보표에서 쓰는 말과 같아야 한다. 예전엔 여기만 Match/Sum 이라
+    // 설명서(Twin/Points)와 어긋나, 같은 것을 두 이름으로 배우게 됐다.
     '땡': 'Pair',
-    '짝': 'Match',
-    '끗': 'Sum',
+    '짝': 'Twin',
+    '끗': 'Points',
+    '등급이 같은 두 장 · 등급이 낮을수록 강함': 'Two of the same grade \u00b7 lower grade is stronger',
     '졸개의 배신': 'Pawn\u2019s Betrayal',
     '가장 약한 두 장 · 땡을 전부 잡는다': 'Weakest two cards · beats every Pair',
     '지금 내 패': 'your hand',
     '졸개의 배신 — 땡은 전부 잡습니다. 땡이 아니면 가장 약한 패예요.':
-      'Mirror 10 \u2014 beats both Overlord and Premium (the lit rungs).',
+      "The runt's betrayal \u2014 it beats every Pair (the lit rungs). Against anything else it is the weakest hand.",
     '미니게임은 로그인하면 즐길 수 있어요!': 'Log in to play the mini game!',
     '진행 중인 판이 없어요.': 'No hand in progress.',
     '금액이 올바르지 않아요.': 'That amount is not valid.',
-    '위로 갈수록 강합니다. 앞자리(큰 숫자) 두 장의 합으로 정합니다.':
-      'Stronger toward the top. Ranked by the sum of the two big numbers.',
+    '위로 갈수록 강합니다. 두 장이 같은 종류면 땡, 등급이 같으면 짝, 나머지는 끗입니다.':
+      'Stronger toward the top. Same kind is a Pair, same grade is a Twin, anything else scores Points.',
     '카드 두 장을 받아 서로 안 보이게 쥐고 배팅합니다.':
       'Each player takes two cards, keeps them hidden, and bets.',
-    '같은 종류면 땡, 등급이 같으면 짝, 나머지는 끗.': 'Same kind = Pair, same grade = Match, else Sum.',
+    '같은 종류면 땡, 등급이 같으면 짝, 나머지는 끗.': 'Same kind = Pair, same grade = Twin, else Points.',
 
     // ── 토너먼트 ──
     '토너먼트': 'Tournament',
@@ -1189,7 +1194,7 @@
     [/^콜 \ud83e\ude99(\d+)$/, 'Call \ud83e\ude99$1'],
     [/^내 배팅 \ud83e\ude99(\d+) · 상대 \ud83e\ude99(\d+)$/, 'You \ud83e\ude99$1 \u00b7 Opponent \ud83e\ude99$2'],
     [/^종류 합 (\d+) · 등급 합 (\d+)$/, 'Kind sum $1 \u00b7 grade sum $2'],
-    [/^← 강함 · 여덟 자리 중 (\d+)번째 · 약함 →$/, '\u2190 strong \u00b7 rank $1 of 8 \u00b7 weak \u2192'],
+    [/^← 강함 · (\d+)칸 중 (\d+)번째 · 약함 →$/, '\u2190 strong \u00b7 rung $2 of $1 \u00b7 weak \u2192'],
     [/^(.+) \(합 (\d+)\)$/, '$1 (sum $2)'],
     [/^덱 (\d+)장$/, 'Deck $1'],
     [/^덱 (\d+)장 남음$/, '$1 left in deck'],
