@@ -5124,17 +5124,31 @@ function shareInvite(btn) {
     setTimeout(() => alert('공유를 지원하지 않는 브라우저예요. 링크를 복사했으니 카톡에 붙여넣어 보내세요!'), 100);
   }
 }
+// 대기실을 걷고 로비를 다시 보여 준다. 새로고침 없이 화면만 되돌린다.
+function leaveWaitUI() {
+  document.getElementById('waitCard').style.display = 'none';
+  document.getElementById('lobbyMain').style.display = '';
+  document.body.classList.remove('waiting');
+  sharedCode = '';
+  roomIsHost = false; roomReady = false; roomModeCur = 'classic';
+  for (const b of document.querySelectorAll('#wcModes .wc-mode')) b.classList.toggle('on', b.dataset.m === 'classic');
+}
+
 // toHome=true 면 로비로만 나간다. '나가기' 로 나온 사람은 대개 다른 방을
 // 고르려는 것이라 멀티 창을 다시 열어 주지만, '홈' 을 누른 사람은 홈을 보려는
 // 것이다 — 거기서도 멀티 창이 뜨면 홈을 눌렀는데 홈이 아닌 셈이다.
 function cancelWait(toHome) {
   socket.emit('leave_room');
+  clearSession();
+  // 홈으로 나갈 때는 새로고침하지 않는다. 페이지를 다시 읽으면 배경음악이
+  // 처음부터 끊겼다 다시 시작하는데, 방을 하나 나왔을 뿐인 사람에게는
+  // 화면이 통째로 갈리는 것으로 느껴진다. 화면만 되돌리면 노래는 그대로 흐른다.
+  if (toHome) { leaveWaitUI(); return; }
+  // '나가기' 는 곧이어 멀티 창을 열어야 해서 예전 길(새로고침)을 그대로 쓴다 —
+  // 방을 만들다 만 상태가 남아 있을 수 있어 한 번 씻어 내는 편이 안전하다.
   roomIsHost = false; roomReady = false; roomModeCur = 'classic';
-  // 여기서 창을 열어 봐야 바로 아래 새로고침에 쓸려 나가므로, 표시만 남기고
-  // 새로 뜬 화면에서 연다.
-  if (toHome) sessionStorage.removeItem('ff_openmulti');
-  else sessionStorage.setItem('ff_openmulti', '1');
-  clearSession(); fastReload();
+  sessionStorage.setItem('ff_openmulti', '1');
+  fastReload();
 }
 
 

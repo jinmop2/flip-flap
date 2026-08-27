@@ -366,7 +366,8 @@ ok('튜토리얼은 전적에 안 남긴다', /if \(room\.tutorial\) return fals
 console.log('\n⑫ 대기실 — 짧은 화면에서도 시작·나가기가 보인다');
 // 모드가 다섯이 되면서 카드가 556px 까지 자랐다. 화면이 짧으면 위아래가 잘리는데
 // 하필 아래가 '시작'·'나가기' 라, 방에 갇힌 것처럼 보였다.
-ok('카드를 화면 안에 묶는다', /#waitCard \{[\s\S]{0,520}max-height:calc\(var\(--app-h, 100vh\) - 96px\);/.test(htm));
+ok('카드를 화면 안에 묶는다',
+   /#waitCard \{[\s\S]{0,760}max-height:calc\(var\(--app-h, 100vh\) - 96px - 72px - var\(--safe-b\)\);/.test(htm));
 ok('가운데만 스크롤한다', /#waitCard \.wc-scroll \{[\s\S]{0,200}overflow-y:auto;/.test(htm)
    && /<div class="wc-scroll">/.test(htm) && /<\/div><!-- \/wc-scroll -->/.test(htm));
 ok('시작·나가기는 바닥에 붙는다', /#waitCard \.wc-foot \{[\s\S]{0,180}flex-shrink:0;/.test(htm)
@@ -386,7 +387,22 @@ ok('홈이 방에서 나가게 한다',
 // '나가기' 는 다른 방을 고르려는 것이라 멀티 창을 다시 열지만, '홈' 은 홈이어야 한다
 ok('홈으로 나가면 멀티 창을 안 연다',
    /function cancelWait\(toHome\)/.test(cli)
-   && /if \(toHome\) sessionStorage\.removeItem\('ff_openmulti'\);\s*\n\s*else sessionStorage\.setItem\('ff_openmulti', '1'\);/.test(cli));
+   && /if \(toHome\) \{ leaveWaitUI\(\); return; \}/.test(cli));
+// 새로고침을 하면 배경음악이 끊겼다 다시 시작한다 — 방 하나 나왔을 뿐인데
+// 화면이 통째로 갈리는 것으로 느껴진다. 홈으로 갈 때는 화면만 되돌린다.
+ok('홈으로 나갈 때는 새로고침하지 않는다', /function leaveWaitUI\(\)/.test(cli)
+   && /if \(toHome\) \{ leaveWaitUI\(\); return; \}[\s\S]{0,400}fastReload\(\);/.test(cli));
+ok('화면을 제자리로 돌려놓는다',
+   /function leaveWaitUI\(\)[\s\S]{0,420}waitCard'\)\.style\.display = 'none';[\s\S]{0,200}classList\.remove\('waiting'\);/.test(cli));
+
+console.log('\n⑭ 대기실이 탭바 뒤로 내려가지 않는다');
+// 위쪽 프로필 바와 아래쪽 탭바 자리를 안 비우면 나가기가 탭바 뒤로 숨는다
+ok('위아래 자리를 비운다',
+   /max-height:calc\(var\(--app-h, 100vh\) - 96px - 72px - var\(--safe-b\)\);/.test(htm));
+ok('짧은 화면은 한 단계 더 조인다',
+   /@media \(max-height:760px\)[\s\S]{0,200}max-height:calc\(var\(--app-h, 100vh\) - 72px - 66px - var\(--safe-b\)\);/.test(htm));
+ok('바닥 버튼 폭을 줄였다',
+   /#waitCard \.wc-foot \.btn \{ width:100%; padding-top:9px; padding-bottom:9px; \}/.test(htm));
 ok('나가기 버튼은 예전 그대로', /onclick="cancelWait\(\)"/.test(htm));
 
 console.log(`결과: ${pass} 통과, ${fail} 실패`);

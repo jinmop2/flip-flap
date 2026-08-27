@@ -84,8 +84,14 @@ ok('앉을 수 있는지 먼저 본다', (() => {
 })());
 ok('못 앉으면 방이 그대로 남는다', /if \(bad\.length\) \{[\s\S]{0,420}return socket\.emit\('error'/.test(srv));
 ok('빈자리는 AI 라고 적어 준다', /if \(roomReady && roomModeCur === 'mini'\) btn\.textContent = '게임 시작 \(빈자리는 AI\)';/.test(cli));
-ok('솔로는 자리 넷으로 한 번에', /miniGo\(4, false\)/.test(htm)
-   && !/miniGo\(2, false\)/.test(htm) && !/miniGo\(3, false\)/.test(htm));
+// 솔로는 AI 를 몇 명 붙일지 내가 정하는 게 낫다 — 온라인처럼 기다릴 상대가 없다
+ok('솔로는 2·3·4인을 고른다',
+   /miniGo\(2, false\)/.test(htm) && /miniGo\(3, false\)/.test(htm) && /miniGo\(4, false\)/.test(htm));
+ok('솔로에 온라인 칸은 없다', (() => {
+  const at = htm.indexOf('id="soloModal"');
+  const solo = htm.slice(at, htm.indexOf('id="multiModal"'));
+  return at > 0 && !/quickJoin\('mini'\)/.test(solo);
+})());
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

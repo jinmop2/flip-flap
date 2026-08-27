@@ -2439,7 +2439,19 @@
       /* 모드가 다섯이 되면서 카드가 556px 까지 자랐다. 화면이 짧으면 위아래가
          잘리는데 하필 아래가 '시작'·'나가기' 라 갇힌 것처럼 보인다.
          화면 안에 들어오게 묶고, 넘치는 것은 가운데만 스크롤한다. */
-      max-height:calc(var(--app-h, 100vh) - 96px);
+      /* 위쪽 프로필 바(약 96px)와 아래쪽 탭바(약 64px) 자리를 비워 둔다.
+         예전엔 아래를 안 비워서 나가기가 탭바 뒤로 내려갔다. */
+      max-height:calc(var(--app-h, 100vh) - 96px - 72px - var(--safe-b));
+    }
+    /* 세로가 짧은 기기(대개 핸드폰 + 주소창)에서는 한 단계 더 조인다 */
+    @media (max-height:760px) {
+      #waitCard { gap:9px; padding:16px 18px;
+                  max-height:calc(var(--app-h, 100vh) - 72px - 66px - var(--safe-b)); }
+      #waitCard .wc-code { font-size:2.1rem; letter-spacing:6px; padding:4px 14px 3px; }
+      #waitCard .wc-seat { padding:6px 4px; }
+      #waitCard .wc-mode { padding:6px 4px; }
+      #waitCard .wc-scroll { gap:9px; }
+      #waitCard .wc-foot .btn { padding-top:8px; padding-bottom:8px; }
     }
     #waitCard .wc-scroll {
       display:flex; flex-direction:column; align-items:center; gap:12px;
@@ -2448,10 +2460,13 @@
     }
     /* 시작·나가기는 늘 바닥에 붙어 있다 — 스크롤과 상관없이 보여야 하는 둘이다 */
     #waitCard .wc-foot {
-      display:flex; flex-direction:column; align-items:center; gap:8px;
+      display:flex; flex-direction:column; align-items:center; gap:6px;
       width:100%; flex-shrink:0; padding-top:2px;
     }
-    #waitCard .wc-foot .btn { width:100%; }
+    /* 핸드폰에서는 나가기가 화면 아래로 밀려 안 보였다. 위아래 폭을 줄여
+       카드 전체를 끌어올린다 — 옆으로는 그대로라 누르기 어렵지 않다. */
+    #waitCard .wc-foot .btn { width:100%; padding-top:9px; padding-bottom:9px; }
+    #waitCard .wc-foot .lobby-rules-link { padding:4px 8px; }
     .wc-label { font-size:.8rem; color:#8a7a80; }
     .wc-code {
       display:flex; align-items:center; gap:10px;
@@ -5035,16 +5050,21 @@
 
     <div class="mm-sec"><b>미니게임</b><span class="mc-tag">두 장 승부</span><i></i></div>
     <p class="mm-hint">카드 두 장을 쥐고 배팅하는 섯다식 판이에요</p>
-    <div class="mm-tiles c2">
+    <div class="mm-tiles c3">
+      <button class="mm-tile t-mini" onclick="miniGo(2, false)">
+        <span class="mt-ico">🃏</span>
+        <span class="mt-name">2인</span>
+        <span class="mt-sub">AI 1명</span>
+      </button>
+      <button class="mm-tile t-mini" onclick="miniGo(3, false)">
+        <span class="mt-ico">🃏</span>
+        <span class="mt-name">3인</span>
+        <span class="mt-sub">AI 2명</span>
+      </button>
       <button class="mm-tile t-mini" onclick="miniGo(4, false)">
         <span class="mt-ico">🃏</span>
-        <span class="mt-name">미니게임</span>
-        <span class="mt-sub">AI 3명 · 자리 4</span>
-      </button>
-      <button class="mm-tile t-mini" onclick="quickJoin('mini')">
-        <span class="mt-ico">🌐</span>
-        <span class="mt-name">온라인</span>
-        <span class="mt-sub">방에 모여서 시작</span>
+        <span class="mt-name">4인</span>
+        <span class="mt-sub">AI 3명</span>
       </button>
     </div>
 
