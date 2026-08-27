@@ -158,6 +158,7 @@
     '상대를 못 찾았어요 — 전문가 AI 와 붙습니다': "No one turned up \u2014 you're up against an Expert AI",
     '상대를 찾았어요! 어떤 판일까요…': 'Found an opponent! Which game will it be\u2026',
     '경매로 세트를 먼저 완성하면 승리': 'Complete a set first and you win',
+    '모드 다시 고르기': 'Pick another mode',
     '두 장으로 겨루는 섯다식 판': 'A Sutda-style round decided by two cards',
     '은행': 'Bank',
     '눌러서 뒤집기': 'Tap to flip',

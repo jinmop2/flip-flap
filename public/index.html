@@ -219,41 +219,65 @@
       box-shadow:inset 0 0 18px rgba(0,0,0,.55), 0 0 16px rgba(255,215,120,.45); }
     @media (prefers-reduced-motion: reduce) { .rk-reel { transition:none !important; } }
 
-    /* 솔로플레이 — 모드를 먼저 고르고 그 안에서 난이도를 고른다 */
+    /* 솔로플레이 — 모드 껍질이 걷히면서 그 자리에 난이도가 드러난다.
+       아래로 밀어내면 눌렀던 자리가 움직여 다른 모드가 따라 내려간다.
+       칸은 그대로 두고 안에 든 것만 갈아 끼운다 — 두 겹을 겹쳐 두고 서로 넘긴다. */
     .sm-list { display:flex; flex-direction:column; gap:8px; width:100%; }
-    .sm-item { width:100%; }
+    .sm-item { position:relative; width:100%; height:62px; border-radius:14px; }
+    /* 두 겹 다 칸을 꽉 채운다 — 그래야 높이가 안 변한다 */
+    .sm-head, .sm-body {
+      position:absolute; inset:0; border-radius:14px;
+      transition:opacity .2s ease, transform .24s cubic-bezier(.34,1.3,.64,1);
+    }
     .sm-head {
-      display:flex; align-items:center; gap:11px; width:100%; text-align:left; cursor:pointer;
-      padding:13px 14px; border-radius:14px; font-family:'Fredoka';
+      display:flex; align-items:center; gap:11px; text-align:left; cursor:pointer;
+      padding:0 14px; font-family:'Fredoka';
       background:linear-gradient(180deg,#3a1018,#260a10); border:1.5px solid #b98d34;
-      box-shadow:inset 0 1px 0 rgba(255,215,120,.16); transition:.14s;
+      box-shadow:inset 0 1px 0 rgba(255,215,120,.16);
     }
     .sm-head:hover { filter:brightness(1.12); }
     .sm-ico { font-size:1.5rem; line-height:1; flex-shrink:0; }
     .sm-txt { flex:1; min-width:0; }
     .sm-txt b { display:block; font-size:.98rem; color:#f5e6c0; }
     .sm-txt small { display:block; font-size:.68rem; color:#a89880; margin-top:1px; line-height:1.35; }
-    .sm-arrow { flex-shrink:0; color:#c8a86a; font-size:.9rem; transition:transform .2s; }
-    /* 펼쳐진 칸은 머리를 조금 더 밝게 — 지금 무엇을 고르는 중인지 보이게 */
-    .sm-item.on .sm-head { border-color:var(--gold); filter:brightness(1.1); border-radius:14px 14px 0 0; }
-    .sm-item.on .sm-arrow { transform:rotate(180deg); }
-    /* 접힘/펼침 — grid 로 여닫으면 높이를 몰라도 부드럽게 움직인다 */
+    .sm-arrow { flex-shrink:0; color:#c8a86a; font-size:.9rem; }
+    /* 껍질이 걷힌다 — 위로 살짝 들리며 사라진다 */
+    .sm-item.on .sm-head { opacity:0; transform:translateY(-7px) scale(.97); pointer-events:none; }
+    /* 난이도는 그 자리에서 올라온다 */
     .sm-body {
-      display:grid; grid-template-rows:0fr; transition:grid-template-rows .22s ease, opacity .18s;
-      opacity:0; overflow:hidden;
-      background:rgba(0,0,0,.25); border:1.5px solid transparent; border-top:none; border-radius:0 0 14px 14px;
+      display:flex; align-items:center; gap:6px; padding:5px;
+      opacity:0; transform:translateY(7px) scale(.97); pointer-events:none;
+      background:rgba(0,0,0,.32); border:1.5px solid var(--gold);
+      box-shadow:inset 0 1px 0 rgba(255,215,120,.12);
     }
-    .sm-item.on .sm-body { grid-template-rows:1fr; opacity:1; border-color:var(--gold); }
-    .sm-body > * { min-height:0; overflow:hidden; }
-    .sm-item.on .sm-body > * { padding:10px; }
+    .sm-item.on .sm-body { opacity:1; transform:none; pointer-events:auto; }
+    .sm-body .mm-tiles { flex:1; height:100%; gap:6px; align-items:stretch; }
+    /* 칸 높이(62px)를 넘으면 안 된다 — 안쪽을 납작하게 눌러 한 줄에 맞춘다 */
+    .sm-body .mm-tile { padding:0 4px; border-radius:10px; gap:1px; justify-content:center;
+                        height:100%; min-height:0; }
+    .sm-body .mm-tile .mt-ico { font-size:.9rem; line-height:1; }
+    .sm-body .mm-tile .mt-name { font-size:.78rem; }
+    .sm-body .mm-tile .mt-sub { font-size:.56rem; line-height:1.2; }
+    /* 되돌아가기 — 껍질을 다시 덮는다 */
+    .sm-back {
+      flex-shrink:0; width:26px; align-self:stretch; border-radius:9px; cursor:pointer;
+      background:rgba(0,0,0,.35); border:1px solid rgba(200,160,0,.3); color:#c8a86a;
+      font-family:'Fredoka'; font-size:.9rem; line-height:1; padding:0;
+    }
+    .sm-back:hover { color:#ffe9a8; border-color:var(--gold); }
     .sm-item.t-item .sm-head { background:linear-gradient(180deg,#3a2358,#241040); border-color:#8b6ad8; }
     .sm-item.t-item .sm-txt b { color:#e2d4ff; }
+    .sm-item.t-item .sm-body { border-color:#8b6ad8; }
     .sm-item.t-tv .sm-head { background:linear-gradient(180deg,#173a55,#0d2233); border-color:#6ac0f0; }
     .sm-item.t-tv .sm-txt b { color:#bfe8ff; }
+    .sm-item.t-tv .sm-body { border-color:#6ac0f0; }
     .sm-item.t-quad .sm-head { background:linear-gradient(180deg,#123a30,#0c2620); border-color:#4a9a7a; }
     .sm-item.t-quad .sm-txt b { color:#c8f0dc; }
+    .sm-item.t-quad .sm-body { border-color:#4a9a7a; }
     .sm-item.t-mini .sm-head { background:linear-gradient(180deg,#4a1030,#2c0820); border-color:#d06a9a; }
     .sm-item.t-mini .sm-txt b { color:#ffd6e8; }
+    .sm-item.t-mini .sm-body { border-color:#d06a9a; }
+    @media (prefers-reduced-motion: reduce) { .sm-head, .sm-body { transition:opacity .12s; transform:none !important; } }
 
     /* 나란한 칸들 */
     .mm-hint { font-size:.68rem; color:#8a7a80; text-align:center; margin:-2px 0 7px; }
@@ -5053,6 +5077,7 @@
           <span class="sm-arrow">▾</span>
         </button>
         <div class="sm-body">
+          <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
           <div class="mm-tiles c3">
             <button class="mm-tile" onclick="soloPlay('easy')">
               <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
@@ -5077,6 +5102,7 @@
           <span class="sm-arrow">▾</span>
         </button>
         <div class="sm-body">
+          <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
           <div class="mm-tiles c3">
             <button class="mm-tile t-item" onclick="startItemGame('easy')">
               <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
@@ -5101,6 +5127,7 @@
           <span class="sm-arrow">▾</span>
         </button>
         <div class="sm-body">
+          <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
           <div class="mm-tiles c3">
             <button class="mm-tile t-twelve" onclick="tvSolo('easy')">
               <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
@@ -5125,6 +5152,7 @@
           <span class="sm-arrow">▾</span>
         </button>
         <div class="sm-body">
+          <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
           <div class="mm-tiles c2">
             <button class="mm-tile t-quad" onclick="q4Start(3)">
               <span class="mt-ico">👥</span>
@@ -5145,6 +5173,7 @@
           <span class="sm-arrow">▾</span>
         </button>
         <div class="sm-body">
+          <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
           <div class="mm-tiles c3">
             <button class="mm-tile t-mini" onclick="miniGo(2, false)">
               <span class="mt-ico">🃏</span>

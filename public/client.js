@@ -4821,7 +4821,8 @@ const TUT_SLIDES = {
 // 솔로플레이 — 모드 하나만 펼친다. 여럿이 동시에 열리면 다시 열다섯 칸이 된다.
 window.soloPick = function (m) {
   const items = document.querySelectorAll('#soloModal .sm-item');
-  for (const el of items) el.classList.toggle('on', el.dataset.m === m && !el.classList.contains('on'));
+  // m 이 없으면(되돌아가기) 전부 덮는다
+  for (const el of items) el.classList.toggle('on', !!m && el.dataset.m === m && !el.classList.contains('on'));
 };
 
 window.tutPickOpen = function () {
