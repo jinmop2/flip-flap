@@ -59,9 +59,13 @@ function fitBoard() {
     return;
   }
 
-  // 눕힌 화면(가로가 길고 높이가 넉넉지 않을 때)은 가로 전용 배치를 쓴다.
-  // 세로 배치를 그대로 눕히면 높이가 발목을 잡아 판이 아주 작아진다.
-  const land = vw > vh * 1.15 && vh < 760;
+  // 가로 전용 배치(화면 전체가 펠트)는 눕힌 폰처럼 높이가 정말 없을 때만 쓴다.
+  //
+  // 예전 기준은 "높이 760 미만" 이었는데, 노트북 창이 대부분 그 아래로 들어온다
+  // (1366×660, 1440×760…). 그래서 노트북에서 타원 테이블이 사라지고 화면 전체가
+  // 펠트인 큰 판이 떴다 — 카드가 좌우로 흩어져 어디를 봐야 할지 모르게 된다.
+  // 노트북은 높이가 넉넉하니 폰과 같은 세로 판(타원 테이블)을 그대로 키운다.
+  const land = vw > vh * 1.15 && vh < 560;
   const W = land ? LAND_W : BOARD_W, H = land ? LAND_H : BOARD_H;
   const z = Math.min((vw - 16) / W, (vh - 8) / H);
   root.style.setProperty('--board-w', W + 'px');
@@ -971,10 +975,18 @@ function rankRoulette(mode, done) {
   reel.style.transform = `translateY(-${Math.round(cur * SLOT_H)}px)`;
   void reel.offsetWidth;
   const end = (RK_LOOPS * RANK_ORDER.length) * SLOT_H;
-  const dur = 1500;
-  reel.style.transition = `transform ${dur}ms cubic-bezier(.16,.9,.24,1)`;
+  // 빠르게 돌던 것을 이어받아 고르게 늦춘다. 예전 곡선(.16,.9,.24,1)은 앞쪽
+  // 25% 에서 이미 81% 를 가 버려, 도는 동안은 느리고 정할 때만 확 튄 뒤 뚝
+  // 멈추는 것처럼 보였다 — 사람이 기대하는 룰렛과 정반대다.
+  // 표준 ease-out 은 구간별로 22·20·18·16·12·9·4 씩 줄어, 처음이 가장 빠르고
+  // 끝으로 갈수록 한 칸씩 눈에 걸리며 선다.
+  const dur = 2100;
+  reel.style.transition = `transform ${dur}ms cubic-bezier(0, 0, .58, 1)`;
   reel.style.transform = `translateY(-${end}px)`;
-  for (let i = 0; i < 9; i++) setTimeout(() => playSound('tick'), 90 + i * (dur / 11));
+  // 딸깍은 칸이 지나가는 순간에 맞춘다 — 소리 간격이 일정하면 눈은 느려지는데
+  // 귀는 안 느려져 따로 논다. 위 곡선의 역함수로 시각을 잡는다.
+  for (let i = 0; i < 10; i++)
+    setTimeout(() => playSound('tick'), 60 + dur * (1 - Math.sqrt(1 - i / 10)));
   setTimeout(() => {
     win.classList.add('landed');
     playSound('bell');
@@ -5676,6 +5688,11 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spe
   else de.style.display = 'none';
   playSound('deal');
   startBGM('game');
+  // 판을 열었으면 테이블을 재야 한다. 예전엔 리사이즈가 올 때만 쟀는데,
+  // 폰은 판을 열 때 주소창이 접히며 리사이즈가 따라와서 우연히 맞았고
+  // 컴퓨터에서는 그런 게 없어 타원 테이블이 아예 안 그려졌다 —
+  // 카드가 맨바닥에 흩어진 것처럼 보인 이유다.
+  scheduleRelayout();
 });
 let drewNow = false;
 socket.on('state_update', s => {
@@ -6723,6 +6740,7 @@ function tvOpen() {
   tvMoveEmote('tv-emoteSlot');
   try { applyMySkins(); } catch (_) {}   // 장착한 테이블·카드앞면은 어느 모드에서나 그대로
   try { startBGM('game'); } catch (_) {}
+  scheduleRelayout();                    // 판을 열었으면 테이블을 잰다
 }
 window.tvSolo = function (diff) {
   closeModePanels();

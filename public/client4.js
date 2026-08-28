@@ -806,6 +806,7 @@
     $('q-status').textContent = '자리 배치 중…';
     sfx('deal');
     try { if (typeof startBGM === 'function') startBGM('game'); } catch (_) {}   // 2인전과 같은 배경음악
+    if (typeof scheduleRelayout === 'function') scheduleRelayout();   // 판을 열었으면 테이블을 잰다
     socket.emit('g4_start', { nick: typeof getNick === 'function' ? getNick() : '나', n: lastSoloN });
   };
 

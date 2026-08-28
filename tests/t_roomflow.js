@@ -34,7 +34,12 @@ ok('배율을 화면에서 계산한다', /Math\.min\(\(vw - 16\) \/ W, \(vh - 8
 ok('가로를 막지 않는다', !/rotateNote/.test(htm) && !/lock\('portrait'\)/.test(cli));
 // 가로 전용 배치 — 왼쪽 상대 · 가운데 경매대 · 아래 한 줄이 내 자리
 // 오른쪽에 같은 폭의 빈 칸을 둬야 가운데 칸이 판 한가운데에 온다
-ok('가로에서는 격자로 편다', /body\.land\.ingame #game \{[\s\S]{0,700}grid-template-areas:"opp center pad" "mine mine mine"/.test(htm));
+// 고르는 자리에 제 줄을 준다 — 세로에서 #myZone 이 비워 두던 아래 여백이
+// 가로에는 없어서, 확정 버튼이 고를 카드 위에 그대로 앉았다.
+ok('가로에서는 격자로 편다', /body\.land\.ingame #game \{[\s\S]{0,900}grid-template-areas:"opp center pad" "act act act" "mine mine mine"/.test(htm));
+ok('고르는 자리는 손패 위가 아니다', /body\.land #game #actionArea \{ position:static; grid-area:act;/.test(htm));
+// 세로 레일용 폭 100% 가 가로에서는 서로를 밀어내, 내 배팅 칸이 레일 밖으로 나갔다
+ok('가로 레일은 칸을 밀어내지 않는다', /body\.land #g-rail > \* \{ width:auto; \}/.test(htm));
 ok('좌우 칸 폭이 같다', /grid-template-columns:minmax\(120px, 21%\) 1fr minmax\(120px, 21%\)/.test(htm));
 // !important 를 무조건 걸면 로비에서 꺼 둔 판까지 되살아난다 — .ingame 을 같이 건다
 ok('판 안에서만 격자로 바꾼다', /body\.land\.ingame #game \{[\s\S]{0,40}display:grid !important/.test(htm));
@@ -43,7 +48,23 @@ ok('미니게임에는 가로 크기를 안 씌운다', /body\.land #mini \{[^}]
 ok('덱과 턴 표시는 가운데 칸 왼쪽 끝에',
    /body\.land #deckStack \{ position:absolute; left:4px/.test(htm) && /body\.land #turnInfo \{ position:absolute; left:4px/.test(htm));
 ok('가로 설계 크기가 따로 있다', /LAND_W = 940, LAND_H = 520/.test(cli));
-ok('눕히고 높이가 좁을 때만 쓴다', /vw > vh \* 1\.15 && vh < 760/.test(cli));
+// 노트북 창은 대부분 높이 660~760 이라 예전 기준(760)에 걸려, 타원 테이블이
+// 사라지고 화면 전체가 펠트인 큰 판이 떴다. 눕힌 폰만 그 배치를 쓴다.
+ok('눕힌 폰에서만 가로 배치', /vw > vh \* 1\.15 && vh < 560/.test(cli));
+// 판을 열 때 테이블을 재지 않으면, 리사이즈가 없는 컴퓨터에서는 영영 안 그려진다
+ok('판을 열면 테이블을 잰다',
+   /startBGM\('game'\);[\s\S]{0,320}scheduleRelayout\(\);\n\}\);/.test(cli)
+   && /tvOpen\(\) \{[\s\S]{0,420}scheduleRelayout\(\);/.test(cli));
+// 카드를 줄였으면 그 안 글자도 줄여야 한다 — 낮고 넓은 화면에서 숫자가 카드 밖으로 나갔다
+{
+  const short = (h) => {
+    const i = htm.indexOf(`@media (max-height: ${h}px) {`);
+    return i < 0 ? '' : htm.slice(i, htm.indexOf('\n    }', i));
+  };
+  ok('낮은 화면에서 카드 글자도 줄인다',
+     [730, 640].every((h) => /\.card \.c-num \{ font-size:2\.3rem; \}/.test(short(h))
+                          && /\.card \.c-rank \{ font-size:\.95rem/.test(short(h))));
+}
 ok('듣던 음악 유지 토글은 없앴다', !/toggleKeepAudio/.test(htm) && !/togKeep/.test(htm));
 ok('밖의 음악에 자동으로 양보한다', /yieldToOtherAudio/.test(cli));
 // 접힌 상태를 저장하지 않는다 — 새로고침하면 늘 다시 시도한다

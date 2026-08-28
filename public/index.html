@@ -219,7 +219,10 @@
     /* 상대를 기다리는 동안 계속 도는 상태. 자바스크립트 타이머로 한 칸씩
        옮기면 10초 내내 타이머가 돌고 딸깍 소리도 서른 번 난다 — 브라우저에
        맡기고 소리는 멈출 때만 낸다. 마지막 칸이 첫 칸과 같아 이음매가 없다. */
-    .rk-reel.idle { animation:rkIdle 1.05s linear infinite; }
+    /* 기다리는 동안은 빠르게 돈다. 멈출 때 아래 transition 이 ease-out 으로
+       늦추므로, 전체가 '빠르게 → 천천히 → 멈춤' 으로 읽힌다. 예전엔 도는 동안
+       느리고 정할 때 확 빨라져 거꾸로였다. */
+    .rk-reel.idle { animation:rkIdle .42s linear infinite; }
     @keyframes rkIdle { from { transform:translateY(0); } to { transform:translateY(var(--rk-loop)); } }
     @media (prefers-reduced-motion: reduce) { .rk-reel { transition:none !important; animation:none !important; } }
 
@@ -4501,6 +4504,15 @@
       .bid-area { height:88px; }
       .pile-group .card { width:34px; height:47px; margin-left:-16px; padding:2px; }
       .pile-group .card .c-num { font-size:1.3rem; }
+      /* 카드를 줄였으면 그 안의 글자도 같이 줄여야 한다. 예전엔 이 값이
+         @media (max-width:600px) 에만 있었다 — 폰은 폭 조건이 늘 걸려서
+         멀쩡했지만, 낮고 넓은 화면(노트북 가로·폰 눕힘)에서는 카드만
+         42px 로 줄고 숫자는 데스크톱 크기(3.35rem)로 남아 카드 밖으로
+         17px 삐져나간 채 잘렸다. */
+      .card .c-num { font-size:2.3rem; }
+      .card .c-rank { font-size:.95rem; padding:1px 6px; min-width:19px; }
+      .card .c-rank.two { font-size:.86rem; padding:1px 4px; min-width:17px; }
+      .card.back .bf.flip, .card.back .bf.flap { font-size:.8rem; }
       .pile-group .card .c-rank { font-size:.55rem; padding:0 2px; min-width:11px; border-radius:4px; }
       #myZone { padding-bottom:calc(24px + var(--safe-b)); }
       #oppZone { padding-top:50px; }
@@ -4517,6 +4529,15 @@
       .bid-area { height:80px; }
       .pile-group .card { width:31px; height:43px; margin-left:-11px; padding:2px; }
       .pile-group .card .c-num { font-size:1.35rem; }
+      /* 카드를 줄였으면 그 안의 글자도 같이 줄여야 한다. 예전엔 이 값이
+         @media (max-width:600px) 에만 있었다 — 폰은 폭 조건이 늘 걸려서
+         멀쩡했지만, 낮고 넓은 화면(노트북 가로·폰 눕힘)에서는 카드만
+         42px 로 줄고 숫자는 데스크톱 크기(3.35rem)로 남아 카드 밖으로
+         17px 삐져나간 채 잘렸다. */
+      .card .c-num { font-size:2.3rem; }
+      .card .c-rank { font-size:.95rem; padding:1px 6px; min-width:19px; }
+      .card .c-rank.two { font-size:.86rem; padding:1px 4px; min-width:17px; }
+      .card.back .bf.flip, .card.back .bf.flap { font-size:.8rem; }
       .pile-group .card .c-rank { font-size:.52rem; padding:0 2px; min-width:10px; border-radius:4px; }
       #myZone { padding-bottom:calc(16px + var(--safe-b)); }
       #myProfile { transform:scale(.9); transform-origin:bottom right; }
@@ -4552,8 +4573,11 @@
          밀린다. 빈 칸이라고 노는 자리는 아니다: 위에는 상대 프로필·시계,
          아래에는 이모트·내 프로필이 떠 있는 자리다. */
       grid-template-columns:minmax(120px, 21%) 1fr minmax(120px, 21%);
-      grid-template-rows:1fr auto;
-      grid-template-areas:"opp center pad" "mine mine mine";
+      /* 고르는 자리에 제 줄을 준다. 세로에서는 #myZone 이 아래쪽을 그만큼
+         비워 두는데(padding-bottom), 가로에서는 그 여백을 지워서 확정 버튼이
+         손패 카드 위에 그대로 앉았다 — 고를 카드를 버튼이 가렸다. */
+      grid-template-rows:1fr auto auto;
+      grid-template-areas:"opp center pad" "act act act" "mine mine mine";
       gap:2px; padding:6px 10px calc(4px + var(--safe-b));
       align-items:stretch;
     }
@@ -4568,18 +4592,28 @@
     }
     body.land #game::after, body.land #tv::after { display:none; }
     /* 낸 카드는 가운데 줄에 나란히 — 세로용 오른쪽 레일 자리는 여기서 화면을 넘는다 */
-    body.land #g-rail { position:static; transform:none; width:auto; flex-direction:row; gap:8px; }
+    body.land #g-rail { position:static; transform:none; width:auto; flex-direction:row; gap:8px;
+                        flex-shrink:0; }
+    /* 세로 레일은 위아래로 쌓이므로 칸이 폭을 꽉 채운다(#g-rail > * { width:100% }).
+       가로에서는 그게 서로를 밀어내, 레일은 한 칸 폭인데 '내 배팅' 은 그 밖에
+       떨어져 나가 있었다 — 두 칸이 딴 데 있는 것처럼 보였다. */
+    body.land #g-rail > * { width:auto; }
     body.land #g-rail .bid-area { min-height:0; }
     body.land #oppZone { grid-area:opp; padding-top:70px; justify-content:flex-start; gap:2px; }
     body.land #centerZone {
-      grid-area:center; flex-direction:row; flex-wrap:wrap;
+      grid-area:center; flex-direction:row; flex-wrap:nowrap;
       align-items:center; justify-content:center; gap:10px; padding-bottom:26px;
+      /* 덱과 턴 표시는 이 칸 왼쪽 끝에 얹혀 있다(아래 absolute). 그 자리를
+         비워 두지 않으면 경매대가 덱 위로 올라와 '중앙 카드' 이름표를 덮는다.
+         오른쪽도 같은 만큼 비운다 — 한쪽만 비우면 경매대가 그만큼 밀린다. */
+      padding-left:74px; padding-right:74px;
     }
     body.land #myZone {
       grid-area:mine; flex-direction:row; align-items:flex-end; justify-content:center;
-      /* 오른쪽 아래 이모트·시계 자리만 비운다. 왼쪽까지 같이 비우면 배팅·획득
-         칸이 손패를 오른쪽으로 밀어 오히려 더 치우친다(재 보니 -12 → +34). */
-      gap:8px; padding-bottom:0; padding-right:124px;
+      /* 오른쪽 아래는 시계 자리, 왼쪽 아래는 이모트 자리다. 예전엔 오른쪽만
+         비워 뒀는데, 이모트 버튼이 왼쪽 아래에 떠 있어서 내 획득 칸을 그대로
+         덮었다 — "획득 없음" 이 이모지 뒤로 반쯤 숨었다. */
+      gap:8px; padding-bottom:0; padding-right:124px; padding-left:48px;
     }
     /* 덱과 턴 표시는 가운데 칸의 왼쪽 끝에 붙인다.
        줄에 같이 세우면 [턴][덱][경매대] 세 덩어리가 함께 가운데로 몰려,
@@ -4590,6 +4624,8 @@
     body.land #deckStack .deck-count { bottom:-19px; }
     body.land #auctionMat { min-height:0; }
     body.land #statusBar { order:4; position:absolute; bottom:0; left:50%; transform:translateX(-50%); margin:0; }
+    body.land #game #actionArea { position:static; grid-area:act; left:auto; right:auto; bottom:auto;
+                                  min-height:0; }
     /* 상대 자리는 좁으므로 카드도 작게 */
     body.land #oppHand .card { width:34px; height:48px; padding:3px; border-radius:6px; border-width:1.5px; }
     body.land #oppZone .pile-group .card { width:30px; height:42px; }
