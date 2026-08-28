@@ -3270,7 +3270,16 @@ document.getElementById('visRow').addEventListener('click', e => {
 // ── 방 목록 ─────────────────────────────────────────────────
 let gameNicks = null, gameProfiles = null;
 let lastSig = {};   // 섹션별 변경 감지(불필요한 DOM 재생성 방지 → 렉↓)
-function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+// 남이 쓴 글자를 화면에 넣기 전에 막는다.
+// textContent → innerHTML 은 & < > 만 바꾸고 따옴표는 그대로 둔다. 그런데
+// 이 결과가 onclick="fn('...')" 처럼 속성 안 자바스크립트 문자열로도 들어간다 —
+// 닉네임에 작은따옴표가 하나 있으면 그 문자열을 깨고 나올 수 있었다.
+// 따옴표와 백슬래시까지 막는다. 글자로 보일 때는 그대로 ' 와 " 로 보인다.
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/\\/g, '&#92;');
+}
 
 // 인게임 프로필 카드 (컴팩트 — 클릭하면 전적 펼침)
 function renderGameProfile(elId, p) {

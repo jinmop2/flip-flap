@@ -616,6 +616,10 @@ function nickProblem(n) {
   if (s.length > NICK_MAX) return '닉네임은 8자 이내여야 해요.';
   if (JAMO_ONLY.test(s.replace(/\s/g, ''))) return '자음·모음만으로는 만들 수 없어요.';
   if (RESERVED_KEY.test(s)) return '사용할 수 없는 닉네임이에요.';
+  // 화면을 만들 때 닉네임이 속성 안 자바스크립트 문자열로도 들어간다.
+  // 내보내는 쪽(esc)에서 막고 있지만, 들어오는 쪽에서도 막는다 — 한 겹이
+  // 뚫려도 다른 한 겹이 남아야 한다.
+  if (/["'`<>\\]/.test(s)) return '따옴표·꺾쇠는 쓸 수 없어요.';
   if (hasBadWord(s)) return '사용할 수 없는 표현이 들어 있어요.';
   return null;
 }
