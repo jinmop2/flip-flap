@@ -42,7 +42,22 @@ console.log('\n② 620 과 720 사이가 비어 있지 않다');
   ok('중간 그림 크기도 정한다', /\.mc-emblem \{ width:50px; height:50px; \}/.test(b));
 }
 
-console.log('\n③ 칸 안쪽 셈이 맞는가 (여백·그림·글씨 합)');
+console.log('\n③ 케이스를 flex 컨테이너로 쓰지 않는다');
+{
+  // <button> 을 flex 로 쓰면 사파리에서 자식이 세로로 안 늘어난다. 크로미움에서는
+  // 멀쩡해서 못 보고 지나쳤고, 아이폰에서 펠트가 카드 위쪽 절반만 채웠다.
+  // 첫 .mode-card 는 낮은 화면용 덮어쓰기다 — 본 규칙(비율을 정하는 쪽)을 본다
+  const card = /\.mode-card \{([^}]*aspect-ratio:1 \/ 1\.28[^}]*)\}/.exec(html);
+  ok('케이스는 block 이다', card && /display:block/.test(card[1]), card ? card[1].trim().slice(0, 60) : '규칙 없음');
+  ok('케이스에 flex 를 안 준다', card && !/display:flex/.test(card[1]));
+  const felt = /\.mc-felt \{([^}]*)\}/.exec(html);
+  // 펠트가 스스로 채운다 — flex:1 은 부모가 flex 여야 듣는다
+  ok('펠트가 스스로 높이를 채운다', felt && /height:100%/.test(felt[1]) && /width:100%/.test(felt[1]),
+     felt ? felt[1].trim().slice(0, 60) : '규칙 없음');
+  ok('펠트는 flex:1 에 기대지 않는다', felt && !/flex:1/.test(felt[1]));
+}
+
+console.log('\n④ 칸 안쪽 셈이 맞는가 (여백·그림·글씨 합)');
 {
   // 칸 높이 - 케이스 padding(7*2) = 펠트. 그 안에 그림+제목+설명+간격 둘이 들어가야 한다.
   const fits = (card, emblem, gap, title, sub) => {
