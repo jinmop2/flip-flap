@@ -2781,9 +2781,18 @@ function veil(fn) {
     }
   }, 85);
 }
+// 탭마다 다른 음. 다섯음 음계(도·레·미·솔·라)라 어느 둘을 눌러도 어울린다 —
+// 반음이 섞이면 빨리 훑을 때 귀에 걸린다.
+const NAV_NOTES = { home: 523.25, mission: 587.33, shop: 659.25, gacha: 698.46,
+                    friends: 783.99, clan: 880, rank: 987.77 };
+function playNav(key) {
+  NAV_PITCH = NAV_NOTES[key] || 587.33;
+  playSound('nav');
+}
 function navGo(key) {
   const act = Object.prototype.hasOwnProperty.call(NAV_ACTIONS, key) ? NAV_ACTIONS[key] : null;
   if (!act) return;
+  playNav(key);
   veil(() => {
     if (key !== 'home') closeAllNavModals();   // 탭끼리 겹쳐 열리지 않게
     act();
@@ -3421,6 +3430,7 @@ let bgmOff = localStorage.getItem('ff_bgm') != null ? localStorage.getItem('ff_b
 let sfxOff = localStorage.getItem('ff_sfx') != null ? localStorage.getItem('ff_sfx') === 'off' : _legacyOff;
 // 재즈 징글용 헬퍼 (BGM과 독립적으로 AC.destination에 바로 출력)
 function jbrass(freq, delay, dur, vol, bendTo) {   // 뮤트 트럼펫 (원하면 끝에 피치 벤드)
+  if (keepOtherAudio) return;   // 밖의 음악에 양보 중 — tone() 만 지키고 있었다
   const t = AC.currentTime + delay;
   const o = AC.createOscillator(), g = AC.createGain(), lp = AC.createBiquadFilter();
   o.type = 'sawtooth'; o.frequency.setValueAtTime(freq, t);
@@ -3432,7 +3442,25 @@ function jbrass(freq, delay, dur, vol, bendTo) {   // 뮤트 트럼펫 (원하�
   g.gain.setValueAtTime(vol, t + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(lp); lp.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + dur + 0.05);
 }
+// 저음 — 화음에 무게를 준다. 트럼펫만 쌓으면 얇게 들려 "이겼다" 가 안 남는다.
+function jbass(freq, delay, dur, vol) {
+  if (keepOtherAudio) return;
+  const t = AC.currentTime + delay;
+  const o = AC.createOscillator(), g = AC.createGain(), lp = AC.createBiquadFilter();
+  o.type = 'triangle'; o.frequency.setValueAtTime(freq, t);
+  lp.type = 'lowpass'; lp.frequency.value = 820;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.025);
+  g.gain.setValueAtTime(vol, t + dur * 0.45);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(lp); lp.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + dur + 0.05);
+}
+// 반짝임 — 종소리 몇 알을 화음 위에 얹어 끝맛을 만든다
+function jspark(notes, delay, vol) {
+  notes.forEach((f, i) => tone(f, 'sine', vol, 0.85, delay + i * 0.055));
+}
+
 function jcym(delay, freq, dur, vol) {   // 심벌 크래시/히트
+  if (keepOtherAudio) return;
   const t = AC.currentTime + delay;
   const n = Math.floor(AC.sampleRate * 0.5), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
   for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
@@ -3441,6 +3469,8 @@ function jcym(delay, freq, dur, vol) {   // 심벌 크래시/히트
   const g = AC.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   s.connect(bp); bp.connect(g); g.connect(sfxGain); s.start(t); s.stop(t + dur + 0.05);
 }
+// 메뉴바 소리의 높이. 누른 탭에 따라 바뀐다 — 아래에서 playNav 가 정한다.
+let NAV_PITCH = 587.33;
 function playSound(n) {
   if (sfxOff) return;
   try { AC.resume(); } catch(_) {}
@@ -3454,11 +3484,28 @@ function playSound(n) {
     case 'special':[110,116.5,123.5,130.8].forEach((f,i)=>tone(f,'triangle',.14,.1,i*.08));
                    jbrass(587.33,.34,.5,.16); jcym(.34,6000,.35,.06); break;
     // 승리 — 블루지 상행 릭 + 밝은 6/9 스탭 (원래 버전)
-    case 'victory':[440,523,659,784].forEach((f,i)=>jbrass(f,i*.1,.16,.12));
-                   jbrass(880,.4,.7,.16); [440,554,659,740].forEach(f=>tone(f,'sine',.08,.6,.42)); break;
-    // 패배 — 뮤트 트럼펫 하강 + 마지막 음 처지는 벤드 (원래 버전)
-    case 'defeat': jbrass(392,0,.4,.12); jbrass(349,.28,.4,.12); jbrass(294,.56,.9,.13,220); break;
+    // 우승 — 픽업 두 음 → 화음 한 방 → 위로 반짝이며 남는 꼬리.
+    // 예전엔 짧은 아르페지오 하나로 끝나 "이겼다" 가 안 남았다.
+    case 'victory':
+      [392,493.88].forEach((f,i)=>jbrass(f, i*.08, .11, .09));                 // 들이쉬는 두 음
+      [523.25,659.25,783.99,1046.5].forEach((f,i)=>jbrass(f, .17, .62, .125-i*.012));  // C·E·G·C
+      jbass(130.81, .17, .95, .17);                                            // 낮은 C — 무게
+      jcym(.17, 5200, .55, .085);
+      jspark([1046.5,1318.5,1568,2093], .46, .05);                             // 위로 반짝
+      jbrass(1046.5, .64, .9, .095); break;                                    // 길게 남는 마무리
+    // 패배 — 힘이 빠지는 하강. 낮은 음이 깔린 채로 세 음이 내려가고,
+    // 마지막 음만 아래로 처지며 끊긴다. 예전엔 트럼펫 셋뿐이라 가벼웠다.
+    case 'defeat':
+      jbass(98, 0, 1.15, .12);                                                 // 바닥에 깔리는 저음
+      [349.23,311.13,261.63].forEach((f,i)=>jbrass(f, i*.21, .33, .105));      // F·E♭·C
+      jbrass(233.08, .64, 1.0, .115, 185);                                     // 마지막 — 아래로 처진다
+      jcym(.02, 2200, .55, .045);                                              // 먼지 같은 소리
+      tone(174.61, 'sine', .055, 1.15, .64); break;
     case 'deal':   tone(280,'sine',.05,.07); break;
+    // 아래 메뉴바 — 나무 두드리는 듯한 짧은 소리. 탭마다 음이 반음씩 올라가
+    // 왼쪽에서 오른쪽으로 훑으면 음계로 들린다.
+    case 'nav':    tone(NAV_PITCH, 'sine', .07, .1); tone(NAV_PITCH*1.5, 'sine', .03, .07, .03);
+                   tone(NAV_PITCH/2, 'triangle', .045, .12); break;
     case 'bell':   [0,0.45].forEach(off => [1568,2093].forEach((f,i)=>tone(f,'sine',.2,1.2, off+i*.02))); break;
     case 'tick':   tone(1400,'square',.06,.05); break;
     // 세트 완성 — 재즈 6th로 마무리하는 밝은 상행

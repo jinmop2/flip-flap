@@ -1234,10 +1234,13 @@
     .gc-buy.t-rare   { border-color:rgba(95,168,216,.55); }
     .gc-buy.t-epic   { border-color:rgba(200,139,255,.6); }
     .gc-buy.t-legend { border-color:rgba(195,219,254,.7); box-shadow:0 0 10px rgba(195,219,254,.28); }
-    /* 파편 전용 — 파편 색(하늘)으로 따로 구분한다. 뽑기로는 못 얻는 줄이다. */
-    .gc-buy.t-only { border-color:rgba(140,220,255,.8);
-      background:linear-gradient(160deg,rgba(40,110,160,.3),rgba(0,0,0,.34));
-      box-shadow:0 0 11px rgba(120,205,255,.32); }
+    /* 파편 전용 — 파편 색(하늘)으로 따로 구분한다. 뽑기로는 못 얻는 줄이다.
+       바깥 발광은 걷었다. 칸 열한 개가 나란히 서면 각자의 발광이 서로 이어져
+       구역 전체를 두른 띠처럼 보였다 — 있지도 않은 테두리가 떠 있는 셈이었다.
+       빛은 칸 안쪽으로만 넣는다. */
+    .gc-buy.t-only { border-color:rgba(140,220,255,.55);
+      background:linear-gradient(160deg,rgba(40,110,160,.26),rgba(0,0,0,.34));
+      box-shadow:inset 0 1px 0 rgba(180,235,255,.18); }
     .gc-buy.poor { opacity:.42; cursor:default; }
     .gc-buy.poor .gi-cost { color:#7a7f89; }
     .gc-buy.owned { opacity:.3; cursor:default; }
