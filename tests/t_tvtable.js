@@ -10,7 +10,8 @@ const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++,
 
 console.log('① 테이블 판');
 ok('테이블 요소가 있다', /<div id="tv-table">/.test(htm));
-ok('두툼한 가죽 레일이 둘러 있다', /#tv-table, #game-table, #quad-table \{[\s\S]{0,900}0 0 0 22px #2b1d13/.test(htm));
+// 레일 색은 테마를 따라간다(심야·백금). 지키려는 것은 '두툼한 테가 둘러 있다' 는 것.
+ok('두툼한 레일이 둘러 있다', /#tv-table, #game-table, #quad-table \{[\s\S]{0,900}0 0 0 22px #1c2127/.test(htm));
 ok('위아래가 둥근 판이다', /#tv-table, #game-table, #quad-table \{[^}]*border-radius:46% \/ 20%/.test(htm));
 ok('레일 윗면에 빛이 있다', /#tv-table::before, #game-table::before, #quad-table::before \{[\s\S]{0,200}inset:-23px/.test(htm));
 ok('펠트 천이다', /#tv-table, #game-table, #quad-table \{[^}]*var\(--felt\)/.test(htm));
@@ -53,7 +54,7 @@ ok('레일이 화면 밖으로 안 잘린다', /left = Math\.max\(left, h\.left 
 ok('전리품과 손패 사이에 레일 자리가 있다', /#tv-myAcq \{ margin-bottom:34px; \}/.test(htm) && /#tv-oppAcq \{ margin-top:34px; \}/.test(htm));
 
 console.log('\n④ 배경은 어두운 방, 바깥은 검정');
-ok('트웰브 배경이 어두운 방이다', /#tv \{[^}]*#241a14/.test(htm));
+ok('트웰브 배경이 어두운 방이다', /#tv \{[^}]*#1a1d21/.test(htm));
 ok('바깥은 완전한 검정으로 마감한다', /#070403 74%, #000 100%\)/.test(htm)
    && /background-color:#000;/.test(htm));
 ok('테이블 둘레만 빛이 든다', /#tv::after \{[\s\S]{0,320}radial-gradient\(ellipse 76% 56% at 50% 46%/.test(htm));

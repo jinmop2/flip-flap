@@ -234,9 +234,9 @@ ok('로비 한가운데 랭킹 버튼은 뺐다', !/class="rank-btn"/.test(htm))
 ok('설정은 아이콘만', /id="setBtn"[\s\S]{0,200}<svg/.test(htm) && !/id="setBtn"[\s\S]{0,400}>설정</.test(htm));
 ok('설정 누름이 프로필로 안 퍼진다', /id="setBtn"[^>]*event\.stopPropagation\(\)/.test(htm));
 
-// 아래 탭 — 켜진 곳은 금색, 창을 닫지 않고 바로 옮겨간다
+// 아래 탭 — 켜진 곳에 판이 깔린다(테마가 심야·백금으로 바뀌며 금색 → 백금)
 ok('메뉴바가 로비 창들 위에 있다', /#navBar \{[\s\S]{0,140}z-index:50/.test(htm));
-ok('켜진 탭은 금색 판', /\.nav-item\.active::before \{[\s\S]{0,160}rgba\(200,160,0,\.15\)/.test(htm));
+ok('켜진 탭에 판이 깔린다', /\.nav-item\.active::before \{[\s\S]{0,160}rgba\(144,167,200,\.15\)/.test(htm));
 ok('탭을 옮기면 열린 창을 닫는다', /function navGo[\s\S]{0,200}closeAllNavModals\(\)/.test(cli));
 ok('랭킹 창도 같이 닫는다', /function closeAllNavModals[\s\S]{0,300}closeLb\(\)/.test(cli));
 // 홈은 무조건 홈 — 모드 고르는 창과 설명서도 같이 닫는다

@@ -72,8 +72,8 @@ ok('잔액 안 깎임', a.byToken(t2).coins === 10);
   ok('닫기 타이머도 손잡이로 잡아 둔다', /dyeHide = setTimeout/.test(c));
   ok('눌러서 건너뛸 수 있다', /ov\.onclick = \(\) => \{ dyeStop\(\);/.test(c));
   // 어두운 판 위의 기본 스크롤 막대가 하얀 네모처럼 보였다
-  ok('스크롤 막대를 판 색으로', /scrollbar-color:rgba\(185,141,52,\.45\) transparent/.test(h)
-     && /::-webkit-scrollbar-thumb[\s\S]{0,200}background:rgba\(185,141,52,\.45\)/.test(h));
+  ok('스크롤 막대를 판 색으로', /scrollbar-color:rgba\(131,150,180,\.45\) transparent/.test(h)
+     && /::-webkit-scrollbar-thumb[\s\S]{0,200}background:rgba\(131,150,180,\.45\)/.test(h));
   ok('교환소에도 걸린다', /\.gc-stage, \.lb-box, \.lb-list, \.gc-pane/.test(h));
 }
 
