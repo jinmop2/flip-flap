@@ -1133,8 +1133,8 @@ function closeLb() { document.getElementById('lbModal').classList.remove('show')
 // 아래 탭에 켠다.
 async function refreshMissionDot() {
   if (!myAccount) return navMark('mission', 0);
-  const r = await apiPost('/api/missions', { token: localStorage.getItem('ff_auth') });
-  const ready = !r.error ? (r.list || []).filter((m) => m.done && !m.claimed).length : 0;
+  const r = await fetchInto('missions', () => apiPost('/api/missions', { token: authToken() }), 15000);
+  const ready = r && !r.error ? (r.list || []).filter((m) => m.done && !m.claimed).length : 0;
   navMark('mission', ready);
 }
 
@@ -1175,13 +1175,21 @@ const _cache = new Map();          // 열쇠 → 마지막 응답
 const _inflight = new Map();       // 같은 것을 두 번 부르지 않게
 
 function cacheGet(key) { return _cache.get(key); }
-function cacheDrop(key) { _cache.delete(key); }
+function cacheDrop(key) { _cache.delete(key); _cacheAt.delete(key); }
 // 받아 와서 담아 둔다. 이미 부르는 중이면 그 약속을 같이 쓴다.
-function fetchInto(key, fetcher) {
+// maxAge — 이만큼 안 지난 값이 있으면 그걸 그대로 준다.
+// 예전엔 미리 받아 두고도 배지 갱신이 같은 것을 또 쏘아, 켤 때마다
+// /api/friends · /api/clan · /api/missions 가 두 번씩 나갔다.
+const _cacheAt = new Map();
+function fetchInto(key, fetcher, maxAge) {
+  if (maxAge) {
+    const at = _cacheAt.get(key);
+    if (at && Date.now() - at < maxAge && _cache.has(key)) return Promise.resolve(_cache.get(key));
+  }
   const going = _inflight.get(key);
   if (going) return going;
   const p = Promise.resolve().then(fetcher)
-    .then((r) => { if (r && !r.error) _cache.set(key, r); return r; })
+    .then((r) => { if (r && !r.error) { _cache.set(key, r); _cacheAt.set(key, Date.now()); } return r; })
     .finally(() => _inflight.delete(key));
   _inflight.set(key, p);
   return p;
@@ -1199,12 +1207,16 @@ function showThenRefresh(key, fetcher, render) {
 // 켜자마자 네 개를 동시에 던지면 정작 급한 로비 화면이 늦어진다.
 function prefetchTabs() {
   if (!myAccount) return;
+  // 배지 갱신이 먼저 받아 둔 게 있으면 건너뛴다. 미리받기는 400ms 뒤에
+  // 시작하는데, 그 사이 배지가 이미 같은 것을 받아 온다 — 그대로 두면
+  // 켤 때마다 세 개가 두 번씩 나간다.
+  const FRESH = 15000;
   const jobs = [
-    () => fetchInto('missions', () => apiPost('/api/missions', { token: authToken() })),
-    () => fetchInto('friends',  () => apiPost('/api/friends',  { token: authToken() })),
-    () => fetchInto('clan',     () => apiPost('/api/clan',     { token: authToken() })),
-    () => fetchInto('lb',       () => fetch('/api/leaderboard').then((x) => x.json())),
-    () => fetchInto('clanlist', () => apiPost('/api/clan-list', { token: authToken() })),
+    () => fetchInto('missions', () => apiPost('/api/missions', { token: authToken() }), FRESH),
+    () => fetchInto('friends',  () => apiPost('/api/friends',  { token: authToken() }), FRESH),
+    () => fetchInto('clan',     () => apiPost('/api/clan',     { token: authToken() }), FRESH),
+    () => fetchInto('lb',       () => fetch('/api/leaderboard').then((x) => x.json()), FRESH),
+    () => fetchInto('clanlist', () => apiPost('/api/clan-list', { token: authToken() }), FRESH),
   ];
   jobs.forEach((j, i) => setTimeout(() => { try { j(); } catch (_) {} }, 400 + i * 250));
 }
@@ -1215,7 +1227,7 @@ function openMissions() {
   if (!cacheGet('missions')) list.innerHTML = '<div class="lb-empty">불러오는 중…</div>';
   document.getElementById('missionModal').classList.add('show');
   return showThenRefresh('missions',
-    () => apiPost('/api/missions', { token: authToken() }), renderMissions);
+    () => fetchInto('missions', () => apiPost('/api/missions', { token: authToken() })), renderMissions);
 }
 function renderMissions(r) {
   const list = document.getElementById('missionList');
@@ -2375,9 +2387,10 @@ async function updateSocialBadges() {
     e.textContent = n > 99 ? '99+' : n;
     e.style.display = n > 0 ? '' : 'none';
   };
+  // 미리 받아 둔 게 있으면 그걸 쓴다 — 배지 때문에 같은 것을 또 쏠 이유가 없다
   const [f, c] = await Promise.all([
-    apiPost('/api/friends', { token: authToken() }),
-    apiPost('/api/clan', { token: authToken() }),
+    fetchInto('friends', () => apiPost('/api/friends', { token: authToken() }), 15000),
+    fetchInto('clan',    () => apiPost('/api/clan',    { token: authToken() }), 15000),
   ]);
   const nIn = f.ok ? f.reqIn.length : 0;
   const tb = document.getElementById('ftabBadge');

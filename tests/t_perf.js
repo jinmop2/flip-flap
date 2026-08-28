@@ -218,5 +218,23 @@ console.log('\n⑨ 딜 — 두 사람에게 한 장씩 번갈아');
      /return \(offset \+ \(cards\.length - 1\) \* step\) \* stagger \+ dur;/.test(c));
 }
 
+
+console.log('\n⑦ 켤 때 같은 것을 두 번 부르지 않는다');
+{
+  // 미리받기와 배지 갱신이 각자 쏘아, 켤 때마다 /api/friends · /api/clan ·
+  // /api/missions 가 두 번씩 나갔다. 느린 망에서는 그대로 왕복 세 번이다.
+  const c = fs.readFileSync(src + '/public/client.js', 'utf8');
+  ok('받아 둔 값에 나이가 있다', /const _cacheAt = new Map\(\);/.test(c)
+     && /function fetchInto\(key, fetcher, maxAge\)/.test(c));
+  ok('안 지난 값은 그대로 쓴다',
+     /if \(at && Date\.now\(\) - at < maxAge && _cache\.has\(key\)\) return Promise\.resolve/.test(c));
+  ok('배지도 받아 둔 것을 쓴다',
+     /fetchInto\('friends',[\s\S]{0,90}?15000\)/.test(c) && /fetchInto\('clan',[\s\S]{0,90}?15000\)/.test(c));
+  ok('미리받기도 같은 규칙', /const FRESH = 15000;/.test(c)
+     && (c.match(/FRESH\)/g) || []).length >= 5);
+  // 값을 버릴 때 나이도 같이 버려야 한다 — 안 그러면 낡은 값을 새것으로 안다
+  ok('버릴 때 나이도 버린다', /_cache\.delete\(key\); _cacheAt\.delete\(key\);/.test(c));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
