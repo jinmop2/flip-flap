@@ -105,6 +105,12 @@
     body.waiting #lobby .logo, body.waiting .logo-actions { display:none; }
     body.waiting #lobby { justify-content:center; }
     /* 낮은 화면에서는 대기 카드도 한 벌 줄여 한 화면에 담는다 */
+    /* 620 과 720 사이가 비어 있어, 그 구간에서는 212px 짜리 칸이 그대로
+       버티다 화면을 넘겼다. 한 단을 둔다. */
+    @media (max-height:700px) and (min-height:621px) {
+      .mode-card { aspect-ratio:auto; height:176px; }
+      .mc-emblem { width:50px; height:50px; }
+    }
     @media (max-height:700px) {
       body.waiting #lobby { padding-top:calc(70px + var(--safe-t)); padding-bottom:calc(62px + var(--safe-b)); }
       #waitCard { gap:8px; padding:14px 18px; }
@@ -2426,7 +2432,13 @@
     }
     @media (max-height:620px) {
       .logo h1, .logo .flap { font-size:2.5rem; }
-      .mode-card { aspect-ratio:auto; height:126px; }
+      /* 칸을 낮추면 안에 든 것도 같이 낮춰야 한다. 예전엔 높이만 눌러 놔서
+         펠트(107px)보다 내용(110px)이 커져 "AI와 대전" 이 잘렸다. */
+      .mode-card { aspect-ratio:auto; height:132px; }
+      .mc-felt { gap:3px; }
+      .mc-emblem { width:40px; height:40px; }
+      .mc-title { font-size:.98rem; }
+      .mc-sub { font-size:.62rem; }
     }
 
     /* 모드 하위 패널 */
