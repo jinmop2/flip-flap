@@ -376,9 +376,17 @@
     .mm-tiles.c4 .mt-name { font-size:.74rem; }
     /* 빠른 입장은 다섯 모드가 됐다 — 좁은 폰에서도 한 줄에 들어가게 더 줄인다 */
     .mm-tiles.c5 { grid-template-columns:repeat(5, 1fr); gap:6px; }
-    .mm-tiles.c5 .mt-name { font-size:.62rem; letter-spacing:-.3px; }
-    .mm-tiles.c5 .mt-ico { font-size:1.05rem; }
-    .mm-tiles.c5 .mm-tile { padding:10px 3px 8px; border-radius:11px; }
+    /* 여섯 칸 — 대회까지 한 줄에 선다. 좁은 폰에서 이름이 깨지지 않게 더 조인다. */
+    .mm-tiles.c6 { grid-template-columns:repeat(6, 1fr); gap:4px; }
+    .mm-tiles.c5 .mt-name, .mm-tiles.c6 .mt-name { font-size:.62rem; letter-spacing:-.3px; }
+    .mm-tiles.c6 .mt-name { font-size:.56rem; }
+    .mm-tiles.c5 .mt-ico, .mm-tiles.c6 .mt-ico { font-size:1.05rem; }
+    .mm-tiles.c6 .mt-ico { font-size:.98rem; }
+    .mm-tiles.c6 .mt-sub { font-size:.5rem; }
+    .mm-tiles.c5 .mm-tile, .mm-tiles.c6 .mm-tile { padding:10px 3px 8px; border-radius:11px; }
+    .mm-tiles.c6 .mm-tile { padding:9px 2px 7px; }
+    /* 두 줄로 접히는 폭 — 여섯이 한 줄에 들어가면 글씨가 읽을 수 없게 작아진다 */
+    @media (max-width:380px) { .mm-tiles.c6 { grid-template-columns:repeat(3, 1fr); } }
     .mm-tile.t-tv { background:linear-gradient(180deg,#1c4a6b,#0d2a44); border-color:#4aa8dd; }
     .mm-tile.t-tv .mt-name { color:#bfe8ff; }
     .mm-tile {
@@ -5480,7 +5488,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     </button>
 
     <div class="mm-sec"><b>빠른 입장</b><i></i></div>
-    <div class="mm-tiles c5">
+    <div class="mm-tiles c6">
       <button class="mm-tile" onclick="quickJoin('classic')">
         <span class="mt-ico">🃏</span>
         <span class="mt-name">클래식</span>
@@ -5501,19 +5509,13 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
         <span class="mt-ico">🃏</span>
         <span class="mt-name">미니게임</span>
       </button>
+      <!-- 대회도 한 칸이다. 따로 빼 두면 "지금 되는 건가" 를 눌러 봐야 안다. -->
+      <button class="mm-tile t-tour" onclick="tourOpen()">
+        <span class="mt-ico">🏆</span>
+        <span class="mt-name">토너먼트</span>
+        <span class="mt-sub">4명↑</span>
+      </button>
     </div>
-
-    <!-- 사람 여덟이 붙는 대회. 정각·30분에만 열리므로 "지금 바로" 칸들과
-         섞이지 않게 따로 줄을 준다. AI 8강은 솔로플레이 안에 있다. -->
-    <div class="mm-sec"><b>대회</b><i></i></div>
-    <button class="mm-hero tour" onclick="tourOpen()">
-      <span class="hh-ico">🏆</span>
-      <span class="hh-txt">
-        <span class="hh-name">토너먼트</span>
-        <span class="hh-sub">사람 8강 · 정각·30분 개최 · 참가비 🪙200 · 우승 🪙1000</span>
-      </span>
-      <span class="hh-side" id="mmTourAt"></span>
-    </button>
 
     <div class="mm-sec"><b>방</b><i></i></div>
     <div class="online-actions">
@@ -5988,11 +5990,11 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <!-- 참가 안내 -->
     <div id="tourIntro">
       <p class="auth-hint" style="text-align:center;margin:2px 0 8px">
-        8강 · 4강은 단판, <b style="color:#ffe9a8">결승은 3판 2선승</b> · 모든 경기는 2인전<br>
+        결승 전까지는 단판, <b style="color:#ffe9a8">결승은 3판 2선승</b> · 모든 경기는 2인전<br>
         참가비 <b style="color:#ffd94a">🪙200</b> · 우승 <b style="color:#ffd94a">🪙1000</b> · 준우승 <b style="color:#ffd94a">🪙200</b>
       </p>
       <p class="auth-hint" style="text-align:center;margin:0 0 4px;font-size:.7rem">
-        매시 정각과 30분에 열려요. 시작할 때 자리가 비면 AI 가 채웁니다.
+        <b style="color:#ffe9a8">네 명</b>이 모이면 열려요. 다섯 명부터는 8강이 되고, 남는 자리는 AI 가 채웁니다.
       </p>
       <p class="auth-hint" id="tourNextAt" style="text-align:center;margin:0 0 10px;font-size:.72rem;color:#ffd94a"></p>
       <button class="btn btn-gold" onclick="tourJoin()">🪙200 내고 참가</button>
@@ -6001,7 +6003,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 
     <!-- 대기 -->
     <div id="tourWait" style="display:none">
-      <div class="tw-count"><b id="tourLeft">–</b><span>뒤 시작</span></div>
+      <div class="tw-count"><b id="tourLeft">–</b><span id="tourLeftLbl">뒤 시작</span></div>
       <div class="tw-slots" id="tourSlots"></div>
       <p class="auth-hint" style="text-align:center;margin:8px 0 0" id="tourWaitNote"></p>
       <button class="btn btn-outline" onclick="tourLeave()">나가기 (참가비 환불)</button>

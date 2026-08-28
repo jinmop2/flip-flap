@@ -70,12 +70,17 @@ ok('로비 카드에서 뺐다', !/onclick="miniOpen\(\)"[\s\S]{0,120}미니게�
 ok('로비에 곁들이 격자가 없다', !/mode-grid sub/.test(htm) && !/mode-grid\.sub/.test(htm));
 ok('토너먼트는 솔로 안에 있다', /onclick="soloPick\('tour'\)"/.test(htm)
    && /stourStart\('expert'\)/.test(htm));
-ok('사람 대회는 멀티 안에 있다', /class="mm-hero tour" onclick="tourOpen\(\)"/.test(htm));
+// 대회도 다른 모드와 같은 칸이다. 따로 빼 두면 "지금 되는 건가" 를 눌러 봐야 안다.
+ok('사람 대회는 모드 칸이 됐다', /class="mm-tile t-tour" onclick="tourOpen\(\)"/.test(htm)
+   && !/mm-hero tour/.test(htm));
 // 다른 모드와 같은 통로로 — 빠른 입장·방 모드 고르기에 나란히 선다
 ok('빠른 입장에 있다', /quickJoin\('mini'\)/.test(htm)
    && /\['classic', 'item', 'quad', 'twelve', 'mini'\]\.includes\(mode\)/.test(srv));
-ok('빠른 입장이 다섯 칸이 됐다', /<div class="mm-tiles c5">/.test(htm)
-   && /\.mm-tiles\.c5 \{ grid-template-columns:repeat\(5, 1fr\); gap:6px; \}/.test(htm));
+// 대회까지 들어와 여섯 칸이다. 좁은 폰에서는 두 줄로 접는다 —
+// 여섯이 한 줄에 들어가면 글씨가 읽을 수 없게 작아진다.
+ok('빠른 입장이 여섯 칸이 됐다', /<div class="mm-tiles c6">/.test(htm)
+   && /\.mm-tiles\.c6 \{ grid-template-columns:repeat\(6, 1fr\); gap:4px; \}/.test(htm));
+ok('좁은 폰에서는 두 줄로', /@media \(max-width:380px\) \{ \.mm-tiles\.c6 \{ grid-template-columns:repeat\(3, 1fr\); \} \}/.test(htm));
 ok('방 모드 고르기에 있다', /data-m="mini" onclick="roomMode\('mini'\)"/.test(htm)
    && /mini: '미니게임'/.test(cli));
 ok('다섯 번째 칸이 한 줄을 다 쓴다', /\.wc-modes \.wc-mode:last-child:nth-child\(odd\) \{ grid-column:1 \/ -1; \}/.test(htm));

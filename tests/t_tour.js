@@ -24,10 +24,15 @@ console.log('① 자리 채우기');
   ok('모두 한 번씩만 나온다',
      new Set(t.rounds[0].flatMap((m) => [m.a, m.b])).size === 8);
 
-  // 30초에 안 차면 AI 로 메운다 — 사람이 하나여도 시작한다
+  // 안 차면 AI 로 메운다 — 사람이 하나여도 시작한다.
+  // 정원은 모인 인원에 맞춘다: 넷까지는 4강, 다섯부터 8강.
   const solo = T.createBracket(people(1), rngOf(2));
-  ok('한 명이어도 여덟 자리', solo.seats.length === 8);
-  ok('나머지는 AI', solo.seats.filter((s) => s.isBot).length === 7);
+  ok('한 명이면 네 자리', solo.seats.length === 4, String(solo.seats.length));
+  ok('나머지는 AI', solo.seats.filter((s) => s.isBot).length === 3);
+  const four = T.createBracket(people(4), rngOf(21));
+  ok('넷이면 4강', four.size === 4 && four.rounds.length === 1 && four.rounds[0].length === 2);
+  ok('넷이면 AI 가 없다', four.seats.every((x) => !x.isBot));
+  ok('다섯부터 8강', T.createBracket(people(5), rngOf(22)).size === 8);
   ok('사람은 그대로 있다', solo.seats.filter((s) => !s.isBot).length === 1);
 
   const five = T.createBracket(people(5), rngOf(3));
@@ -75,6 +80,16 @@ console.log('\n③ 등수와 상금');
   ok('준우승 2위', t.rank[fin.b] === 2);
   ok('4강 탈락은 3위', drop4.every((s) => t.rank[s] === 3), JSON.stringify(drop4.map((s) => t.rank[s])));
   ok('8강 탈락은 5위', drop8.every((s) => t.rank[s] === 5));
+  // 4인 대회는 첫 라운드가 곧 4강이다 — 거기서 떨어지면 5위가 아니라 3위다
+  {
+    const t4 = T.createBracket(people(4), rngOf(31), null, 4);
+    const out4 = [];
+    for (let i = 0; i < 2; i++) { const m = T.curRound(t4)[i]; out4.push(m.b); T.reportWin(t4, i, m.a); }
+    const f = T.curRound(t4)[0];
+    T.reportWin(t4, 0, f.a); T.reportWin(t4, 0, f.a);
+    ok('4인 대회 첫 탈락은 3위', out4.every((x) => t4.rank[x] === 3), JSON.stringify(out4.map((x) => t4.rank[x])));
+    ok('4인 대회도 우승·준우승', t4.rank[f.a] === 1 && t4.rank[f.b] === 2);
+  }
 
   ok('우승 상금 1000', T.prizeFor(1) === 1000);
   ok('준우승 상금 200', T.prizeFor(2) === 200);
@@ -239,13 +254,19 @@ console.log('\n⑨ 서버가 붙여 놓은 길');
 
   ok('참가는 서버가 받는다', /socket\.on\('tour_join'/.test(srv));
   ok('참가비는 서버가 뺀다', /accounts\.tourEnter\(socket\.token, TOUR\.ENTRY_FEE\)/.test(srv));
-  ok('30분마다 대기실을 연다', /function tourEnsureLobby/.test(srv)
-     && /startAt: TOUR\.nextStartAt\(\)/.test(srv));
+  // 시각이 아니라 사람이 모이면 연다. 정각·30분에만 열리면 눌러 본 사람
+  // 대부분이 "지금은 안 된다" 를 보고 돌아선다.
+  ok('사람이 모이면 연다', /function tourEnsureLobby/.test(srv)
+     && /function tourReschedule\(\)/.test(srv)
+     && /n >= TOUR\.MIN_SIZE/.test(srv));
+  ok('최소 인원은 넷', /const MIN_SIZE = 4;/.test(fs.readFileSync(__dirname + '/../tournament.js', 'utf8')));
+  ok('안 차면 AI 로 채워 연다', /TOUR_FILL_MS/.test(srv) && /L\.fill = setTimeout\(\(\) => tourStart\(\)/.test(srv));
+  ok('정원은 인원에 맞춘다', /TOUR\.createBracket\(entrants, null, null, TOUR\.sizeFor\(entrants\.length\)\)/.test(srv));
   ok('서버가 뜨면 접수를 연다', /tourEnsureLobby\(\);\s*\/\/ 서버가 뜨면/.test(srv));
   ok('끝나면 다음 회차를 연다', /tourEnsureLobby\(\);\s*\/\/ 다음 회차/.test(srv));
   ok('참가자가 없으면 다음 회차로', /if \(!entrants\.length\) \{ tourEnsureLobby\(\); return; \}/.test(srv));
   ok('다 차면 바로 시작', /entrants\.length >= TOUR\.SIZE/.test(srv));
-  ok('시작 직전에는 안 받는다', /startAt - Date\.now\(\) < 3000/.test(srv));
+  ok('시작 직전에는 안 받는다', /startAt && tourLobby\.startAt - Date\.now\(\) < 2000/.test(srv));
   // 3판 2선승 — 승부가 안 났으면 그 경기의 다음 판을 다시 연다
   ok('시리즈 다음 판을 연다', /if \(r\.seriesGame\)/.test(srv)
      && /tourMakeMatch\(index, m\.a, m\.b\)/.test(srv));

@@ -256,10 +256,12 @@
     '토너먼트': 'Tournament',
     '8강 · 세 판을 이기면 우승 · 매 경기 모드가 바뀐다':
       'Top 8 · win three to take it · the mode changes each match',
-    '사람 8강 · 정각·30분 개최 · 참가비 🪙200 · 우승 🪙1000':
-      '8 players · on the hour and half hour · 🪙200 to enter · 🪙1000 to win',
     '대회': 'Tournament',
-    '개최': ' start',
+    '곧 시작해요. 잠시 후 다시 시도해주세요.': 'Starting now — try again in a moment.',
+    '4명↑': '4+',
+    '지금은 대회가 진행 중이에요. 곧 다음 대회가 열려요.':
+      'A tournament is running right now. The next one opens shortly.',
+    '뒤 시작': 'until start',
     '대회 종료': 'Tournament over',
     '우승': 'Champion',
     '경기 시작': 'Start match',
@@ -275,14 +277,15 @@
     '🃏 클래식': '🃏 Classic',
     '🎪 아이템전': '🎪 Item Match',
     // 토너먼트
-    '8강 · 4강은 단판,': 'Quarter- and semi-finals are single games,',
+    '결승 전까지는 단판,': 'Every round before the final is a single game,',
     '결승은 3판 2선승': 'the final is best of three',
     '· 모든 경기는 2인전': '· every match is 1v1',
     '참가비': 'Entry fee',
     '· 우승': '· Winner',
     '· 준우승': '· Runner-up',
-    '매시 정각과 30분에 열려요. 시작할 때 자리가 비면 AI 가 채웁니다.':
-      'Starts every hour on the hour and at half past. Empty seats are filled by AI.',
+    '네 명': 'Four players',
+    '이 모이면 열려요. 다섯 명부터는 8강이 되고, 남는 자리는 AI 가 채웁니다.':
+      ' opens it. Five or more makes it a top-8, and AI fills any empty seat.',
     // 룰북 탭
     '2인용': '1v1',
     '3인용': '3 players',
@@ -1145,8 +1148,6 @@
 
     // ── 토너먼트 ──
     '토너먼트': 'Tournament',
-    '곧 시작해요. 다음 회차에 참가해주세요.': 'Starting now — please join the next one.',
-    '뒤 시작': 'until start',
 
     '\ud83e\ude99200 내고 참가': 'Enter for \ud83e\ude99200',
     '나가기 (참가비 환불)': 'Leave (entry fee refunded)',

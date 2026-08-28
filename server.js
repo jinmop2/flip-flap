@@ -1721,8 +1721,9 @@ io.on('connection', (socket) => {
     if (socket.tourWaiting) return socket.emit('tour_lobby', tourLobbyView());
     if (socket.roomId && rooms[socket.roomId]) return socket.emit('tour_error', '게임 중에는 참가할 수 없어요.');
     if (tourLobby && tourLobby.entrants.length >= TOUR.SIZE) return socket.emit('tour_error', '자리가 다 찼어요.');
-    // 개최 시각이 코앞이면 받지 않는다 — 참가비만 내고 못 들어가는 일이 없게
-    if (tourLobby && tourLobby.startAt - Date.now() < 3000) return socket.emit('tour_error', '곧 시작해요. 다음 회차에 참가해주세요.');
+    // 곧 시작하면 받지 않는다 — 참가비만 내고 못 들어가는 일이 없게
+    if (tourLobby && tourLobby.startAt && tourLobby.startAt - Date.now() < 2000)
+      return socket.emit('tour_error', '곧 시작해요. 잠시 후 다시 시도해주세요.');
     // 같은 계정이 두 자리를 먹지 못하게
     const u = accounts.byToken(socket.token);
     if (!u) return socket.emit('tour_error', '로그인이 필요해요.');
@@ -1739,9 +1740,8 @@ io.on('connection', (socket) => {
                               isBot: false, token: socket.token });
     socket.tourWaiting = true;
     socket.leave('lobby');
+    tourReschedule();
     pushTourLobby();
-    // 정원이 다 차면 시각을 기다리지 않고 바로 연다
-    if (tourLobby.entrants.length >= TOUR.SIZE) { clearTimeout(tourLobby.timer); setTimeout(() => tourStart(), 400); }
   });
   socket.on('tour_leave', () => { tourLeaveLobby(socket, true); socket.emit('tour_left'); });
   socket.on('tour_peek', () => {
@@ -2157,7 +2157,7 @@ io.on('connection', (socket) => {
     t.pending = Date.now();
     t.mode = stourMode();
     socket.emit('stour_go', { mode: t.mode, diff: t.diff, round: t.b.round,
-                              roundName: TOUR.roundName(t.b.round) });
+                              roundName: TOUR.roundName(t.b.round, t.b) });
   });
 
   socket.on('stour_quit', () => { sTours.delete(socket.id); });
@@ -3014,26 +3014,51 @@ let tourLobby = null;                  // { entrants:[], timer, startAt }
 // 30분마다 열린다. 대기실은 늘 열어 두고, 다음 개최 시각이 되면 출발한다.
 // 예전엔 첫 사람이 들어온 뒤 30초였는데, 그러면 언제 열릴지 알 수 없어
 // 사람이 모이지 않는다. 시각이 정해져 있어야 맞춰 온다.
+// 대회는 이제 다른 모드와 같은 줄에 선다 — 눌러서 들어가 사람이 모이면 열린다.
+// 예전엔 정각·30분에만 열려서, 로비에서 눌러 본 사람 대부분이
+// "지금은 안 된다" 를 보고 돌아섰다.
+const TOUR_COUNTDOWN_MS = 20000;   // 최소 인원이 차고 나서 더 기다려 주는 시간
+const TOUR_FILL_MS = 75000;        // 이만큼 기다려도 안 차면 AI 로 채워 연다
 function tourEnsureLobby() {
   if (tourLobby) return tourLobby;
-  tourLobby = { entrants: [], startAt: TOUR.nextStartAt(), timer: null };
-  const wait = Math.max(1000, tourLobby.startAt - Date.now());
-  tourLobby.timer = setTimeout(() => tourStart(), wait);
+  tourLobby = { entrants: [], startAt: 0, timer: null, fill: null };
   return tourLobby;
+}
+// 인원이 바뀔 때마다 다시 잰다.
+//   · 정원(8)이 차면 곧바로
+//   · 최소 인원(4)이 차면 20초 세고 — 그 사이 더 오면 8강으로 커진다
+//   · 넷이 안 차도 첫 사람이 들어온 뒤 75초가 지나면 AI 로 채워 연다
+function tourReschedule() {
+  const L = tourLobby; if (!L) return;
+  const n = L.entrants.length;
+  clearTimeout(L.timer); L.timer = null;
+  if (!n) { clearTimeout(L.fill); L.fill = null; L.startAt = 0; return; }
+  if (!L.fill) L.fill = setTimeout(() => tourStart(), TOUR_FILL_MS);
+  if (n >= TOUR.SIZE) { L.startAt = Date.now() + 600; L.timer = setTimeout(() => tourStart(), 600); return; }
+  if (n >= TOUR.MIN_SIZE) {
+    // 이미 세고 있으면 그대로 둔다 — 사람이 올 때마다 늘어나면 영영 안 열린다
+    if (!L.startAt || L.startAt < Date.now()) L.startAt = Date.now() + TOUR_COUNTDOWN_MS;
+    L.timer = setTimeout(() => tourStart(), Math.max(300, L.startAt - Date.now()));
+    return;
+  }
+  L.startAt = 0;   // 아직 최소 인원 미달 — 셈을 멈추고 기다린다
 }
 
 const tourSeatKey = (socket) => socket.id;
 
 function tourLobbyView(joined) {
-  const startAt = tourLobby ? tourLobby.startAt : TOUR.nextStartAt();
+  const n = tourLobby ? tourLobby.entrants.length : 0;
+  const startAt = tourLobby ? tourLobby.startAt : 0;
   return {
     open: true,
     joined: !!joined,
-    count: tourLobby ? tourLobby.entrants.length : 0,
-    size: TOUR.SIZE,
+    count: n,
+    size: TOUR.sizeFor(n),      // 지금 인원이면 몇 강인가
+    min: TOUR.MIN_SIZE,
+    max: TOUR.SIZE,
     fee: TOUR.ENTRY_FEE,
     startAt,
-    leftMs: Math.max(0, startAt - Date.now()),
+    leftMs: startAt ? Math.max(0, startAt - Date.now()) : 0,
     running: !!(tour && !tour.done),
     nicks: tourLobby ? tourLobby.entrants.map((e) => e.nick) : [],
   };
@@ -3050,6 +3075,7 @@ function tourLeaveLobby(socket, refund = true) {
   if (i < 0) return;
   const [gone] = tourLobby.entrants.splice(i, 1);
   socket.tourWaiting = false;
+  tourReschedule();          // 최소 인원 아래로 떨어지면 셈을 멈춘다
   if (refund && gone.token) {
     const r = accounts.tourRefund(gone.token, TOUR.ENTRY_FEE);
     if (r.ok) io.to(gone.key).emit('profile', { profile: r.profile });
@@ -3062,6 +3088,7 @@ function tourStart() {
   if (!tourLobby) return;
   const entrants = tourLobby.entrants.slice();
   clearTimeout(tourLobby.timer);
+  clearTimeout(tourLobby.fill);
   tourLobby = null;
   // 참가자가 없으면 그냥 다음 회차를 연다 (빈 대회를 굴릴 이유가 없다)
   if (!entrants.length) { tourEnsureLobby(); return; }
@@ -3074,7 +3101,8 @@ function tourStart() {
     return;
   }
 
-  const bracket = TOUR.createBracket(entrants);
+  // 넷 이하면 4강, 다섯부터는 8강. 빈 자리는 AI 가 채운다.
+  const bracket = TOUR.createBracket(entrants, null, null, TOUR.sizeFor(entrants.length));
   tour = { id: 'T' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
            bracket, rooms: {}, done: false };
   // 자리 번호로 빠르게 찾기
@@ -3133,7 +3161,7 @@ function tourMakeMatch(index, seatA, seatB) {
     nicks: [prof0.nick, prof1.nick],
     profiles: [prof0, prof1],
     tokens: [p0.token || null, p1.isBot ? null : (p1.token || null)],
-    name: '토너먼트 ' + TOUR.roundName(b.round), game: null,
+    name: '토너먼트 ' + TOUR.roundName(b.round, b), game: null,
     vsBot: false, difficulty: 'expert',
     secret: false, password: '', itemMode: false,
     // 토너먼트 표식 — 끝났을 때 어디로 보고할지

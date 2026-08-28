@@ -4219,22 +4219,32 @@ socket.on('tour_left', () => { clearInterval(tourTick); tourTick = null; tourFac
 socket.on('tour_lobby', (d) => {
   if (!d || !d.open) { tourFace('intro'); return; }
   document.getElementById('tourModal').classList.add('show');
-  // 아직 참가 전이면 안내 화면에 다음 개최 시각만 적어 준다
+  // 아직 참가 전이면 지금 몇 명이 기다리는지를 적어 준다.
+  // 시각이 아니라 사람이 모이면 열리므로, 알려 줄 것은 시계가 아니라 인원이다.
   if (!d.joined) {
     tourFace('intro');
     const note = document.getElementById('tourNextAt');
     if (note) note.textContent = d.running
-      ? '지금은 대회가 진행 중이에요. 다음 회차는 ' + tourClock(d.startAt) + ' 시작'
-      : '다음 대회는 ' + tourClock(d.startAt) + ' 시작 (' + tourLeftText(d.leftMs) + ' 뒤)';
+      ? '지금은 대회가 진행 중이에요. 곧 다음 대회가 열려요.'
+      : d.count >= d.min
+        ? `${d.count}명 대기 중 — 곧 시작해요!`
+        : `${d.count}/${d.min}명 대기 중 — ${d.min}명이 모이면 열려요`;
     return;
   }
   tourFace('wait');
   tourLeftMs = d.leftMs;
+  const lbl = document.getElementById('tourLeftLbl');
+  const counting = d.leftMs > 0;
+  if (lbl) lbl.textContent = counting ? '뒤 시작' : `명 더 모이면 시작`;
   const paint = () => {
-    document.getElementById('tourLeft').textContent = tourLeftText(tourLeftMs);
+    // 최소 인원이 안 찼으면 시계 대신 남은 사람 수를 센다 — 0 이 흐르면
+    // "곧 열린다" 로 읽히는데 실제로는 아무 일도 안 일어난다.
+    document.getElementById('tourLeft').textContent =
+      counting ? tourLeftText(tourLeftMs) : String(Math.max(0, d.min - d.count));
     tourLeftMs -= 250;
   };
-  clearInterval(tourTick); paint(); tourTick = setInterval(paint, 250);
+  clearInterval(tourTick); paint();
+  if (counting) tourTick = setInterval(paint, 250);
 
   const box = document.getElementById('tourSlots');
   const me = myAccount ? myAccount.nick : null;
@@ -4246,8 +4256,9 @@ socket.on('tour_lobby', (d) => {
       : '<div class="tw-slot empty">빈 자리</div>';
   }
   box.innerHTML = html;
-  document.getElementById('tourWaitNote').textContent =
-    `${d.count}/${d.size}명 · 시작할 때 빈 자리는 AI 가 채워요`;
+  document.getElementById('tourWaitNote').textContent = counting
+    ? `${d.count}명 · ${d.size}강으로 열려요 · 빈 자리는 AI 가 채워요`
+    : `${d.count}/${d.min}명 · ${d.min}명이 모이면 시작해요`;
 });
 
 // 대진표.
@@ -4702,18 +4713,6 @@ function openMode(m) {
     if (side) side.innerHTML = myAccount
       ? `<b>${esc(myAccount.rank)}</b>${myAccount.rp} RP`
       : '<b>게스트</b>기록 안 됨';
-  }
-  // 대회 칸에 다음 개최 시각 — 눌러 보기 전에 "지금 되는지" 가 보여야 한다.
-  // 정각·30분 고정이라 서버에 묻지 않고 여기서 셈해도 정확하다.
-  if (m !== 'solo') {
-    const at = document.getElementById('mmTourAt');
-    if (at) {
-      const P = 30 * 60 * 1000;
-      const next = new Date(Math.floor(Date.now() / P) * P + P);
-      const hh = String(next.getHours()).padStart(2, '0');
-      const mm = String(next.getMinutes()).padStart(2, '0');
-      at.innerHTML = `<b>${hh}:${mm}</b>개최`;
-    }
   }
   document.getElementById(m === 'solo' ? 'soloModal' : 'multiModal').classList.add('show');
 }

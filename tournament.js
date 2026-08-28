@@ -12,13 +12,18 @@
 //   · 8강·4강은 단판, 결승만 3판 2선승
 //   · 우승 1000코인, 준우승 200코인 (준우승은 참가비를 돌려받는 셈)
 
-const SIZE = 8;                 // 정원 (2의 거듭제곱이어야 대진이 맞는다)
+const SIZE = 8;                 // 최대 정원 (2의 거듭제곱이어야 대진이 맞는다)
+const MIN_SIZE = 4;             // 이만큼 모이면 연다 — 둘이 붙는 건 대회가 아니라 그냥 판이다
 const ENTRY_FEE = 200;
 const PRIZE = { 1: 1000, 2: 200 };
-const PERIOD_MS = 30 * 60 * 1000;   // 30분마다
-const ROUND_NAMES = ['8강', '4강', '결승'];
+const PERIOD_MS = 30 * 60 * 1000;   // 30분마다 (예약 개최 — 지금은 안 쓴다)
+// 라운드 이름은 정원에 따라 다르다. 넷이면 4강부터, 여덟이면 8강부터.
+const ROUND_NAMES_8 = ['8강', '4강', '결승'];
+const ROUND_NAMES_4 = ['4강', '결승'];
 // 라운드별 판수. 결승만 3판 2선승 — 우승은 한 판 운으로 갈리지 않게.
 const BEST_OF = [1, 1, 3];
+// 모인 인원에 맞는 정원 — 넷이면 4강, 다섯 이상이면 8강(나머지는 AI 가 채운다)
+function sizeFor(n) { return n > MIN_SIZE ? SIZE : MIN_SIZE; }
 const winsNeeded = (bestOf) => Math.floor((bestOf || 1) / 2) + 1;
 
 // 다음 개최 시각 — 매시 0분·30분. now 를 주면 그 시점 기준으로 계산한다(테스트용).
@@ -42,20 +47,23 @@ function shuffle(arr, rand) {
 // key 는 사람이면 소켓 id, AI 면 'bot0' 같은 고정 문자열. 대진표는 key 로만 말한다.
 // bestOf — 라운드별 판수를 갈아끼운다. 솔로 대회는 결승도 단판이다:
 // 혼자 하는 대회에서 결승만 세 판이면 "세 판 이기면 우승" 이라는 약속이 깨진다.
-function createBracket(entrants, rand, bestOf) {
+function createBracket(entrants, rand, bestOf, size) {
+  const cap = size === MIN_SIZE || size === SIZE ? size : sizeFor(entrants.length);
   const seats = shuffle(entrants, rand);
-  while (seats.length < SIZE) {
+  while (seats.length < cap) {
     const i = seats.length;
     seats.push({ key: 'bot' + i, nick: null, isBot: true, token: null });
   }
-  const bo = Array.isArray(bestOf) ? bestOf : BEST_OF;
+  // 정원이 넷이면 결승까지 두 판, 여덟이면 세 판이다. 판수 표도 뒤에서 맞춰 잘라 쓴다.
+  const rounds = cap === MIN_SIZE ? 2 : 3;
+  const bo = (Array.isArray(bestOf) ? bestOf : BEST_OF).slice(-rounds);
   return {
-    size: SIZE,
-    seats: seats.slice(0, SIZE),
+    size: cap,
+    seats: seats.slice(0, cap),
     round: 0,                       // 0=8강, 1=4강, 2=결승
     bestOf: bo,
     // rounds[r] = [{ a, b, winner }]  — a·b 는 seats 의 자리 번호
-    rounds: [pairsOf([...Array(SIZE).keys()], bo[0])],
+    rounds: [pairsOf([...Array(cap).keys()], bo[0])],
     over: false,
     rank: {},                       // seat → 등수 (1·2 만 상금)
   };
@@ -73,7 +81,8 @@ function pairsOf(list, bestOf) {
 
 const seatOf = (t, i) => t.seats[i];
 const curRound = (t) => t.rounds[t.round] || [];
-const roundName = (r) => ROUND_NAMES[r] || `${r + 1}라운드`;
+const roundNamesOf = (t) => (t && t.size === MIN_SIZE ? ROUND_NAMES_4 : ROUND_NAMES_8);
+const roundName = (r, t) => roundNamesOf(t)[r] || `${r + 1}라운드`;
 
 // 아직 안 끝난 경기들
 function pendingMatches(t) {
@@ -102,7 +111,12 @@ function reportWin(t, matchIndex, winnerSeat) {
   const loser = winnerSeat === m.a ? m.b : m.a;
   // 진 사람의 등수 — 이번 라운드에서 떨어진 사람들은 같은 등수를 나눠 갖는다.
   // 8강 탈락 5위, 4강 탈락 3위, 결승 패배 2위.
-  t.rank[loser] = t.round === 0 ? 5 : t.round === 1 ? 3 : 2;
+  // 이번 라운드에서 떨어진 사람들은 같은 등수를 나눠 갖는다.
+  // 남은 라운드 수로 센다 — 정원이 넷이면 첫 라운드가 곧 4강이라 3위다.
+  // t.rounds 는 지금까지 만들어진 것만 담으므로 정원에서 총 라운드를 구한다.
+  const total = Math.round(Math.log2(t.size || SIZE));
+  const left = total - 1 - t.round;             // 0 이면 지금이 결승
+  t.rank[loser] = left === 0 ? 2 : left === 1 ? 3 : 5;
 
   if (pendingMatches(t).length) return { ok: true, advanced: false };
 
@@ -114,7 +128,8 @@ function reportWin(t, matchIndex, winnerSeat) {
     return { ok: true, advanced: false, finished: true, champion: winners[0] };
   }
   t.round++;
-  t.rounds.push(pairsOf(winners, (t.bestOf || BEST_OF)[t.round]));
+  const bo = t.bestOf || BEST_OF;
+  t.rounds.push(pairsOf(winners, bo[t.round] !== undefined ? bo[t.round] : 1));
   return { ok: true, advanced: true };
 }
 
@@ -145,11 +160,11 @@ function forfeit(t, seat) {
 // 화면에 내려보낼 형태. 사람 이름은 서버가 채워 넣는다(여기선 seats 를 그대로 쓴다).
 function view(t, mySeat) {
   return {
-    size: t.size, round: t.round, roundName: roundName(t.round), over: t.over,
+    size: t.size, round: t.round, roundName: roundName(t.round, t), over: t.over,
     seats: t.seats.map((s, i) => ({ i, nick: s.nick, isBot: s.isBot, rank: t.rank[i] || null,
                                     me: mySeat === i })),
     rounds: t.rounds.map((ms, r) => ({
-      round: r, name: roundName(r),
+      round: r, name: roundName(r, t),
       matches: ms.map((m) => ({ a: m.a, b: m.b, winner: m.winner,
                                 bestOf: m.bestOf || 1, score: m.score || {} })),
     })),
@@ -161,7 +176,8 @@ function view(t, mySeat) {
 const prizeFor = (rank) => PRIZE[rank] || 0;
 
 module.exports = {
-  SIZE, ENTRY_FEE, PRIZE, PERIOD_MS, ROUND_NAMES, BEST_OF, winsNeeded, nextStartAt,
+  SIZE, MIN_SIZE, sizeFor, ENTRY_FEE, PRIZE, PERIOD_MS, BEST_OF, winsNeeded, nextStartAt,
+  ROUND_NAMES: ROUND_NAMES_8, ROUND_NAMES_4, roundNamesOf,
   createBracket, reportWin, forfeit, pendingMatches, curRound, seatOf, roundName, view, prizeFor,
   _shuffle: shuffle, _pairsOf: pairsOf,
 };
