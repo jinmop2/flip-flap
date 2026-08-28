@@ -257,7 +257,26 @@ const NAV_ICON = {
   '랭킹': '<svg viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M7 4h10v6a5 5 0 0 1-10 0z"></path><path d="M7 6H4.5a2.5 2.5 0 0 0 2.5 4"></path><path d="M17 6h2.5a2.5 2.5 0 0 1-2.5 4"></path><path d="M10 20h4M12 15v5"></path></svg>',
 };
 
+// 심야 안의 펠트 짝. 케이스 남색과 같은 계열이던 멀티 파랑이 파묻혀
+// 한쪽은 묻히고 한쪽은 겉돌았다 — 짝이 맞으려면 둘이 케이스에서
+// 비슷한 만큼 떨어져 있어야 한다.
+const MID_FELTS = {
+  MidnightJade: { label: '심야 · 청옥과 감청',
+    FELT_S: '#2c7f72 0%, #154a41 62%, #0a2823 100%',
+    FELT_M: '#2f74b8 0%, #17457a 62%, #0b2444 100%' },
+  MidnightSilver: { label: '심야 · 은녹과 강청',
+    FELT_S: '#4a7d72 0%, #2c4f47 62%, #182c28 100%',
+    FELT_M: '#4a6e9e 0%, #2c4468 62%, #18263c 100%' },
+  MidnightGrape: { label: '심야 · 청록과 포도',
+    FELT_S: '#1d7a72 0%, #0f4741 62%, #082623 100%',
+    FELT_M: '#7d5eb6 0%, #48327a 62%, #271a42 100%' },
+};
+
 for (const [name, t] of Object.entries(THEMES)) {
   writeFileSync(`${name}.dc.html`, tpl(t));
   console.log(`${name}.dc.html — ${t.label}`);
+}
+for (const [name, f] of Object.entries(MID_FELTS)) {
+  writeFileSync(`${name}.dc.html`, tpl({ ...THEMES.Midnight, ...f }));
+  console.log(`${name}.dc.html — ${f.label}`);
 }
