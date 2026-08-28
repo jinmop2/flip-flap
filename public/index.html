@@ -898,6 +898,13 @@
     .win-stamp.st-flame, .q-winstamp.st-flame { font-family:sans-serif; font-size:1.7rem; color:#ff9d3a;
       text-shadow:0 0 10px rgba(255,120,40,.9), 0 0 22px rgba(255,60,0,.55); }
 
+    /* 매화 도장 — 붉은 인주 빛. 획이 굵어야 도장으로 읽힌다. */
+    .win-stamp.st-plum, .q-winstamp.st-plum { font-family:sans-serif; font-size:1.6rem; color:#e2557a;
+      text-shadow:0 0 9px rgba(226,85,122,.8), 0 1px 2px rgba(0,0,0,.6); }
+    /* 먹 도장 — 번진 먹. 색을 빼고 그림자로 눌러 찍은 느낌을 낸다. */
+    .win-stamp.st-ink, .q-winstamp.st-ink { font-family:Georgia,serif; font-size:1.5rem; font-weight:900;
+      color:#1a1a1a; text-shadow:0 0 6px rgba(0,0,0,.9), 0 0 14px rgba(40,40,40,.6); }
+
     /* ── 카드 놓을 때 파티클 ── */
     .place-fx { position:absolute; inset:0; pointer-events:none; z-index:6; overflow:visible; }
     .place-fx i {
@@ -949,6 +956,30 @@
       to   { opacity:0; transform:translate(var(--fx), var(--fy)) scale(.25); }
     }
     /* 오로라 — 하늘에 드리운 커튼. 점이 아니라 띠라서 느리게 흔들린다. */
+    /* 꽃보라 — 벚꽃이 비스듬히 쏟아진다. 조각마다 도는 속도가 달라야 눈보라로 보인다. */
+    .vx-petal i {
+      width:9px; height:11px; border-radius:70% 0 70% 0; background:#ffc2da;
+      box-shadow:0 0 8px rgba(255,170,205,.7);
+      animation:vxPetal 3.1s linear forwards;
+    }
+    @keyframes vxPetal {
+      0%   { opacity:0; transform:translate(0,-12vh) rotate(0deg); }
+      12%  { opacity:1; }
+      100% { opacity:0; transform:translate(14vw,108vh) rotate(760deg); }
+    }
+    /* 반딧불 — 아래에서 떠올라 깜빡이며 사라진다 */
+    .vx-firefly i {
+      width:6px; height:6px; border-radius:50%; background:#eaffb0;
+      box-shadow:0 0 10px rgba(210,255,140,.95), 0 0 22px rgba(160,240,90,.6);
+      animation:vxFly 3.4s ease-in-out forwards;
+    }
+    @keyframes vxFly {
+      0%   { opacity:0; transform:translate(0,102vh) scale(.6); }
+      18%  { opacity:1; }
+      55%  { opacity:.35; }
+      75%  { opacity:1; }
+      100% { opacity:0; transform:translate(6vw,-8vh) scale(1.1); }
+    }
     .vx-aurora i {
       top:-8%; height:70vh; border-radius:50% / 14%; width:120px; opacity:0;
       background:linear-gradient(180deg, rgba(120,255,205,.55) 0%, rgba(90,190,255,.35) 45%, transparent 100%);
@@ -1426,6 +1457,99 @@
 
     /* ── 명패 (닉네임 장식) ── */
     .np-wood, .np-neon, .np-gold, .np-daily, .np-lv50, .np-ruby, .np-crystal, .np-obsidian, .np-hanji, .np-shard, .np-hwatu, .np-dawn, .np-dragon { padding:1px 9px; border-radius:8px; display:inline-block; }
+    /* ══ 새 세트 넷 — 물결 · 서리 · 자개 · 청사초롱 ══════════════════
+       전부 정적인 그라디언트라 애니메이션 비용은 없다. 카드 뒷면은 상대에게도
+       보이므로 "샀다는 게 한눈에" 보이도록 무늬를 서로 다르게 준다. */
+
+    /* 물결 — 밤바다. 물결이 위아래로 어긋나 겹친다. */
+    .card.back.cb-tide {
+      background:
+        repeating-radial-gradient(ellipse 140% 26% at 50% 12%, rgba(190,240,255,.16) 0 2px, transparent 2px 14px),
+        repeating-radial-gradient(ellipse 140% 26% at 50% 88%, rgba(150,215,255,.12) 0 2px, transparent 2px 16px),
+        linear-gradient(170deg,#0d4a6e,#12688f 46%,#062a44) !important;
+      border-color:#7fd4f0 !important;
+      box-shadow:0 3px 13px rgba(40,160,220,.45) !important;
+    }
+    .card.back.cb-tide::before { border-color:rgba(190,240,255,.6) !important; }
+    .card.back.cb-tide .bf { background:none; -webkit-text-fill-color:#d8f4ff; color:#d8f4ff;
+      text-shadow:0 0 8px rgba(120,215,255,.8); }
+
+    /* 서리 — 유리에 낀 성에. 결이 사방으로 뻗는다. */
+    .card.back.cb-frost {
+      background:
+        linear-gradient(72deg, rgba(255,255,255,.4) 0 1.5px, transparent 1.5px 22px),
+        linear-gradient(-38deg, rgba(220,245,255,.34) 0 1.5px, transparent 1.5px 18px),
+        linear-gradient(14deg, rgba(255,255,255,.22) 0 1px, transparent 1px 12px),
+        linear-gradient(160deg,#cfe9f5,#8fbdd4 52%,#5b8aa4) !important;
+      border-color:#ffffff !important;
+      box-shadow:0 3px 14px rgba(160,215,240,.6), inset 0 0 14px rgba(255,255,255,.5) !important;
+    }
+    .card.back.cb-frost::before { border-color:rgba(255,255,255,.9) !important; }
+    .card.back.cb-frost .bf { background:none; -webkit-text-fill-color:#2b4b5c; color:#2b4b5c;
+      text-shadow:0 1px 0 rgba(255,255,255,.8); }
+
+    /* 자개 — 옻칠 위에 박은 조각. 보는 각도마다 다른 색이 도는 그 느낌. */
+    .card.back.cb-najeon {
+      background:
+        conic-gradient(from 200deg at 32% 30%, rgba(120,255,220,.5), rgba(160,190,255,.45) 25%, rgba(255,180,235,.45) 50%, rgba(255,240,170,.4) 72%, rgba(120,255,220,.5)),
+        conic-gradient(from 20deg at 70% 72%, rgba(180,255,240,.4), rgba(200,180,255,.4) 33%, rgba(255,200,225,.4) 66%, rgba(180,255,240,.4)),
+        linear-gradient(150deg,#14100e,#241b16 55%,#0d0a08) !important;
+      background-blend-mode:screen, screen, normal !important;
+      border-color:#d8c8a0 !important;
+      box-shadow:0 3px 15px rgba(0,0,0,.6), inset 0 0 12px rgba(255,240,210,.2) !important;
+    }
+    .card.back.cb-najeon::before { border-color:rgba(230,215,180,.7) !important; }
+    .card.back.cb-najeon .bf { background:none; -webkit-text-fill-color:#f2e6cd; color:#f2e6cd;
+      text-shadow:0 1px 3px rgba(0,0,0,.9); }
+
+    /* 청사초롱 — 푸른 비단에 붉은 불빛이 어린다 */
+    .card.back.cb-lantern {
+      background:
+        radial-gradient(ellipse 52% 34% at 50% 30%, rgba(255,180,120,.5), transparent 70%),
+        radial-gradient(ellipse 52% 34% at 50% 74%, rgba(255,140,110,.35), transparent 70%),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.09) 0 1px, transparent 1px 8px),
+        linear-gradient(165deg,#123a72,#1b56a0 50%,#0a2247) !important;
+      border-color:#ffc98a !important;
+      box-shadow:0 3px 13px rgba(255,170,90,.4) !important;
+    }
+    .card.back.cb-lantern::before { border-color:rgba(255,205,150,.7) !important; }
+    .card.back.cb-lantern .bf { background:none; -webkit-text-fill-color:#ffe0bc; color:#ffe0bc;
+      text-shadow:0 0 9px rgba(255,160,80,.85); }
+
+    /* ── 명패 셋 ── */
+    .np-tide { background:linear-gradient(135deg,#0d4a6e,#1b7ba8 58%,#0a3350);
+      border:1px solid #7fd4f0; color:#dcf4ff !important;
+      box-shadow:0 1px 5px rgba(10,40,70,.5), inset 0 1px 0 rgba(190,240,255,.32); }
+    .np-frost { background:linear-gradient(135deg,#dff0f8,#a8cadb 60%,#7ea6bb);
+      border:1px solid #ffffff; color:#2b4b5c !important;
+      box-shadow:0 1px 5px rgba(120,170,200,.45), inset 0 1px 0 rgba(255,255,255,.9); }
+    .np-najeon { background:
+        conic-gradient(from 200deg at 30% 40%, rgba(120,255,220,.42), rgba(180,190,255,.38) 30%, rgba(255,185,230,.4) 62%, rgba(120,255,220,.42)),
+        linear-gradient(140deg,#171210,#28201a);
+      background-blend-mode:screen, normal;
+      border:1px solid #d8c8a0; color:#f4ead4 !important;
+      box-shadow:0 1px 6px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,240,210,.25); }
+
+    /* ── 카드 앞면 둘 ── */
+    .cf-tide .card:not(.back) { box-shadow:0 3px 10px rgba(30,140,200,.35), inset 0 0 0 1px rgba(190,240,255,.35); }
+    .cf-tide .card .c-num { color:#0a3a58; text-shadow:0 1px 0 rgba(210,245,255,.75), 0 0 12px rgba(120,215,255,.5); }
+    .cf-tide .card .c-rank { color:#0d4a6e; }
+    .shop-cfprev.cfp-tide { color:#0a3a58; text-shadow:0 0 10px rgba(120,215,255,.7); }
+
+    .cf-frost .card:not(.back) { box-shadow:0 3px 10px rgba(150,200,230,.45), inset 0 0 0 1px rgba(255,255,255,.6); }
+    .cf-frost .card .c-num { color:#2b4b5c;
+      text-shadow:0 1px 0 rgba(255,255,255,.95), 0 0 10px rgba(200,240,255,.8); }
+    .cf-frost .card .c-rank { color:#3d6274; }
+    .shop-cfprev.cfp-frost { color:#2b4b5c; text-shadow:0 1px 0 rgba(255,255,255,.9); }
+
+    /* ── 상점 미리보기 (테이블) ── */
+    .shop-tblprev.tp-tide { background:radial-gradient(ellipse at 50% 42%, #12688f, #062a44); }
+    .shop-tblprev.tp-frost { background:radial-gradient(ellipse at 50% 42%, #cfe9f5, #6f9db4); }
+    .shop-tblprev.tp-najeon { background:
+      conic-gradient(from 200deg at 40% 40%, rgba(120,255,220,.4), rgba(255,190,235,.4) 45%, rgba(120,255,220,.4)),
+      radial-gradient(ellipse at 50% 45%, #241b16, #0d0a08); background-blend-mode:screen, normal; }
+    .shop-tblprev.tp-lantern { background:radial-gradient(ellipse at 50% 36%, #ffb478 0%, #1b56a0 42%, #0a2247 100%); }
+
     /* 파편 명패 — 갈라진 결정. 금 간 자리로 빛이 샌다. */
     .np-shard { background:
         linear-gradient(112deg, rgba(255,255,255,.5) 0 22%, transparent 22.5%),
@@ -2985,6 +3109,27 @@
     #game.tbl-dawn #game-table , #game4.tbl-dawn #quad-table , #mini.tbl-dawn , #tv.tbl-dawn #tv-table { background:
       radial-gradient(ellipse 90% 70% at 50% 30%, #4a4a86 0%, #2e2b58 62%, #171436 100%);
       border-color:#5a5490; }
+    /* 물결 테이블 — 밤바다. 물결이 판을 가로지른다. */
+    #game.tbl-tide #game-table , #game4.tbl-tide #quad-table , #mini.tbl-tide , #tv.tbl-tide #tv-table { background:
+      repeating-radial-gradient(ellipse 120% 18% at 50% 30%, rgba(190,240,255,.055) 0 3px, transparent 3px 22px),
+      radial-gradient(ellipse 90% 70% at 50% 40%, #12688f 0%, #0a3f5e 62%, #04202f 100%);
+      border-color:#2f6f90; }
+    /* 빙판 테이블 — 얼어붙은 호수. 결이 사방으로 뻗는다. */
+    #game.tbl-frost #game-table , #game4.tbl-frost #quad-table , #mini.tbl-frost , #tv.tbl-frost #tv-table { background:
+      linear-gradient(66deg, rgba(255,255,255,.10) 0 1px, transparent 1px 34px),
+      linear-gradient(-40deg, rgba(220,245,255,.09) 0 1px, transparent 1px 28px),
+      radial-gradient(ellipse 90% 70% at 50% 40%, #9fc6d8 0%, #6b96ac 60%, #40616f 100%);
+      border-color:#c7e2ee; }
+    /* 자개 테이블 — 옻칠 위에 조각을 박았다 */
+    #game.tbl-najeon #game-table , #game4.tbl-najeon #quad-table , #mini.tbl-najeon , #tv.tbl-najeon #tv-table { background:
+      conic-gradient(from 200deg at 34% 34%, rgba(120,255,220,.16), rgba(180,190,255,.14) 30%, rgba(255,185,230,.16) 62%, rgba(120,255,220,.16)),
+      radial-gradient(ellipse 90% 70% at 50% 45%, #241b16 0%, #16100d 66%, #090705 100%);
+      border-color:#8a7550; }
+    /* 초롱 테이블 — 판 위쪽에 불빛이 걸려 있다 */
+    #game.tbl-lantern #game-table , #game4.tbl-lantern #quad-table , #mini.tbl-lantern , #tv.tbl-lantern #tv-table { background:
+      radial-gradient(ellipse 36% 22% at 50% 12%, rgba(255,180,110,.34), transparent 72%),
+      radial-gradient(ellipse 90% 70% at 50% 46%, #17427c 0%, #0e2c56 62%, #071a33 100%);
+      border-color:#c08a52; }
     /* 용린 테이블 — 비늘이 겹친 판 */
     #game.tbl-dragon #game-table , #game4.tbl-dragon #quad-table , #mini.tbl-dragon , #tv.tbl-dragon #tv-table { background:
       repeating-radial-gradient(circle at 50% 8%, rgba(255,225,140,.075) 0 7px, transparent 7px 15px),

@@ -1003,6 +1003,40 @@ const SHOP = {
                   desc: '용이 서린 판 · 파편으로만' },
   face_dragon:  { name: '용린 카드',       icon: '🐉', price: 0, shard: 800, type: 'cardface',
                   desc: '비늘무늬 숫자 앞면 · 파편으로만' },
+  // ── 물결 세트 — 밤바다. 심야 판 위에서 가장 잘 붙는 색이다. ──
+  back_tide:  { name: '파도 카드백',   icon: '🌊', price: 1100, type: 'cardback', desc: '밤바다 물결이 이는 카드 뒷면' },
+  np_tide:    { name: '파도 명패',     icon: '🌊', price: 1200, type: 'plate',    desc: '물결이 흐르는 명패' },
+  tbl_tide:   { name: '심해 테이블',   icon: '🌊', price: 1000, type: 'table',    desc: '깊은 바다빛 테이블' },
+  face_tide:  { name: '물결 카드',     icon: '💧', price: 1150, type: 'cardface', desc: '숫자가 물빛으로 일렁이는 카드 앞면' },
+
+  // ── 서리 세트 — 유리에 낀 성에 ──
+  back_frost: { name: '서리 카드백',   icon: '❄️', price: 1250, type: 'cardback', desc: '성에가 낀 유리 같은 카드 뒷면' },
+  np_frost:   { name: '서리 명패',     icon: '❄️', price: 1300, type: 'plate',    desc: '서리가 앉은 명패' },
+  tbl_frost:  { name: '빙판 테이블',   icon: '🧊', price: 1100, type: 'table',    desc: '얼어붙은 호수 같은 테이블' },
+  face_frost: { name: '서리 카드',     icon: '❄️', price: 1250, type: 'cardface', desc: '숫자에 성에가 앉은 카드 앞면' },
+
+  // ── 나전 세트 — 자개. 파편으로만 닿는 자리다. ──
+  back_najeon: { name: '자개 카드백',  icon: '🐚', price: 0, type: 'cardback', shard: 750, desc: '빛에 따라 색이 도는 자개 카드 뒷면' },
+  np_najeon:   { name: '자개 명패',    icon: '🐚', price: 0, type: 'plate',    shard: 800, desc: '옻칠에 자개를 박은 명패' },
+  tbl_najeon:  { name: '자개 테이블',  icon: '🐚', price: 0, type: 'table',    shard: 700, desc: '자개를 박은 옻칠 테이블' },
+
+  // ── 청사초롱 ──
+  back_lantern: { name: '청사초롱 카드백', icon: '🏮', price: 900, type: 'cardback', desc: '청사초롱 불빛이 어린 카드 뒷면' },
+  tbl_lantern:  { name: '초롱 테이블',     icon: '🏮', price: 850, type: 'table',    desc: '초롱불이 걸린 밤 테이블' },
+
+  // ── 아바타 ──
+  ava_tiger:    { name: '호랑이 탈',   icon: '🐯', price: 800,  type: 'avatar', desc: '탈춤 속 호랑이 탈' },
+  ava_crane:    { name: '학',          icon: '🕊', price: 900,  type: 'avatar', desc: '고고한 학 한 마리' },
+  ava_dokkaebi: { name: '도깨비',      icon: '👹', price: 1400, type: 'avatar', desc: '뿔 달린 도깨비 — 방망이는 안 줍니다' },
+
+  // ── 우승 연출 ──
+  vfx_petal:   { name: '꽃보라',   icon: '🌸', price: 1500, type: 'victory', desc: '이기면 벚꽃이 화면을 덮어요' },
+  vfx_firefly: { name: '반딧불',   icon: '✨', price: 1300, type: 'victory', desc: '이기면 반딧불이 떠올라요' },
+
+  // ── 낙찰 도장 ──
+  stamp_plum: { name: '매화 도장', icon: '🌸', price: 750, type: 'stamp', desc: '낙찰 카드에 매화 도장' },
+  stamp_ink:  { name: '먹 도장',   icon: '🖌', price: 700, type: 'stamp', desc: '낙찰 카드에 먹으로 찍은 도장' },
+
 };
 
 // ── 명패 효과 ──────────────────────────────────────────────────────────────
