@@ -2018,6 +2018,18 @@
     body.quad4 .q-deckslot { margin:12px 5px 0 0; }
     body.quad4 .q-bslot .card { width:46px; height:64px; }
 
+    /* 딜 — 상대에게 가는 카드. 상대는 손패를 안 보여 주므로 날아가는 카드만
+       잠깐 그렸다 사라진다. 이게 없으면 내 앞에만 카드가 생겨서
+       "나눠준다" 가 아니라 "내 손에 그냥 나타난다" 로 보인다. */
+    .q-deal-ghost {
+      position:fixed; width:30px; height:42px; border-radius:5px; z-index:44; pointer-events:none;
+      background:linear-gradient(160deg,#2a3450,#151d2e);
+      border:1.5px solid #6e7f9c; box-shadow:0 3px 10px rgba(0,0,0,.5);
+      opacity:.95;
+      transition:transform .46s cubic-bezier(.22,.9,.3,1), opacity .46s ease-out;
+    }
+    @media (prefers-reduced-motion:reduce) { .q-deal-ghost { display:none; } }
+
     .q-opp.empty { opacity:.45; border-style:dashed; }
     .q-opp.empty .q-oname { color:#90959c; }
     /* 사람 참가자 표시 */

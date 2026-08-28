@@ -3598,9 +3598,11 @@ let vibeOff = localStorage.getItem('ff_vibe') === 'off';
 const canVibe = () => !!(navigator && navigator.vibrate);
 function applySettings() {   // 저장된 상태를 화면·오디오에 반영
   setBgmVolume(bgmOff ? 0 : BGM_VOL);
-  // 안내 문구는 모드마다 다른 칸에 뜬다. 2인전 것만 끄면 트웰브에서는
+  // 안내 문구는 모드마다 다른 칸에 뜬다. 2인전 것만 끄면 다른 판에서는
   // 껐는데도 그대로 남아 있다 — 판마다 있는 안내 칸을 다 같이 끈다.
-  for (const id of ['statusBar', 'tv-status']) {
+  // 다인전(q-status)과 미니게임(mnStatus)이 빠져 있어, 껐는데도 거기서만
+  // 계속 나왔다.
+  for (const id of ['statusBar', 'tv-status', 'q-status', 'mnStatus']) {
     const sb = document.getElementById(id); if (sb) sb.style.display = guideOff ? 'none' : '';
   }
   const set = (id, on) => { const t = document.getElementById(id); if (t) t.classList.toggle('on', on); };

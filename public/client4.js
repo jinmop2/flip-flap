@@ -646,13 +646,24 @@
     if (sel4 && !sorted.some((c) => String(c.id) === String(sel4.id))) sel4 = null;
     if (!pickMode) sel4 = null;
     paintSel();
-    // 첫 손패는 덱에서 한 장씩 날아오게 — 2인전과 같은 연출
+    // 첫 손패는 덱에서 한 장씩 날아오게 — 2인전과 같은 연출.
+    // 예전엔 가운데 '공개 카드' 칸에서 나오고 내 몫만 날아왔다. 카드는 덱에서
+    // 나오는 것이고, 나눠준다면 다 같이 받아야 "나눠준다" 로 읽힌다.
     if (!fx.dealt && sorted.length >= 6 && s.turn <= 1) {
       fx.dealt = true;
-      const STAGGER = 85;
+      const STAGGER = 55;
+      const deck = $('q-deckstack');
+      const seats = [...document.querySelectorAll('#q-opps .q-opp')];
+      const players = seats.length + 1;
+      // 화투·포커처럼 한 바퀴씩 돈다 — 한 사람에게 여섯 장을 몰아주지 않는다.
+      // 나는 맨 끝에 받는다(진행자가 자기 것을 마지막에 놓는 그 순서).
       if (typeof dealFromDeck === 'function')
-        dealFromDeck($('q-center'), hand.querySelectorAll('.card'), { stagger: STAGGER });
-      for (let i = 0; i < sorted.length; i++) setTimeout(() => sfx('deal'), 40 + i * STAGGER);
+        dealFromDeck(deck, hand.querySelectorAll('.card'),
+                     { stagger: STAGGER, offset: seats.length, step: players });
+      q4DealGhosts(deck, seats, { count: sorted.length, players, stagger: STAGGER });
+      // 소리는 네 사람 몫을 다 울린다 — 내 것만 울리면 남에게 가는 카드가 조용하다
+      for (let i = 0; i < sorted.length * players; i++)
+        setTimeout(() => sfx('deal'), 30 + i * STAGGER);
     }
 
     // ── 덱 ──
@@ -800,6 +811,31 @@
   // 좌 → 상 → 우 에 앉힌다. 셋이 붙는 판은 위를 비우고 좌·우만 쓴다.
   const SEAT_AT = { 2: ['at-l', 'at-r'], 3: ['at-l', 'at-t', 'at-r'] };
   const seatAt = (n, i) => (SEAT_AT[n] || SEAT_AT[3])[i] || 'at-t';
+
+  // 상대에게 가는 카드. 상대는 손패를 안 보여 주므로 날아가는 카드만 잠깐
+  // 그렸다 지운다 — 남는 요소가 없어야 판이 무거워지지 않는다.
+  function q4DealGhosts(deckEl, seats, o) {
+    if (!deckEl || !seats.length) return;
+    const d = deckEl.getBoundingClientRect();
+    if (!d.width) return;
+    const cx = d.left + d.width / 2, cy = d.top + d.height / 2;
+    for (let p = 0; p < seats.length; p++) {
+      const r = seats[p].getBoundingClientRect();
+      if (!r.width) continue;
+      const tx = Math.round(r.left + r.width / 2 - cx);
+      const ty = Math.round(r.top + r.height / 2 - cy);
+      for (let i = 0; i < o.count; i++) {
+        const g = document.createElement('div');
+        g.className = 'q-deal-ghost';
+        g.style.left = Math.round(cx - 15) + 'px';
+        g.style.top = Math.round(cy - 21) + 'px';
+        document.body.appendChild(g);
+        const delay = (i * o.players + p) * o.stagger;
+        setTimeout(() => { g.style.transform = `translate(${tx}px, ${ty}px) scale(.55)`; g.style.opacity = '0'; }, delay);
+        setTimeout(() => g.remove(), delay + 560);
+      }
+    }
+  }
 
   // 이모트 버튼은 한 벌뿐이다. 화면을 옮길 때 통째로 데려간다 —
   // 두 벌을 두면 하나가 로비에 남아 판 위에 겹친다.

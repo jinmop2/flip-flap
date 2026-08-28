@@ -724,7 +724,10 @@ console.log('\n㉓ 그냥 물러설 수는 없다 · 나가기는 한 번 묻는
   ok('등급 숫자는 안 쓴다', /#tv \.card \.c-top \{ display:none; \}/.test(htm));
   ok('큰 숫자가 카드 한가운데', /#tv \.card \.c-num \{ flex:1; display:flex; align-items:center; justify-content:center/.test(htm));
   ok('더미도 고르게 겹친다', /#tv \.pile-group \.card \{ margin-left:-14px; \}/.test(htm));
-  ok('가이드 끄기가 트웰브에도 먹힌다', /for \(const id of \['statusBar', 'tv-status'\]\)/.test(cli));
+  // 목록은 네 모드로 늘었다(다인전·미니게임이 빠져 있어 껐는데도 거기서만 나왔다).
+  // 트웰브가 그 목록에 들어 있는지만 본다 — 목록 전체는 t_guidedeal 이 지킨다.
+  ok('가이드 끄기가 트웰브에도 먹힌다',
+     /for \(const id of \[[^\]]*'tv-status'[^\]]*\]\) \{\s*\n\s*const sb = document\.getElementById\(id\); if \(sb\) sb\.style\.display = guideOff/.test(cli));
 }
 
 console.log('\n㉔ 전문가는 방식도 셈해서 고른다 · 안 보이는 한 장 몫도 본다');
