@@ -314,7 +314,7 @@
       const seat = (p.me + k) % 4;
       const who = p.seats[seat];
       const d = document.createElement('div');
-      d.className = 'q-opp' + (who ? '' : ' empty');
+      d.className = 'q-opp ' + seatAt(3, k - 1) + (who ? '' : ' empty');
       const nm = document.createElement('div');
       nm.className = 'q-oname';
       if (who) { const b = document.createElement('span'); b.className = 'q-human'; b.textContent = '사람'; nm.appendChild(b); }
@@ -408,7 +408,7 @@
     for (const i of oppSeats) {
       const p = s.seats[i];
       const d = document.createElement('div');
-      d.className = 'q-opp' + (s.auctioneer === i ? ' auc' : '') + (p.bidded ? ' bidded' : '');
+      d.className = 'q-opp ' + seatAt(oppSeats.length, oppSeats.indexOf(i)) + (s.auctioneer === i ? ' auc' : '') + (p.bidded ? ' bidded' : '');
       const nm = document.createElement('div');
       nm.className = 'q-oname';
       if (s.auctioneer === i) { const b = document.createElement('span'); b.className = 'q-obadge'; b.textContent = '진행'; nm.appendChild(b); }
@@ -509,7 +509,7 @@
     const ob = $('q-oppbids'); ob.innerHTML = '';
     for (const i of oppSeats) {
       const slot = document.createElement('div');
-      slot.className = 'q-bslot' + (i === winner ? ' win' : '');
+      slot.className = 'q-bslot ' + seatAt(oppSeats.length, oppSeats.indexOf(i)) + (i === winner ? ' win' : '');
       const card = bidView(i);
       if (card) {
         slot.appendChild(card);
@@ -795,6 +795,20 @@
 
   // 솔로. n 을 안 주면 직전에 하던 인원으로 (결과창의 "한 판 더!" 가 이걸 쓴다)
   let lastSoloN = 4;
+
+  // 상대가 판 둘레 어디에 앉는가. 나는 늘 아래라, 나머지를 왼쪽부터 시계 방향으로
+  // 좌 → 상 → 우 에 앉힌다. 셋이 붙는 판은 위를 비우고 좌·우만 쓴다.
+  const SEAT_AT = { 2: ['at-l', 'at-r'], 3: ['at-l', 'at-t', 'at-r'] };
+  const seatAt = (n, i) => (SEAT_AT[n] || SEAT_AT[3])[i] || 'at-t';
+
+  // 이모트 버튼은 한 벌뿐이다. 화면을 옮길 때 통째로 데려간다 —
+  // 두 벌을 두면 하나가 로비에 남아 판 위에 겹친다.
+  function q4MoveEmote(into) {
+    const wrap = document.getElementById('emoteWrap');
+    const slot = document.getElementById(into);
+    if (wrap && slot && wrap.parentElement !== slot) slot.appendChild(wrap);
+  }
+
   window.q4Start = function (n) {
     lastSoloN = (Number(n) === 3) ? 3 : (Number(n) === 4 ? 4 : lastSoloN);
     if (typeof closeModePanels === 'function') closeModePanels();
@@ -806,6 +820,7 @@
     $('q-status').textContent = '자리 배치 중…';
     sfx('deal');
     try { if (typeof startBGM === 'function') startBGM('game'); } catch (_) {}   // 2인전과 같은 배경음악
+    q4MoveEmote('q-emoteSlot');   // 왼쪽 아래 — 2인전과 같은 자리
     if (typeof scheduleRelayout === 'function') scheduleRelayout();   // 판을 열었으면 테이블을 잰다
     socket.emit('g4_start', { nick: typeof getNick === 'function' ? getNick() : '나', n: lastSoloN });
   };
@@ -828,6 +843,7 @@
     // 2인전은 나갈 때 페이지를 새로고침해서 저절로 로비 곡으로 돌아간다.
     // 다인전은 화면만 숨기므로 직접 로비 곡으로 바꿔 준다.
     try { if (typeof startBGM === 'function') startBGM('lobby'); } catch (_) {}
+    q4MoveEmote('game');   // 2인전 화면이 제자리다 — 안 돌려주면 거기서 사라진다
     q4Live = false; q4 = null; q4Room = null; q4Pend = null;
     $('q-startPanel').classList.remove('show');
     document.body.classList.remove('quad4', 'q-n3', 'q-waiting');

@@ -95,22 +95,31 @@ function quadLayTable() {
   if (document.body.classList.contains('land')) { table.classList.remove('on'); return; }
   const r = (id) => { const el = document.getElementById(id); const b = el && el.getBoundingClientRect();
     return b && b.width ? b : null; };
-  const mat = r('q-mat'), opps = r('q-opps'), myhand = r('q-myhand'), mybid = r('q-mybid');
+  const mat = r('q-mat');
   if (!mat) { table.classList.remove('on'); return; }
   const h = host.getBoundingClientRect();
   const RAIL = 25;
-  // 가로: 경매대에 맞춰 좁게 잡는다. 상대 줄까지 감싸면 판이 화면 폭을 다 먹어
-  // '둘러앉은' 게 아니라 '판 안에 갇힌' 모양이 된다 — 판을 좁히고 사람은
-  // 그 양옆 가장자리에 걸터앉힌다.
-  const h0 = host.getBoundingClientRect();
-  const wantW = Math.min(h0.width - (RAIL + 2) * 2, Math.max(mat.width + 46, h0.width * 0.62));
-  const cx = h0.left + h0.width / 2;
-  let left = cx - wantW / 2;
-  let right = cx + wantW / 2;
-  // 세로: 상대 자리 한가운데에서 내 배팅 자리 아래까지 — 사람이 레일에 걸터앉는다
-  let top = opps ? opps.top + opps.height * 0.55 : mat.top - RAIL;
-  // 손패는 판 밖이다(손에 들고 있는 것이니까). 판은 그 바로 위까지.
-  let bottom = myhand ? myhand.top - 6 : (mybid ? mybid.bottom + 10 : mat.bottom + RAIL);
+  // 사람은 레일에 걸터앉는다 — 2인전에서 프로필이 판 가장자리에 반쯤 올라앉는
+  // 그 모양이다. 그래서 판의 네 변은 네 사람의 한가운데를 지난다.
+  const mid = (el, axis) => {
+    const b = el && el.getBoundingClientRect();
+    if (!b || !b.width) return null;
+    return axis === 'x' ? b.left + b.width / 2 : b.top + b.height / 2;
+  };
+  const q = (sel) => document.querySelector(sel);
+  const left0 = mid(q('.q-opp.at-l'), 'x');
+  const right0 = mid(q('.q-opp.at-r'), 'x');
+  const top0 = mid(q('.q-opp.at-t'), 'y');
+  const me0 = mid(document.getElementById('q-mebar'), 'y');
+  const myhand = r('q-myhand');
+
+  let left = left0 != null ? left0 : mat.left - RAIL;
+  let right = right0 != null ? right0 : mat.right + RAIL;
+  // 셋이 붙는 판은 위에 아무도 안 앉는다 — 경매대 위로 레일만큼만 올린다
+  let top = top0 != null ? top0 : mat.top - RAIL - 8;
+  // 아래 변은 내가 앉은 자리를 지난다. 손패는 판 밖이다(손에 들고 있는 것이니까).
+  let bottom = me0 != null ? me0 : (myhand ? myhand.top - 6 : mat.bottom + RAIL);
+
   left = Math.max(left, h.left + RAIL + 2);
   right = Math.min(right, h.right - RAIL - 2);
   top = Math.max(top, h.top + RAIL + 2);
@@ -122,6 +131,7 @@ function quadLayTable() {
   table.style.height = Math.round(bottom - top) + 'px';
   table.classList.add('on');
 }
+
 // 그 자리에서 바로 재면 안 된다. 판 높이는 --app-h 에 매여 있고 그 값은 다른
 // 리사이즈 처리에서 뒤늦게 들어온다 — 가로에서 세로로 돌아오면 아직 가로 높이가
 // 박혀 있어 자리가 다 눌린 채로 잡힌다(테이블이 82px 로 납작해졌다).

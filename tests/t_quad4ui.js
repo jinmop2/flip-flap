@@ -140,10 +140,13 @@ console.log('\n⑥ 2인전과 결이 맞는가');
   ok('덱 층이 삐져나오는 만큼 자리를 잡는다', /#q-deckstack \{[^}]*width:54px/.test(html));
   ok('덱 장수가 매트 밖으로 안 나간다', /#q-deckstack \.q-dcount \{[^}]*bottom:2px/.test(html));
 
-  // 확정 버튼은 손패 바로 위 (고른 카드 → 버튼 → 손패 순)
-  const me = html.slice(html.indexOf('<div id="q-me">'), html.indexOf('<div id="q-me">') + 300);
-  ok('배팅 자리가 버튼보다 위', me.indexOf('q-mybid') < me.indexOf('q-confirm'), me.replace(/\s+/g, ' '));
-  ok('버튼이 손패보다 위', me.indexOf('q-confirm') < me.indexOf('q-myhand'));
+  // 아래 차례: 낸 카드 → 획득 → 내 자리 → 손패 → 확정.
+  // 확정을 손패 위에 두던 시절엔 고를 카드와 누를 버튼이 붙어 손가락이 엉켰다.
+  // 2인전처럼 버튼을 맨 아래로 내렸다.
+  const me = html.slice(html.indexOf('<div id="q-me">'), html.indexOf('<div id="q-me">') + 900);
+  ok('낸 카드가 맨 위', me.indexOf('q-mybid') < me.indexOf('q-myacq'), me.replace(/\s+/g, ' ').slice(0, 120));
+  ok('내 자리가 손패 위', me.indexOf('q-mebar') < me.indexOf('q-myhand'));
+  ok('확정이 손패 아래', me.indexOf('q-myhand') < me.indexOf('q-confirm'));
 }
 
 console.log('\n⑦ 안내 문구가 새 흐름과 맞는가');
@@ -183,9 +186,12 @@ console.log('\n⑩ 나가기·설명·설정·프로필');
   ok('오른쪽 위 메뉴 아이콘', /<div class="tv-menuWrap" id="q-menuWrap">/.test(html)
      && /<button class="tv-menuBtn" id="q-menuBtn"/.test(html));
   ok('중앙 나가기는 없앴다', !/id="q-quit"/.test(html));
-  ok('상대 자리를 버튼 아래로 내렸다', /#q-opps \{ margin-top:36px/.test(html));
+  // 자리는 이제 판 둘레에 흩어져 있다 — 위로 밀어낼 줄 자체가 없다
+  ok('가로줄 시절 밀어내기가 없다', !/#q-opps \{ margin-top:/.test(html));
   // 시계와 프로필은 각자 띄우지 않고 #q-mebar 한 줄로 묶었다(⑥ 참고).
-  ok('내 줄은 오른쪽 맨 아래', /#q-mebar \{[^}]*right:8px[^}]*bottom:calc\(4px/.test(html));
+  // 나는 판 아래 가운데에 앉는다 — 2인전에서 프로필이 레일에 걸터앉는 그 자리.
+  // 오른쪽 구석에 붙어 있을 때는 "앉아 있다" 로 안 읽혔다.
+  ok('내 줄은 판 아래 가운데', /#q-mebar \{ align-self:center;/.test(html));
   ok('손패 아래 자리를 비워 둔다', /#q-me \{ padding-bottom:\d+px/.test(html));
   ok('시계가 그 줄 안에 있다', /id="q-mebar"[\s\S]{0,400}?id="q-timer"/.test(html));
   ok('메뉴가 판 위층에 선다', /#q-menuWrap \{ z-index:40; \}/.test(html));
@@ -308,8 +314,7 @@ console.log('\n⑥ 시계·프로필 줄 · 세로 예산');
 {
   // 시계와 프로필을 따로 띄워 둔 동안 시계가 손패 카드 위에 얹혔다.
   ok('한 줄로 묶어 둔다', /#q-mebar \{[^}]*display:flex/.test(html));
-  ok('손패 아래 오른쪽', /#q-mebar \{[^}]*right:8px/.test(html)
-     && /#q-mebar \{[^}]*bottom:calc\(4px/.test(html));
+  ok('손패 위 가운데', /#q-mebar \{ align-self:center;/.test(html));
   ok('안의 둘은 절대위치를 버린다', /#q-mebar > #q-timer \{ position:static/.test(html)
      && /#q-mebar > #q-meProfile \{ position:static/.test(html));
 
@@ -486,21 +491,26 @@ console.log('\n⑮ 다인전도 2인전과 같은 판 위에서 논다');
 
   // 사람이 셋·넷이라 위아래로만 못 앉힌다 — 판 위쪽을 따라 둘러 앉는다
   // 판을 좁히고 양옆 사람은 그 바깥으로 내보낸다 — 판을 둘러싼 모양
+  // 넷이 상·하·좌·우로 앉는다. 예전엔 셋이 위에 한 줄로 서 있어
+  // "마주 앉은" 것도 "둘러앉은" 것도 아닌 모양이었다.
   ok('자리를 판에 둘러 앉힌다',
-     /#q-opps \{ display:flex;[^}]*justify-content:space-between/.test(htm2)
-     && /body\.quad4 #q-opps \.q-opp:first-child \{ transform:translate\(-6px, 30px\); \}/.test(htm2)
-     && /body\.quad4 #q-opps \.q-opp:last-child  \{ transform:translate\(6px, 30px\); \}/.test(htm2));
-  // 판은 경매대에 맞춰 좁게 — 상대 줄까지 감싸면 화면 폭을 다 먹는다
-  ok('판을 좁게 잡는다', /const wantW = Math\.min\(h0\.width - \(RAIL \+ 2\) \* 2, Math\.max\(mat\.width \+ 46, h0\.width \* 0\.62\)\);/.test(cli2));
-  // 판은 자리를 잡은 요소라 흐름에 있는 구역들 위에 얹힌다 — 확정 버튼이 깔렸다
-  ok('구역이 판보다 위에 있다', /#q-opps, #q-oppbids, #q-table, #q-me \{ position:relative; z-index:1; \}/.test(htm2));
-  ok('3인은 둘이 마주 본다', /body\.quad4\.q-n3 #q-opps \{ justify-content:space-around; \}/.test(htm2));
+     /\.q-opp\.at-t \{ left:50%;/.test(htm2)
+     && /\.q-opp\.at-l \{ left:4px;/.test(htm2)
+     && /\.q-opp\.at-r \{ right:4px;/.test(htm2));
+  // 사람이 레일에 걸터앉으므로 판의 네 변은 네 사람의 한가운데를 지난다
+  ok('판이 네 사람을 품는다', /mid\(q\('\.q-opp\.at-l'\), 'x'\)/.test(cli2)
+     && /mid\(q\('\.q-opp\.at-r'\), 'x'\)/.test(cli2));
+  // 판은 자리를 잡은 요소라 흐름에 있는 구역들 위에 얹힌다 — 확정 버튼이 깔렸었다.
+  // 자리 칸은 이제 판 위에 얹힌 겹이라 여기서 뺐다.
+  ok('구역이 판보다 위에 있다', /#q-table, #q-me \{ position:relative; z-index:1; \}/.test(htm2));
+  ok('3인은 둘이 마주 본다', /body\.q-n3 \.q-opp\.at-l, body\.q-n3 \.q-opp\.at-r/.test(htm2));
 
   ok('판 크기를 재는 함수가 있다', /function quadLayTable\(\)/.test(cli2)
      && /window\.quadLayTable = quadLayTable;/.test(cli2));
   ok('다시 그릴 때마다 판을 맞춘다', (c42.match(/window\.quadLayTable\(\)/g) || []).length >= 2);
-  ok('상대 줄부터 손패 바로 위까지', /let top = opps \? opps\.top \+ opps\.height \* 0\.55/.test(cli2)
-     && /let bottom = myhand \? myhand\.top - 6/.test(cli2));
+  // 윗변은 위쪽 사람, 아랫변은 내 자리. 손패는 판 밖이다(손에 들고 있는 것이니까).
+  ok('윗변은 위쪽 사람, 아랫변은 내 자리', /let top = top0 != null \? top0/.test(cli2)
+     && /let bottom = me0 != null \? me0/.test(cli2));
   // 가로는 배치가 통째로 다르다 — 2인전·트웰브와 같이 판을 접는다
   ok('가로에서는 판을 접는다', /body\.land #game-table, body\.land #tv-table, body\.land #quad-table \{ display:none; \}/.test(htm2)
      && /if \(document\.body\.classList\.contains\('land'\)\) \{ table\.classList\.remove\('on'\); return; \}/.test(cli2));
