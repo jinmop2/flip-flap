@@ -39,7 +39,7 @@ const THEMES = {
     TXT: '#e4ecf8', TXT_DIM: '#8fa0bc', TXT_SUB: '#9fb4d8',
     SH: '0 2px 6px rgba(0,0,0,.45)', SH_BIG: '0 6px 18px rgba(0,0,0,.4)',
     LOGO: '#ffffff 0%, #d8e4f8 38%, #93a8cc 62%, #4e5e7e 100%',
-    LOGO_SH: '#2a3category', LOGO_SH2: '#1a2438', LOGO_GLOW: 'rgba(170,205,255,.34)',
+    LOGO_SH: '#2a3450', LOGO_SH2: '#1a2438', LOGO_GLOW: 'rgba(170,205,255,.34)',
     TAG: '#1c2740 0%, #0e1626 100%', TAG_TXT: '#c4d4ee',
     VIG: 'rgba(0,0,0,.45)',
     ACT: 'rgba(159,180,216,.18)', ACT_TXT: '#e4ecf8',
@@ -68,7 +68,6 @@ const THEMES = {
     NOTE: '유일하게 밝은 안. 낮에 밖에서도 읽히지만 밤 카드방의 분위기는 잃는다.',
   },
 };
-THEMES.Midnight.LOGO_SH = '#2a3450';
 
 const tpl = (t) => `<!doctype html>
 <html>
