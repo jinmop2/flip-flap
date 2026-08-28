@@ -869,10 +869,15 @@
       display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
     .shop-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; height:44vh; overflow-y:auto; margin-bottom:10px; }
     /* 상점 구분선 — 격자 한 줄을 통째로 쓴다 */
+    /* 구역 제목 — 멀티플레이 창의 그 줄과 같은 모양. 앞뒤로 금선이 뻗는다. */
     .shop-head {
-      grid-column:1/-1; font-size:.68rem; font-weight:800; color:#9faec5;
-      letter-spacing:1px; padding:8px 2px 2px; border-bottom:1px solid rgba(144,167,200,.22);
-      margin-bottom:2px;
+      grid-column:1 / -1; display:flex; align-items:center; gap:8px;
+      font-size:.72rem; font-weight:800; color:#c8a86a; letter-spacing:.5px;
+      margin:14px 0 2px; white-space:nowrap;
+    }
+    .shop-head::after {
+      content:''; flex:1; height:1px;
+      background:linear-gradient(90deg, rgba(159,180,216,.45), transparent);
     }
     .shop-head:first-child { padding-top:0; }
 
@@ -1249,21 +1254,58 @@
     .gc-sect { width:100%; font-size:.62rem; font-weight:800; color:#7a7f89;
       margin:2px 0 -4px; padding-left:2px; }
 
+    /* ── 진열장 한 칸 ──────────────────────────────────────────
+       예전엔 어두운 네모에 그림·이름·값을 세로로 얹은 게 다였다. 물건이
+       팔 것으로 안 보였다. 위쪽에 빛이 드는 무대를 파고 그 위에 물건을
+       올린 다음, 이름과 값은 아래 판에 적는다. */
     .shop-tile {
-      position:relative; background:#111825; border:1.5px solid #192233; border-radius:13px;
-      padding:12px 4px 8px; display:flex; flex-direction:column; align-items:center; gap:5px;
-      cursor:pointer; transition:.13s;
+      position:relative; border-radius:14px; overflow:hidden; cursor:pointer; transition:.14s;
+      background:linear-gradient(180deg,#141d2e,#0d1320);
+      border:1.5px solid #1c2740;
+      box-shadow:0 2px 8px rgba(0,0,0,.35);
+      display:flex; flex-direction:column;
+      /* 격자 줄 높이를 칸이 정하게 못 박는다. 안 박으면 줄이 3px 로 눌리고
+         그 안에서 무대와 이름이 같이 짜부라진다(칸 안 요소는 늘어날 순 있어도
+         줄을 밀어내진 못한다). */
+      min-height:132px;
     }
-    .shop-tile:hover { border-color:rgba(144,167,200,.5); }
-    .shop-tile.sel { border-color:var(--gold); background:#161f2f; box-shadow:0 0 10px rgba(144,167,200,.25); }
-    .shop-tile .ico { font-size:2rem; line-height:1; min-height:38px; display:flex; align-items:center; }
-    .shop-tile .nm { font-size:.64rem; color:#bbc0ca; font-weight:600; text-align:center; line-height:1.3;
-      height:26px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
-      word-break:keep-all; }
-    .shop-tile .pr { font-size:.66rem; font-weight:800; color:#ffd94a; }
-    .shop-tile .pr.own { color:#7dd87d; }
-    .shop-tile .pr.shard { color:#9fe8ff; }   /* 파편 전용 — 코인이 아니라는 걸 색으로 */
+    .shop-tile:hover { border-color:rgba(144,167,200,.55); transform:translateY(-2px);
+      box-shadow:0 6px 16px rgba(0,0,0,.45); }
+    .shop-tile.sel { border-color:var(--gold); box-shadow:0 0 0 1px rgba(159,180,216,.4), 0 6px 18px rgba(0,0,0,.5); }
+    /* 무대 — 위에서 빛이 떨어지고 바닥은 어둡다 */
+    .shop-tile .ico {
+      position:relative; height:66px; display:flex; align-items:center; justify-content:center;
+      font-size:1.9rem; line-height:1;
+      background:radial-gradient(ellipse 74% 66% at 50% 22%, rgba(190,215,255,.14), rgba(0,0,0,.34) 76%);
+      box-shadow:inset 0 -1px 0 rgba(190,215,255,.1);
+    }
+    .shop-tile .nm { font-size:.64rem; color:#c3cedf; font-weight:600; text-align:center; line-height:1.3;
+      height:26px; margin-top:6px; padding:0 4px; display:-webkit-box; -webkit-line-clamp:2;
+      -webkit-box-orient:vertical; overflow:hidden; word-break:keep-all; }
+    /* 값은 알약에 담는다 — 그냥 글자로 두면 이름과 한 덩이로 읽힌다 */
+    .shop-tile .pr { align-self:center; margin:4px auto 8px; padding:2px 9px; border-radius:999px;
+      font-size:.64rem; font-weight:800; color:#ffd94a;
+      background:rgba(255,215,80,.1); border:1px solid rgba(255,215,80,.28); white-space:nowrap; }
+    .shop-tile .pr.own { color:#8fe0a0; background:rgba(125,216,125,.12); border-color:rgba(125,216,125,.3); }
+    .shop-tile .pr.shard { color:#9fe8ff; background:rgba(120,205,255,.1); border-color:rgba(120,205,255,.3); }
     .shop-tile .shop-cbprev { width:34px; height:47px; }
+    /* 등급 — 값에서 뽑는다. 표를 따로 두면 물건을 넣을 때마다 두 군데를 고쳐야 하고,
+       그러다 한쪽만 고쳐진다. 무대 위 모서리에 작은 보석으로 띄운다. */
+    .shop-tile::after {
+      content:''; position:absolute; top:7px; right:7px; width:7px; height:7px;
+      transform:rotate(45deg); border-radius:1px; opacity:.9;
+    }
+    .shop-tile.r-1::after { background:#6e7f9c; }
+    .shop-tile.r-2::after { background:linear-gradient(135deg,#9fdcff,#3fa8d8); box-shadow:0 0 7px rgba(120,205,255,.6); }
+    .shop-tile.r-3::after { background:linear-gradient(135deg,#ffe9a8,#c8912e); box-shadow:0 0 9px rgba(255,215,120,.7); }
+    .shop-tile.r-2 { border-color:rgba(120,205,255,.34); }
+    .shop-tile.r-3 { border-color:rgba(224,180,92,.44); }
+    /* 이미 가진 것 — 무대를 흐려 "살 것" 과 구별한다 */
+    .shop-tile.have .ico { filter:saturate(.5) brightness(.8); }
+    .shop-tile.have::before {
+      content:''; position:absolute; inset:0; pointer-events:none;
+      background:linear-gradient(180deg, rgba(125,216,125,.06), transparent 40%);
+    }
 
     /* ── 크리스탈 세트 (카드백·명패·테이블·앞면) ── */
     /* 결정면은 각진 다면체 느낌 — 겹친 사선 그라디언트로 면을 쪼갠다 */

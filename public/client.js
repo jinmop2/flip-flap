@@ -2533,6 +2533,15 @@ function shopVisible() {
     return true;
   });
 }
+// 등급은 값에서 뽑는다. 물건마다 등급을 따로 적어 두면 새로 넣을 때마다
+// 두 군데를 고쳐야 하고, 그러다 한쪽만 고쳐진 채 남는다.
+function shopTier(it) {
+  const v = it.shard > 0 ? it.shard * 2.2 : it.price;   // 파편은 코인보다 귀하다
+  // 문턱은 실제 값 분포에서 골랐다 — 24 / 25 / 27 로 고르게 갈린다.
+  // 700 에서 자르면 전설이 서른다섯 개가 되어 '전설' 이 흔해진다.
+  return v >= 1800 ? 3 : v >= 1000 ? 2 : 1;
+}
+
 function renderShop() {
   document.getElementById('shopCoins').textContent = `🪙 ${myAccount ? myAccount.coins : 0}`;
   const list = document.getElementById('shopList');
@@ -2564,7 +2573,8 @@ function renderShop() {
     }
     const owned = myAccount.items && myAccount.items[it.id];
     const tile = document.createElement('div');
-    tile.className = 'shop-tile' + (shopSelId === it.id ? ' sel' : '');
+    tile.className = 'shop-tile r-' + shopTier(it) + (shopSelId === it.id ? ' sel' : '')
+                   + (owned ? ' have' : '');
     let pr;
     if (it.type === 'dye_rare') pr = `<span class="pr own">확정권 x${(myAccount.items || {}).dye_rare_ticket || 0}</span>`;
     else if (EQUIP_SLOT[it.type] && owned) pr = `<span class="pr own">${myAccount[EQUIP_SLOT[it.type]] === it.id ? '장착 중' : '보유'}</span>`;
