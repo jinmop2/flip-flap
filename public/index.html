@@ -122,6 +122,23 @@
     /* FLAP 을 끌어올려 붙여 놨더니 FLIP 의 아랫부분과 겹쳤다.
        글자 크기와 뒤집힌 모양은 그대로 두고 간격만 벌린다. */
     .logo .flap { transform:rotate(180deg); margin-top:-2px; display:inline-block; opacity:.92; }
+    /* 로고 아래 마감 줄 — 가운데 마름모가 로고와 아래 내용을 갈라 준다.
+       예전엔 로고가 그냥 허공에 떠 있어 어디까지가 제목인지가 안 보였다. */
+    .logo-rule { display:flex; align-items:center; gap:10px; width:172px; margin:13px auto 0; }
+    .logo-rule span { flex:1; height:1.5px; border-radius:1px;
+      background:linear-gradient(90deg,transparent,rgba(224,180,92,.85),transparent); }
+    .logo-rule i { width:8px; height:8px; flex-shrink:0; transform:rotate(45deg);
+      background:linear-gradient(135deg,#ffe9a8,#c8912e);
+      box-shadow:0 0 12px rgba(255,215,120,.7), 0 1px 2px rgba(0,0,0,.5); }
+
+    /* 로비 바닥에 깊이 한 겹 — 카드 문양을 아주 옅게 깔고 가장자리에 그늘을 준다.
+       빈 자리가 '비어 보이지' 않게 하는 것이 목적이라 5.5% 를 넘기지 않는다.
+       손가락은 통과시킨다. */
+    #lobby::before, #lobby::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:0; }
+    #lobby::before { opacity:.055;
+      background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='58' height='58'><g fill='%23f5cf6e'><path d='M14 8c0 0-4 4.2-4 6.4 0 1.5 1.5 2.4 3 1.8l-.7 2.8h3.4l-.7-2.8c1.5.6 3-.3 3-1.8C18 12.2 14 8 14 8z'/><path d='M44 38l3.4 3.4L44 44.8l-3.4-3.4z'/></g></svg>"); }
+    #lobby::after { background:radial-gradient(ellipse 78% 58% at 50% 44%, rgba(0,0,0,0) 40%, rgba(0,0,0,.42) 100%); }
+    .lobby-btns, .logo, .logo-actions { position:relative; z-index:1; }
     /* 로고 아래: 랭킹 버튼 + 접속 인원 */
     .logo-actions { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:2px; }
     .rank-btn {
@@ -141,7 +158,9 @@
     .made-by a { color:#8a7a80; text-decoration:none; }
     .made-by a:hover { color:var(--gold); }
     /* 간격이 전부 같으면 그룹이 안 읽힌다. 묶음 안은 좁게, 묶음 사이는 넓게. */
-    .lobby-btns { display:flex; flex-direction:column; gap:8px; width:320px; }
+    /* 카드 두 장이 화면의 주인공이다. 320px 로는 칸이 좁아 세로도 같이 낮아져
+       내용 위아래로 110px 넘게 남았다 — 폭을 조금 넓혀 그 자리를 카드가 갖는다. */
+    .lobby-btns { display:flex; flex-direction:column; gap:8px; width:min(344px, 100%); }
     .lobby-btns > .mode-grid:not(.sub) { margin-top:22px; }   /* 배우기 묶음과 떼어놓는다 */
     .lobby-btns > .lobby-misc { margin-top:26px; }
     /* 닉네임 바 */
@@ -421,16 +440,18 @@
     .online-actions .btn { flex:1; }
     /* 게임 방법 · 튜토리얼 · 상점 (한 줄 고정) */
     .lobby-top { display:flex; gap:7px; width:100%; }
+    /* 아이콘과 글자를 한 줄에 눕힌다 — 세로로 쌓으면 덩치가 커져
+       아래 모드 카드와 무게가 비슷해 보였다. 여기는 부수적인 자리다. */
     .top-link {
-      flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px;
+      flex:1; min-width:0; min-height:44px; display:flex; align-items:center; justify-content:center; gap:7px;
       background:linear-gradient(180deg,#3a1018,#260a10);
-      border:1.5px solid #b98d34; color:#e8c98a; border-radius:13px;
+      border:1.5px solid #b98d34; color:#e8c98a; border-radius:12px;
       box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 2px 5px rgba(0,0,0,.45);
-      padding:11px 4px 9px; font-family:'Fredoka'; font-size:.74rem; font-weight:700; cursor:pointer;
+      padding:0 8px; font-family:'Fredoka'; font-size:.76rem; font-weight:700; cursor:pointer;
       transition:.15s; white-space:nowrap; position:relative;
     }
     .top-link::after {   /* 스티치 라인 */
-      content:''; position:absolute; inset:3px; border-radius:9px;
+      content:''; position:absolute; inset:3px; border-radius:8px;
       border:1px dashed rgba(245,207,110,.35); pointer-events:none;
     }
     .top-link:hover { filter:brightness(1.15); transform:translateY(-1px); }
@@ -2318,25 +2339,38 @@
     .mi-danger span { display:block; margin-top:7px; font-size:11px; color:#8a7a7e; line-height:1.5; }
     /* 솔로/멀티 모드 카드 */
     .mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; }
+    /* 가죽 케이스 안에 펠트 판이 깔린 모양. 예전엔 색만 다른 네모였는데,
+       판 위에서 노는 게임인데 로비에 판이 한 조각도 안 보였다. */
     .mode-card {
-      aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
-      border-radius:18px; cursor:pointer; font-family:'Fredoka'; transition:.16s; position:relative;
+      aspect-ratio:1 / 1.28; display:flex; padding:7px;
+      border-radius:20px; cursor:pointer; font-family:'Fredoka'; transition:.17s; position:relative;
       border:2.5px solid #c99a3a;
-      box-shadow:inset 0 2px 12px rgba(0,0,0,.5), 0 4px 12px rgba(0,0,0,.5);
+      background:linear-gradient(180deg,#3f1219,#25090e);
+      box-shadow:inset 0 1px 0 rgba(255,215,120,.28), 0 6px 18px rgba(0,0,0,.55);
     }
+    .mc-felt {
+      position:relative; flex:1; width:100%; border-radius:13px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px;
+      box-shadow:inset 0 3px 18px rgba(0,0,0,.62), inset 0 0 0 1px rgba(255,215,120,.16);
+      transition:.17s;
+    }
+    .mode-card:hover .mc-felt, .mode-card.active .mc-felt {
+      box-shadow:inset 0 3px 18px rgba(0,0,0,.62), inset 0 0 0 1px rgba(255,215,120,.3); }
     .mode-card::after {   /* 골드 스티치 라인 */
       content:''; position:absolute; inset:5px; border-radius:12px;
       border:1.5px dashed rgba(245,207,110,.5); pointer-events:none;
     }
-    .mode-card.solo  { background:radial-gradient(ellipse at 50% 35%, #226b42 0%, #123f28 70%, #0c2c1c 100%); }
-    .mode-card.multi { background:radial-gradient(ellipse at 50% 35%, #234a86 0%, #16305e 70%, #0e2040 100%); }
+    .mode-card.solo  .mc-felt { background:radial-gradient(ellipse at 50% 32%, #2a7d4e 0%, #16492e 62%, #0c2c1c 100%); }
+    .mode-card.multi .mc-felt { background:radial-gradient(ellipse at 50% 32%, #2a5a9e 0%, #163a6e 62%, #0e2040 100%); }
     .mode-card:hover { transform:translateY(-3px); filter:brightness(1.08); }
     .mode-card.solo:hover,  .mode-card.solo.active  { box-shadow:inset 0 2px 12px rgba(0,0,0,.5), 0 8px 22px rgba(34,107,66,.5); }
     .mode-card.multi:hover, .mode-card.multi.active { box-shadow:inset 0 2px 12px rgba(0,0,0,.5), 0 8px 22px rgba(35,74,134,.5); }
     .mode-card.active { background:linear-gradient(#211427,#180f1e) padding-box, linear-gradient(150deg,var(--mc1),var(--mc2)) border-box; }
     .mc-ico { font-size:2.7rem; line-height:1; filter:drop-shadow(0 3px 8px rgba(0,0,0,.5)); position:relative; }
-    .mc-title { font-size:1.08rem; font-weight:800; color:#f5e6c0; letter-spacing:1px; text-shadow:0 1px 3px rgba(0,0,0,.6); position:relative; }
-    .mc-sub { font-size:.7rem; color:#d8c090; opacity:.85; position:relative; }
+    .mc-title { font-size:1.14rem; font-weight:800; color:#f7ecd0; letter-spacing:.6px; text-shadow:0 1px 3px rgba(0,0,0,.7); position:relative; }
+    .mc-sub { font-size:.68rem; color:#d8c090; opacity:.9; letter-spacing:.3px; position:relative; }
+    .mode-card.solo  .mc-sub { color:#bfe0cc; }
+    .mode-card.multi .mc-sub { color:#c2d6f0; }
 
     /* 곁들이 모드 — 솔로·멀티와 같은 격자에 두되 크기와 테두리 두께로 위계를 준다 */
     .mode-card.mini {
@@ -2363,12 +2397,15 @@
 
     /* 부가 — 한 줄에 모아 작게 */
     .lobby-misc { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; }
+    /* 테두리를 걷어 더 조용하게. 대신 누를 자리는 44px 로 넓힌다 —
+       예전엔 높이가 26px 라 손가락으로 정확히 짚기 어려웠다. */
     .misc-link {
-      background:none; border:1px solid #3a2a40; color:#8a7a80; border-radius:999px;
-      padding:6px 12px; font-family:'Fredoka'; font-size:.66rem; font-weight:600; cursor:pointer;
-      display:inline-flex; align-items:center; gap:5px; text-decoration:none; transition:.14s;
+      background:none; border:none; color:#8a7a80; border-radius:11px;
+      min-height:44px; padding:0 10px; font-family:'Fredoka'; font-size:.66rem; font-weight:600; cursor:pointer;
+      display:inline-flex; align-items:center; justify-content:center; gap:5px;
+      text-decoration:none; transition:.14s;
     }
-    .misc-link:hover { border-color:var(--gold); color:#e8c98a; }
+    .misc-link:hover { color:#e8c98a; background:rgba(255,215,120,.07); }
     .misc-link .svgi { width:14px; height:14px; color:#c8a86a; }
 
 
@@ -2382,7 +2419,7 @@
     }
     @media (max-height:620px) {
       .logo h1, .logo .flap { font-size:2.5rem; }
-      .mode-card { aspect-ratio:auto; height:104px; }
+      .mode-card { aspect-ratio:auto; height:126px; }
     }
 
     /* 모드 하위 패널 */
@@ -4470,8 +4507,10 @@
       #tableLogo .tl { font-size:3.2rem; letter-spacing:5px; }
 
       /* 로비 */
-      .logo h1, .logo .flap { font-size:3.2rem; }
-      .lobby-btns { width:290px; }
+      .logo h1, .logo .flap { font-size:3.55rem; }
+      /* 화면 폭을 더 쓴다. 290px 로는 카드가 139px 밖에 안 되고, 비율을 지키면
+         세로도 같이 낮아져 내용 위아래로 110px 넘게 남았다. */
+      .lobby-btns { width:min(344px, calc(100vw - 46px)); }
 
       /* 룰 모달 */
       .rules-box { padding:22px 20px; }
@@ -5139,6 +5178,7 @@
 <div id="lobby">
   <div class="logo">
     <h1>FLIP</h1><div class="flap">FLAP</div>
+    <div class="logo-rule"><span></span><i></i><span></span></div>
   </div>
   <div class="logo-actions">
 
@@ -5153,18 +5193,18 @@
 
     <!-- 무엇을 할까 — 크기가 곧 우선순위 -->
     <div class="mode-grid">
-      <button class="mode-card solo" id="modeSolo" onclick="openMode('solo')">
+      <button class="mode-card solo" id="modeSolo" onclick="openMode('solo')"><span class="mc-felt">
         <span class="mc-ico"><svg class="mc-emblem" viewBox="0 0 48 48">
           <rect x="14" y="8" width="20" height="30" rx="4" fill="#f7d98a" stroke="#7a4e10" stroke-width="2"/>
           <path d="M24 13.5 C24 13.5 17.5 20 17.5 24.2 C17.5 26.7 20 28.2 22.6 27.1 L21.5 32.5 L26.5 32.5 L25.4 27.1 C28 28.2 30.5 26.7 30.5 24.2 C30.5 20 24 13.5 24 13.5 Z" fill="#2a0a10"/>
-        </svg></span><span class="mc-title">솔로플레이</span><span class="mc-sub">AI와 대전</span>
+        </svg></span><span class="mc-title">솔로플레이</span><span class="mc-sub">AI와 대전</span></span>
       </button>
-      <button class="mode-card multi" id="modeMulti" onclick="openMode('multi')">
+      <button class="mode-card multi" id="modeMulti" onclick="openMode('multi')"><span class="mc-felt">
         <span class="mc-ico"><svg class="mc-emblem" viewBox="0 0 48 48">
           <g transform="rotate(-15 24 25)"><rect x="8" y="10" width="18" height="27" rx="3.5" fill="#c99a3a" stroke="#7a4e10" stroke-width="2"/></g>
           <g transform="rotate(15 24 25)"><rect x="22" y="10" width="18" height="27" rx="3.5" fill="#f7d98a" stroke="#7a4e10" stroke-width="2"/>
             <path d="M31 16 C31 16 25.5 21.5 25.5 25 C25.5 27 27.5 28.2 29.5 27.3 L28.5 31.5 L33.5 31.5 L32.5 27.3 C34.5 28.2 36.5 27 36.5 25 C36.5 21.5 31 16 31 16 Z" fill="#2a0a10"/></g>
-        </svg></span><span class="mc-title">멀티플레이</span><span class="mc-sub">온라인 대전</span>
+        </svg></span><span class="mc-title">멀티플레이</span><span class="mc-sub">온라인 대전</span></span>
       </button>
     </div>
 

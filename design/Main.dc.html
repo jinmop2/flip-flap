@@ -1,0 +1,533 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka:wght@500;600;700&display=swap">
+  <style>
+    body { margin:0; font-family:'Fredoka',system-ui,sans-serif; background:#180509; }
+    a { color:#e8c98a; text-decoration:none; } a:hover { color:#ffe9a8; }
+    .ff, .ff * { box-sizing:border-box; }
+    .ff button { font-family:'Fredoka'; cursor:pointer; border:none; background:none; color:inherit; padding:0; }
+    .ff svg { fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+
+    /* 버건디 가죽 — 프랙탈 노이즈 결 위에 스포트라이트 */
+    .ff-bg {
+      background-color:#180509;
+      background-image:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/><feColorMatrix type='matrix' values='0 0 0 0 0.32 0 0 0 0 0.09 0 0 0 0 0.11 0 0 0 0.32 0'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>"),
+        radial-gradient(ellipse 130% 95% at 50% 26%, #5a1220 0%, #300a12 55%, #120306 100%);
+    }
+    /* 무늬 한 겹 — 카드 문양을 아주 옅게 깔아 빈 자리가 '비어 보이지' 않게 한다.
+       무엇을 읽는 자리가 아니므로 3% 를 넘기지 않는다. */
+    .ff-weave {
+      position:absolute; inset:0; pointer-events:none; opacity:.055;
+      background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='58' height='58'><g fill='%23f5cf6e'><path d='M14 8c0 0-4 4.2-4 6.4 0 1.5 1.5 2.4 3 1.8l-.7 2.8h3.4l-.7-2.8c1.5.6 3-.3 3-1.8C18 12.2 14 8 14 8z'/><path d='M44 38l3.4 3.4L44 44.8l-3.4-3.4z'/></g></svg>");
+    }
+    /* 가장자리 그늘 — 빛이 가운데로 떨어지는 느낌. 판 위에 얹히지만 손가락은 통과한다. */
+    .ff-vig { position:absolute; inset:0; pointer-events:none;
+      background:radial-gradient(ellipse 78% 58% at 50% 44%, rgba(0,0,0,0) 40%, rgba(0,0,0,.42) 100%); }
+
+    /* 로고 — FLAP 은 뒤집혀 붙는다(게임 이름 그대로) */
+    .ff .lg h1, .ff .lg .flap {
+      margin:0; font-family:'Bangers',cursive; font-size:3.55rem; letter-spacing:3.5px; line-height:.9;
+      background:linear-gradient(180deg,#fff3c8 0%,#f5cf6e 38%,#c8912e 62%,#8a5a12 100%);
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      filter:drop-shadow(0 1px 0 #6a4210) drop-shadow(0 2px 0 #4a2c08)
+             drop-shadow(0 4px 6px rgba(0,0,0,.55)) drop-shadow(0 0 18px rgba(255,200,90,.34));
+    }
+    .ff .lg .flap { transform:rotate(180deg); display:inline-block; opacity:.92; }
+    /* 로고 아래 마감 줄 — 가운데 마름모가 로고와 아래 내용을 갈라 준다 */
+    .ff .rule { display:flex; align-items:center; gap:10px; width:172px; margin:13px auto 0; }
+    .ff .rule span { flex:1; height:1.5px; border-radius:1px;
+      background:linear-gradient(90deg,transparent,rgba(224,180,92,.85),transparent); }
+    .ff .rule i { width:8px; height:8px; flex-shrink:0; transform:rotate(45deg);
+      background:linear-gradient(135deg,#ffe9a8,#c8912e);
+      box-shadow:0 0 12px rgba(255,215,120,.7), 0 1px 2px rgba(0,0,0,.5); }
+
+    /* 배우기 — 가죽 태그에 점선 스티치. 가로로 눕혀 부수적인 자리로 낮춘다. */
+    .ff .top-link { position:relative; transition:.15s; }
+    .ff .top-link::after { content:''; position:absolute; inset:3px; border-radius:8px;
+      border:1px dashed rgba(245,207,110,.32); pointer-events:none; }
+    .ff .top-link:hover { filter:brightness(1.12); }
+
+    /* 모드 카드 — 가죽 케이스 안에 펠트 판이 깔린 모양.
+       예전엔 색만 다른 네모였다. 이 게임은 판 위에서 노는 게임인데
+       로비에 판이 한 조각도 안 보였다. */
+    .ff .mode-card { transition:.17s; position:relative; }
+    .ff .mode-card:hover { transform:translateY(-3px); filter:brightness(1.07); }
+    .ff .mode-card:hover .felt { box-shadow:inset 0 3px 18px rgba(0,0,0,.62), inset 0 0 0 1px rgba(255,215,120,.3); }
+    .ff .felt { position:relative; flex:1; width:100%; border-radius:13px; display:flex;
+      flex-direction:column; align-items:center; justify-content:center; gap:7px;
+      box-shadow:inset 0 3px 18px rgba(0,0,0,.62), inset 0 0 0 1px rgba(255,215,120,.16);
+      transition:.17s; }
+
+    .ff .mm-tile, .ff .mm-hero { transition:.14s; }
+    .ff .mm-tile:hover, .ff .mm-hero:hover { filter:brightness(1.1); }
+    .ff .misc { transition:.14s; color:#8a7a80; }
+    .ff .misc:hover { color:#e8c98a; }
+
+    /* 모드 칸 — 겉면과 난이도를 겹쳐 두고 서로 넘긴다. 칸은 62px 그대로 있고
+       안에 든 것만 갈아 끼운다. 아래로 밀어내면 눌렀던 자리가 움직여
+       다른 모드가 따라 내려간다. */
+    .ff .sm-item { position:relative; width:100%; height:62px; border-radius:14px; }
+    .ff .sm-head, .ff .sm-body { position:absolute; inset:0; border-radius:14px;
+      transition:opacity .2s ease, transform .24s cubic-bezier(.34,1.3,.64,1); }
+    .ff .sm-head { display:flex; align-items:center; gap:11px; text-align:left; padding:0 13px;
+      opacity:1; transform:none; pointer-events:auto; }
+    .ff .sm-body { display:flex; align-items:center; gap:6px; padding:5px;
+      background:rgba(0,0,0,.32); box-shadow:inset 0 1px 0 rgba(255,215,120,.12);
+      opacity:0; transform:translateY(7px) scale(.97); pointer-events:none; }
+    .ff .sm-list[data-open="classic"] [data-m="classic"] .sm-head,
+    .ff .sm-list[data-open="item"]    [data-m="item"]    .sm-head,
+    .ff .sm-list[data-open="twelve"]  [data-m="twelve"]  .sm-head,
+    .ff .sm-list[data-open="quad"]    [data-m="quad"]    .sm-head,
+    .ff .sm-list[data-open="mini"]    [data-m="mini"]    .sm-head,
+    .ff .sm-list[data-open="tour"]    [data-m="tour"]    .sm-head {
+      opacity:0; transform:translateY(-7px) scale(.97); pointer-events:none; }
+    .ff .sm-list[data-open="classic"] [data-m="classic"] .sm-body,
+    .ff .sm-list[data-open="item"]    [data-m="item"]    .sm-body,
+    .ff .sm-list[data-open="twelve"]  [data-m="twelve"]  .sm-body,
+    .ff .sm-list[data-open="quad"]    [data-m="quad"]    .sm-body,
+    .ff .sm-list[data-open="mini"]    [data-m="mini"]    .sm-body,
+    .ff .sm-list[data-open="tour"]    [data-m="tour"]    .sm-body {
+      opacity:1; transform:none; pointer-events:auto; }
+    .ff .sm-head:hover { filter:brightness(1.13); }
+    /* 모드 색이 칸 안쪽에서 한 번 더 번진다 — 색만 다른 네모가 아니게 */
+    .ff .sm-glow { position:absolute; inset:0; border-radius:14px; pointer-events:none; opacity:.5; }
+
+    .ff .dbtn { display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:2px 4px; border-radius:10px; height:100%; overflow:hidden;
+      background:linear-gradient(180deg,#3a1018,#260a10);
+      box-shadow:inset 0 1px 0 rgba(255,215,120,.16); }
+    .ff .dbtn:hover { filter:brightness(1.14); }
+    .ff .dbtn i { font-style:normal; font-size:.84rem; line-height:1.15; color:#ffd479; letter-spacing:1px; }
+    .ff .dbtn b { font-size:.76rem; line-height:1.25; font-weight:700; color:#e8c98a; }
+    .ff .dbtn s { text-decoration:none; font-size:.55rem; line-height:1.2; color:#a89880; }
+    .ff .back { flex-shrink:0; width:26px; align-self:stretch; border-radius:9px;
+      background:rgba(0,0,0,.35); border:1px solid rgba(200,160,0,.3); color:#c8a86a;
+      font-size:.9rem; line-height:1; }
+    .ff .back:hover { color:#ffe9a8; border-color:#c8a000; }
+
+    .ff .panel { animation:ffUp .3s cubic-bezier(.34,1.4,.64,1); }
+    @keyframes ffUp { from { opacity:0; transform:translateY(14px) scale(.97); } }
+    .ff .veil { animation:ffFade .25s; }
+    @keyframes ffFade { from { opacity:0; } }
+    .ff .sec { display:flex; align-items:center; gap:8px; }
+    .ff .sec b { font-size:.72rem; font-weight:800; color:#c8a86a; letter-spacing:.6px; white-space:nowrap; }
+    .ff .sec i { flex:1; height:1px; background:linear-gradient(90deg, rgba(185,141,52,.45), transparent); }
+  </style>
+</helmet>
+
+<div class="ff ff-bg" style="position:relative; width:390px; height:844px; overflow:hidden;
+  color:#f0e2c8; display:flex; flex-direction:column;">
+  <div class="ff-weave"></div>
+  <div class="ff-vig"></div>
+
+  <!-- ── 프로필 바 ────────────────────────────────────────── -->
+  <div style="position:relative; z-index:2; flex-shrink:0; display:flex; flex-direction:column;
+    overflow:hidden; background:linear-gradient(180deg,#3a1018 0%,#240a10 100%);
+    border-radius:0 0 18px 18px; box-shadow:0 8px 30px rgba(0,0,0,.55);">
+    <div style="display:flex; align-items:center; gap:11px; padding:12px 15px 13px;">
+      <div style="width:42px; height:42px; border-radius:12px; flex-shrink:0; display:flex;
+        align-items:center; justify-content:center; color:#c8a86a;
+        background:linear-gradient(160deg,#4a3040,#2a1a26); border:2px solid #b98d34;
+        box-shadow:inset 0 1px 0 rgba(255,215,120,.22);">
+        <svg viewBox="0 0 24 24" style="width:21px; height:21px;"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"></path></svg>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:.98rem; font-weight:800; color:#f5e6c0; line-height:1.25;">게스트9063</div>
+        <div style="font-size:.66rem; color:#a89880; line-height:1.35;">게스트 · 기록이 저장되지 않아요</div>
+      </div>
+      <button style="min-height:44px; padding:0 16px; border-radius:999px; font-size:.79rem;
+        font-weight:700; color:#ffe9a8; background:linear-gradient(180deg,#4a2810,#2e1608);
+        border:1.5px solid #c8a000; box-shadow:inset 0 1px 0 rgba(255,215,120,.25), 0 2px 8px rgba(0,0,0,.4);">로그인</button>
+      <button title="설정" style="width:44px; height:44px; border-radius:12px; color:#c8a86a;
+        display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+        <svg viewBox="0 0 24 24" style="width:19px; height:19px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
+    </div>
+    <div style="height:5px; background:#1a0810; overflow:hidden;">
+      <div style="height:100%; width:34%; background:linear-gradient(90deg,#c8912e,#ffd97a);
+        box-shadow:0 0 10px rgba(255,215,120,.45);"></div>
+    </div>
+  </div>
+
+  <!-- ── 로비 본문 ────────────────────────────────────────── -->
+  <div style="position:relative; z-index:2; flex:1; min-height:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:23px; padding:6px 22px 10px;">
+
+    <div class="lg" style="text-align:center;">
+      <h1>FLIP</h1><div class="flap">FLAP</div>
+      <div class="rule"><span></span><i></i><span></span></div>
+    </div>
+
+    <div style="display:flex; gap:8px; width:100%;">
+      <button class="top-link" style="flex:1; min-width:0; min-height:44px; display:flex;
+        align-items:center; justify-content:center; gap:7px; padding:0 8px; border-radius:12px;
+        font-size:.76rem; font-weight:700; background:linear-gradient(180deg,#3a1018,#260a10);
+        border:1.5px solid #b98d34; color:#e8c98a;
+        box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 2px 5px rgba(0,0,0,.45);">
+        <svg viewBox="0 0 24 24" style="width:17px; height:17px; flex-shrink:0;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+        게임방법
+      </button>
+      <button class="top-link" style="flex:1; min-width:0; min-height:44px; display:flex;
+        align-items:center; justify-content:center; gap:7px; padding:0 8px; border-radius:12px;
+        font-size:.76rem; font-weight:700; background:linear-gradient(180deg,#3a1018,#260a10);
+        border:1.5px solid #b98d34; color:#e8c98a;
+        box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 2px 5px rgba(0,0,0,.45);">
+        <svg viewBox="0 0 24 24" style="width:17px; height:17px; flex-shrink:0;"><path d="M22 10 12 5 2 10l10 5z"></path><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"></path><path d="M22 10v6"></path></svg>
+        튜토리얼
+      </button>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; width:100%;">
+      <!-- 가죽 케이스 + 펠트 판. 판 위에서 노는 게임이니 로비에도 판을 한 조각 둔다. -->
+      <button class="mode-card" onClick="{{ goSolo }}" style="height:216px; display:flex;
+        padding:7px; border-radius:20px; border:2.5px solid {{gold}};
+        background:linear-gradient(180deg,#3f1219,#25090e);
+        box-shadow:inset 0 1px 0 rgba(255,215,120,.28), 0 6px 18px rgba(0,0,0,.55);">
+        <span class="felt" style="background:radial-gradient(ellipse at 50% 32%, #2a7d4e 0%, #16492e 62%, #0c2c1c 100%);">
+          <svg viewBox="0 0 48 48" style="width:52px; height:52px; stroke:none; filter:drop-shadow(0 3px 5px rgba(0,0,0,.55));">
+            <rect x="13" y="7" width="22" height="32" rx="4.5" fill="#f7d98a" stroke="#7a4e10" stroke-width="2"></rect>
+            <path d="M24 13C24 13 17 20 17 24.5c0 2.7 2.7 4.3 5.5 3.1L21.3 33h5.4l-1.2-5.4c2.8 1.2 5.5-.4 5.5-3.1C31 20 24 13 24 13Z" fill="#2a0a10"></path>
+          </svg>
+          <span style="font-size:1.14rem; font-weight:800; color:#f7ecd0; letter-spacing:.6px;
+            text-shadow:0 1px 3px rgba(0,0,0,.7);">솔로플레이</span>
+          <span style="font-size:.68rem; color:#bfe0cc; opacity:.9; letter-spacing:.3px;">AI와 대전</span>
+        </span>
+      </button>
+      <button class="mode-card" onClick="{{ goMulti }}" style="height:216px; display:flex;
+        padding:7px; border-radius:20px; border:2.5px solid {{gold}};
+        background:linear-gradient(180deg,#3f1219,#25090e);
+        box-shadow:inset 0 1px 0 rgba(255,215,120,.28), 0 6px 18px rgba(0,0,0,.55);">
+        <span class="felt" style="background:radial-gradient(ellipse at 50% 32%, #2a5a9e 0%, #163a6e 62%, #0e2040 100%);">
+          <svg viewBox="0 0 48 48" style="width:52px; height:52px; stroke:none; filter:drop-shadow(0 3px 5px rgba(0,0,0,.55));">
+            <g transform="rotate(-16 24 25)"><rect x="7" y="9" width="19" height="29" rx="4" fill="#c99a3a" stroke="#7a4e10" stroke-width="2"></rect></g>
+            <g transform="rotate(16 24 25)"><rect x="22" y="9" width="19" height="29" rx="4" fill="#f7d98a" stroke="#7a4e10" stroke-width="2"></rect>
+              <path d="M31.5 15s-5.8 5.8-5.8 9.5c0 2.1 2.1 3.4 4.2 2.4l-1 4.4h5.2l-1-4.4c2.1 1 4.2-.3 4.2-2.4 0-3.7-5.8-9.5-5.8-9.5Z" fill="#2a0a10"></path></g>
+          </svg>
+          <span style="font-size:1.14rem; font-weight:800; color:#f7ecd0; letter-spacing:.6px;
+            text-shadow:0 1px 3px rgba(0,0,0,.7);">멀티플레이</span>
+          <span style="font-size:.68rem; color:#c2d6f0; opacity:.9; letter-spacing:.3px;">온라인 대전</span>
+        </span>
+      </button>
+    </div>
+
+    <!-- 부가 — 테두리를 걷어 조용하게. 대신 누를 자리는 44px 로 넉넉히. -->
+    <div style="display:flex; gap:4px; width:100%; justify-content:center;">
+      <button class="misc" style="flex:1; min-height:44px; display:flex; align-items:center;
+        justify-content:center; gap:5px; font-size:.66rem; font-weight:600; border-radius:11px;">
+        <svg viewBox="0 0 24 24" style="width:14px; height:14px; color:#c8a86a;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+        친구 초대
+      </button>
+      <button class="misc" style="flex:1; min-height:44px; display:flex; align-items:center;
+        justify-content:center; gap:5px; font-size:.66rem; font-weight:600; border-radius:11px;">
+        <svg viewBox="0 0 24 24" style="width:14px; height:14px; color:#c8a86a;"><rect x="7" y="2" width="10" height="20" rx="2.5"></rect><path d="M11 18h2"></path></svg>
+        앱으로 추가
+      </button>
+      <button class="misc" style="flex:1; min-height:44px; display:flex; align-items:center;
+        justify-content:center; gap:5px; font-size:.66rem; font-weight:600; border-radius:11px;">
+        <svg viewBox="0 0 24 24" style="width:14px; height:14px; color:#c8a86a;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        버그 제보
+      </button>
+    </div>
+  </div>
+
+  <!-- ── 메뉴바 ──────────────────────────────────────────── -->
+  <div style="position:relative; z-index:2; flex-shrink:0; display:flex; padding:6px 4px;
+    background:linear-gradient(180deg,#3a1018 0%,#240a10 100%);
+    border-radius:18px 18px 0 0; box-shadow:0 -8px 30px rgba(0,0,0,.55);">
+    <button style="flex:1; min-height:44px; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:3px; border-radius:12px; font-size:.62rem; font-weight:700;
+      color:#ffe9a8; background:rgba(200,160,0,.16);">
+      <svg viewBox="0 0 24 24" style="width:20px; height:20px;"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V20h14V9.5"></path></svg>홈
+    </button>
+    <button style="flex:1; min-height:44px; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:3px; border-radius:12px; font-size:.62rem; font-weight:700; color:#a89880;">
+      <svg viewBox="0 0 24 24" style="width:20px; height:20px;"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1.4"></circle></svg>미션
+    </button>
+    <button style="flex:1; min-height:44px; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:3px; border-radius:12px; font-size:.62rem; font-weight:700; color:#a89880;">
+      <svg viewBox="0 0 24 24" style="width:20px; height:20px;"><circle cx="9" cy="20" r="1.4"></circle><circle cx="18" cy="20" r="1.4"></circle><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 7H6"></path></svg>상점
+    </button>
+    <button style="flex:1; min-height:44px; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:3px; border-radius:12px; font-size:.62rem; font-weight:700; color:#a89880;">
+      <svg viewBox="0 0 24 24" style="width:20px; height:20px;"><circle cx="9" cy="8" r="3.4"></circle><path d="M2 20c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6"></path><path d="M17 8.5a3 3 0 0 1 0 5.4"></path><path d="M19 20c0-2.6-1-4.2-2.6-5"></path></svg>친구
+    </button>
+    <button style="flex:1; min-height:44px; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:3px; border-radius:12px; font-size:.62rem; font-weight:700; color:#a89880;">
+      <svg viewBox="0 0 24 24" style="width:20px; height:20px;"><path d="M12 3l8 3v6c0 5-3.4 8.2-8 9-4.6-.8-8-4-8-9V6z"></path></svg>클랜
+    </button>
+    <button style="flex:1; min-height:44px; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:3px; border-radius:12px; font-size:.62rem; font-weight:700; color:#a89880;">
+      <svg viewBox="0 0 24 24" style="width:20px; height:20px;"><path d="M7 4h10v6a5 5 0 0 1-10 0z"></path><path d="M7 6H4.5a2.5 2.5 0 0 0 2.5 4"></path><path d="M17 6h2.5a2.5 2.5 0 0 1-2.5 4"></path><path d="M10 20h4M12 15v5"></path></svg>랭킹
+    </button>
+  </div>
+
+  <!-- ── 솔로플레이 패널 ─────────────────────────────────── -->
+  <sc-if value="{{ isSolo }}" hint-placeholder-val="{{ false }}">
+    <div class="veil" onClick="{{ goLobby }}" style="position:absolute; inset:0; z-index:45;
+      background:rgba(8,2,4,.84); backdrop-filter:blur(3px); display:flex; align-items:center;
+      justify-content:center; padding:18px;">
+      <div class="panel" onClick="{{ stop }}" style="width:100%;
+        background:linear-gradient(180deg,#3a1018,#22090e); border:1.5px solid #b98d34;
+        border-radius:18px; padding:18px 16px; display:flex; flex-direction:column; gap:13px;
+        box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 12px 40px rgba(0,0,0,.6);">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="flex:1; font-size:1.02rem; font-weight:700; color:#ffe9a8; letter-spacing:.3px;">솔로플레이</div>
+          <button onClick="{{ goLobby }}" style="width:36px; height:36px; display:flex;
+            align-items:center; justify-content:center; color:#c8a86a; border-radius:10px;">
+            <svg viewBox="0 0 24 24" style="width:19px; height:19px; stroke-width:2.6;"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+          </button>
+        </div>
+
+        <div class="sm-list" data-open="{{ open }}" style="display:flex; flex-direction:column; gap:8px;">
+
+          <div class="sm-item" data-m="classic">
+            <button class="sm-head" onClick="{{ pickClassic }}" style="background:linear-gradient(180deg,#3a1018,#260a10); border:1.5px solid #b98d34; box-shadow:inset 0 1px 0 rgba(255,215,120,.16);">
+              <span class="sm-glow" style="background:radial-gradient(ellipse 45% 130% at 8% 50%, rgba(200,160,0,.3), transparent 70%);"></span>
+              <svg viewBox="0 0 24 24" style="width:23px; height:23px; flex-shrink:0; position:relative; stroke:none;"><rect x="4.5" y="3.5" width="10" height="15" rx="2" fill="#c1272d" stroke="#7a1a1e" stroke-width="1.4"></rect><rect x="9.5" y="5.5" width="10" height="15" rx="2" fill="#f7d98a" stroke="#7a4e10" stroke-width="1.4"></rect></svg>
+              <span style="flex:1; min-width:0; position:relative;">
+                <b style="display:block; font-size:.97rem; color:#f5e6c0; letter-spacing:.2px;">클래식</b>
+                <small style="display:block; font-size:.67rem; color:#a89880; margin-top:1px; line-height:1.35;">경매로 세트를 먼저 완성하면 승리</small>
+              </span>
+            </button>
+            <div class="sm-body" style="border:1.5px solid #b98d34;">
+              <button class="back" onClick="{{ close }}" title="모드 다시 고르기">‹</button>
+              <div style="flex:1; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; height:100%;">
+                <button class="dbtn" style="border:1.5px solid #b98d34;"><i>★☆☆</i><b>쉬움</b><s>5코인</s></button>
+                <button class="dbtn" style="border:1.5px solid #b98d34;"><i>★★☆</i><b>보통</b><s>15코인</s></button>
+                <button class="dbtn" style="border:1.5px solid #b98d34;"><i>★★★</i><b>전문가</b><s>40코인</s></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sm-item" data-m="item">
+            <button class="sm-head" onClick="{{ pickItem }}" style="background:linear-gradient(180deg,#3a2358,#241040); border:1.5px solid #8b6ad8; box-shadow:inset 0 1px 0 rgba(255,215,120,.16);">
+              <span class="sm-glow" style="background:radial-gradient(ellipse 45% 130% at 8% 50%, rgba(139,106,216,.42), transparent 70%);"></span>
+              <svg viewBox="0 0 24 24" style="width:23px; height:23px; flex-shrink:0; position:relative; stroke:none;"><path d="M12 3 3.5 9.5h17z" fill="#c8b0ff"></path><rect x="5" y="9.5" width="14" height="11" rx="1.6" fill="#8b6ad8"></rect><rect x="10.6" y="9.5" width="2.8" height="11" fill="#f7d98a"></rect></svg>
+              <span style="flex:1; min-width:0; position:relative;">
+                <b style="display:block; font-size:.97rem; color:#e2d4ff; letter-spacing:.2px;">아이템전</b>
+                <small style="display:block; font-size:.67rem; color:#a89880; margin-top:1px; line-height:1.35;">아이템이 판을 뒤집는 경매</small>
+              </span>
+            </button>
+            <div class="sm-body" style="border:1.5px solid #8b6ad8;">
+              <button class="back" onClick="{{ close }}" title="모드 다시 고르기">‹</button>
+              <div style="flex:1; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; height:100%;">
+                <button class="dbtn" style="border:1.5px solid #8b6ad8;"><i>★☆☆</i><b>쉬움</b><s>5코인</s></button>
+                <button class="dbtn" style="border:1.5px solid #8b6ad8;"><i>★★☆</i><b>보통</b><s>15코인</s></button>
+                <button class="dbtn" style="border:1.5px solid #8b6ad8;"><i>★★★</i><b>전문가</b><s>40코인</s></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sm-item" data-m="twelve">
+            <button class="sm-head" onClick="{{ pickTwelve }}" style="background:linear-gradient(180deg,#173a55,#0d2233); border:1.5px solid #6ac0f0; box-shadow:inset 0 1px 0 rgba(255,215,120,.16);">
+              <span class="sm-glow" style="background:radial-gradient(ellipse 45% 130% at 8% 50%, rgba(106,192,240,.4), transparent 70%);"></span>
+              <svg viewBox="0 0 24 24" style="width:23px; height:23px; flex-shrink:0; position:relative; stroke:none;"><ellipse cx="12" cy="6.5" rx="7.5" ry="2.8" fill="#9fdcff"></ellipse><path d="M4.5 6.5v4c0 1.6 3.4 2.8 7.5 2.8s7.5-1.2 7.5-2.8v-4" fill="#4a9ed0"></path><path d="M4.5 11.5v4c0 1.6 3.4 2.8 7.5 2.8s7.5-1.2 7.5-2.8v-4" fill="#2a6f9e"></path></svg>
+              <span style="flex:1; min-width:0; position:relative;">
+                <b style="display:block; font-size:.97rem; color:#bfe8ff; letter-spacing:.2px;">TWELVE</b>
+                <small style="display:block; font-size:.67rem; color:#a89880; margin-top:1px; line-height:1.35;">카드가 아니라 칩으로 값을 부른다</small>
+              </span>
+            </button>
+            <div class="sm-body" style="border:1.5px solid #6ac0f0;">
+              <button class="back" onClick="{{ close }}" title="모드 다시 고르기">‹</button>
+              <div style="flex:1; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; height:100%;">
+                <button class="dbtn" style="border:1.5px solid #6ac0f0;"><i>★☆☆</i><b>쉬움</b><s>5코인</s></button>
+                <button class="dbtn" style="border:1.5px solid #6ac0f0;"><i>★★☆</i><b>보통</b><s>15코인</s></button>
+                <button class="dbtn" style="border:1.5px solid #6ac0f0;"><i>★★★</i><b>전문가</b><s>40코인</s></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sm-item" data-m="quad">
+            <button class="sm-head" onClick="{{ pickQuad }}" style="background:linear-gradient(180deg,#123a30,#0c2620); border:1.5px solid #4a9a7a; box-shadow:inset 0 1px 0 rgba(255,215,120,.16);">
+              <span class="sm-glow" style="background:radial-gradient(ellipse 45% 130% at 8% 50%, rgba(74,154,122,.42), transparent 70%);"></span>
+              <svg viewBox="0 0 24 24" style="width:23px; height:23px; flex-shrink:0; position:relative; stroke:none;"><ellipse cx="12" cy="12" rx="9" ry="6" fill="#1f4a3c" stroke="#4a9a7a" stroke-width="1.5"></ellipse><circle cx="12" cy="4.6" r="2.2" fill="#a8dcc4"></circle><circle cx="12" cy="19.4" r="2.2" fill="#a8dcc4"></circle><circle cx="3.2" cy="12" r="2.2" fill="#a8dcc4"></circle><circle cx="20.8" cy="12" r="2.2" fill="#a8dcc4"></circle></svg>
+              <span style="flex:1; min-width:0; position:relative;">
+                <b style="display:block; font-size:.97rem; color:#c8f0dc; letter-spacing:.2px;">다인전</b>
+                <small style="display:block; font-size:.67rem; color:#a89880; margin-top:1px; line-height:1.35;">셋·넷이 판을 둘러앉는다</small>
+              </span>
+            </button>
+            <div class="sm-body" style="border:1.5px solid #4a9a7a;">
+              <button class="back" onClick="{{ close }}" title="모드 다시 고르기">‹</button>
+              <div style="flex:1; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; height:100%;">
+                <button class="dbtn" style="border:1.5px solid #4a9a7a;"><i>★☆☆</i><b>쉬움</b><s>3인</s></button>
+                <button class="dbtn" style="border:1.5px solid #4a9a7a;"><i>★★☆</i><b>보통</b><s>4인</s></button>
+                <button class="dbtn" style="border:1.5px solid #4a9a7a;"><i>★★★</i><b>전문가</b><s>4인</s></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sm-item" data-m="mini">
+            <button class="sm-head" onClick="{{ pickMini }}" style="background:linear-gradient(180deg,#4a1030,#2c0820); border:1.5px solid #d06a9a; box-shadow:inset 0 1px 0 rgba(255,215,120,.16);">
+              <span class="sm-glow" style="background:radial-gradient(ellipse 45% 130% at 8% 50%, rgba(208,106,154,.42), transparent 70%);"></span>
+              <svg viewBox="0 0 24 24" style="width:23px; height:23px; flex-shrink:0; position:relative; stroke:none;"><g transform="rotate(-12 12 12)"><rect x="3" y="5" width="9" height="14" rx="1.8" fill="#ffb8d4" stroke="#8a3a5e" stroke-width="1.3"></rect></g><g transform="rotate(12 12 12)"><rect x="12" y="5" width="9" height="14" rx="1.8" fill="#f7d98a" stroke="#7a4e10" stroke-width="1.3"></rect></g></svg>
+              <span style="flex:1; min-width:0; position:relative;">
+                <b style="display:block; font-size:.97rem; color:#ffd6e8; letter-spacing:.2px;">미니게임</b>
+                <small style="display:block; font-size:.67rem; color:#a89880; margin-top:1px; line-height:1.35;">두 장으로 겨루는 섯다식 판</small>
+              </span>
+            </button>
+            <div class="sm-body" style="border:1.5px solid #d06a9a;">
+              <button class="back" onClick="{{ close }}" title="모드 다시 고르기">‹</button>
+              <div style="flex:1; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; height:100%;">
+                <button class="dbtn" style="border:1.5px solid #d06a9a;"><i>2인</i><b>둘이</b><s>AI 1명</s></button>
+                <button class="dbtn" style="border:1.5px solid #d06a9a;"><i>3인</i><b>셋이</b><s>AI 2명</s></button>
+                <button class="dbtn" style="border:1.5px solid #d06a9a;"><i>4인</i><b>넷이</b><s>AI 3명</s></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sm-item" data-m="tour" style="margin-top:3px;">
+            <button class="sm-head" onClick="{{ pickTour }}" style="background:linear-gradient(180deg,#4a3508,#2a1d04); border:1.5px solid #e0b45c; box-shadow:inset 0 1px 0 rgba(255,215,120,.16);">
+              <span class="sm-glow" style="background:radial-gradient(ellipse 45% 130% at 8% 50%, rgba(224,180,92,.45), transparent 70%);"></span>
+              <svg viewBox="0 0 24 24" style="width:23px; height:23px; flex-shrink:0; position:relative;"><path d="M7 4h10v6a5 5 0 0 1-10 0z" fill="#ffd98a" stroke="#8a5a12" stroke-width="1.4"></path><path d="M7 6H4.5a2.5 2.5 0 0 0 2.5 4" stroke="#ffd98a" stroke-width="1.6" fill="none"></path><path d="M17 6h2.5a2.5 2.5 0 0 1-2.5 4" stroke="#ffd98a" stroke-width="1.6" fill="none"></path><path d="M10 20h4M12 15.5v4.5" stroke="#ffd98a" stroke-width="1.8"></path></svg>
+              <span style="flex:1; min-width:0; position:relative;">
+                <b style="display:block; font-size:.97rem; color:#ffeec0; letter-spacing:.2px;">토너먼트</b>
+                <small style="display:block; font-size:.67rem; color:#a89880; margin-top:1px; line-height:1.35;">8강 · 세 판을 이기면 우승</small>
+              </span>
+            </button>
+            <div class="sm-body" style="border:1.5px solid #e0b45c;">
+              <button class="back" onClick="{{ close }}" title="모드 다시 고르기">‹</button>
+              <div style="flex:1; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; height:100%;">
+                <button class="dbtn" style="border:1.5px solid #e0b45c;"><i>★☆☆</i><b>쉬움</b><s>60코인</s></button>
+                <button class="dbtn" style="border:1.5px solid #e0b45c;"><i>★★☆</i><b>보통</b><s>200코인</s></button>
+                <button class="dbtn" style="border:1.5px solid #e0b45c;"><i>★★★</i><b>전문가</b><s>500코인</s></button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ── 멀티플레이 패널 ─────────────────────────────────── -->
+  <sc-if value="{{ isMulti }}" hint-placeholder-val="{{ false }}">
+    <div class="veil" onClick="{{ goLobby }}" style="position:absolute; inset:0; z-index:45;
+      background:rgba(8,2,4,.84); backdrop-filter:blur(3px); display:flex; align-items:center;
+      justify-content:center; padding:18px;">
+      <div class="panel" onClick="{{ stop }}" style="width:100%;
+        background:linear-gradient(180deg,#3a1018,#22090e); border:1.5px solid #b98d34;
+        border-radius:18px; padding:18px 16px; display:flex; flex-direction:column; gap:9px;
+        box-shadow:inset 0 1px 0 rgba(255,215,120,.2), 0 12px 40px rgba(0,0,0,.6);">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="flex:1; font-size:1.02rem; font-weight:700; color:#ffe9a8; letter-spacing:.3px;">멀티플레이</div>
+          <button onClick="{{ goLobby }}" style="width:36px; height:36px; display:flex;
+            align-items:center; justify-content:center; color:#c8a86a; border-radius:10px;">
+            <svg viewBox="0 0 24 24" style="width:19px; height:19px; stroke-width:2.6;"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+          </button>
+        </div>
+
+        <button class="mm-hero" style="display:flex; align-items:center; gap:12px; width:100%;
+          text-align:left; padding:13px 15px; border-radius:15px;
+          background:linear-gradient(135deg,#6d4a10 0%,#8d5f16 45%,#5a3a0c 100%); border:1.5px solid #e0b45c;
+          box-shadow:inset 0 1px 0 rgba(255,235,170,.35), 0 4px 16px rgba(0,0,0,.4);">
+          <svg viewBox="0 0 24 24" style="width:27px; height:27px; flex-shrink:0;"><path d="M7 4h10v6a5 5 0 0 1-10 0z" fill="#ffe9a8" stroke="#7a5210" stroke-width="1.4"></path><path d="M7 6H4.5a2.5 2.5 0 0 0 2.5 4" stroke="#ffe9a8" stroke-width="1.6" fill="none"></path><path d="M17 6h2.5a2.5 2.5 0 0 1-2.5 4" stroke="#ffe9a8" stroke-width="1.6" fill="none"></path><path d="M10 20h4M12 15.5v4.5" stroke="#ffe9a8" stroke-width="1.9"></path></svg>
+          <span style="flex:1; min-width:0;">
+            <span style="display:block; font-size:1rem; font-weight:900; color:#fff6dc; letter-spacing:.3px;">랭크게임</span>
+            <span style="display:block; font-size:.65rem; color:rgba(255,240,205,.75); margin-top:2px;">클래식 · 아이템전 · TWELVE 무작위 · RP 반영</span>
+          </span>
+          <span style="flex-shrink:0; text-align:right; font-size:.64rem; font-weight:800; color:#fff0c8;">
+            <b style="display:block; font-size:.85rem;">게스트</b>기록 안 됨</span>
+        </button>
+
+        <button class="mm-hero" style="display:flex; align-items:center; gap:12px; width:100%;
+          text-align:left; padding:12px 15px; border-radius:15px;
+          background:linear-gradient(135deg,#14413a 0%,#1b5a4c 45%,#0e2f2a 100%); border:1.5px solid #5cc8a8;
+          box-shadow:inset 0 1px 0 rgba(180,255,230,.28), 0 3px 12px rgba(0,0,0,.35);">
+          <svg viewBox="0 0 24 24" style="width:27px; height:27px; flex-shrink:0;"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="#dffaef" stroke="#1b5a4c" stroke-width="1.3"></path></svg>
+          <span style="flex:1; min-width:0;">
+            <span style="display:block; font-size:.93rem; font-weight:900; color:#dffaef; letter-spacing:.3px;">빠른대전</span>
+            <span style="display:block; font-size:.65rem; color:rgba(210,250,235,.72); margin-top:2px;">모드 상관없이 가장 빨리 · RP 미반영</span>
+          </span>
+        </button>
+
+        <div class="sec" style="margin:9px 0 4px;"><b>빠른 입장</b><i></i></div>
+        <div style="display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:4px;">
+          <button class="mm-tile" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 2px 7px; border-radius:13px; background:linear-gradient(180deg,#3a1018,#260a10); border:1.5px solid #b98d34; box-shadow:inset 0 1px 0 rgba(255,215,120,.16);">
+            <svg viewBox="0 0 24 24" style="width:18px; height:18px; stroke:none;"><rect x="4.5" y="3.5" width="10" height="15" rx="2" fill="#c1272d" stroke="#7a1a1e" stroke-width="1.4"></rect><rect x="9.5" y="5.5" width="10" height="15" rx="2" fill="#f7d98a" stroke="#7a4e10" stroke-width="1.4"></rect></svg>
+            <span style="font-size:.56rem; font-weight:700; letter-spacing:-.3px; color:#e8c98a;">클래식</span>
+          </button>
+          <button class="mm-tile" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 2px 7px; border-radius:13px; background:linear-gradient(180deg,#3a1018,#260a10); border:1.5px solid #8b6ad8; box-shadow:inset 0 1px 0 rgba(255,215,120,.16);">
+            <svg viewBox="0 0 24 24" style="width:18px; height:18px; stroke:none;"><path d="M12 3 3.5 9.5h17z" fill="#c8b0ff"></path><rect x="5" y="9.5" width="14" height="11" rx="1.6" fill="#8b6ad8"></rect><rect x="10.6" y="9.5" width="2.8" height="11" fill="#f7d98a"></rect></svg>
+            <span style="font-size:.56rem; font-weight:700; letter-spacing:-.3px; color:#e8c98a;">아이템전</span>
+          </button>
+          <button class="mm-tile" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 2px 7px; border-radius:13px; background:linear-gradient(180deg,#3a1018,#260a10); border:1.5px solid #6ac0f0; box-shadow:inset 0 1px 0 rgba(255,215,120,.16);">
+            <svg viewBox="0 0 24 24" style="width:18px; height:18px; stroke:none;"><ellipse cx="12" cy="6.5" rx="7.5" ry="2.8" fill="#9fdcff"></ellipse><path d="M4.5 6.5v4c0 1.6 3.4 2.8 7.5 2.8s7.5-1.2 7.5-2.8v-4" fill="#4a9ed0"></path><path d="M4.5 11.5v4c0 1.6 3.4 2.8 7.5 2.8s7.5-1.2 7.5-2.8v-4" fill="#2a6f9e"></path></svg>
+            <span style="font-size:.56rem; font-weight:700; letter-spacing:-.3px; color:#e8c98a;">TWELVE</span>
+          </button>
+          <button class="mm-tile" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 2px 7px; border-radius:13px; background:linear-gradient(180deg,#3a1018,#260a10); border:1.5px solid #4a9a7a; box-shadow:inset 0 1px 0 rgba(255,215,120,.16);">
+            <svg viewBox="0 0 24 24" style="width:18px; height:18px; stroke:none;"><ellipse cx="12" cy="12" rx="9" ry="6" fill="#1f4a3c" stroke="#4a9a7a" stroke-width="1.5"></ellipse><circle cx="12" cy="4.6" r="2.2" fill="#a8dcc4"></circle><circle cx="12" cy="19.4" r="2.2" fill="#a8dcc4"></circle><circle cx="3.2" cy="12" r="2.2" fill="#a8dcc4"></circle><circle cx="20.8" cy="12" r="2.2" fill="#a8dcc4"></circle></svg>
+            <span style="font-size:.56rem; font-weight:700; letter-spacing:-.3px; color:#e8c98a;">다인전</span>
+          </button>
+          <button class="mm-tile" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 2px 7px; border-radius:13px; background:linear-gradient(180deg,#3a1018,#260a10); border:1.5px solid #d06a9a; box-shadow:inset 0 1px 0 rgba(255,215,120,.16);">
+            <svg viewBox="0 0 24 24" style="width:18px; height:18px; stroke:none;"><g transform="rotate(-12 12 12)"><rect x="3" y="5" width="9" height="14" rx="1.8" fill="#ffb8d4" stroke="#8a3a5e" stroke-width="1.3"></rect></g><g transform="rotate(12 12 12)"><rect x="12" y="5" width="9" height="14" rx="1.8" fill="#f7d98a" stroke="#7a4e10" stroke-width="1.3"></rect></g></svg>
+            <span style="font-size:.56rem; font-weight:700; letter-spacing:-.3px; color:#e8c98a;">미니게임</span>
+          </button>
+          <button class="mm-tile" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 2px 7px; border-radius:13px; background:linear-gradient(180deg,#3a1018,#260a10); border:1.5px solid #e0b45c; box-shadow:inset 0 1px 0 rgba(255,215,120,.16);">
+            <svg viewBox="0 0 24 24" style="width:18px; height:18px;"><path d="M7 4h10v6a5 5 0 0 1-10 0z" fill="#ffd98a" stroke="#8a5a12" stroke-width="1.4"></path><path d="M10 20h4M12 15.5v4.5" stroke="#ffd98a" stroke-width="1.8"></path></svg>
+            <span style="font-size:.56rem; font-weight:700; letter-spacing:-.3px; color:#e8c98a;">토너먼트</span>
+            <span style="font-size:.5rem; color:#a89880;">4명↑</span>
+          </button>
+        </div>
+
+        <div class="sec" style="margin:11px 0 4px;"><b>방</b><i></i></div>
+        <div style="display:flex; gap:8px;">
+          <button style="flex:1; min-height:44px; border-radius:12px; font-size:.78rem; font-weight:700;
+            color:#e8c98a; border:1.5px solid #b98d34; background:rgba(0,0,0,.25);">+ 방 만들기</button>
+          <button style="flex:1; min-height:44px; border-radius:12px; font-size:.78rem; font-weight:700;
+            color:#e8c98a; border:1.5px solid #b98d34; background:rgba(0,0,0,.25);"># 코드로 참가</button>
+        </div>
+
+        <div class="sec" style="margin:11px 0 4px;"><b>열린 방</b><i></i></div>
+        <div style="text-align:center; font-size:.71rem; color:#8a7a80; padding:12px 0 2px;">
+          열린 방이 없어요. 방을 만들어보세요!
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{
+  "start": {"editor":"enum","options":["lobby","solo","multi"],"default":"lobby","section":"여는 화면"},
+  "gold": {"editor":"color","default":"#c99a3a","options":["#c99a3a","#c8a000","#8a7a80","#c1272d"],"section":"색"},
+  "$preview": {"width":390,"height":844}
+}'>
+class Component extends DCLogic {
+  renderVals() {
+    // 생성자를 두지 않는다 — 상태가 아직 없을 때도 첫 그리기가 되어야 한다
+    const st = this.state || {};
+    const screen = st.screen ?? (this.props.start ?? 'lobby');
+    const go = (s) => () => this.setState({ screen: s, open: null });
+    // 한 칸만 열린다. 같은 칸을 다시 누르면 겉면이 도로 덮인다.
+    const pick = (m) => () => this.setState({ open: st.open === m ? null : m });
+    return {
+      gold: this.props.gold ?? '#c99a3a',
+      open: st.open ?? '',
+      isSolo: screen === 'solo',
+      isMulti: screen === 'multi',
+      goSolo: go('solo'),
+      goMulti: go('multi'),
+      goLobby: go('lobby'),
+      close: () => this.setState({ open: null }),
+      // 패널 안을 눌렀을 때 뒤쪽 덮개까지 눌리지 않게
+      stop: (e) => { if (e && e.stopPropagation) e.stopPropagation(); },
+      pickClassic: pick('classic'),
+      pickItem: pick('item'),
+      pickTwelve: pick('twelve'),
+      pickQuad: pick('quad'),
+      pickMini: pick('mini'),
+      pickTour: pick('tour'),
+    };
+  }
+}
+</script>
+</body>
+</html>
