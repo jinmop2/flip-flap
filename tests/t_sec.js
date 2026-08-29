@@ -89,8 +89,12 @@ ok('관리자 라우트는 전부 키를 본다', (() => {
 // /stats · /reports 는 브라우저로 여는 화면이라 STATS_KEY 를 주소에서 받는데,
 // 그건 다른 키이고 Referrer-Policy·no-store 로 따로 막아 둔다.
 ok('ADMIN_KEY 는 본문으로만 받는다',
-   /if \(!req\.body \|\| req\.body\.key !== KEY\)/.test(srv)
+   /if \(!req\.body \|\| !keyEq\(req\.body\.key, KEY\)\)/.test(srv)
    && !/ADMIN_KEY[\s\S]{0,200}req\.query/.test(srv));
+// 비교는 상수 시간으로. 문자열 !== 는 앞자리가 어디서 틀렸는지가 시간에 드러나서,
+// 이론상 한 글자씩 맞춰 나갈 수 있다. 코인 발행 권한이 걸린 키라 여기까지 막는다.
+ok('관리자 키 비교는 상수 시간이다', /function keyEq\(/.test(srv) && /crypto\.timingSafeEqual/.test(srv));
+ok('약한 관리자 키는 뜰 때 경고한다', /ADMIN_KEY 가 약합니다/.test(srv));
 ok('주소로 받는 화면은 리퍼러·캐시를 막는다', (() => {
   for (const path of ['/stats', '/reports']) {
     const at = srv.indexOf(`app.get('${path}'`);

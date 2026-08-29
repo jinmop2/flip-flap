@@ -3,6 +3,7 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const path = require('path');
+const crypto = require('crypto');
 const accounts = require('./accounts');
 const expert3 = require('./expert3');   // 전문가 AI v3 (카운팅+몬테카를로+종반탐색)
 const items = require('./items');       // 아이템전(이벤트 모드) 아이템 12종
@@ -79,6 +80,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // 주의: 카운터를 IP만으로 잡으면 모든 API가 한 카운터를 공유해, 실효 한도가 가장 낮은
 //      엔드포인트 값으로 떨어진다(예: 목록 몇 번 조회하면 클랜 생성이 막힘). 경로까지 키에 포함한다.
 const rlMap = new Map();
+const ipOf = (req) => (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'x').split(',')[0].trim();
 function rateLimit(max) {
   return (req, res, next) => {
     const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'x').split(',')[0].trim();
@@ -93,7 +95,8 @@ function rateLimit(max) {
 setInterval(() => { const now = Date.now(); for (const [k, e] of rlMap) if (now - e.ts > 120000) rlMap.delete(k); }, 120000);
 
 // ── 인증 API ───────────────────────────────────────────────
-app.post('/api/signup', rateLimit(20), (req, res) => { const { id, password, nick } = req.body || {}; const out = accounts.signup(id, password, nick); if (out.ok) stats.bump('signups'); res.json(out); });
+// 가입 — IP 를 넘긴다. 한 곳에서 계정을 찍어내는 걸 계정 쪽에서 센다.
+app.post('/api/signup', rateLimit(20), (req, res) => { const { id, password, nick } = req.body || {}; const out = accounts.signup(id, password, nick, ipOf(req)); if (out.ok) stats.bump('signups'); res.json(out); });
 app.post('/api/login',  rateLimit(30), (req, res) => { const { id, password } = req.body || {}; res.json(accounts.login(id, password)); });
 app.post('/api/me',     rateLimit(90), (req, res) => { const { token } = req.body || {}; res.json(accounts.meByToken(token)); });
 
@@ -108,10 +111,28 @@ app.post('/api/coupon', rateLimit(12), (req, res) => {
 // 관리자 — 키는 URL 쿼리가 아니라 본문으로 받는다.
 // 쿼리로 받으면 브라우저 히스토리·리퍼러·서버 로그에 코인 발행 권한이 그대로 남는다.
 const ADMIN_KEY = () => process.env.ADMIN_KEY || process.env.STATS_KEY;
+
+// 이 키 하나로 코인 발행·계정 조작이 다 된다. 짧거나 뻔하면 그게 곧 뒷문이므로,
+// 뜰 때 한 번 소리내어 알린다 (막지는 않는다 — 운영 중인 서버를 못 뜨게 하면 그게 더 큰 사고다).
+(function warnWeakAdminKey() {
+  const k = ADMIN_KEY();
+  if (!k) return console.warn('⚠ ADMIN_KEY 가 없습니다 — 관리자 기능이 잠깁니다.');
+  const weak = k.length < 20 ? '20자 미만'
+             : /^[a-z]+$|^[0-9]+$/i.test(k) ? '한 종류 문자만'
+             : /^(admin|test|flipflap|password|1234)/i.test(k) ? '뻔한 시작' : null;
+  if (weak) console.warn('⚠ ADMIN_KEY 가 약합니다 (' + weak + '). 코인 발행 권한이 걸린 키입니다 — 무작위 32자 이상으로 바꿔주세요.');
+})();
+
+// 관리자 키 비교는 자리수마다 시간이 달라지면 안 된다 — 앞자리부터 맞춰 나갈 수 있다.
+function keyEq(a, b) {
+  const x = Buffer.from(String(a || '')), y = Buffer.from(String(b || ''));
+  if (x.length !== y.length) return false;
+  return crypto.timingSafeEqual(x, y);
+}
 function adminOk(req, res) {
   const KEY = ADMIN_KEY();
   if (!KEY) { res.status(403).json({ error: 'Render 환경변수에 ADMIN_KEY 를 설정해주세요.' }); return false; }
-  if (!req.body || req.body.key !== KEY) { res.status(403).json({ error: '잘못된 키입니다.' }); return false; }
+  if (!req.body || !keyEq(req.body.key, KEY)) { res.status(403).json({ error: '잘못된 키입니다.' }); return false; }
   return true;
 }
 // 백업 — 코인·전적·클랜은 한 번 날아가면 되돌릴 수 없다.
@@ -482,7 +503,8 @@ app.post('/api/missions', rateLimit(60), (req, res) => { const { token } = req.b
 // 보상 수령 — 금액은 서버가 정한다. 화면은 어느 미션인지만 보낸다.
 app.post('/api/mission-claim', rateLimit(40), (req, res) => { const { token, id } = req.body || {}; res.json(accounts.claimMission(token, id)); });
 app.post('/api/tutorial-done', rateLimit(20), (req, res) => { const { token } = req.body || {}; const out = accounts.claimTutorial(token); if (out.claimed) stats.bump('tutorial'); res.json(out); });
-app.post('/api/refer', rateLimit(10), (req, res) => { const { token, ref } = req.body || {}; res.json(accounts.applyReferral(token, ref)); });
+// 친구 초대 — IP 를 넘긴다. 같은 곳에서 온 초대는 초대자 보상을 한 번만 친다.
+app.post('/api/refer', rateLimit(10), (req, res) => { const { token, ref } = req.body || {}; res.json(accounts.applyReferral(token, ref, ipOf(req))); });
 app.post('/api/titles',   rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.titleList(token)); });
 app.post('/api/equip-title', rateLimit(30), (req, res) => { const { token, titleId } = req.body || {}; res.json(accounts.equipTitle(token, titleId || null)); });
 app.post('/api/myrank', rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json({ ok: true, me: accounts.myRank(token) }); });
@@ -3336,7 +3358,7 @@ setInterval(seasonTick, HOUR);
 setInterval(backupTick, 24 * HOUR);
 
 // 배포/재시작(SIGTERM) 시 새 연결 차단 후 정리 — 진행 중 저장은 이미 즉시 persist됨
-process.on('SIGTERM', () => { console.log('SIGTERM 수신 — 종료 중'); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 5000); });
+process.on('SIGTERM', () => { console.log('SIGTERM 수신 — 종료 중'); accounts.flushNow(); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 5000); });
 
 // ══════════════════════════════════════════════════════════
 // 미니게임 테이블 — 솔로(AI)와 멀티(사람)를 한 코드로 굴린다.

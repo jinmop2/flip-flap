@@ -92,6 +92,10 @@ async function loadFromDB() {
       const sm = await pool.query("SELECT data FROM ff_meta WHERE k = 'season'");
       db.season = (sm.rows[0] && sm.rows[0].data) || null;
     } catch (_) { db.season = null; }
+    try {
+      const im = await pool.query("SELECT data FROM ff_meta WHERE k = 'ipsalt'");
+      db.meta_ipsalt = (im.rows[0] && im.rows[0].data) || null;   // 없으면 첫 사용 때 생성된다
+    } catch (_) { db.meta_ipsalt = null; }
     rebuildIndex();
     dbReady = true; dbLastError = null;
     console.log('계정 ' + rows.length + '개, 클랜 ' + clanRows.length + '개, 쿠폰 ' + cpnRows.length + '개 DB에서 로드됨');
@@ -110,6 +114,18 @@ function storeInfo() {
            users: Object.keys(db.users || {}).length, clans: Object.keys(db.clans || {}).length };
 }
 let saveTimer = null;
+// 종료 직전에 부른다 — 파일 저장은 300ms 미뤄 두므로, 그 틈에 재시작하면
+// 마지막 몇 번의 변경이 통째로 사라진다. DB 가 죽어 파일로 버티는 동안
+// 재배포가 겹치는 상황이 정확히 그 틈이다.
+function flushNow() {
+  // DB 로 잘 돌아가는 중이면 파일을 쓰지 않는다. 여기서 통째로 떨궈 두면
+  // 그 파일이 남아, 나중에 DB 가 잠깐 죽었다 살아날 때 rescueFileOnlyUsers 가
+  // '탈퇴한 계정' 까지 되살린다 — 삭제는 되돌릴 수 없어야 한다.
+  if (pool && dbReady) return;
+  clearTimeout(saveTimer); saveTimer = null;
+  try { fs.mkdirSync(path.dirname(FILE), { recursive: true }); fs.writeFileSync(FILE, JSON.stringify(db)); }
+  catch (e) { console.error('종료 저장 실패:', e.message); }
+}
 function saveFile() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
@@ -124,6 +140,25 @@ function persistMeta(key, data) {
       [key, JSON.stringify(data)]).catch(e => console.error('메타 저장 실패(' + key + '):', e.message));
   } else saveFile();
 }
+// ── IP 지문 ────────────────────────────────────────────────────────────────
+// "같은 곳에서 온 계정인가" 를 알아야 초대 보상 파밍을 막을 수 있다.
+// 그렇다고 IP 원본을 계정에 박아 두면 그건 그냥 개인정보 보관이다 —
+// 소금을 섞어 해시만 남긴다. 비교는 되지만 되돌릴 수는 없다.
+// 소금은 한 번 만들어 ff_meta 에 두고 계속 쓴다. 재시작마다 바뀌면 예전 지문과
+// 비교가 안 되어 방어가 저절로 풀린다.
+function ipSalt() {
+  if (!db.meta_ipsalt) {
+    db.meta_ipsalt = crypto.randomBytes(16).toString('hex');
+    persistMeta('ipsalt', db.meta_ipsalt);
+  }
+  return db.meta_ipsalt;
+}
+function ipTag(ip) {
+  const raw = String(ip || '').trim();
+  if (!raw || raw === 'x') return null;   // 알 수 없는 IP 로는 아무도 막지 않는다
+  return crypto.createHash('sha256').update(ipSalt() + '|' + raw).digest('hex').slice(0, 16);
+}
+
 async function readMeta(key) {
   if (!(pool && dbReady)) return db['meta_' + key] || null;
   try {
@@ -635,7 +670,23 @@ function grantFounder(u) {
   u.titles = u.titles || {};
   u.titles.t_founder = true;
 }
-function signup(id, pw, nick) {
+// 한 곳에서 계정을 무한히 찍어내면 닉네임이 마르고 저장소가 부푼다.
+// 창단 코인 자체는 계정 밖으로 못 나가지만(코인은 이전 불가), 찍어내는 것 자체를 막는다.
+// 기억은 메모리에만 둔다 — IP 지문을 굳이 오래 남길 이유가 없다.
+const SIGNUP_PER_IP_DAY = 6;
+const signupIp = new Map();   // ipTag -> { at, n }
+function signupAllowed(tag) {
+  if (!tag) return true;                        // IP 를 모르면 막지 않는다
+  const now = Date.now();
+  if (signupIp.size > 5000) {                   // 타이머 없이 들를 때만 청소
+    for (const [k, v] of signupIp) if (now - v.at > 86400000) signupIp.delete(k);
+  }
+  const e = signupIp.get(tag);
+  if (!e || now - e.at > 86400000) { signupIp.set(tag, { at: now, n: 1 }); return true; }
+  if (e.n >= SIGNUP_PER_IP_DAY) return false;
+  e.n++; return true;
+}
+function signup(id, pw, nick, ip) {
   id = String(id || '').trim(); nick = String(nick || '').trim();
   if (!validId(id)) return { error: '아이디는 영문/숫자 3~16자예요.' };
   if (/^kakao_/i.test(id)) return { error: '사용할 수 없는 아이디예요.' };   // 카카오 계정 키와 충돌 방지
@@ -644,9 +695,12 @@ function signup(id, pw, nick) {
   const idl = id.toLowerCase(), nickl = nick.toLowerCase();
   if (db.users[idl]) return { error: '이미 있는 아이디예요.' };
   if (db.nickTaken[nickl]) return { error: '이미 사용 중인 닉네임이에요.' };
+  const tag = ipTag(ip);
+  if (!signupAllowed(tag)) return { error: '오늘은 이 기기에서 계정을 더 만들 수 없어요.' };
   const salt = crypto.randomBytes(12).toString('hex');
   const token = makeToken();
   const u = { id, nick, nickSet: true, salt, hash: hashPw(pw, salt), token, tokenExp: Date.now() + TOKEN_TTL, wins: 0, losses: 0, xp: 0, rp: 0, createdAt: Date.now() };   // 일반 가입은 폼에서 닉 확정
+  if (tag) u.ipt = tag;   // 어디서 만들어진 계정인지 (원본 IP 아님 — 해시)
   grantFounder(u);
   db.users[idl] = u; db.nickTaken[nickl] = idl; tokenIndex[token] = idl; persist(idl);
   return { ok: true, token, profile: profileOf(u) };
@@ -1934,7 +1988,7 @@ function claimDaily(token) {
 
 // ── 친구 초대 보상 — 초대받은 신규 계정과 초대자 둘 다 +100 (플래그 1회) ──
 const REFER_COINS = 100, REFER_CAP = 50;   // 초대자 최대 50회까지 지급
-function applyReferral(token, refCode) {
+function applyReferral(token, refCode, ip) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
   if (u.referredBy) return { error: '이미 초대 보상을 받았어요.' };
@@ -1945,10 +1999,26 @@ function applyReferral(token, refCode) {
   if (!ref || refl === idl) return { error: '유효하지 않은 초대 코드예요.' };
   if (Date.now() - (u.createdAt || 0) > 72 * 3600 * 1000) return { error: '가입 3일 이내에만 등록할 수 있어요.' };
   u.referredBy = refl;
-  u.coins = (u.coins || 0) + REFER_COINS;
-  if ((ref.refCount || 0) < REFER_CAP) {   // 초대자 남용 방지 상한
+  u.coins = (u.coins || 0) + REFER_COINS;   // 초대받은 쪽은 계정당 한 번뿐이라 그대로 준다
+
+  // 초대자 보상은 같은 곳에서 온 초대를 한 번만 친다.
+  //
+  // 상한 50회만 있을 때는, 한 기기에서 계정 50개를 만들어 자기 코드를 넣는 것으로
+  // 초대자 계정에 5,000코인이 그대로 꽂혔다. 코인은 계정 간 이전이 안 되니
+  // 파밍이 성립하는 통로는 여기 하나뿐이다 — 그래서 여기서 끊는다.
+  //
+  // 같은 집에서 형제가 들어오는 경우도 있으므로 차단이 아니라 "첫 한 명만 인정" 이다.
+  // 받는 쪽 100코인은 어차피 그대로 나가니 초대받은 사람이 손해 볼 일도 없다.
+  const tag = ipTag(ip) || u.ipt || null;
+  const dupIp = !!tag && Array.isArray(ref.refIps) && ref.refIps.includes(tag);
+  if ((ref.refCount || 0) < REFER_CAP && !dupIp) {   // 초대자 남용 방지 상한
     ref.refCount = (ref.refCount || 0) + 1;
     ref.coins = (ref.coins || 0) + REFER_COINS;
+    if (tag) {
+      ref.refIps = Array.isArray(ref.refIps) ? ref.refIps : [];
+      ref.refIps.push(tag);
+      if (ref.refIps.length > REFER_CAP) ref.refIps.shift();   // 무한히 쌓이지 않게
+    }
     persist(refl);
   }
   persist(idl);
@@ -2920,6 +2990,7 @@ module.exports = {
   profileOf, topPlayers, shopList, buyItem, equipItem, equipTitle,
   gachaInfo, rollGacha, exchangeShard, usePipette, GACHA_TIER, TIER_OF, SHARD_ONLY, bonusOf,
   missionList, claimMission, titleList, dmList, dmSend, dmUnread,
+  flushNow,
   tourEnter, tourRefund, tourPrize, miniStake, miniPay, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,
   // 친구
   friendList, sendFriendReq, acceptFriendReq, declineFriendReq, cancelFriendReq, removeFriend,
