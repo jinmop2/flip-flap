@@ -2168,28 +2168,45 @@ io.on('connection', (socket) => {
 
   // 혼자 하기 (AI 와)
   // ── 솔로 토너먼트 ──────────────────────────────────────────
-  socket.on('stour_start', ({ diff, nick } = {}) => {
+  socket.on('stour_start', ({ diff, nick, pid } = {}) => {
     const level = ['easy', 'hard', 'expert'].includes(diff) ? diff : 'hard';
-    if (sTours.has(socket.id) && !sTours.get(socket.id).done)
-      return stourPush(socket, sTours.get(socket.id));      // 이미 열려 있으면 그걸 돌려준다
+    // pid 는 방에 들어갈 때만 적힌다. 대회는 방보다 먼저 열리므로 여기서 받아 둔다 —
+    // 손님(비로그인)은 이게 없으면 소켓 id 로 잡혀 새로고침에 대회를 잃는다.
+    if (pid && !socket.pid) socket.pid = String(pid).slice(0, 64);
+    const own = stourOwner(socket);
+    const cur = sTours.get(own);
+    if (cur && !cur.done) { cur.sid = socket.id; cur.at = Date.now(); return stourPush(socket, cur); }
     const prof = myProfile(nick);
     const pool = TOUR._shuffle(STOUR_NAMES).slice(0, TOUR.SIZE - 1);
-    const entrants = [{ key: socket.id, nick: prof.nick, isBot: false, token: socket.token || null }];
+    // 자리 열쇠도 소켓이 아니라 사람으로 — 소켓이 바뀌어도 내 자리를 잃지 않는다
+    const entrants = [{ key: own, nick: prof.nick, isBot: false, token: socket.token || null }];
     for (const n of pool) entrants.push({ key: 'ai_' + n, nick: n, isBot: true, token: null });
     const b = TOUR.createBracket(entrants, null, STOUR_BEST_OF);
     const t = {
       id: 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
-      b, diff: level, seat: b.seats.findIndex(x => x.key === socket.id),
+      b, diff: level, seat: b.seats.findIndex(x => x.key === own),
       wins: 0, mode: null, done: false, token: socket.token || null,
+      own, sid: socket.id, at: Date.now(),
     };
-    sTours.set(socket.id, t);
+    sTours.set(own, t);
+    stourPush(socket, t);
+  });
+
+  // 새로고침하고 돌아왔다 — 하던 대회가 있으면 그대로 돌려준다.
+  socket.on('stour_resume', ({ pid } = {}) => {
+    if (pid && !socket.pid) socket.pid = String(pid).slice(0, 64);
+    const t = sTours.get(stourOwner(socket));
+    if (!t || t.done) return socket.emit('stour_none');
+    t.sid = socket.id; t.at = Date.now();
+    t.pending = 0;                       // 끊겼다 왔으면 띄워 둔 판은 없던 것으로
     stourPush(socket, t);
   });
 
   // 다음 경기 모드를 뽑는다. 뽑는 것은 서버다 — 클라이언트가 고르면
   // 자신 있는 모드만 골라 올라갈 수 있다.
   socket.on('stour_next', () => {
-    const t = sTours.get(socket.id);
+    const t = sTours.get(stourOwner(socket));
+    if (t) { t.sid = socket.id; t.at = Date.now(); }
     if (!t || t.b.over || t.done) return;
     if (stourMyMatch(t) < 0) return;
     // 이미 한 판을 띄웠으면 또 뽑지 않는다. 두 번 누르면 방이 두 개 열리고,
@@ -2201,7 +2218,7 @@ io.on('connection', (socket) => {
                               roundName: TOUR.roundName(t.b.round, t.b) });
   });
 
-  socket.on('stour_quit', () => { sTours.delete(socket.id); });
+  socket.on('stour_quit', () => { sTours.delete(stourOwner(socket)); });
 
   socket.on('tv_solo', ({ pid, nick, diff, stour } = {}) => {
     const level = ['easy', 'hard', 'expert'].includes(diff) ? diff : 'hard';
@@ -2638,7 +2655,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    sTours.delete(socket.id);          // 대회는 접속과 함께 사라진다
+    // 대회는 지우지 않는다. 새로고침도 여기로 들어오는데, 그때 지워 버리면
+    // 판 하나 끝내고 로비로 돌아온 사람의 대회가 사라진다. 시각만 적어 두고
+    // 오래 안 돌아오면 아래 청소가 걷어 간다.
+    { const t = sTours.get(stourOwner(socket)); if (t) t.at = Date.now(); }
     // 시작 전 대기실에서 끊긴 것이면 방을 남기고 자리만 비운다
     {
       const r = socket.roomId && rooms[socket.roomId];
@@ -2964,18 +2984,33 @@ const STOUR_BEST_OF = [1, 1, 1];                     // 결승도 단판 — "�
 const STOUR_PRIZE = { easy: 60, hard: 200, expert: 500 };
 const STOUR_NAMES = ['까치', '흑조', '백랑', '여우', '두루미', '산군', '청설모',
                      '노루', '수달', '부엉이', '살쾡이', '담비', '족제비', '해오라기'];
-const sTours = new Map();                            // socket.id → 진행 중인 대회
+// 진행 중인 솔로 대회. 열쇠는 socket.id 가 아니라 '사람' 이다.
+//
+// 예전엔 socket.id 로 잡고 끊길 때 지웠다. 그런데 판이 끝나고 '로비로' 를
+// 누르면 화면이 새로고침되고(fastReload), 새로고침하면 소켓이 새로 붙는다 —
+// 그 순간 대회가 통째로 사라졌다. 트웰브 판은 나가는 길이 새로고침뿐이라
+// 대회에서 트웰브가 걸리면 무조건 거기서 끊겼다. "한 판 하면 끊긴다" 가 이것이다.
+//
+// 이제 로그인했으면 토큰, 아니면 기기 id(pid) 로 잡는다. 둘 다 새로고침을 넘어
+// 살아남으므로, 돌아오면 대회가 그대로 있다.
+const sTours = new Map();                            // owner(token|pid) → 진행 중인 대회
+const stourOwner = (socket) => socket.token || socket.pid || socket.id;
+// 끊긴 대회를 언제까지 들고 있을까. 새로고침은 몇 초면 돌아오지만, 폰에서
+// 앱을 잠깐 내렸다 올리는 것도 흔하다. 넉넉히 두되 영원히 쌓아 두지는 않는다.
+const STOUR_KEEP_MS = 30 * 60 * 1000;
 
 const stourMode = () => STOUR_MODES[Math.floor(Math.random() * STOUR_MODES.length)];
 
 // 이 방이 대회 경기인지 표시한다. 서버가 뽑아 둔 모드·난이도와 맞을 때만 인정한다.
 function stourMark(socket, room, mode, diff, want) {
   if (!want || !room) return;
-  const t = sTours.get(socket.id);
+  const own = stourOwner(socket);
+  const t = sTours.get(own);
   if (!t || t.b.over || t.done) return;
   if (t.mode !== mode || t.diff !== diff) return;
   if (stourMyMatch(t) < 0) return;
-  room.stour = { sid: socket.id, id: t.id, round: t.b.round };
+  t.sid = socket.id; t.at = Date.now();
+  room.stour = { own, sid: socket.id, id: t.id, round: t.b.round };
   t.pending = 0;                         // 판이 열렸다
   room.noRank = true;                    // 대회 판은 등급에 안 걸린다 — 상대가 전부 AI 다
 }
@@ -2985,21 +3020,42 @@ function stourMark(socket, room, mode, diff, want) {
 function stourResult(room, iWon) {
   const mark = room && room.stour; if (!mark) return;
   room.stour = null;                     // 한 판이 두 번 정산되지 않게
-  const t = sTours.get(mark.sid);
+  const t = sTours.get(mark.own || mark.sid);
   if (!t || t.id !== mark.id || t.b.over || t.done) return;
+  t.at = Date.now();
   t.pending = 0;
+  const out0 = {};                       // 라운드 보상 등, 아래에서 담아 둘 것들
   const idx = stourMyMatch(t); if (idx < 0) return;
   const m = TOUR.curRound(t.b)[idx];
   const foe = m.a === t.seat ? m.b : m.a;
   TOUR.reportWin(t.b, idx, iWon ? t.seat : foe);
   if (iWon) t.wins++;
+  // 한 판 이길 때마다 그 자리에서 챙긴다.
+  //
+  // 예전엔 우승·준우승만 돈이 됐다. 그래서 8강에서 이기고 4강에서 지면
+  // 세 판을 이겨 놓고도 빈손이라, 올라가는 재미가 값으로 이어지지 않았다.
+  // (게다가 중간에 끊기면 그마저도 못 받았다.)
+  // 이기고 올라간 라운드마다 준다 — 지면 안 나오므로 일찍 지는 게 이득이 될 일도 없다.
+  if (iWon && !t.b.over) {
+    const step = Math.round((STOUR_PRIZE[t.diff] || 0) * 0.15);
+    if (step > 0) {
+      out0.roundPrize = step;
+      if (!t.token) out0.guest = true;
+      else {
+        // 같은 라운드를 두 번 정산하지 못하게 대회 번호에 라운드를 붙여 적는다
+        const r = accounts.tourPrize(t.token, t.id + ':r' + mark.round, 0, step, true);
+        if (r && r.ok) { out0.coins = r.coins; out0.titles = r.titles; out0.profile = r.profile; }
+        else out0.roundPrize = 0;
+      }
+    }
+  }
   const fills = stourFillOthers(t);
   // 유저가 떨어졌으면 남은 라운드는 AI 끼리 끝까지 간다 — 대진표가 완성돼야
   // "내가 몇 등이었나" 가 보인다.
   while (!t.b.over) { const more = stourFillOthers(t); if (!more.length) break; fills.push(...more); }
 
-  const sock = io.sockets.sockets.get(mark.sid);
-  const out = { won: iWon, fills, view: stourView(t) };
+  const sock = io.sockets.sockets.get(t.sid || mark.sid);
+  const out = Object.assign({ won: iWon, fills, view: stourView(t) }, out0);
   if (t.b.over) {
     t.done = true;
     const rank = t.b.rank[t.seat] || null;
@@ -3018,6 +3074,13 @@ function stourResult(room, iWon) {
   }
   if (sock) sock.emit('stour_result', out);
 }
+
+// 오래 안 돌아온 대회는 걷어 간다. 안 그러면 메모리에 계속 쌓인다.
+// 이미 도는 시계(seasonTick 등)와 달리 값싼 일이라 10분에 한 번이면 충분하다.
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, t] of sTours) if (now - (t.at || 0) > STOUR_KEEP_MS) sTours.delete(k);
+}, 10 * 60 * 1000);
 
 // 내 자리의 이번 라운드 경기 번호
 function stourMyMatch(t) {

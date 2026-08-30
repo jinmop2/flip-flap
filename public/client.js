@@ -218,6 +218,9 @@ socket.on('connect', () => {
   setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400);
   const tk = localStorage.getItem('ff_auth');
   if (tk) socket.emit('auth', { token: tk });   // 로그인 세션 연결
+  // 하던 솔로 대회가 있으면 되찾는다. 판이 끝나고 로비로 돌아오는 길이
+  // 새로고침이라, 이게 없으면 대회가 화면에서만 사라져 끊긴 것처럼 보인다.
+  if (localStorage.getItem('ff_stour')) socket.emit('stour_resume', { pid: PID });
   // 재접속 or 초대 링크 or 로비 목록
   const sess = localStorage.getItem('ff_sess');
   const urlRoom = (new URLSearchParams(location.search).get('room') || '').toUpperCase();
@@ -6087,7 +6090,12 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
   // 대회 경기는 재대결·로비 대신 대진표로 돌아간다.
   // 로비 버튼은 새로고침을 하는데, 새로고침하면 소켓이 바뀌어 자리를 잃는다.
   const goBtns = document.getElementById('goBtns');
-  if (isTourMatch && goBtns) {
+  // 솔로 대회도 같다 — '한 판 더' 는 대회 밖의 판을 열고, '로비로' 는 새로고침을 한다.
+  // 둘 다 대회를 하던 흐름을 끊는다. 대진표로 돌아가는 길 하나만 남긴다.
+  if (isStourMatch && goBtns) {
+    if (rb) rb.style.display = 'none';
+    stourOnlyBackBtn(goBtns);
+  } else if (isTourMatch && goBtns) {
     if (rb) rb.style.display = 'none';
     let back = document.getElementById('tourBackBtn');
     if (!back) {
@@ -6103,9 +6111,26 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
     });
   } else {
     const back = document.getElementById('tourBackBtn'); if (back) back.style.display = 'none';
+    const sback = document.getElementById('stourBackBtn'); if (sback) sback.style.display = 'none';
   }
   setTimeout(() => { document.getElementById('gameOver').style.display = 'flex'; showRewards(); }, delay);
 });
+
+// 결과창에 '대진표로' 하나만 남긴다 (솔로 대회 전용)
+function stourOnlyBackBtn(goBtns) {
+  let back = document.getElementById('stourBackBtn');
+  if (!back) {
+    back = document.createElement('button');
+    back.id = 'stourBackBtn'; back.className = 'btn btn-gold'; back.style.width = 'auto';
+    back.textContent = '🏆 대진표로';
+    back.onclick = () => stourBackToBracket();
+    goBtns.appendChild(back);
+  }
+  back.style.display = '';
+  goBtns.querySelectorAll('button').forEach((b) => { if (b !== back) b.style.display = 'none'; });
+  const chal = document.querySelector('#goBox .btn-kakao');
+  if (chal) chal.style.display = 'none';
+}
 
 // 승리/패배 화면 통계 (완성 세트 + 획득 수)
 function renderGameOverStats(winner, setKind, mi) {
@@ -7080,6 +7105,11 @@ function tvShowOver(win, endBy) {
   const chal = document.querySelector('#goBox .btn-kakao');
   if (chal) chal.style.display = 'none';        // 트웰브는 도전장 통로가 없다
   const back = document.getElementById('tourBackBtn'); if (back) back.style.display = 'none';
+  // 대회 중이면 '한 판 더'·'나가기' 대신 대진표로. 트웰브는 나가는 길이
+  // 새로고침(tvQuitNow → fastReload)뿐이라, 대회에서 트웰브가 걸리면
+  // 여기서 반드시 끊겼다 — "한 판 하면 끊긴다" 의 가장 잦은 경로였다.
+  if (isStourMatch && btns) stourOnlyBackBtn(btns);
+  else { const sb = document.getElementById('stourBackBtn'); if (sb) sb.style.display = 'none'; }
   setTimeout(() => { document.getElementById('gameOver').style.display = 'flex'; showRewards(); }, delay);
 }
 // 완성한 세트의 종류 (없으면 0)
@@ -7767,8 +7797,14 @@ const ST_DIFF_NAME = { easy: '쉬움', hard: '보통', expert: '전문가' };
 
 window.stourStart = function (diff) {
   closeModePanels();
-  socket.emit('stour_start', { diff, nick: getNick() });
+  localStorage.setItem('ff_stour', '1');       // 새로고침해도 하던 대회를 다시 찾는다
+  socket.emit('stour_start', { diff, nick: getNick(), pid: PID });
 };
+// 대회 경기 중인가 — 판이 끝났을 때 '로비로' 대신 '대진표로' 를 내밀기 위한 깃발.
+// 로비로는 새로고침을 하는데, 예전엔 그 새로고침에 대회가 통째로 날아갔다.
+// 지금은 서버가 대회를 사람(토큰·기기 id)에 붙여 두므로 날아가지는 않지만,
+// 판마다 화면이 통째로 갈리면 대회를 하는 느낌이 끊긴다.
+let isStourMatch = false;
 window.stourClose = function () {
   const m = document.getElementById('stourModal');
   if (m) m.classList.remove('show');
@@ -7776,7 +7812,20 @@ window.stourClose = function () {
 // 대회를 접는다 — 진행 중이면 서버 쪽도 버린다
 window.stourGiveUp = function () {
   socket.emit('stour_quit');
-  stour = null; stourClose();
+  localStorage.removeItem('ff_stour');
+  stour = null; isStourMatch = false; stourClose();
+};
+// 판이 끝나고 대진표로 — 새로고침 없이 화면만 되돌린다
+window.stourBackToBracket = function () {
+  document.getElementById('gameOver').style.display = 'none';
+  const g = document.getElementById('game'); if (g) g.style.display = 'none';
+  const gt = document.getElementById('game-table'); if (gt) gt.classList.remove('on');
+  const tb = document.getElementById('tv-table'); if (tb) tb.classList.remove('on');
+  document.body.classList.remove('ingame', 'twelve');
+  const lb = document.getElementById('lobby'); if (lb) lb.style.display = 'flex';
+  isStourMatch = false;
+  try { clearSession(); } catch (_) {}
+  if (stour) { stourShow(); }
 };
 
 
@@ -7869,6 +7918,7 @@ window.stourGo = function () {
 socket.on('stour_go', (d) => {
   stourNextUI(`<div class="st-mode pop">${ST_MODE_NAME[d.mode] || d.mode}</div>`);
   playSound('bell');
+  isStourMatch = true;
   // 뽑힌 것을 보여 준 뒤에 판으로 넘어간다 — 바로 넘기면 무엇이 걸렸는지 못 본다
   setTimeout(() => {
     stourClose();
@@ -7887,18 +7937,24 @@ socket.on('stour_go', (d) => {
 });
 
 // 한 경기가 끝났다 — 대진표를 채우며 보여 준다
+socket.on('stour_none', () => { localStorage.removeItem('ff_stour'); });
+
 socket.on('stour_result', (d) => {
   stour = d.view;
+  isStourMatch = false;
   stourShow();
   stourRender(d.view, d.fills);
   playSound(d.won ? 'setwin' : 'tick');
   if (!d.view.over) {
     stourNextUI(
       `<div class="st-foe">${d.won ? '올라갔어요!' : ''}</div>` +
+      (d.roundPrize ? `<div class="st-prize">🪙${d.roundPrize} 획득</div>` : '') +
+      (d.guest && d.roundPrize ? `<div class="st-foe">로그인하면 받을 수 있어요</div>` : '') +
       `<div class="st-foe">다음 상대 · <b style="color:#ffeec0">${esc(stourFoeName(d.view))}</b></div>` +
       `<button class="btn btn-gold" onclick="stourGo()">다음 경기</button>` +
       `<button class="btn btn-outline btn-sm" onclick="stourGiveUp()">대회 포기</button>`
     );
+    if (d.profile) { myAccount = d.profile; renderAccount(); }
     return;
   }
   // 끝났다
@@ -7911,5 +7967,6 @@ socket.on('stour_result', (d) => {
     `<button class="btn btn-gold" onclick="stourGiveUp()">확인</button>`
   );
   playSound(rank === 1 ? 'victory' : 'defeat');
+  localStorage.removeItem('ff_stour');
   if (d.profile) { myAccount = d.profile; renderAccount(); }
 });

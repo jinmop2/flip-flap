@@ -1868,7 +1868,9 @@ function tourRefund(token, fee) {
 
 // 상금. 같은 대회에서 두 번 받지 못하게 대회 번호를 적어 둔다 —
 // 여기가 새면 상금이 두 번 나간다.
-function tourPrize(token, tourId, rank, amount) {
+// noStat — 한 라운드를 이겨서 받는 몫에 쓴다. 참가 횟수를 올리면 안 된다
+// (한 대회에서 세 번 부르면 세 번 나간 것으로 세어 칭호가 어긋난다).
+function tourPrize(token, tourId, rank, amount, noStat) {
   const idl = tokenIndex[token];
   const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
@@ -1883,8 +1885,10 @@ function tourPrize(token, tourId, rank, amount) {
   if (keys.length > 30) for (const k of keys.slice(0, keys.length - 30)) delete u.tourPaid[k];
 
   u.stats = u.stats || {};
-  if (rank === 1) u.stats.tourWins = (u.stats.tourWins || 0) + 1;
-  u.stats.tourPlays = (u.stats.tourPlays || 0) + 1;
+  if (!noStat) {
+    if (rank === 1) u.stats.tourWins = (u.stats.tourWins || 0) + 1;
+    u.stats.tourPlays = (u.stats.tourPlays || 0) + 1;
+  }
   if (amt > 0) u.coins = (u.coins || 0) + amt;
   const titles = checkTitles(u);
   persist(idl);
