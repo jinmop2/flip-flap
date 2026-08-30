@@ -395,7 +395,8 @@ try { const rp = new URLSearchParams(location.search).get('ref'); if (rp) localS
 // 무지개만 다르다. 글자에 그라디언트를 오려 붙이려면 background 를 써야 하는데
 // 명패(.np-*)도 같은 칸을 쓴다. 한 요소에 둘을 얹으면 뒤에 오는 쪽이 이겨서
 // 이름이 통째로 사라진다 — 그래서 무지개는 글자만 안쪽 <i> 로 감싼다.
-const ncClass = c => (c && c !== 'rainbow') ? ' nc-' + c : '';
+// nc-on — "물감이 얹혔다" 는 표시. 밝은 명패에서 글자에 테를 두를 때 쓴다.
+const ncClass = c => (c && c !== 'rainbow') ? ' nc-on nc-' + c : '';
 // 염색된 이름 한 조각. 이름을 찍는 곳은 전부 이걸 거쳐야 물감이 빠짐없이 따라간다.
 const nickHTML = (nick, color) => color === 'rainbow'
   ? `<i class="nc-rainbow">${esc(nick)}</i>`
@@ -1386,12 +1387,50 @@ function renderItems(s) {
     if (!id) { html += '<div class="ib-slot empty"></div>'; continue; }
     const it = ITEM_INFO[id] || { name: id, icon: '❓', tier: 'common' };
     const usable = itemUsableNow(id, s);
-    // 못 쓰는 슬롯도 눌리게 둔다 — 아무 반응이 없으면 뭘 가진 건지조차 알 수 없다
+    // 못 쓰는 슬롯도 눌리게 둔다 — 아무 반응이 없으면 뭘 가진 건지조차 알 수 없다.
+    // 길게 누르면 어떤 물건인지 알려 준다. 폰에는 마우스를 얹는다는 게 없어서
+    // title 속성은 아무 소용이 없다 — 쓸 수 있는 물건도 눌러 보기 전에 확인할 길이 없었다.
     html += `<div class="ib-slot ${it.tier} ${usable ? 'ready' : 'locked'}" title="${esc(it.name)}"
+                  data-item="${esc(id)}"
                   onclick="${usable ? `openItemUse('${id}')` : `explainItem('${id}')`}">${itemArt(id)}</div>`;
   }
   slots.innerHTML = html;
+  slots.querySelectorAll('.ib-slot[data-item]').forEach(bindLongPress);
   renderFxBanner(s);
+}
+
+// 길게 누르면 설명, 짧게 누르면 원래 하던 일.
+//
+// 손가락은 조금씩 떨리므로 10px 까지는 누른 것으로 친다. 길게 눌러 설명이 뜬 뒤에는
+// 손을 뗄 때 딸려 오는 click 을 한 번 삼킨다 — 안 그러면 설명을 보려다 물건을 쓴다.
+const LONG_PRESS_MS = 420;
+function bindLongPress(el) {
+  const id = el.dataset.item;
+  let timer = null, fired = false, sx = 0, sy = 0;
+  const stop = () => { clearTimeout(timer); timer = null; };
+  el.addEventListener('pointerdown', (e) => {
+    fired = false; sx = e.clientX; sy = e.clientY;
+    stop();
+    timer = setTimeout(() => {
+      fired = true; timer = null;
+      explainItem(id);
+      vibe('turn');                     // 길게 눌렸다는 걸 손으로도 알린다
+      el.classList.remove('lp-hold');
+    }, LONG_PRESS_MS);
+    el.classList.add('lp-hold');
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (timer && (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10)) { stop(); el.classList.remove('lp-hold'); }
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) {
+    el.addEventListener(ev, () => { stop(); el.classList.remove('lp-hold'); });
+  }
+  // 설명을 띄웠으면 뒤따라오는 click 은 없던 일로 한다
+  el.addEventListener('click', (e) => {
+    if (fired) { e.preventDefault(); e.stopImmediatePropagation(); fired = false; }
+  }, true);
+  // 폰에서 꾹 누르면 뜨는 '복사/공유' 메뉴를 막는다
+  el.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
 // 클라이언트 쪽 사용 가능 판단 (서버가 최종 판정 — 여기선 버튼을 흐리게 할 뿐)
@@ -6590,8 +6629,10 @@ function renderAuction(changed) {
   if (!s.auction) { badge.textContent = ''; badge.className = ''; return; }
 
   const a = s.auction, mine = s.auctioneer === s.myIndex, atype = a.auctionType, isReveal = s.phase === 'reveal';
-  if (atype === 'open')   { badge.textContent = '오픈';   badge.className = 'type-badge open'; }
-  else if (atype === 'closed') { badge.textContent = '클로즈'; badge.className = 'type-badge closed'; }
+  // 이름은 모드를 가리지 않고 '오픈 경매'·'클로즈 경매' 하나로 쓴다.
+  // 같은 것을 화면마다 다르게 부르면 처음 배우는 사람은 다른 규칙인 줄 안다.
+  if (atype === 'open')   { badge.textContent = '오픈 경매';   badge.className = 'type-badge open'; }
+  else if (atype === 'closed') { badge.textContent = '클로즈 경매'; badge.className = 'type-badge closed'; }
   else { badge.textContent = ''; badge.className = ''; }
 
   // 'draw' 단계엔 중앙 카드 미공개 (덱 스택이 초점)

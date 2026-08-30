@@ -487,8 +487,9 @@
       fx.centerId = cid; fx.offerId = oid;
 
       // 경매 방식은 턴바에 (매트 한가운데를 비워 카드가 주인공이 되게)
-      const tag = a.type === 'open' ? ['👁', '오픈']
-                : (a.type === 'closed' || a.type === 'close') ? ['🙈', '클로즈'] : null;
+      // 이름은 2인전·트웰브와 같게 쓴다 ('오픈 경매'·'클로즈 경매')
+      const tag = a.type === 'open' ? ['👁', '오픈 경매']
+                : (a.type === 'closed' || a.type === 'close') ? ['🙈', '클로즈 경매'] : null;
       if (tag) $('q-typeTag').innerHTML = (typeof ico === 'function' ? ico(tag[0]) : tag[0]) + ' ' + tag[1];
       else $('q-typeTag').textContent = '';
     } else {

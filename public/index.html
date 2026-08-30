@@ -473,16 +473,27 @@
     .mc-emblem { width:58px; height:58px; display:block; filter:drop-shadow(0 3px 4px rgba(0,0,0,.55)); }
     .top-link.shop-link { border-color:rgba(144,167,200,.4); color:#dcebff; }
     .top-link.shop-link:hover { background:rgba(144,167,200,.14); }
-    /* ── 닉네임 염색 ── */
-    .nc-red    { color:#ff6b6b !important; }
-    .nc-blue   { color:#6bb8ff !important; }
-    .nc-green  { color:#7dd87d !important; }
-    .nc-orange { color:#ffab5e !important; }
-    .nc-purple { color:#c39bff !important; }
-    .nc-cyan   { color:#5ee0d8 !important; }
-    .nc-pink   { color:#ff8ecf !important; }
-    .nc-lime   { color:#c8f05a !important; }
-    .nc-gold   { color:#ffd94a !important; text-shadow:0 0 9px rgba(255,215,80,.55); }
+    /* ── 닉네임 염색 ──
+       클래스를 두 번 겹쳐 쓴 것은 오타가 아니다.
+       명패(.np-crystal 등) 열 종이 자기 글자색을 !important 로 박아 두는데,
+       둘 다 클래스 하나라 특이도가 같아 뒤에 오는 명패가 이긴다. 명패 CSS 는
+       한참 아래에 있으니 산 물감이 늘 졌다 — "닉네임 색이 안 나온다" 가 이것이다.
+       .nc-red.nc-red 는 클래스 둘이라 명패보다 세다. 물감이 늘 이긴다. */
+    .nc-red.nc-red       { color:#ff6b6b !important; }
+    .nc-blue.nc-blue     { color:#6bb8ff !important; }
+    .nc-green.nc-green   { color:#7dd87d !important; }
+    .nc-orange.nc-orange { color:#ffab5e !important; }
+    .nc-purple.nc-purple { color:#c39bff !important; }
+    .nc-cyan.nc-cyan     { color:#5ee0d8 !important; }
+    .nc-pink.nc-pink     { color:#ff8ecf !important; }
+    .nc-lime.nc-lime     { color:#c8f05a !important; }
+    .nc-gold.nc-gold     { color:#ffd94a !important; text-shadow:0 0 9px rgba(255,215,80,.55); }
+    /* 밝은 명패(수정·한지·파편·서리)는 원래 어두운 글자를 쓴다. 거기에 밝은 물감이
+       올라가면 이번엔 물감이 이겨서 안 보인다 — 이기게 해 놓고 안 보이면 소용없다.
+       물감이 얹힌 때만 어두운 테를 둘러 글자를 띄운다. */
+    .np-crystal.nc-on, .np-hanji.nc-on, .np-shard.nc-on, .np-frost.nc-on {
+      text-shadow:0 0 3px rgba(0,0,0,.9), 0 1px 2px rgba(0,0,0,.75);
+    }
     /* 무지개 — 색이 하나씩 갈아 끼워지는 게 아니라, 이름 전체에 무지개가
        가로로 한 번 깔린다. 그 위로 흰 빛이 왼쪽에서 오른쪽으로 훑고 지나간다.
 
@@ -2732,8 +2743,16 @@
     #tutText { font-size:.84rem; line-height:1.55; color:#d9e0ea; }
     #tutText b { color:#dcebff; }
     .tut-do { margin-top:7px; font-weight:700; color:#ffd94a; font-size:.84rem; }
-    .tut-quit { background:none; border:none; color:#566174; font-family:'Fredoka'; font-size:.7rem; cursor:pointer; letter-spacing:0; }
-    .tut-quit:hover { color:#bbc0ca; }
+    /* 27×15px 이라 손가락으로 겨냥이 안 됐다. 글자는 그대로 두고 누를 자리만
+       넓힌다 — 여백을 안쪽으로 먹이고 그만큼 바깥으로 당겨, 줄 높이는 안 변한다. */
+    .tut-quit {
+      background:none; border:none; color:#8b97a8; font-family:'Fredoka';
+      font-size:.72rem; cursor:pointer; letter-spacing:0;
+      padding:11px 12px; margin:-11px -10px -11px 0; border-radius:9px;
+      min-width:44px; min-height:44px; display:inline-flex; align-items:center;
+      justify-content:flex-end; gap:3px; -webkit-tap-highlight-color:transparent;
+    }
+    .tut-quit:hover, .tut-quit:active { color:#e8eef7; background:rgba(159,180,216,.14); }
     /* 탭해서 계속 힌트 (맥동) */
     .tut-next { margin-top:9px; text-align:center; font-size:.72rem; font-weight:700; color:#9faec5; animation:tutNextPulse 1.4s ease-in-out infinite; }
     @keyframes tutNextPulse { 0%,100%{ opacity:.45; } 50%{ opacity:1; } }
@@ -2822,7 +2841,11 @@
     }
     @media (max-width:600px) {
       #tutBox.pos-bot { bottom:185px; }
-      #tutBox.pos-top { top:60px; }
+      /* 노치 여백을 빼면 안 된다. 메뉴 버튼(.tv-menuWrap)은 8px + safe-t 에
+         40px 높이로 서는데, 여기만 60px 로 고정하면 노치 폰에서 35px 겹쳐
+         '종료 ×' 가 햄버거 밑에 통째로 들어간다 — 폰에서만 나던 그 문제다.
+         메뉴 아래 12px 을 두고 선다. */
+      #tutBox.pos-top { top:calc(60px + var(--safe-t)); }
       #tutText { font-size:.78rem; }
     }
     /* 방 목록 */
@@ -4503,7 +4526,15 @@
       display:flex; align-items:center; justify-content:center;
     }
     .bid-empty::after { content:'♠'; font-size:1.3rem; color:rgba(200,222,255,.12); }   /* 자리 워터마크 */
+    /* 길게 누르는 중 — 눌리고 있다는 걸 눈으로도 알려 준다 */
+    .ib-slot { -webkit-touch-callout:none; }
+    .ib-slot.lp-hold { transform:scale(.93); filter:brightness(1.25); transition:transform .18s, filter .18s; }
     .type-badge { font-size:.62rem; padding:2px 10px; border-radius:8px; font-weight:600; letter-spacing:1px; }
+    /* 쓸 말이 없으면 상자도 안 뜬다. 경매 방식을 고르기 전에는 글자가 비는데,
+       테두리와 바탕색은 그대로라 작은 초록 딱지가 혼자 떠 있었다.
+       자리는 그대로 잡아 둔다(display:none 으로 지우면 고르는 순간 줄이 밀린다). */
+    /* 클래스를 두 번 쓴 것은 .type-badge.open 과 특이도를 같게 두면 뒤에 오는 쪽이 이겨서다 */
+    .type-badge.type-badge:empty { background:none; border-color:transparent; box-shadow:none; padding:0; }
     .type-badge.open { background:#1e3a2a; color:#5cd69c; border:1px solid rgba(92,214,156,.35); }
     .type-badge.closed { background:#2a1a3a; color:#b89cfe; border:1px solid rgba(184,156,254,.35); }
     .btn-row { display:flex; gap:8px; }
@@ -6426,13 +6457,13 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <h3><span data-ico="👁"></span> 오픈과 클로즈 — 여기가 다르다</h3>
     <div class="r4-two">
       <div class="r4-card">
-        <div class="r4-ct">오픈</div>
+        <div class="r4-ct">오픈 경매</div>
         <p>경매품을 <b>보여 준다</b>.<br>
         배팅은 모두 덮어 낸 뒤 <b>한 번에 공개</b>.<br>
         물건은 알지만 남을 못 읽는다.</p>
       </div>
       <div class="r4-card">
-        <div class="r4-ct">클로즈</div>
+        <div class="r4-ct">클로즈 경매</div>
         <p>경매품을 <b>감춘다</b>.<br>
         대신 진행자부터 <b>시계방향으로 한 명씩</b> 공개하며 낸다.<br>
         뒤에 내는 사람은 앞사람 카드를 다 보고 정한다.</p>
