@@ -131,19 +131,22 @@ function decideBidX2(hand, prize, myAcq, oppAcq, visOpp, deckLeft) {
 
 // ── AI 디스패처 ──
 const X3 = require('./expert3.js');
+const X4 = require('./expert4.js');
 function aiOffer(hand, myAcq, oppAcq, d, ctx){
   if (d==='expertx3') return X3.offerV3({ hand, myAcq, oppAcq, center: ctx.center, deckLeft: ctx.deckLeft, oppHandLen: ctx.oppHandLen }, ctx.mem);
+  if (d==='expertx4') return X4.offerV4({ hand, myAcq, oppAcq, center: ctx.center, deckLeft: ctx.deckLeft, oppHandLen: ctx.oppHandLen, plannedType: 'open' }, ctx.mem);
   return (d==='expertx'||d==='expertx2')?offerX(hand,myAcq,oppAcq):cpuChooseOffer(hand,myAcq);
 }
 function aiType(hand, prize, myAcq, oppAcq, d, ctx){
   if (d==='expertx3') return X3.typeV3({ hand, myAcq, oppAcq, center: prize[0], offered: prize[1] }, ctx.mem);
+  if (d==='expertx4') return X4.typeV4({ hand, myAcq, oppAcq, center: prize[0], offered: prize[1] }, ctx.mem);
   return (d==='expertx'||d==='expertx2')?typeX(hand,prize,myAcq,oppAcq):cpuChooseType(hand,prize,myAcq,d);
 }
 function aiBid(hand, prize, myAcq, oppAcq, type, visOpp, d, deckLeft, ctx){
-  if (d==='expertx3') {
+  if (d==='expertx3' || d==='expertx4') {
     // 치팅 방지: 클로즈 후공이면 출품 카드를 모른다
     const offered = ctx.isAuctioneer || type==='open' ? prize[1] : null;
-    return X3.bidV3({
+    return (d==='expertx4' ? X4.bidV4 : X3.bidV3)({
       hand, myAcq, oppAcq, center: prize[0], offered, visOpp,
       auctionType: type, isAuctioneer: ctx.isAuctioneer, deckLeft, oppHandLen: ctx.oppHandLen,
     }, ctx.mem);

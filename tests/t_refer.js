@@ -40,7 +40,30 @@ console.log('① 한 기기에서 계정을 찍어 초대 보상을 모을 수 �
   ok('같은 IP 초대는 한 번만 인정된다', a.byToken(boss.token).refCount === 1,
      '인정 ' + a.byToken(boss.token).refCount + '회');
   ok('초대자가 챙긴 코인이 100 을 넘지 않는다', gain <= 100, '실제 +' + gain);
-  ok('가입 자체도 하루 상한에서 막힌다', blockedAt >= 0 && blockedAt <= 6, '막힌 지점 ' + blockedAt);
+  // 가입 상한은 '넉넉하되 무한은 아니게' 다. 6으로 조였더니 통신사 NAT·학교·
+  // 가정처럼 IP 를 나눠 쓰는 진짜 손님이 먼저 걸렸다 — 그래서 50으로 올렸다.
+  // 여기서 보는 것은 "30개쯤은 통과한다"(손님을 막지 않는다) 와
+  // "그래도 무한은 아니다" 둘이다. 파밍을 끊는 것은 위의 초대 규칙이다.
+  ok('손님이 먼저 걸리지 않는다 (30개는 통과)', blockedAt === -1, '막힌 지점 ' + blockedAt);
+}
+
+console.log('①-2 그래도 무한히 찍어낼 수는 없다');
+{
+  const IP = '203.0.113.99';
+  let made = 0;
+  for (let i = 0; i < 80; i++) {
+    if (a.signup('mass' + i, 'pw1234', '대량' + i, IP).error) break;
+    made++;
+  }
+  ok('한 IP 에서 하루에 만들 수 있는 수에 끝이 있다', made > 0 && made < 80, made + '개');
+  ok('그 끝이 손님을 막을 만큼 낮지는 않다', made >= 30, made + '개');
+  // 같은 기계 안(개발·시험)은 세지 않는다 — 여기 걸리면 진짜 문제를 가린다
+  let local = 0;
+  for (let i = 0; i < 60; i++) {
+    if (a.signup('loop' + i, 'pw1234', '로컬' + i, '127.0.0.1').error) break;
+    local++;
+  }
+  ok('로컬(127.0.0.1)은 상한을 안 탄다', local === 60, local + '개');
 }
 
 console.log('② 진짜 친구 초대는 그대로 받는다');

@@ -5,7 +5,7 @@ const io = require('socket.io')(http);
 const path = require('path');
 const crypto = require('crypto');
 const accounts = require('./accounts');
-const expert3 = require('./expert3');   // 전문가 AI v3 (카운팅+몬테카를로+종반탐색)
+const ai = require('./expert4');        // 전문가 AI — 지금은 v4 (v3 + 출품 몬테카를로 + 덤 인식)
 const items = require('./items');       // 아이템전(이벤트 모드) 아이템 12종
 const twelve = require('./twelve');     // TWELVE — 칩으로 사는 경매 (모드 하나)
 const stats = require('./stats');       // 방문·활동 통계 (자체 수집)
@@ -1209,8 +1209,8 @@ function maybeCpuAct(roomId) {
       const card = room.tutorial
         ? tutorialOffer(hand, opp)
         : room.difficulty === 'expert'
-        ? expert3.offerV3({ hand, myAcq: acq, oppAcq: opp, center: g.auction.centerCard,
-            deckLeft: g.centerDeck.length, oppHandLen: (ci === 0 ? g.p2Hand : g.p1Hand).length }, room.aiMem || (room.aiMem = expert3.createMem()))
+        ? ai.offer({ hand, myAcq: acq, oppAcq: opp, center: g.auction.centerCard,
+            deckLeft: g.centerDeck.length, oppHandLen: (ci === 0 ? g.p2Hand : g.p1Hand).length }, room.aiMem || (room.aiMem = ai.createMem()))
         : room.difficulty === 'easy' ? cpuChooseOffer(hand, acq)
         : offerX(hand, acq, opp);
       // AI 전략이 손패에 없는 카드를 고르면(과거엔 조용히 멈춰 게임이 교착됐다)
@@ -1232,7 +1232,7 @@ function maybeCpuAct(roomId) {
       const opp  = ci === 0 ? g.p2Acquired : g.p1Acquired;
       const prize = [g.auction.centerCard, g.auction._offeredCard];
       const type = room.difficulty === 'expert'
-        ? expert3.typeV3({ hand, myAcq: acq, oppAcq: opp, center: prize[0], offered: prize[1] }, room.aiMem || (room.aiMem = expert3.createMem()))
+        ? ai.type({ hand, myAcq: acq, oppAcq: opp, center: prize[0], offered: prize[1] }, room.aiMem || (room.aiMem = ai.createMem()))
         : room.difficulty === 'easy' ? cpuChooseType(hand, prize, acq, 'easy')
         : typeX(hand, prize, acq, opp);
       g.auction.auctionType = type === 'close' ? 'closed' : type;   // 'open'|'closed'
@@ -1270,11 +1270,14 @@ function maybeCpuAct(roomId) {
       } else if (room.difficulty === 'expert') {
         // 치팅 방지: 클로즈 후공이면 출품 카드를 모름
         const offered = (isAuctioneer || g.auction.auctionType === 'open') ? g.auction._offeredCard : null;
-        bid = expert3.bidV3({
+        bid = ai.bid({
           hand, myAcq: acq, oppAcq: opp, center: g.auction.centerCard, offered, visOpp,
           auctionType: g.auction.auctionType, isAuctioneer, deckLeft: g.centerDeck.length,
           oppHandLen: (ci === 0 ? g.p2Hand : g.p1Hand).length,
-        }, room.aiMem || (room.aiMem = expert3.createMem()));
+          // 🏷 덤 — 경매품에 앞면으로 얹혀 둘 다 보고 있다. 진 쪽이 가져가므로
+          // 이기는 값을 깎는다. 여태 안 넘겨 줘서 AI 는 이게 있는 줄도 몰랐다.
+          tip: g.auction.tipCard || null,
+        }, room.aiMem || (room.aiMem = ai.createMem()));
       } else if (room.difficulty === 'easy') {
         // 루키 모드: 항상 최약 카드만 배팅 → 첫 판은 사실상 승리 보장
         bid = room.rookie
@@ -1623,7 +1626,7 @@ function startBotMatch(entry, opts = {}) {
     secret: false, password: '', cpuIndex: 1, botMatch: true,
     itemMode: mode === 'item', mode,
     ranked,                                        // 랭크게임 대기 중 봇이 들어온 판
-    aiMem: expert3.createMem(),
+    aiMem: ai.createMem(),
   };
   rooms[roomId].profiles[1] = { nick: rooms[roomId].nicks[1], guest: true };   // 게스트 유저처럼 보이게
   s.leave('lobby'); s.join(roomId); s.roomId = roomId; s.playerIndex = 0; s.pid = entry.pid;
@@ -1845,7 +1848,7 @@ io.on('connection', (socket) => {
       rooms[roomId].profiles[1] = { nick: 'AI', guest: true, bot: true };
       rooms[roomId].game = createGame(rooms[roomId].itemMode, rooms[roomId].tutorial);
       rooms[roomId].startedAt = Date.now();
-      rooms[roomId].aiMem = expert3.createMem();   // 전문가 AI 카운팅 메모리
+      rooms[roomId].aiMem = ai.createMem();   // 전문가 AI 카운팅 메모리
       // 대회 경기인지는 클라이언트 말이 아니라 서버가 쥔 대진으로 판정한다.
       // 모드·난이도가 서버가 뽑아 둔 것과 맞아야 한다 — 아니면 그냥 솔로 판이다.
       stourMark(socket, rooms[roomId], rooms[roomId].itemMode ? 'item' : 'classic', difficulty, stour);
@@ -2720,7 +2723,7 @@ function restartGame(roomId) {
   }
   room.game = createGame(room.itemMode);
   room.startedAt = Date.now();
-  room.aiMem = expert3.createMem();   // 새 판 → AI 메모리 초기화
+  room.aiMem = ai.createMem();   // 새 판 → AI 메모리 초기화
   room.rematch = [false, false];
   room.players.forEach((sid, i) => { if (sid) io.to(sid).emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks, profiles: room.profiles, itemMode: room.itemMode }); });
   broadcast(roomId);
@@ -2829,9 +2832,9 @@ function settle(roomId) {
     const humanAcq = ci === 0 ? g.p2Acquired : g.p1Acquired;
     const aiAcq = ci === 0 ? g.p1Acquired : g.p2Acquired;
     const oppValEst = Math.max(
-      expert3.wantValue(prize, humanAcq, expert3.feasibleTarget(humanAcq, aiAcq)),
-      expert3.denyValue(prize, aiAcq));
-    expert3.noteSettle(room.aiMem, {
+      ai.wantValue(prize, humanAcq, ai.feasibleTarget(humanAcq, aiAcq)),
+      ai.denyValue(prize, aiAcq));
+    ai.noteSettle(room.aiMem, {
       myBid: aiBidCard, oppBid: humanBid, offered: g.auction._offeredCard,
       offeredByMe: g.auctioneer === ci + 1, oppValEst,
     });
@@ -3206,7 +3209,7 @@ function tourMakeMatch(index, seatA, seatB) {
     tour: { id: tour.id, round: b.round, index, seats: [humanFirst ? seatA : seatB, humanFirst ? seatB : seatA] },
     noRank: true,                                  // 대회는 RP 를 건드리지 않는다
   };
-  if (p1.isBot) { rooms[roomId].cpuIndex = 1; rooms[roomId].aiMem = expert3.createMem(); }
+  if (p1.isBot) { rooms[roomId].cpuIndex = 1; rooms[roomId].aiMem = ai.createMem(); }
 
   const join = (sk, idx) => { if (!sk) return; sk.leave('lobby'); sk.join(roomId); sk.roomId = roomId; sk.playerIndex = idx; };
   join(s0, 0); if (s1) join(s1, 1);

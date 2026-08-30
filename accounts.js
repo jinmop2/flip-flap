@@ -681,8 +681,20 @@ function grantFounder(u) {
 // 한 곳에서 계정을 무한히 찍어내면 닉네임이 마르고 저장소가 부푼다.
 // 창단 코인 자체는 계정 밖으로 못 나가지만(코인은 이전 불가), 찍어내는 것 자체를 막는다.
 // 기억은 메모리에만 둔다 — IP 지문을 굳이 오래 남길 이유가 없다.
-const SIGNUP_PER_IP_DAY = 6;
+//
+// 처음에 6으로 뒀다가 50으로 올렸다. 6은 너무 빡빡하다 — 한국 통신사는 여러
+// 가입자가 공인 IP 하나를 나눠 쓰고(CGNAT), 학교·PC방·가정도 한 IP 다.
+// 출시 첫날 계정을 못 만드는 사람이 나오면 그건 어뷰저가 아니라 그냥 손님이다.
+// 막아서 얻는 것보다 잃는 게 크다.
+//
+// 코인을 찍어내는 통로는 초대 보상 쪽에서 이미 끊었으므로(applyReferral),
+// 여기 남은 목적은 닉네임 고갈과 저장소 팽창을 막는 것뿐이고 50이면 충분하다.
+const SIGNUP_PER_IP_DAY = 50;
 const signupIp = new Map();   // ipTag -> { at, n }
+// 같은 기계 안에서 오는 것은 세지 않는다 — 개발·시험이 여기 걸리면 진짜 문제를
+// 가린다(실제로 이 상한 때문에 미니게임 시험이 조용히 깨졌다).
+// 운영에서는 바깥에서 들어오므로 해당 사항이 없다.
+const LOCAL_IP = /^(127.|::1$|::ffff:127.|10.|192.168.|172.(1[6-9]|2d|3[01]).)/;
 function signupAllowed(tag) {
   if (!tag) return true;                        // IP 를 모르면 막지 않는다
   const now = Date.now();
@@ -703,7 +715,7 @@ function signup(id, pw, nick, ip) {
   const idl = id.toLowerCase(), nickl = nick.toLowerCase();
   if (db.users[idl]) return { error: '이미 있는 아이디예요.' };
   if (db.nickTaken[nickl]) return { error: '이미 사용 중인 닉네임이에요.' };
-  const tag = ipTag(ip);
+  const tag = LOCAL_IP.test(String(ip || '')) ? null : ipTag(ip);
   if (!signupAllowed(tag)) return { error: '오늘은 이 기기에서 계정을 더 만들 수 없어요.' };
   const salt = crypto.randomBytes(12).toString('hex');
   const token = makeToken();

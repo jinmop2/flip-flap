@@ -94,6 +94,36 @@ function denyValue(prize, oppAcq) {
   return best;
 }
 
+// ── 🏷 덤 (아이템전) ────────────────────────────────────────
+//
+// 아이템전에는 경매품에 아이템이 얹혀 나오는 판이 있다. 규칙이 뒤집혀 있다 —
+// 그 경매에서 **진 쪽**이 그 아이템을 가져간다.
+//
+// 여태 전문가 AI 는 이 카드를 아예 못 봤다. 서버가 넘겨 주는 경매품이
+// 중앙 카드와 출품 카드 둘뿐이라 덤이 얹혔는지조차 몰랐다. 그래서
+// "덤이 나오면 6을 던지고 진다" 는 건 아이템을 노린 게 아니라, 카드값이
+// 낮아 버린 것이 우연히 아이템을 주운 것이었다. 반대로 아이템이 탐나는
+// 판을 이겨서 상대에게 넘겨 준 일도 그만큼 있었다.
+//
+// 덤이 있으면 이기는 값이 깎인다: 이기면 카드를 얻고 아이템을 내주고,
+// 지면 카드를 내주고 아이템을 얻는다. 그래서 아이템 값을 두 번 뺀다
+// (내가 못 갖는 것 + 상대가 갖는 것).
+//
+// 값은 등급으로 매긴다. 판을 뒤집는 물건(재경매·도둑고양이 같은 전설)이
+// 세 걸음, 흔한 것이 한 걸음 값어치쯤이다.
+const TIP_WORTH = { common: 0.10, rare: 0.18, legend: 0.28 };
+function tipValue(tip) { return tip ? (TIP_WORTH[tip.tier] ?? 0.14) : 0; }
+//
+// 다만 아이템 욕심에 내주면 안 되는 자리가 둘 있다.
+//   · 내가 먹으면 그 자리에서 이긴다 — 아이템은 뒷일이다.
+//   · 넘기면 상대가 그 자리에서 이긴다 — 막는 게 먼저다.
+// 그 둘은 원래 값 그대로 둔다.
+function adjustForTip(myVal, denyVal, tip) {
+  const w = tipValue(tip);
+  if (!w || myVal >= 0.99 || denyVal >= 0.9) return myVal;
+  return Math.max(0, myVal - w * 2);
+}
+
 // ── 메모리 (게임당 1개) ──────────────────────────────────────
 function createMem() {
   return {
@@ -278,7 +308,10 @@ function bidV3(view, mem) {
   if (hand.length === 1) return hand[0];
   const myTarget = feasibleTarget(view.myAcq, view.oppAcq);
   const prizeKnown = [view.center, view.offered].filter(Boolean);
-  let myVal = Math.max(wantValue(prizeKnown, view.myAcq, myTarget), denyValue(prizeKnown, view.oppAcq));
+  const denyNow = denyValue(prizeKnown, view.oppAcq);
+  let myVal = Math.max(wantValue(prizeKnown, view.myAcq, myTarget), denyNow);
+  // 🏷 덤이 얹혀 있으면 이기는 값이 깎인다 (진 쪽이 아이템을 가져간다)
+  myVal = adjustForTip(myVal, denyNow, view.tip);
   // 캐치업: 열세·종반이면 템포 가치 상승
   const behind = view.myAcq.length <= view.oppAcq.length;
   const late = view.deckLeft <= 5;
@@ -288,8 +321,10 @@ function bidV3(view, mem) {
   const bluffP = bluffEst(mem);
   // 종반 완전 시뮬(롤아웃) 범위. 3 → 5 로 넓히니 맞대결 승률이 2%p 올랐다.
   // 이 구간은 수가 적어 끝까지 읽는 게 표본 추정보다 정확하다.
-  const endgame = view.deckLeft <= 5;
-  const SAMPLES = endgame ? 60 : 96;
+  // 손잡이는 밖에서 돌릴 수 있게 열어 둔다 (v4 실험용). 안 주면 예전 값 그대로다.
+  const EG_DEPTH = view.endgameDepth ?? 5;
+  const endgame = view.deckLeft <= EG_DEPTH;
+  const SAMPLES = view.samples ?? (endgame ? 60 : 96);
 
   // 상대가 보는 경매품 (클로즈면 출품 카드 안 보임 → 상대는 중앙만으로 판단)
   const prizeForOpp = view.auctionType === 'open' || !view.isAuctioneer
@@ -433,6 +468,7 @@ function typeV3(view, mem) {
 
 module.exports = {
   createMem, noteSettle, bidV3, offerV3, typeV3,
+  tipValue, adjustForTip, TIP_WORTH,
   // 내부 재사용 (sim/서버에서 oppValEst 계산용)
   feasibleTarget, wantValue, denyValue, power,
 };
