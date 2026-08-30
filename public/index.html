@@ -2725,7 +2725,10 @@
     .tut-pk.t-mini .tp-txt b { color:#ffd6e8; }
 
 
-    .tut-tag { font-size:.66rem; font-weight:700; color:var(--gold); letter-spacing:2px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; }
+    /* 아이콘·제목은 한 덩이로 묶는다. 세 덩이로 두면 space-between 이 제목을
+       한가운데로 밀어내, 제목만 동떨어지고 닫기가 엉뚱한 자리에 선 것처럼 보인다. */
+    .tut-tag { font-size:.66rem; font-weight:700; color:var(--gold); letter-spacing:2px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .tut-tag .tt-l { display:flex; align-items:center; gap:5px; min-width:0; }
     #tutText { font-size:.84rem; line-height:1.55; color:#d9e0ea; }
     #tutText b { color:#dcebff; }
     .tut-do { margin-top:7px; font-weight:700; color:#ffd94a; font-size:.84rem; }
@@ -7066,7 +7069,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 <!-- 최근 전적 -->
 <!-- 튜토리얼 코치 -->
 <div id="tutBox" onclick="tutConfirm()" style="cursor:pointer">
-  <div class="tut-tag"><span data-ico="🎓"></span> 튜토리얼 <button class="tut-quit" onclick="event.stopPropagation(); endTutorial()">종료 ×</button></div>
+  <div class="tut-tag"><span class="tt-l"><span data-ico="🎓"></span> 튜토리얼</span><button class="tut-quit" onclick="event.stopPropagation(); endTutorial()">종료 ×</button></div>
   <div id="tutText"></div>
   <div class="tut-next">▸ 화면을 탭하면 계속</div>
 </div>

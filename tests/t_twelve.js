@@ -562,7 +562,15 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   // 정산은 저절로 넘어간다
   ok('다음 턴 버튼이 없다', !/btn\('다음 턴'/.test(cli));
   ok('서버가 알아서 넘긴다', /g\.phase === 'settled'\) \{\s*\n\s*clearTimeout\(room\.tvNext\)/.test(srv));
-  ok('넘기기 전에 연출할 틈을 준다', /\}, 4200\);/.test(srv));
+  // 칩이 은행으로 가고 카드가 날아 앉는 데 1.5초쯤. 4.2초는 판이 멈춘 것처럼 길었다.
+  ok('넘기기 전에 연출할 틈을 준다', /\}, 2600\);/.test(srv));
+  // 둘 게 없는데 판을 다시 보내면 두 가지가 같이 망가진다 —
+  // 정산 화면이 다시 그려져 이미 날아간 낙찰 카드가 중앙에 도로 놓이고,
+  // tvPush 가 다음 판 타이머를 새로 걸어 멈춤이 그만큼 길어진다.
+  ok('AI 가 둘 게 없으면 판을 다시 보내지 않는다', /if \(!acted\) return;\s*\n\s*tvPush\(roomId\);/.test(srv));
+  // 화면 쪽에도 한 겹 — 이미 날아가 앉았으면 중앙에 도로 놓지 않는다
+  ok('앉은 카드를 중앙에 도로 놓지 않는다', /const pz = tvSettleLive \? \(v\.last\.prize \|\| \[\]\) : \[\];/.test(cli)
+     && /if \(!tvFlying\.length\) tvSettleLive = false;/.test(cli));
   ok('끝난 판은 안 넘긴다', /if \(g\.over\) \{ tvFinish\(roomId\); return; \}/.test(srv));
   // 낙찰 카드는 이긴 쪽 필드로 간다 — 경매대에 남지 않는다
   // 경매품을 지웠다가 잠시 뒤 날아오르게 하면 한 번 사라졌다 나타나 보인다.

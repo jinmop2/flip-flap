@@ -2070,7 +2070,9 @@ io.on('connection', (socket) => {
         twelve.nextTurn(gg);
         tvPush(roomId);
         if (r.cpuIndex !== undefined) tvBot(roomId);
-      }, 4200);
+        // 칩이 은행으로 가고 카드가 날아 앉는 데까지 1.5초쯤. 그 뒤로 한 박자면
+        // 결과를 읽을 수 있다 — 4.2초는 판이 멈춘 것처럼 길었다.
+      }, 2600);
     }
   }
   // AI 자리를 둘 수 있는 만큼 둔다. 사람이 둘 차례가 오면 멈춘다.
@@ -2079,6 +2081,11 @@ io.on('connection', (socket) => {
     if (!g || g.over || room.cpuIndex === undefined) return;
     const me = room.cpuIndex + 1;
     const acted = twelve.applyAi(g, me, Math.random, room.difficulty || 'hard');
+    // 둔 게 없으면 아무것도 보내지 않는다.
+    // 예전엔 무조건 보냈는데, 정산 중에 이게 한 번 더 날아가면 두 가지가 같이 망가졌다:
+    //   · 화면이 정산 상태로 다시 그려져, 이미 날아간 낙찰 카드가 중앙에 도로 놓였다
+    //   · tvPush 가 다음 판 타이머를 새로 걸어, 멈춰 있는 시간이 그만큼 늘어났다
+    if (!acted) return;
     tvPush(roomId);
     // 사람이 따라올 만한 뜸. 값을 부르는 대목은 더 길게 — 그게 이 모드의 승부처다.
     const wait = (g.phase === 'bid' || g.phase === 'close') ? 2200 : 1500;

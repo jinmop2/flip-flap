@@ -938,6 +938,12 @@ const RANK_ICO = { classic: '🃏', item: '🎪', twelve: '🔵' };
 const RANK_ORDER = ['classic', 'item', 'twelve'];
 const SLOT_H = 46;          // .rk-slot 높이와 같아야 한다
 const RK_LOOPS = 6;         // 몇 바퀴 돌고 멈출까
+// 위 곡선에서 칸이 넘어가는 시각(ms).
+// 앞쪽 대여섯 칸은 40ms 간격으로 흐릿하게 지나가 소리로 셀 수 없다. 그렇다고
+// 띄엄띄엄 골라 빼면 남은 간격이 도로 좁아져, 눈은 늦어지는데 귀는 한 번 다시
+// 빨라진다 — 그래서 앞을 통째로 자르고 꼬리만 남긴다. 간격이 49 → 410ms 로
+// 한 번도 좁아지지 않고 벌어진다.
+const RK_TICKS = [235, 284, 338, 396, 462, 535, 618, 715, 830, 969, 1146, 1390, 1800];
 
 // 룰렛은 기다리는 내내 돈다. 상대를 찾는 동안 계속 돌다가, 정해지는 순간
 // 그 자리에서 멈춘다 — 기다림 자체가 "무엇이 걸릴까" 로 읽힌다.
@@ -985,27 +991,44 @@ function rankRoulette(mode, done) {
   reel.style.transform = `translateY(-${Math.round(cur * SLOT_H)}px)`;
   void reel.offsetWidth;
   const end = (RK_LOOPS * RANK_ORDER.length) * SLOT_H;
-  // 빠르게 돌던 것을 이어받아 고르게 늦춘다. 예전 곡선(.16,.9,.24,1)은 앞쪽
-  // 25% 에서 이미 81% 를 가 버려, 도는 동안은 느리고 정할 때만 확 튄 뒤 뚝
-  // 멈추는 것처럼 보였다 — 사람이 기대하는 룰렛과 정반대다.
-  // 표준 ease-out 은 구간별로 22·20·18·16·12·9·4 씩 줄어, 처음이 가장 빠르고
-  // 끝으로 갈수록 한 칸씩 눈에 걸리며 선다.
-  const dur = 2100;
-  reel.style.transition = `transform ${dur}ms cubic-bezier(0, 0, .58, 1)`;
+  // 룰렛이 도는 결 — 처음이 가장 빠르고 갈수록 눈에 띄게 늦어져야 한다.
+  //
+  // 표준 ease-out(0,0,.58,1)은 18칸을 2.9·2.7·2.5·2.3·2.0·1.8·1.5·1.2·0.8·0.3 로
+  // 지나간다. 거의 등속이라 "늦어진다" 가 안 보였다. 그렇다고 (0,.5,.22,1) 처럼
+  // 확 앞으로 몰면 첫 10% 에 9칸이 지나가고 나머지 60% 는 한 칸도 안 지나가
+  // 멈춘 것처럼 보인다 — 빠른 게 아니라 고장 난 것으로 읽힌다.
+  //
+  // 구간마다 속도가 0.75배씩 줄어드는 결을 목표로 곡선을 맞췄다:
+  //   4.8 · 3.6 · 2.7 · 2.0 · 1.5 · 1.1 · 0.9 · 0.6 · 0.5 · 0.4 칸
+  // 처음이 마지막의 열두 배지만, 끝까지 한 칸씩은 계속 넘어간다.
+  const dur = 1800;
+  reel.style.transition = `transform ${dur}ms cubic-bezier(.18, .53, .39, .9)`;
   reel.style.transform = `translateY(-${end}px)`;
-  // 딸깍은 칸이 지나가는 순간에 맞춘다 — 소리 간격이 일정하면 눈은 느려지는데
-  // 귀는 안 느려져 따로 논다. 위 곡선의 역함수로 시각을 잡는다.
-  for (let i = 0; i < 10; i++)
-    setTimeout(() => playSound('tick'), 60 + dur * (1 - Math.sqrt(1 - i / 10)));
+  // 딸깍은 칸이 실제로 넘어가는 순간에 울린다. 간격이 일정하면 눈은 늦어지는데
+  // 귀는 안 늦어져 따로 논다. 위 곡선으로 18칸의 경계 시각을 미리 풀어 둔 값이고,
+  // 앞쪽 너무 촘촘한 것(60ms 미만)은 소리로 못 알아들으므로 뺐다.
+  // 끝의 네 간격이 139·177·244·410ms — 늦어지는 게 귀로 들린다.
+  for (const at of RK_TICKS) setTimeout(() => playSound('tick'), at);
   setTimeout(() => {
     win.classList.add('landed');
     playSound('bell');
-    setTimeout(done, 700);                                // 멈춘 걸 볼 시간
+    setTimeout(done, 340);                                // 멈춘 걸 볼 한 박자
   }, dur + 40);
 }
 
+// 상대를 찾았고 무엇을 할지도 정해졌다 — 여기서부터 매칭 창은 할 일이 끝났다.
+// 룰렛이 서고 한 박자 뒤 창을 걷는다. 남겨 두면 판이 이미 깔린 뒤에도
+// "찾는 중" 창이 위에 떠 있어, 무엇을 기다리는 화면인지 알 수 없다.
+// 뽑힌 모드는 토스트로 남으니 창이 사라져도 못 보고 지나칠 일은 없다.
+function matchDone(label) {
+  const m = document.getElementById('matchModal');
+  if (m) m.classList.remove('show');
+  rkHide(); matchCountdownStop();
+  toast(`🎲 <b>${esc(label)}</b>`, 1800);
+}
 socket.on('ranked_mode', ({ mode, bot, room }) => {
   isItemMode = mode === 'item';
+  const label = RANK_LABEL[mode] || mode;
   // 방에서 '랜덤' 으로 시작한 경우 — 매칭 창이 아니라 대기실 위에서 돌린다
   if (room) {
     const m = document.getElementById('matchModal');
@@ -1014,10 +1037,7 @@ socket.on('ranked_mode', ({ mode, bot, room }) => {
     if (t0) t0.textContent = '🎲 랜덤';
     const h0 = document.getElementById('matchHint');
     if (h0) h0.textContent = '무엇을 할지 지금 정합니다…';
-    rankRoulette(mode, () => {
-      if (t0) t0.textContent = '🎲 ' + (RANK_LABEL[mode] || mode);
-      toast(`🎲 <b>${esc(RANK_LABEL[mode] || mode)}</b>`, 1800);
-    });
+    rankRoulette(mode, () => matchDone(label));
     return;
   }
   matchCountdownStop();
@@ -1025,10 +1045,7 @@ socket.on('ranked_mode', ({ mode, bot, room }) => {
   if (h) h.textContent = '';
   const t = document.getElementById('matchTitle');
   if (t) t.textContent = '🏆 랭크게임';
-  rankRoulette(mode, () => {
-    if (t) t.textContent = '🏆 ' + (RANK_LABEL[mode] || mode);
-    toast(`🎲 <b>${esc(RANK_LABEL[mode] || mode)}</b>`, 1800);
-  });
+  rankRoulette(mode, () => matchDone(label));
 });
 // 판이 열리면 룰렛은 걷는다 — 다음에 다시 열 때 지난 결과가 남아 있으면 안 된다
 function rkHide() { rankSpinStop(); const b = document.getElementById('rkRoulette'); if (b) b.classList.remove('on'); }
@@ -7224,6 +7241,7 @@ function tvReact(prev, v) {
     // 판이 다시 그려진 다음 프레임에 곧바로 띄운다.
     if (iWon) vibe('got');
     tvFlying = (l.prize || []).map((c) => c.id);
+    tvSettleLive = true;
     requestAnimationFrame(() => requestAnimationFrame(() => {
       tvLand(l.prize || [], iWon);
       tvSfx('place');
@@ -7418,6 +7436,9 @@ function tvDealt(cardEl, deckEl) {
 
 // 경매대에 놓인 그 카드가 그대로 떠올라 더미의 제 자리로 간다.
 // 지우고 새로 띄우면 한 박자 비어 어색하다 — 있던 자리에서 출발한다.
+// 낙찰 카드가 아직 중앙에 놓여 있어야 하는 동안만 참. 다 날아가 앉으면 거짓이 되고,
+// 그 뒤로는 판을 다시 그려도 중앙에 카드를 놓지 않는다.
+let tvSettleLive = false;
 function tvLand(prize, iWon) {
   const fx = document.getElementById('tv-fx');
   const dest = document.getElementById(iWon ? 'tv-myAcq' : 'tv-oppAcq');
@@ -7450,6 +7471,7 @@ function tvLand(prize, iWon) {
 // 한 장이 다 내려앉았다 — 그 사이 판을 다시 그렸어도 켜지도록 더미를 다시 그린다
 function tvFlyDone(id) {
   tvFlying = tvFlying.filter((x) => x !== id);
+  if (!tvFlying.length) tvSettleLive = false;   // 다 앉았다 — 중앙은 이제 비워 둔다
   if (!tvView) return;
   tvPile(document.getElementById('tv-myAcq'), tvView.myAcq, tvFlying);
   tvPile(document.getElementById('tv-oppAcq'), tvView.oppAcq, tvFlying);
@@ -7508,9 +7530,20 @@ function tvRender(v) {
     // 경매품은 그 자리에 그대로 둔다. 없앴다가 잠시 뒤 날아오르게 하면
     // 카드가 한 번 사라졌다 다시 나타나 보인다 — 그 빈 순간이 어색했다.
     // tvLand 가 이 카드를 그대로 집어 들고 날아간다.
-    const pz = v.last.prize || [];
-    if (pz[0]) { const e0 = makeCard(pz[0]); e0.dataset.cid = String(pz[0].id); c.appendChild(e0); }
-    if (pz[1]) { const e1 = makeCard(pz[1]); e1.dataset.cid = String(pz[1].id); o.appendChild(e1); }
+    //
+    // 다만 이미 날아가 앉은 뒤라면 도로 놓지 않는다. 정산 중에 판을 다시 그릴
+    // 일이 생기면(예전엔 AI 쪽에서 헛푸시가 왔다) 낙찰된 카드가 중앙에 그대로
+    // 남아 있는 것처럼 보였다 — 이번엔 아무도 그걸 집어 가지 않으니까.
+    const pz = tvSettleLive ? (v.last.prize || []) : [];
+    // 날고 있는 중에 다시 그려졌다면 자리만 잡고 숨는다 — 안 그러면 두 장으로 보인다
+    const midFlight = !!document.querySelector('#tv-fx .tv-fly');
+    const place = (card, box) => {
+      const el = makeCard(card); el.dataset.cid = String(card.id);
+      if (midFlight) el.style.visibility = 'hidden';
+      box.appendChild(el);
+    };
+    if (pz[0]) place(pz[0], c);
+    if (pz[1]) place(pz[1], o);
     $('tv-typeBadge').className = 'type-badge ' + (v.last.winner === v.me ? 'open' : 'closed');
     $('tv-typeBadge').textContent = v.last.winner === v.me ? '내가 낙찰' : '상대가 낙찰';
     // 정산 화면에서는 실제로 낸 값만큼만 남긴다 — 곧 은행으로 쓸려 간다
