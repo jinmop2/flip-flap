@@ -2526,6 +2526,25 @@ async function renderMyTitles() {
 // ── 최근 전적 ──
 
 // ── 쿠폰 등록 ───────────────────────────────────────────────
+// ── 쿠폰 — 작은 창으로 뺐다 ──
+// 예전엔 상점 맨 위에 입력칸이 늘 한 줄을 먹고 있었다. 쿠폰은 어쩌다 한 번
+// 쓰는 것이라, 물건 칸을 그만큼 밀어내면서까지 늘 펼쳐 둘 이유가 없다.
+window.openCoupon = function () {
+  const m = document.getElementById('cpnModal'); if (!m) return;
+  const msg = document.getElementById('cpnMsg'); if (msg) { msg.textContent = ''; msg.className = 'cpn-msg'; }
+  m.classList.add('show');
+  // 폰에서 자판이 바로 올라오면 창이 가려진다 — 한 박자 두고 focus
+  setTimeout(() => { const i = document.getElementById('cpnInput'); if (i) i.focus(); }, 120);
+};
+window.closeCoupon = function () {
+  const m = document.getElementById('cpnModal'); if (m) m.classList.remove('show');
+};
+// 파편상점(교환소)으로 바로 — 들어가는 길이 없어 물건을 눌러 봐야 알았다
+window.openShardShop = function () {
+  closeShop();
+  Promise.resolve(openGacha()).then(() => gachaTab('exch')).catch(() => {});
+};
+
 async function submitCoupon() {
   const inp = document.getElementById('cpnInput');
   const msg = document.getElementById('cpnMsg');
@@ -2544,9 +2563,10 @@ async function submitCoupon() {
   inp.value = '';
   myAccount = res.profile;          // 서버가 계산한 잔액으로 갱신 (클라이언트 값은 신뢰하지 않는다)
   renderAccount();
-  const sc = document.getElementById('shopCoins');
-  if (sc) sc.textContent = '🪙 ' + (res.profile.coins ?? 0);
+  shopWallet();
   playSound('setwin');
+  // 받은 것을 보여 준 뒤 창을 접는다 — 열어 둔 채로 두면 뭘 더 해야 하나 싶다
+  setTimeout(() => closeCoupon(), 1800);
 }
 
 // ── 상점 ────────────────────────────────────────────────────
@@ -2647,8 +2667,17 @@ function shopTier(it) {
   return v >= 1800 ? 3 : v >= 1000 ? 2 : 1;
 }
 
+// 지갑 — 코인과 파편. 파편 전용품이 있는데 파편이 안 보이면
+// 왜 못 사는지, 얼마나 모아야 하는지 알 길이 없다.
+function shopWallet() {
+  const c = document.getElementById('shopCoins');
+  const d = document.getElementById('shopShards');
+  if (c) c.textContent = '🪙 ' + ((myAccount && myAccount.coins) || 0);
+  if (d) d.textContent = '🔷 ' + ((myAccount && myAccount.shards) || 0);
+}
+
 function renderShop() {
-  document.getElementById('shopCoins').textContent = `🪙 ${myAccount ? myAccount.coins : 0}`;
+  shopWallet();
   const list = document.getElementById('shopList');
   const vis = shopVisible();
   if (!vis.length) { list.innerHTML = '<div class="lb-empty">상점을 불러오지 못했어요. 잠시 후 다시 열어주세요.</div>'; return; }
@@ -4754,6 +4783,7 @@ const ESC_TARGETS = [
   // 폭탄으로 버릴 카드를 고르는 중이면 못 닫는다 — 고를 때까지 판이 기다린다
   ['itemUseModal', () => { if (!_bombOn) closeItemUse(); }],
   ['matchModal',   () => cancelMatch()],       // 대기열에서도 빼야 한다
+  ['cpnModal',     () => closeCoupon()],       // 상점 위에 뜨므로 상점보다 뒤에
   ['confirmModal', () => confirmClose(false)], // 확인창은 대개 가장 위에 뜬다
   // nickModal 은 일부러 제외 — 닉네임을 정해야 넘어가는 단계라 ESC 로 건너뛰면 안 된다
 ];
