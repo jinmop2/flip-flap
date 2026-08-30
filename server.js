@@ -98,7 +98,14 @@ setInterval(() => { const now = Date.now(); for (const [k, e] of rlMap) if (now 
 // 가입 — IP 를 넘긴다. 한 곳에서 계정을 찍어내는 걸 계정 쪽에서 센다.
 app.post('/api/signup', rateLimit(20), (req, res) => { const { id, password, nick } = req.body || {}; const out = accounts.signup(id, password, nick, ipOf(req)); if (out.ok) stats.bump('signups'); res.json(out); });
 app.post('/api/login',  rateLimit(30), (req, res) => { const { id, password } = req.body || {}; res.json(accounts.login(id, password)); });
-app.post('/api/me',     rateLimit(90), (req, res) => { const { token } = req.body || {}; res.json(accounts.meByToken(token)); });
+// 세션 확인. 여기서 잘못 답하면 화면이 로그인을 지운다 — 계정을 아직 다 못 읽었으면
+// "만료" 가 아니라 "아직 준비 중" 이라고 답해야 한다. 상태 코드로도 구분되게 503 을 준다.
+app.post('/api/me',     rateLimit(90), (req, res) => {
+  const { token } = req.body || {};
+  if (!accounts.storeReady())
+    return res.status(503).json({ error: '서버가 준비 중이에요. 잠시 후 다시 시도해주세요.', retry: true });
+  res.json(accounts.meByToken(token));
+});
 
 // ── 쿠폰 ───────────────────────────────────────────────────────────────────
 // 사용자 — 코드를 넣으면 코인을 받는다. IP 를 같이 넘겨 무차별 대입을 막는다.
@@ -1717,6 +1724,8 @@ io.on('connection', (socket) => {
 
   // 로그인 토큰 연결 (계정 프로필)
   socket.on('auth', ({ token } = {}) => {
+    // 계정을 아직 다 못 읽었으면 게스트로 확정 짓지 않는다 — 잠시 뒤 다시 물어보게 한다
+    if (!accounts.storeReady()) { socket.emit('auth_retry'); return; }
     const u = token && accounts.byToken(token);
     if (u) {
       socket.token = token; socket.emit('auth_ok', { profile: accounts.profileOf(u) });

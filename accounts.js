@@ -107,6 +107,14 @@ async function loadFromDB() {
     scheduleDbRetry();
   }
 }
+// 계정을 물어봐도 되는 상태인가.
+//
+// 서버는 DB 를 다 읽기 전에 이미 요청을 받는다(아래 loadFromDB 는 await 하지 않는다).
+// 그 틈에 들어온 물음에 "그런 토큰 없다" 고 답하면, 화면은 그 말을 믿고 로그인을
+// 지워 버린다 — 멀쩡한 계정이 접속할 때마다 풀리는 이유가 이것이었다.
+// 파일 저장(로컬)은 동기라 이 틈이 없다.
+function storeReady() { return !pool || dbReady; }
+
 // 운영 점검용 — 지금 어디에 저장 중인지 (자격증명은 노출하지 않음)
 function storeInfo() {
   return { mode: pool ? (dbReady ? 'postgres' : 'file(임시 — DB 재연결 대기)') : 'file',
@@ -3001,5 +3009,5 @@ module.exports = {
   // 클랜 채팅
   clanChatList, clanChatSend, blockUser, blockList, reportMessage, reportList,
   // 운영 점검
-  storeInfo,
+  storeInfo, storeReady,
 };

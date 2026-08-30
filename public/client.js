@@ -268,7 +268,14 @@ function getNick() { return myAccount ? myAccount.nick : (localStorage.getItem('
 // ── 회원 계정 ────────────────────────────────────────────────
 let myAccount = null;   // 로그인 프로필 (null=게스트)
 async function apiPost(url, body) {
-  try { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return await r.json(); }
+  try {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json();
+    // 200 이 아니면 '서버가 그렇게 판단했다' 가 아니라 '지금은 못 물어봤다' 로 본다.
+    // 503(준비 중)·429(너무 잦음)·5xx 를 답으로 믿으면, 멀쩡한 로그인을 지우게 된다.
+    if (!r.ok) { j.httpFail = true; j.status = r.status; }
+    return j;
+  }
   catch (_) { return { error: '서버 연결 실패', netFail: true }; }
 }
 // 로그인 요청 → 타이틀 화면(구글/카카오/게스트)로 통일.
@@ -328,13 +335,38 @@ function toast(html, ms = 2600) {
   toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }
 
+// 로그인 되살리기.
+//
+// 로그인을 지우는 것은 되돌릴 수 없는 일이라, "서버가 이 토큰은 무효라고
+// 분명히 말했을 때" 에만 한다. 연결 실패·준비 중(503)·너무 잦음(429)·서버 오류는
+// 전부 '지금은 모른다' 이지 '무효다' 가 아니다.
+//
+// 렌더 무료 요금제는 놀다가 깨어나므로, 깨어나는 동안 들어온 첫 물음이
+// 준비 전에 닿는 일이 잦다. 그 한 번을 답으로 믿어 로그인을 지우는 바람에
+// 접속할 때마다 다시 로그인해야 했다. 이제 몇 번 더 물어본다.
 async function restoreSession() {
   const tk = localStorage.getItem('ff_auth'); if (!tk) return;
-  const r = await apiPost('/api/me', { token: tk });
-  if (r.ok) { myAccount = r.profile; renderAccount(); claimDaily(); }
-  else if (r.netFail) { toast('⚠️ 서버 연결이 늦어지고 있어요 — 잠시 후 새로고침해 주세요', 3200); }   // 콜드스타트/오프라인: 유효 토큰 지키기
-  else localStorage.removeItem('ff_auth');   // 서버가 명시적으로 거부한 경우만 로그아웃
+  const naps = [0, 700, 1500, 3000];
+  for (let i = 0; i < naps.length; i++) {
+    if (naps[i]) await new Promise((go) => setTimeout(go, naps[i]));
+    const r = await apiPost('/api/me', { token: tk });
+    if (r.ok) {
+      myAccount = r.profile; renderAccount(); claimDaily();
+      // 소켓 쪽 인사가 준비 전에 닿았을 수 있다 — 계정을 다시 붙여 둔다
+      if (socket.connected) socket.emit('auth', { token: tk });
+      return;
+    }
+    if (!(r.netFail || r.httpFail)) { localStorage.removeItem('ff_auth'); return; }   // 진짜로 무효
+  }
+  toast('⚠️ 서버 연결이 늦어지고 있어요 — 잠시 후 새로고침해 주세요', 3200);   // 토큰은 지키고 물러난다
 }
+// 서버가 "아직 계정을 읽는 중" 이라고 하면 잠시 뒤 다시 인사한다
+socket.on('auth_retry', () => {
+  setTimeout(() => {
+    const tk = localStorage.getItem('ff_auth');
+    if (tk && socket.connected) socket.emit('auth', { token: tk });
+  }, 1200);
+});
 // 1일 접속 보상 수령 (연속 출석 스택 표시)
 async function claimDaily() {
   const d = await apiPost('/api/daily', { token: localStorage.getItem('ff_auth') });
