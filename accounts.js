@@ -96,6 +96,10 @@ async function loadFromDB() {
       const im = await pool.query("SELECT data FROM ff_meta WHERE k = 'ipsalt'");
       db.meta_ipsalt = (im.rows[0] && im.rows[0].data) || null;   // 없으면 첫 사용 때 생성된다
     } catch (_) { db.meta_ipsalt = null; }
+    try {
+      const al = await pool.query("SELECT data FROM ff_meta WHERE k = 'adminlog'");
+      db.adminLog = (al.rows[0] && al.rows[0].data) || [];        // 누가 무엇을 했는지
+    } catch (_) { db.adminLog = []; }
     rebuildIndex();
     dbReady = true; dbLastError = null;
     console.log('계정 ' + rows.length + '개, 클랜 ' + clanRows.length + '개, 쿠폰 ' + cpnRows.length + '개 DB에서 로드됨');
@@ -729,6 +733,9 @@ function login(id, pw) {
   const idl = String(id || '').trim().toLowerCase();
   const u = db.users[idl];
   if (!u || !u.hash || u.hash !== hashPw(pw, u.salt)) return { error: '아이디 또는 비밀번호가 틀렸어요.' };   // 카카오 계정은 비번 없음
+  // 정지 중이면 여기서 막는다. 왜 막혔는지는 알려 준다 —
+  // 이유를 모르면 문의만 늘고, 고칠 기회도 없다.
+  { const b = banInfo(u); if (b) return { error: banText(b), banned: b }; }
   // 로그인마다 토큰 갱신·만료 연장
   if (u.token) delete tokenIndex[u.token];
   u.token = makeToken(); u.tokenExp = Date.now() + TOKEN_TTL;
@@ -868,7 +875,29 @@ function byToken(token) {
   if (u.tokenExp && Date.now() > u.tokenExp) { delete tokenIndex[token]; return null; }  // 만료
   return u;
 }
-function meByToken(token) { const u = byToken(token); return u ? { ok: true, profile: profileOf(u) } : { error: '세션 만료' }; }
+function meByToken(token) {
+  const u = byToken(token);
+  if (!u) return { error: '세션 만료' };
+  const b = banInfo(u);
+  if (b) return { error: banText(b), banned: b };   // 화면이 정지 안내를 띄운다
+  return { ok: true, profile: profileOf(u) };
+}
+// 재갈 안내 한 줄.
+function muteText(m) {
+  if (!m) return '';
+  const when = m.until
+    ? new Date(m.until + 9 * 3600 * 1000).toISOString().slice(0, 16).replace('T', ' ') + ' 까지'
+    : '무기한';
+  return `채팅이 제한된 상태예요 (${when}).` + (m.reason ? ` 사유: ${m.reason}` : '');
+}
+// 정지 안내 한 줄. 기간이 있으면 언제까지인지 적는다.
+function banText(b) {
+  if (!b) return '';
+  const when = b.until
+    ? new Date(b.until + 9 * 3600 * 1000).toISOString().slice(0, 16).replace('T', ' ') + ' 까지'
+    : '무기한';
+  return `이용이 제한된 계정이에요 (${when}).` + (b.reason ? ` 사유: ${b.reason}` : '');
+}
 
 // 계정 영구 삭제 — 구글플레이 정책(계정 생성 앱은 삭제 수단 제공 의무).
 // 일반 계정은 비밀번호 재확인, 소셜 계정은 토큰만으로 삭제. 되돌릴 수 없음.
@@ -2872,6 +2901,7 @@ function clanChatList(token) {
 function clanChatSend(token, text) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
+  { const m = muteInfo(u); if (m) return { error: muteText(m) }; }
   const c = clanOf(u);
   if (!c) return { error: '클랜에 가입해야 채팅할 수 있어요.' };
 
@@ -2963,6 +2993,7 @@ function dmSend(token, otherIdl, text) {
   const idl = tokenIndex[token];
   const u = idl && Object.prototype.hasOwnProperty.call(db.users, idl) ? db.users[idl] : null;
   if (!u) return { error: '로그인이 필요해요.' };
+  { const m = muteInfo(u); if (m) return { error: muteText(m) }; }
   const other = String(otherIdl || '').toLowerCase();
   if (!other || other === idl) return { error: '상대를 찾을 수 없어요.' };
   if (!friendIdlsOf(idl).includes(other)) return { error: '친구끼리만 대화할 수 있어요.' };
@@ -3040,6 +3071,222 @@ function reportList(limit = 50) {
   return { ok: true, reports: (db.reports || []).slice(-limit).reverse() };
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+//  운영 (관리자)
+// ══════════════════════════════════════════════════════════════════════════
+//
+// 원칙 셋:
+//   ① 여기 있는 함수는 전부 서버의 adminOk 를 통과한 뒤에만 불린다.
+//      화면이 보낸 값으로 무엇을 할지 정하지 않는다 — 무엇을 할지는 여기서 정한다.
+//   ② 사람에 대한 조치는 되돌릴 수 있어야 한다. 정지는 기간이 있고 풀 수 있다.
+//      되돌릴 수 없는 것(계정 삭제)은 여기 두지 않는다.
+//   ③ 누가 언제 무엇을 했는지 남긴다. 남지 않는 권한은 나중에 아무도 설명할 수 없다.
+
+const ADMIN_LOG_KEEP = 500;
+function adminLog(action, target, detail) {
+  db.adminLog = Array.isArray(db.adminLog) ? db.adminLog : [];
+  db.adminLog.push({ at: Date.now(), action, target: target || null, detail: detail || null });
+  if (db.adminLog.length > ADMIN_LOG_KEEP) db.adminLog.splice(0, db.adminLog.length - ADMIN_LOG_KEEP);
+  persistMeta('adminlog', db.adminLog);
+}
+function adminLogList(n = 100) {
+  return (Array.isArray(db.adminLog) ? db.adminLog : []).slice(-n).reverse();
+}
+
+// 계정 하나 집기. 열쇠는 소문자 아이디다.
+const userOf = (idl) => {
+  const k = String(idl || '').toLowerCase();
+  return Object.prototype.hasOwnProperty.call(db.users, k) ? db.users[k] : null;
+};
+
+// ── 정지 ────────────────────────────────────────────────────────────────
+// 기간을 넣으면 그때까지, 0 이면 무기한. 사유는 본인에게 그대로 보인다 —
+// 왜 막혔는지 모르면 문의만 늘고, 고칠 기회도 없다.
+function banInfo(u) {
+  if (!u || !u.ban) return null;
+  if (u.ban.until && Date.now() > u.ban.until) return null;   // 기간이 지났다
+  return { until: u.ban.until || 0, reason: u.ban.reason || '', at: u.ban.at || 0 };
+}
+function adminBan(idl, days, reason) {
+  const u = userOf(idl); if (!u) return { error: '없는 계정이에요.' };
+  const d = Math.max(0, Math.min(3650, Number(days) || 0));
+  u.ban = { at: Date.now(), until: d ? Date.now() + d * 86400000 : 0,
+            reason: String(reason || '').slice(0, 200) };
+  // 정지된 사람의 토큰은 끊는다 — 안 그러면 켜 둔 창에서 계속 논다
+  if (u.token) { delete tokenIndex[u.token]; u.token = null; }
+  persist(String(idl).toLowerCase());
+  adminLog('ban', u.id, { days: d, reason: u.ban.reason });
+  return { ok: true, ban: banInfo(u) };
+}
+function adminUnban(idl) {
+  const u = userOf(idl); if (!u) return { error: '없는 계정이에요.' };
+  delete u.ban;
+  persist(String(idl).toLowerCase());
+  adminLog('unban', u.id, null);
+  return { ok: true };
+}
+
+// ── 채팅 재갈 ───────────────────────────────────────────────────────────
+// 판은 두게 두고 말만 막는다. 한 마디 때문에 게임까지 막는 건 과하다.
+function muteInfo(u) {
+  if (!u || !u.mute) return null;
+  if (u.mute.until && Date.now() > u.mute.until) return null;
+  return { until: u.mute.until || 0, reason: u.mute.reason || '' };
+}
+function adminMute(idl, days, reason) {
+  const u = userOf(idl); if (!u) return { error: '없는 계정이에요.' };
+  const d = Math.max(0, Math.min(365, Number(days) || 0));
+  u.mute = { at: Date.now(), until: d ? Date.now() + d * 86400000 : 0,
+             reason: String(reason || '').slice(0, 200) };
+  persist(String(idl).toLowerCase());
+  adminLog('mute', u.id, { days: d, reason: u.mute.reason });
+  return { ok: true, mute: muteInfo(u) };
+}
+function adminUnmute(idl) {
+  const u = userOf(idl); if (!u) return { error: '없는 계정이에요.' };
+  delete u.mute;
+  persist(String(idl).toLowerCase());
+  adminLog('unmute', u.id, null);
+  return { ok: true };
+}
+
+// ── 운영 쪽지 ───────────────────────────────────────────────────────────
+// 친구가 아니어도 닿아야 하므로 일반 쪽지(dmSend)와 다른 통로를 쓴다.
+// 답장은 받지 않는다 — 여기로 상담을 받기 시작하면 감당이 안 된다.
+const NOTICE_KEEP = 30;
+function adminNotice(idl, text) {
+  const u = userOf(idl); if (!u) return { error: '없는 계정이에요.' };
+  const t = String(text || '').trim().slice(0, 500);
+  if (!t) return { error: '내용을 입력해주세요.' };
+  u.notices = Array.isArray(u.notices) ? u.notices : [];
+  u.notices.push({ id: crypto.randomBytes(6).toString('hex'), text: t, at: Date.now(), read: false });
+  if (u.notices.length > NOTICE_KEEP) u.notices.splice(0, u.notices.length - NOTICE_KEEP);
+  persist(String(idl).toLowerCase());
+  adminLog('notice', u.id, { text: t.slice(0, 80) });
+  return { ok: true };
+}
+// 전체 공지 — 지금 접속한 사람에게는 서버가 바로 띄우고, 여기서는 계정에 남긴다.
+// 대상이 많으므로 조건(최소 레벨 등)으로 좁힐 수 있게 둔다.
+function adminNoticeAll(text, opts = {}) {
+  const t = String(text || '').trim().slice(0, 500);
+  if (!t) return { error: '내용을 입력해주세요.' };
+  const minLevel = Math.max(0, Number(opts.minLevel) || 0);
+  let n = 0;
+  for (const [idl, u] of Object.entries(db.users)) {
+    if (minLevel && levelOf(u.xp) < minLevel) continue;
+    u.notices = Array.isArray(u.notices) ? u.notices : [];
+    u.notices.push({ id: crypto.randomBytes(6).toString('hex'), text: t, at: Date.now(), read: false });
+    if (u.notices.length > NOTICE_KEEP) u.notices.splice(0, u.notices.length - NOTICE_KEEP);
+    persist(idl); n++;
+  }
+  adminLog('notice_all', null, { text: t.slice(0, 80), count: n, minLevel });
+  return { ok: true, count: n };
+}
+// 본인이 읽는 쪽 — 안 읽은 것만 준다
+function myNotices(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const list = (u.notices || []).filter((x) => !x.read);
+  return { ok: true, list };
+}
+function markNoticesRead(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  let n = 0;
+  for (const x of (u.notices || [])) if (!x.read) { x.read = true; n++; }
+  if (n) persist(idl);
+  return { ok: true, n };
+}
+
+// ── 코인 조정 ───────────────────────────────────────────────────────────
+// 사고가 났을 때 되돌리는 용도다. 늘리는 것도 줄이는 것도 남긴다.
+function adminCoins(idl, delta, memo) {
+  const u = userOf(idl); if (!u) return { error: '없는 계정이에요.' };
+  const d = Math.trunc(Number(delta) || 0);
+  if (!d) return { error: '0 은 의미가 없어요.' };
+  u.coins = Math.max(0, (u.coins || 0) + d);
+  persist(String(idl).toLowerCase());
+  adminLog('coins', u.id, { delta: d, after: u.coins, memo: String(memo || '').slice(0, 100) });
+  return { ok: true, coins: u.coins };
+}
+
+// ── 조회 ────────────────────────────────────────────────────────────────
+// 찾기. 아이디·닉네임 어느 쪽으로도 찾힌다.
+function adminSearch(q, limit = 30) {
+  const s = String(q || '').trim().toLowerCase();
+  const out = [];
+  for (const [idl, u] of Object.entries(db.users)) {
+    if (s && !idl.includes(s) && !String(u.nick || '').toLowerCase().includes(s)) continue;
+    out.push({
+      idl, id: u.id, nick: u.nick, level: levelOf(u.xp), rp: u.rp || 0,
+      coins: u.coins || 0, wins: u.wins || 0, losses: u.losses || 0,
+      createdAt: u.createdAt || 0, lastSeen: u.lastSeen || 0,
+      provider: u.provider || (u.temp ? 'temp' : 'id'),
+      banned: !!banInfo(u), muted: !!muteInfo(u),
+    });
+    if (out.length >= 400) break;                 // 안전장치
+  }
+  // 최근에 만든 계정부터
+  out.sort((a, b) => (b.lastSeen || b.createdAt) - (a.lastSeen || a.createdAt));
+  return { ok: true, total: out.length, list: out.slice(0, Math.min(200, Math.max(1, limit))) };
+}
+
+// 한 사람 자세히. 비밀번호 해시·소금·토큰은 절대 내보내지 않는다 —
+// 관리자 화면이라도 그것들이 오갈 이유가 없다.
+function adminUser(idl) {
+  const u = userOf(idl); if (!u) return { error: '없는 계정이에요.' };
+  const p = profileOf(u);
+  return {
+    ok: true,
+    profile: p,
+    admin: {
+      idl: String(idl).toLowerCase(),
+      createdAt: u.createdAt || 0, lastSeen: u.lastSeen || 0,
+      provider: u.provider || (u.temp ? 'temp' : 'id'),
+      ban: banInfo(u), mute: muteInfo(u),
+      referredBy: u.referredBy || null, refCount: u.refCount || 0,
+      loginStreak: u.loginStreak || 0,
+      itemCount: Object.keys(u.items || {}).length,
+      titleCount: Object.keys(u.titles || {}).length,
+      stats: u.stats || {},
+      notices: (u.notices || []).slice(-10).reverse(),
+      // 같은 기기에서 만들어졌는지 견주는 용도. 원본 IP 가 아니라 지문이다.
+      ipt: u.ipt || null,
+    },
+  };
+}
+
+// 한눈 요약 — 얼마나 쓰이고 있나
+function adminOverview() {
+  const users = Object.values(db.users);
+  const now = Date.now();
+  const day = 86400000;
+  const active = (ms) => users.filter((u) => (u.lastSeen || 0) > now - ms).length;
+  return {
+    ok: true,
+    users: users.length,
+    banned: users.filter((u) => banInfo(u)).length,
+    muted: users.filter((u) => muteInfo(u)).length,
+    active1d: active(day), active7d: active(7 * day), active30d: active(30 * day),
+    newToday: users.filter((u) => (u.createdAt || 0) > now - day).length,
+    clans: Object.keys(db.clans || {}).length,
+    coins: users.reduce((n, u) => n + (u.coins || 0), 0),
+    reports: (db.reports || []).length,
+    season: seasonState(),
+  };
+}
+
+// 마지막 접속 시각 — 정지·활동 판단의 바탕이 된다.
+// 판을 둘 때마다 적으면 저장이 잦아지므로, 하루에 한 번만 적는다.
+function touchSeen(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return;
+  const now = Date.now();
+  if (u.lastSeen && now - u.lastSeen < 3600000) return;   // 한 시간에 한 번이면 충분하다
+  u.lastSeen = now;
+  persist(idl);
+}
+
 module.exports = {
   createTempAccounts, rotateTempCode, revokeTempCode, tempAccountList, codeLogin,
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, applyRp4, claimDaily, myRank,
@@ -3064,4 +3311,8 @@ module.exports = {
   clanChatList, clanChatSend, blockUser, blockList, reportMessage, reportList,
   // 운영 점검
   storeInfo, storeReady,
+  // 운영 (관리자) — 전부 서버의 adminOk 를 통과한 뒤에만 불린다
+  adminOverview, adminSearch, adminUser, adminBan, adminUnban, adminMute, adminUnmute,
+  adminNotice, adminNoticeAll, adminCoins, adminLogList,
+  banInfo, muteInfo, myNotices, markNoticesRead, touchSeen,
 };

@@ -47,10 +47,12 @@ console.log('② 화면은 확실할 때만 로그인을 지운다');
      /restoreSession[\s\S]{0,900}if \(socket\.connected\) socket\.emit\('auth', \{ token: tk \}\);/.test(cli));
   ok('서버가 다시 오라 하면 다시 인사한다', /socket\.on\('auth_retry'/.test(cli));
 
-  // 되돌릴 수 없는 일이므로, 토큰을 지우는 곳은 셋뿐이어야 한다:
-  // 스스로 로그아웃 · 계정 삭제 · 서버가 분명히 거부.
+  // 되돌릴 수 없는 일이므로, 토큰을 지우는 곳은 넷뿐이어야 한다:
+  // 스스로 로그아웃 · 계정 삭제 · 서버가 분명히 거부 · 운영자가 정지.
+  // (정지는 서버가 토큰을 이미 끊은 뒤라, 화면에 남겨 두면 '세션 만료' 만 반복된다)
   const spots = (cli.match(/removeItem\('ff_auth'\)/g) || []).length;
-  ok('토큰을 지우는 자리는 셋뿐', spots === 3, spots + '곳');
+  ok('토큰을 지우는 자리는 넷뿐', spots === 4, spots + '곳');
+  ok('그중 하나는 정지 통보다', /socket\.on\('banned'[\s\S]{0,400}removeItem\('ff_auth'\)/.test(cli));
 }
 
 console.log('③ 깨어나는 동안 옛 화면에 갇히지 않는다');

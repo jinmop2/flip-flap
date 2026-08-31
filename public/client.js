@@ -357,12 +357,32 @@ async function restoreSession() {
       myAccount = r.profile; renderAccount(); claimDaily();
       // 소켓 쪽 인사가 준비 전에 닿았을 수 있다 — 계정을 다시 붙여 둔다
       if (socket.connected) socket.emit('auth', { token: tk });
+      showNotices();                      // 안 읽은 운영 쪽지가 있으면 보여 준다
       return;
     }
     if (!(r.netFail || r.httpFail)) { localStorage.removeItem('ff_auth'); return; }   // 진짜로 무효
   }
   toast('⚠️ 서버 연결이 늦어지고 있어요 — 잠시 후 새로고침해 주세요', 3200);   // 토큰은 지키고 물러난다
 }
+// 운영 쪽지 — 한 사람에게든 전체 공지든 같은 통로로 온다
+socket.on('admin_notice', ({ text } = {}) => {
+  if (!text) return;
+  askConfirm({ icon: '📢', title: '운영자 알림', desc: String(text).slice(0, 500),
+               yes: '확인', no: null }, () => {});
+});
+// 정지됐다 — 지금 보고 있는 화면을 덮고 왜 막혔는지 알려 준다.
+// 이유를 안 알려 주면 문의만 늘고, 고칠 기회도 없다.
+socket.on('banned', (b) => {
+  const when = b && b.until
+    ? new Date(b.until).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) + ' 까지'
+    : '무기한';
+  localStorage.removeItem('ff_auth');
+  askConfirm({ icon: '🚫', title: '이용이 제한됐어요',
+               desc: (b && b.reason ? '사유: ' + b.reason + '\n' : '') + '제한 기간: ' + when,
+               yes: '확인', no: null },
+             () => { try { location.reload(); } catch (_) {} });
+});
+
 // 서버가 "아직 계정을 읽는 중" 이라고 하면 잠시 뒤 다시 인사한다
 socket.on('auth_retry', () => {
   setTimeout(() => {
@@ -370,6 +390,21 @@ socket.on('auth_retry', () => {
     if (tk && socket.connected) socket.emit('auth', { token: tk });
   }, 1200);
 });
+// 안 읽은 운영 쪽지. 여럿이면 하나씩 차례로 보여 준다.
+async function showNotices() {
+  const r = await apiPost('/api/notices', { token: authToken() });
+  const list = (r && r.list) || [];
+  if (!list.length) return;
+  let i = 0;
+  const next = () => {
+    if (i >= list.length) { apiPost('/api/notices-read', { token: authToken() }); return; }
+    const m = list[i++];
+    askConfirm({ icon: '📢', title: '운영자 알림', desc: String(m.text).slice(0, 500),
+                 yes: '확인', no: null }, next);
+  };
+  setTimeout(next, 900);                  // 로비가 자리를 잡은 뒤에
+}
+
 // 1일 접속 보상 수령 (연속 출석 스택 표시)
 async function claimDaily() {
   const d = await apiPost('/api/daily', { token: localStorage.getItem('ff_auth') });
@@ -4911,7 +4946,11 @@ function askConfirm({ icon = '❓', title, desc = '', yes = '확인', no = '취�
   document.getElementById('cfTitle').textContent = title;
   document.getElementById('cfDesc').textContent = desc;
   document.getElementById('cfYes').textContent = yes;
-  document.getElementById('cfNo').textContent = no;
+  // no 를 안 주면(알림처럼 확인만 받는 창) 취소 버튼을 감춘다.
+  // 예전엔 그대로 찍어서 'null' 이라고 적힌 버튼이 떴다.
+  const cfNo = document.getElementById('cfNo');
+  if (no == null) { cfNo.style.display = 'none'; }
+  else { cfNo.style.display = ''; cfNo.textContent = no; }
   _confirmCb = cb;
   document.getElementById('confirmModal').classList.add('show');
 }

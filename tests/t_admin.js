@@ -1,7 +1,10 @@
-// 관리자 페이지 — 화면 전체가 server.js 안 템플릿 문자열 한 덩어리라,
-// 따옴표 한 겹만 어긋나도 인라인 스크립트가 통째로 죽는다. 그러면 버튼이
-// 하나도 안 먹는데 화면은 멀쩡해 보인다(실제로 임시 계정을 붙이다 그렇게 됐다).
+// 관리자 페이지 — 따옴표 한 겹만 어긋나도 인라인 스크립트가 통째로 죽는다.
+// 그러면 버튼이 하나도 안 먹는데 화면은 멀쩡해 보인다(실제로 임시 계정을 붙이다
+// 그렇게 됐고, 파일로 옮긴 뒤에도 서버용 이스케이프가 남아 또 그랬다).
 // 그래서 서버를 띄우지 않고도 "정말 파싱되는가" 를 여기서 확인한다.
+//
+// 화면은 이제 admin.html 한 파일이다. server.js 안 155줄짜리 템플릿 문자열이던
+// 것을 뺐다 — 화면이 커질수록 서버 코드가 화면 코드에 묻힌다.
 const fs = require('fs');
 const path = require('path');
 const src = path.join(__dirname, '..');
@@ -10,25 +13,13 @@ const srv = fs.readFileSync(src + '/server.js', 'utf8');
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra !== undefined ? '  ' + extra : ''))); };
 
-// /admin 라우트가 만들어 내는 HTML 을 실제로 뽑아 본다.
-// express 없이, 그 안의 템플릿 문자열만 평가한다.
-function adminHtml() {
-  const at = srv.indexOf("app.get('/admin'");
-  const start = srv.indexOf('res.type(\'html\').send(`', at);
-  const from = start + 'res.type(\'html\').send(`'.length;
-  // 백틱이 닫히는 지점 — 이스케이프된 백틱은 없다(있다면 여기서 걸린다)
-  const end = srv.indexOf('`);', from);
-  const tpl = srv.slice(from, end);
-  // ${...} 안은 서버 값이라 여기서는 자리만 채운다
-  const fake = { accounts: { TITLES: { t: { icon: '★', name: '칭호' } } } };
-  // eslint-disable-next-line no-new-func
-  return new Function('accounts', 'Object', 'return `' + tpl + '`;')(fake.accounts, Object);
-}
-
-console.log('① 화면이 만들어진다');
+console.log('① 화면이 있다');
 let html = '';
-try { html = adminHtml(); ok('템플릿이 평가된다', html.length > 1000, String(html.length)); }
-catch (e) { ok('템플릿이 평가된다', false, e.message); }
+try { html = fs.readFileSync(src + '/admin.html', 'utf8'); } catch (_) {}
+ok('admin.html 이 있다', html.length > 1000, String(html.length));
+ok('라우트가 그 파일을 준다', /app\.get\('\/admin'[\s\S]{0,400}sendFile\(path\.join\(__dirname, 'admin\.html'\)\)/.test(srv));
+// 주소에 키가 실리지 않는 화면이지만, 캐시·리퍼러는 그래도 막아 둔다
+ok('캐시·리퍼러를 막는다', /app\.get\('\/admin'[\s\S]{0,400}Referrer-Policy[\s\S]{0,200}no-store/.test(srv));
 
 console.log('\n② 인라인 스크립트가 파싱된다');
 {

@@ -194,162 +194,126 @@ app.post('/api/admin/temp-revoke', rateLimit(20), (req, res) => {
   res.json(accounts.revokeTempCode((req.body || {}).id));
 });
 
+// ── 운영 API ───────────────────────────────────────────────────────────────
+// 전부 adminOk 를 지난다. 키는 본문으로만 받고, 무엇을 할지는 서버가 정한다.
+// 화면은 "누구에게 무엇을" 만 보내고 금액·기간의 한계는 accounts.js 가 자른다.
+
+// 한눈 요약 + 최근 30일 + 지금 접속 수
+app.post('/api/admin/overview', rateLimit(60), (req, res) => {
+  if (!adminOk(req, res)) return;
+  // 4인전 방 수는 server4 가 쥐고 있다 (attach4 가 돌려준 손잡이)
+  res.json({
+    ...accounts.adminOverview(),
+    days: stats.report(30),
+    live: {
+      online: io.engine.clientsCount || 0,
+      rooms: Object.keys(rooms).length,
+      playing: Object.values(rooms).filter((r) => r && (r.game || r.tv)).length,
+      quad: (typeof g4 !== 'undefined' && g4 && g4.count) ? g4.count() : 0,
+      quadWaiting: (typeof g4 !== 'undefined' && g4 && g4.waiting) ? g4.waiting() : 0,
+      uptime: Math.round(process.uptime()),
+      store: accounts.storeInfo(),
+    },
+  });
+});
+
+// 사람 찾기 · 자세히 보기
+app.post('/api/admin/users', rateLimit(60), (req, res) => {
+  if (!adminOk(req, res)) return;
+  const { q, limit } = req.body || {};
+  res.json(accounts.adminSearch(q, limit));
+});
+app.post('/api/admin/user', rateLimit(60), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json(accounts.adminUser((req.body || {}).idl));
+});
+
+// 제재 — 정지(게임 전체) · 재갈(말만)
+app.post('/api/admin/ban', rateLimit(30), (req, res) => {
+  if (!adminOk(req, res)) return;
+  const { idl, days, reason } = req.body || {};
+  const out = accounts.adminBan(idl, days, reason);
+  // 켜 둔 창에서 계속 놀지 못하게 지금 붙어 있는 소켓도 끊는다
+  if (out.ok) kickAccount(idl, accounts.banInfo({ ban: out.ban }));
+  res.json(out);
+});
+app.post('/api/admin/unban', rateLimit(30), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json(accounts.adminUnban((req.body || {}).idl));
+});
+app.post('/api/admin/mute', rateLimit(30), (req, res) => {
+  if (!adminOk(req, res)) return;
+  const { idl, days, reason } = req.body || {};
+  res.json(accounts.adminMute(idl, days, reason));
+});
+app.post('/api/admin/unmute', rateLimit(30), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json(accounts.adminUnmute((req.body || {}).idl));
+});
+
+// 코인 조정 (사고 복구용)
+app.post('/api/admin/coins', rateLimit(30), (req, res) => {
+  if (!adminOk(req, res)) return;
+  const { idl, delta, memo } = req.body || {};
+  res.json(accounts.adminCoins(idl, delta, memo));
+});
+
+// 쪽지 — 한 사람에게 / 전체에게
+app.post('/api/admin/notice', rateLimit(30), (req, res) => {
+  if (!adminOk(req, res)) return;
+  const { idl, text } = req.body || {};
+  const out = accounts.adminNotice(idl, text);
+  if (out.ok) pushNotice(idl, text);           // 지금 접속 중이면 바로 띄운다
+  res.json(out);
+});
+app.post('/api/admin/notice-all', rateLimit(6), (req, res) => {
+  if (!adminOk(req, res)) return;
+  const { text, minLevel } = req.body || {};
+  const out = accounts.adminNoticeAll(text, { minLevel });
+  if (out.ok) io.emit('admin_notice', { text: String(text).slice(0, 500) });
+  res.json(out);
+});
+
+// 신고함 · 운영 기록
+app.post('/api/admin/reports', rateLimit(30), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json({ ok: true, list: accounts.reportList(200) });
+});
+app.post('/api/admin/log', rateLimit(30), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json({ ok: true, list: accounts.adminLogList(150) });
+});
+
+// 지금 그 계정으로 붙어 있는 소켓을 끊는다 (정지 즉시 반영)
+function kickAccount(idl, ban) {
+  const key = String(idl || '').toLowerCase();
+  const sid = accountSockets.get(key);
+  if (!sid) return;
+  const sk = io.sockets.sockets.get(sid);
+  if (!sk) return;
+  try { sk.emit('banned', ban || null); } catch (_) {}
+  setTimeout(() => { try { sk.disconnect(true); } catch (_) {} }, 400);
+}
+// 접속 중이면 쪽지를 바로 띄운다
+function pushNotice(idl, text) {
+  const sid = accountSockets.get(String(idl || '').toLowerCase());
+  if (!sid) return;
+  io.to(sid).emit('admin_notice', { text: String(text).slice(0, 500) });
+}
+
 // 관리자 페이지 — 키는 이 화면에서 입력받아 요청 본문으로만 보낸다 (URL 에 안 남음)
+// 관리자 페이지. 화면은 admin.html 한 파일에 있다 —
+// 예전엔 server.js 안의 155줄짜리 템플릿 문자열이었는데, 화면이 커질수록
+// 서버 코드가 화면 코드에 묻힌다. 비밀은 안 들어 있다(키는 사람이 직접 넣는다).
 app.get('/admin', rateLimit(20), (req, res) => {
-  res.type('html').send(`<!DOCTYPE html><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="noindex,nofollow"><title>FLIP FLAP 관리</title>
-<style>
- body{font-family:system-ui,sans-serif;background:#1a0b10;color:#e8dfc8;margin:0;padding:18px;max-width:820px}
- h1{color:#ffd94a;font-size:1.15rem;margin:0 0 14px}
- .card{background:#2a1018;border:1px solid #5a3a20;border-radius:12px;padding:14px;margin-bottom:14px}
- label{display:block;font-size:.8rem;color:#c8a86a;margin:8px 0 3px}
- input{width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid #5a3a20;background:#160810;color:#e8dfc8;font-size:.95rem}
- button{background:#ffd94a;color:#2a1008;border:0;border-radius:8px;padding:10px 16px;font-weight:800;cursor:pointer;font-size:.95rem}
- button.ghost{background:transparent;color:#c8a86a;border:1px solid #5a3a20}
- .row{display:flex;gap:8px;flex-wrap:wrap}.row>div{flex:1;min-width:120px}
- table{border-collapse:collapse;width:100%;font-size:.8rem;margin-top:10px}
- th,td{border:1px solid #4a2a18;padding:5px 8px;text-align:left}
- th{background:#3a1018;color:#ffd94a}
- tr.dead{opacity:.45;text-decoration:line-through}
- code{background:#160810;padding:3px 7px;border-radius:5px;color:#8fe0a0;font-size:.95rem;letter-spacing:.06em}
- .msg{margin-top:10px;font-size:.85rem}.err{color:#ff9a9a}.ok{color:#8fe0a0}
- .codes{display:flex;flex-direction:column;gap:5px;margin-top:10px}
-</style>
-<h1>🎟 FLIP FLAP — 쿠폰 · 임시 계정</h1>
-
-<div class="card">
-  <label>관리자 키 (Render 환경변수 ADMIN_KEY)</label>
-  <input id="key" type="password" placeholder="키를 입력하세요" autocomplete="off">
-  <div class="msg" id="keyMsg"></div>
-</div>
-
-<div class="card">
-  <b>쿠폰 발행</b>
-  <div class="row">
-    <div><label>지급 코인</label><input id="coins" type="number" value="500" min="1"></div>
-    <div><label>발행 장수</label><input id="count" type="number" value="1" min="1" max="200"></div>
-  </div>
-  <div class="row">
-    <div><label>장당 사용 인원 (0=무제한)</label><input id="maxUses" type="number" value="1" min="0"></div>
-    <div><label>유효 기간(일, 0=무기한)</label><input id="days" type="number" value="0" min="0"></div>
-  </div>
-  <div class="row">
-    <div><label>최소 레벨 (0=제한 없음)</label><input id="minLevel" type="number" value="0" min="0"></div>
-    <div><label>메모</label><input id="memo" placeholder="예: 오픈채팅 이벤트"></div>
-  </div>
-  <div class="row">
-    <div><label>칭호 지급 (선택)</label><select id="title"><option value="">— 없음 —</option>${
-      Object.entries(accounts.TITLES).map(([id, t]) =>
-        `<option value="${id}">${t.icon} ${t.name}</option>`).join('')
-    }</select></div>
-    <div><label>코드 직접 지정 (선택, 영문·숫자 8~20자)</label><input id="code" placeholder="비우면 자동 생성"></div>
-  </div>
-  <div class="msg">칭호만 줄 거면 지급 코인을 0 으로 두세요.</div>
-  <div style="margin-top:12px"><button onclick="mk()">발행하기</button></div>
-  <div class="msg" id="mkMsg"></div>
-  <div class="codes" id="codes"></div>
-</div>
-
-<div class="card">
-  <b>발행 목록</b> <button class="ghost" onclick="load()" style="float:right">새로고침</button>
-  <div id="list"></div>
-</div>
-
-<div class="card">
-  <b>임시 계정 (코드로 로그인)</b>
-  <div class="msg">코드는 <b>만들 때 딱 한 번</b>만 보입니다. 서버에는 해시만 남아 나중에 다시 볼 수 없어요.</div>
-  <div class="row">
-    <div><label>개수</label><input id="tCount" type="number" value="5" min="1" max="20"></div>
-    <div><label>지급 코인</label><input id="tCoins" type="number" value="3000" min="0"></div>
-  </div>
-  <div style="margin-top:12px"><button onclick="tmk()">계정 만들기</button>
-    <button class="ghost" onclick="tload()">목록 새로고침</button></div>
-  <div class="msg" id="tMsg"></div>
-  <div class="codes" id="tCodes"></div>
-  <div id="tList"></div>
-</div>
-
-<script>
-const $=id=>document.getElementById(id);
-const key=()=>$('key').value.trim();
-async function post(path, body){
-  const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({...body,key:key()})});
-  return r.json();
-}
-async function mk(){
-  $('mkMsg').textContent=''; $('codes').innerHTML='';
-  if(!key()) return $('mkMsg').className='msg err', $('mkMsg').textContent='키를 입력해주세요.';
-  const out=await post('/api/admin/coupon-new',{
-    coins:+$('coins').value, count:+$('count').value, maxUses:+$('maxUses').value,
-    days:+$('days').value, minLevel:+$('minLevel').value, memo:$('memo').value,
-    title:$('title').value, code:$('code').value.trim()});
-  if(out.error){ $('mkMsg').className='msg err'; $('mkMsg').textContent='⚠ '+out.error; return; }
-  $('mkMsg').className='msg ok';
-  const what=[]; if(out.coins) what.push(out.coins+'코인'); if(out.title) what.push('칭호 '+out.title);
-  $('mkMsg').textContent=out.codes.length+'장 발행 완료'+(what.length?' (장당 '+what.join(' + ')+')':'');
-  $('codes').innerHTML=out.codes.map(c=>'<code>'+c+'</code>').join('');
-  load();
-}
-async function load(){
-  if(!key()) return;
-  const out=await post('/api/admin/coupon-list',{});
-  if(out.error){ $('keyMsg').className='msg err'; $('keyMsg').textContent='⚠ '+out.error; $('list').innerHTML=''; return; }
-  $('keyMsg').className='msg ok'; $('keyMsg').textContent='확인됨';
-  const rows=out.coupons.map(c=>'<tr class="'+(c.dead?'dead':'')+'"><td><code>'+c.code+'</code></td><td>'+
-    (c.titleName?c.titleName:c.coins)+
-    '</td><td>'+c.uses+(c.maxUses?'/'+c.maxUses:'/∞')+'</td><td>'+
-    (c.expiresAt?new Date(c.expiresAt).toLocaleDateString('ko-KR'):'-')+'</td><td>'+
-    (c.minLevel||'-')+'</td><td>'+(c.memo||'')+'</td></tr>').join('');
-  $('list').innerHTML=out.coupons.length
-    ? '<table><tr><th>코드</th><th>지급</th><th>사용</th><th>만료</th><th>최소Lv</th><th>메모</th></tr>'+rows+'</table>'
-    : '<div class="msg">아직 발행한 쿠폰이 없어요.</div>';
-}
-// ── 임시 계정 ──
-async function tmk(){
-  $('tMsg').textContent=''; $('tCodes').innerHTML='';
-  if(!key()) return $('tMsg').className='msg err', $('tMsg').textContent='키를 입력해주세요.';
-  const out=await post('/api/admin/temp-new',{count:+$('tCount').value, coins:+$('tCoins').value});
-  if(out.error){ $('tMsg').className='msg err'; $('tMsg').textContent='⚠ '+out.error; return; }
-  $('tMsg').className='msg ok';
-  $('tMsg').textContent=out.accounts.length+'개 만들었어요 — 아래 코드를 지금 복사해 두세요 (다시 못 봅니다)';
-  $('tCodes').innerHTML=out.accounts.map(a=>
-    '<div>'+a.nick+' · <code>'+a.code+'</code></div>').join('');
-  tload();
-}
-async function trot(id){
-  if(!confirm(id+' 코드를 다시 발급할까요? 지금 코드는 즉시 못 쓰게 됩니다.')) return;
-  const out=await post('/api/admin/temp-rotate',{id});
-  if(out.error){ $('tMsg').className='msg err'; $('tMsg').textContent='⚠ '+out.error; return; }
-  $('tMsg').className='msg ok'; $('tMsg').textContent=out.nick+' 새 코드';
-  $('tCodes').innerHTML='<div>'+out.nick+' · <code>'+out.code+'</code></div>';
-  tload();
-}
-async function trev(id){
-  if(!confirm(id+' 코드를 끌까요? 다시 켜려면 재발급해야 합니다.')) return;
-  await post('/api/admin/temp-revoke',{id}); tload();
-}
-async function tload(){
-  if(!key()) return;
-  const out=await post('/api/admin/temp-list',{});
-  if(out.error){ $('tList').innerHTML=''; return; }
-  // onclick 안에 따옴표를 다시 넣으면 이스케이프가 한 겹 더 필요해진다.
-  // 여기는 템플릿 리터럴 안이라 그 한 겹이 어긋나기 쉽고, 어긋나면 이 스크립트가
-  // 통째로 죽어서 쿠폰 발행까지 멈춘다 — 실제로 그렇게 됐다.
-  // 그래서 id 는 data 속성으로 넘기고 핸들러는 나중에 붙인다.
-  const rows=out.accounts.map(a=>'<tr class="'+(a.active?'':'dead')+'"><td>'+a.id+'</td><td>'+a.nick+
-    '</td><td>'+a.coins+'</td><td>'+(a.expiresAt?new Date(a.expiresAt).toLocaleDateString('ko-KR'):'-')+
-    '</td><td><button class="ghost act-rot" data-id="'+a.id+'">재발급</button> '+
-    '<button class="ghost act-rev" data-id="'+a.id+'">끄기</button></td></tr>').join('');
-  $('tList').innerHTML=out.accounts.length
-    ? '<table><tr><th>아이디</th><th>닉네임</th><th>코인</th><th>만료</th><th></th></tr>'+rows+'</table>'
-    : '<div class="msg">아직 만든 임시 계정이 없어요.</div>';
-  for(const b of $('tList').querySelectorAll('.act-rot')) b.onclick=()=>trot(b.dataset.id);
-  for(const b of $('tList').querySelectorAll('.act-rev')) b.onclick=()=>trev(b.dataset.id);
-}
-$('key').addEventListener('change',()=>{load();tload();});
-</script>`);
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+// 쿠폰에 얹을 칭호 목록 (관리자 화면 드롭다운)
+app.post('/api/admin/titles', rateLimit(30), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json({ ok: true, list: Object.entries(accounts.TITLES).map(([id, t]) => ({ id, name: t.name, icon: t.icon })) });
 });
 
 
@@ -512,6 +476,9 @@ app.post('/api/mission-claim', rateLimit(40), (req, res) => { const { token, id 
 app.post('/api/tutorial-done', rateLimit(20), (req, res) => { const { token } = req.body || {}; const out = accounts.claimTutorial(token); if (out.claimed) stats.bump('tutorial'); res.json(out); });
 // 친구 초대 — IP 를 넘긴다. 같은 곳에서 온 초대는 초대자 보상을 한 번만 친다.
 app.post('/api/refer', rateLimit(10), (req, res) => { const { token, ref } = req.body || {}; res.json(accounts.applyReferral(token, ref, ipOf(req))); });
+// 운영 쪽지 — 본인이 읽는 쪽. 안 읽은 것만 준다.
+app.post('/api/notices',      rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.myNotices(token)); });
+app.post('/api/notices-read', rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.markNoticesRead(token)); });
 app.post('/api/titles',   rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json(accounts.titleList(token)); });
 app.post('/api/equip-title', rateLimit(30), (req, res) => { const { token, titleId } = req.body || {}; res.json(accounts.equipTitle(token, titleId || null)); });
 app.post('/api/myrank', rateLimit(60), (req, res) => { const { token } = req.body || {}; res.json({ ok: true, me: accounts.myRank(token) }); });
@@ -1730,6 +1697,9 @@ io.on('connection', (socket) => {
     // 계정을 아직 다 못 읽었으면 게스트로 확정 짓지 않는다 — 잠시 뒤 다시 물어보게 한다
     if (!accounts.storeReady()) { socket.emit('auth_retry'); return; }
     const u = token && accounts.byToken(token);
+    // 정지 중이면 붙이지 않는다. 정지할 때 토큰을 끊으므로 여기까지 오는 일은
+    // 드물지만, 끊기 직전에 인사가 스쳐 지나갈 수 있다 — 한 겹 더 둔다.
+    { const b = u && accounts.banInfo(u); if (b) { socket.token = null; socket.emit('banned', b); return; } }
     if (u) {
       socket.token = token; socket.emit('auth_ok', { profile: accounts.profileOf(u) });
       // 같은 계정으로 다른 곳에서 이미 접속 중이면 기존 세션을 밀어냄 (최신 로그인 우선)
@@ -1740,6 +1710,7 @@ io.on('connection', (socket) => {
         if (ps) { ps.emit('dup_login'); setTimeout(() => { try { ps.disconnect(true); } catch (_) {} }, 400); }
       }
       accountSockets.set(idl, socket.id); socket.accountId = idl;
+      accounts.touchSeen(token);        // 마지막 접속 시각 (운영 화면에서 본다)
     } else { socket.token = null; }
   });
   // 이 소켓 플레이어의 프로필 (로그인=계정, 아니면 게스트)

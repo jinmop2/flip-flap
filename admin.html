@@ -1,0 +1,435 @@
+<!DOCTYPE html><html lang="ko"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>FLIP FLAP 운영</title>
+<style>
+ :root{--bg:#0d1119;--card:#151c28;--line:#2a3547;--ink:#dfe7f2;--dim:#8b97a8;--gold:#ffd94a;--good:#8fe0a0;--bad:#ff9a9a;--blue:#7fb4f0;}
+ *{box-sizing:border-box}
+ body{font-family:system-ui,-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--ink);margin:0;padding:0;font-size:14px}
+ header{position:sticky;top:0;z-index:10;background:#0d1119ee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+ h1{font-size:1rem;margin:0;color:var(--gold);white-space:nowrap}
+ .keybox{display:flex;gap:6px;align-items:center;margin-left:auto}
+ .keybox input{width:190px}
+ nav{display:flex;gap:4px;padding:8px 16px 0;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+ nav button{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);padding:8px 12px;font:inherit;font-weight:700;cursor:pointer;border-radius:6px 6px 0 0}
+ nav button.on{color:var(--gold);border-bottom-color:var(--gold);background:#ffffff08}
+ main{padding:16px;max-width:1100px;margin:0 auto}
+ .pane{display:none}.pane.on{display:block}
+ .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+ .card>h2{font-size:.86rem;margin:0 0 10px;color:var(--gold);letter-spacing:.03em}
+ label{display:block;font-size:.75rem;color:var(--dim);margin:8px 0 3px}
+ input,select,textarea{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#0a0f18;color:var(--ink);font:inherit}
+ textarea{resize:vertical;min-height:70px}
+ button.b{background:var(--gold);color:#241a05;border:0;border-radius:8px;padding:9px 15px;font:inherit;font-weight:800;cursor:pointer}
+ button.g{background:transparent;color:var(--dim);border:1px solid var(--line);border-radius:8px;padding:9px 15px;font:inherit;font-weight:700;cursor:pointer}
+ button.d{background:#5c2230;color:#ffd6d6;border:1px solid #8a3546;border-radius:8px;padding:9px 15px;font:inherit;font-weight:700;cursor:pointer}
+ .row{display:flex;gap:8px;flex-wrap:wrap}.row>div{flex:1;min-width:130px}
+ .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:9px}
+ .kpi{background:#0f1622;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+ .kpi b{display:block;font-size:1.32rem;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.2}
+ .kpi span{font-size:.7rem;color:var(--dim)}
+ .kpi.hot b{color:var(--good)}
+ table{border-collapse:collapse;width:100%;font-size:.78rem}
+ th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;white-space:nowrap}
+ th{color:var(--gold);font-weight:700;position:sticky;top:0;background:var(--card)}
+ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+ .scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+ tr.pick{background:#ffd94a18}
+ tr.ban td:first-child::after{content:' 정지';color:var(--bad);font-size:.7rem}
+ tr.mute td:first-child::after{content:' 재갈';color:#ffc98a;font-size:.7rem}
+ .msg{font-size:.8rem;margin-top:8px;min-height:16px}
+ .msg.ok{color:var(--good)}.msg.err{color:var(--bad)}
+ code{background:#0a0f18;padding:3px 7px;border-radius:5px;color:var(--good);letter-spacing:.06em}
+ .codes{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+ .chart{display:flex;align-items:flex-end;gap:2px;height:110px;padding:6px 0;overflow-x:auto}
+ .chart i{flex:1;min-width:7px;background:linear-gradient(180deg,#7fb4f0,#3a6ea8);border-radius:2px 2px 0 0;position:relative}
+ .chart i.uv{background:linear-gradient(180deg,#ffd94a,#a8862a)}
+ .chart i:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#000d;padding:3px 6px;border-radius:5px;font-size:.68rem;white-space:nowrap;color:#fff}
+ .legend{font-size:.72rem;color:var(--dim);display:flex;gap:12px;margin-top:4px}
+ .legend b{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:middle;margin-right:4px}
+ .who{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+ .who .nick{font-size:1.05rem;font-weight:800;color:var(--gold)}
+ .tag{font-size:.68rem;padding:2px 7px;border-radius:6px;border:1px solid var(--line);color:var(--dim)}
+ .tag.bad{color:var(--bad);border-color:#8a3546}
+ .tag.warn{color:#ffc98a;border-color:#8a6a35}
+ .hint{font-size:.74rem;color:var(--dim);line-height:1.5}
+ .empty{color:var(--dim);font-size:.8rem;padding:14px;text-align:center}
+</style>
+
+<header>
+  <h1>⚙️ FLIP FLAP 운영</h1>
+  <div class="keybox">
+    <input id="key" type="password" placeholder="관리자 키" autocomplete="off">
+    <button class="g" onclick="saveKey()">기억</button>
+  </div>
+</header>
+
+<nav>
+  <button class="on" data-p="dash" onclick="tab('dash')">대시보드</button>
+  <button data-p="user" onclick="tab('user')">플레이어</button>
+  <button data-p="notice" onclick="tab('notice')">공지</button>
+  <button data-p="report" onclick="tab('report')">신고</button>
+  <button data-p="coupon" onclick="tab('coupon')">쿠폰·계정</button>
+  <button data-p="log" onclick="tab('log')">운영 기록</button>
+</nav>
+
+<main>
+<!-- ── 대시보드 ── -->
+<section class="pane on" id="p-dash">
+  <div class="card">
+    <h2>지금 <button class="g" style="float:right;padding:4px 10px;font-size:.75rem" onclick="loadDash()">새로고침</button></h2>
+    <div class="kpis" id="live"></div>
+  </div>
+  <div class="card">
+    <h2>누적</h2>
+    <div class="kpis" id="totals"></div>
+  </div>
+  <div class="card">
+    <h2>최근 30일 방문</h2>
+    <div class="chart" id="chart"></div>
+    <div class="legend"><span><b style="background:#7fb4f0"></b>페이지뷰</span><span><b style="background:#ffd94a"></b>순방문자</span></div>
+    <div class="scroll" style="margin-top:10px">
+      <table><thead><tr><th>날짜</th><th class="n">PV</th><th class="n">순방문</th><th class="n">가입</th><th class="n">게임</th><th class="n">멀티</th><th class="n">봇</th><th class="n">튜토</th><th class="n">동접</th></tr></thead>
+      <tbody id="days"></tbody></table>
+    </div>
+  </div>
+</section>
+
+<!-- ── 플레이어 ── -->
+<section class="pane" id="p-user">
+  <div class="card">
+    <h2>찾기</h2>
+    <div class="row">
+      <div style="flex:3"><input id="q" placeholder="아이디 또는 닉네임 (비우면 최근 접속 순)" onkeydown="if(event.key==='Enter')findUsers()"></div>
+      <div style="flex:0 0 auto"><button class="b" onclick="findUsers()">검색</button></div>
+    </div>
+    <div class="msg" id="uMsg"></div>
+    <div class="scroll" style="margin-top:10px">
+      <table><thead><tr><th>닉네임</th><th>아이디</th><th class="n">Lv</th><th class="n">RP</th><th class="n">코인</th><th class="n">전적</th><th>가입</th><th>최근</th></tr></thead>
+      <tbody id="users"></tbody></table>
+    </div>
+  </div>
+  <div class="card" id="detail" style="display:none"></div>
+</section>
+
+<!-- ── 공지 ── -->
+<section class="pane" id="p-notice">
+  <div class="card">
+    <h2>전체 공지</h2>
+    <div class="hint">접속 중인 사람에게는 바로 뜨고, 아닌 사람은 다음 접속 때 봅니다. 되돌릴 수 없으니 한 번 더 읽어보세요.</div>
+    <label>내용 (최대 500자)</label>
+    <textarea id="nAll" placeholder="예) 오늘 밤 12시에 잠깐 점검이 있어요. 판 중에 끊길 수 있습니다."></textarea>
+    <div class="row" style="margin-top:8px">
+      <div><label>최소 레벨 (0 = 전체)</label><input id="nLevel" type="number" value="0" min="0"></div>
+      <div style="display:flex;align-items:flex-end"><button class="b" onclick="sendAll()">전체에게 보내기</button></div>
+    </div>
+    <div class="msg" id="nMsg"></div>
+  </div>
+</section>
+
+<!-- ── 신고 ── -->
+<section class="pane" id="p-report">
+  <div class="card">
+    <h2>신고함 <button class="g" style="float:right;padding:4px 10px;font-size:.75rem" onclick="loadReports()">새로고침</button></h2>
+    <div class="scroll">
+      <table><thead><tr><th>시각</th><th>신고자</th><th>대상</th><th>내용</th><th></th></tr></thead>
+      <tbody id="reports"></tbody></table>
+    </div>
+  </div>
+</section>
+
+<!-- ── 쿠폰·계정 ── -->
+<section class="pane" id="p-coupon">
+  <div class="card">
+    <h2>쿠폰 발행</h2>
+    <div class="row">
+      <div><label>지급 코인</label><input id="coins" type="number" value="500" min="0"></div>
+      <div><label>발행 장수</label><input id="count" type="number" value="1" min="1" max="200"></div>
+    </div>
+    <div class="row">
+      <div><label>장당 사용 인원 (0=무제한)</label><input id="maxUses" type="number" value="1" min="0"></div>
+      <div><label>유효 기간(일, 0=무기한)</label><input id="days" type="number" value="0" min="0"></div>
+    </div>
+    <div class="row">
+      <div><label>최소 레벨 (0=제한 없음)</label><input id="minLevel" type="number" value="0" min="0"></div>
+      <div><label>메모</label><input id="memo" placeholder="예: 오픈채팅 이벤트"></div>
+    </div>
+    <div class="row">
+      <div><label>칭호 지급 (선택)</label><select id="title"><option value="">— 없음 —</option></select></div>
+      <div><label>코드 직접 지정 (선택, 영문·숫자 8~20자)</label><input id="code" placeholder="비우면 자동 생성"></div>
+    </div>
+    <div class="hint" style="margin-top:6px">칭호만 줄 거면 지급 코인을 0 으로 두세요.</div>
+    <div style="margin-top:10px"><button class="b" onclick="mk()">발행하기</button></div>
+    <div class="msg" id="mkMsg"></div>
+    <div class="codes" id="codes"></div>
+  </div>
+  <div class="card">
+    <h2>발행 목록 <button class="g" style="float:right;padding:4px 10px;font-size:.75rem" onclick="load()">새로고침</button></h2>
+    <div class="scroll" id="list"></div>
+  </div>
+  <div class="card">
+    <h2>임시 계정 (코드로 로그인)</h2>
+    <div class="hint">코드는 <b>만들 때 딱 한 번</b>만 보입니다. 서버에는 해시만 남아 나중에 다시 볼 수 없어요.</div>
+    <div class="row" style="margin-top:6px">
+      <div><label>개수</label><input id="tCount" type="number" value="5" min="1" max="20"></div>
+      <div><label>지급 코인</label><input id="tCoins" type="number" value="3000" min="0"></div>
+    </div>
+    <div style="margin-top:10px"><button class="b" onclick="tmk()">계정 만들기</button>
+      <button class="g" onclick="tload()">목록 새로고침</button></div>
+    <div class="msg" id="tMsg"></div>
+    <div class="codes" id="tCodes"></div>
+    <div class="scroll" id="tList" style="margin-top:8px"></div>
+  </div>
+</section>
+
+<!-- ── 운영 기록 ── -->
+<section class="pane" id="p-log">
+  <div class="card">
+    <h2>운영 기록 <button class="g" style="float:right;padding:4px 10px;font-size:.75rem" onclick="loadLog()">새로고침</button></h2>
+    <div class="hint">누가 언제 무엇을 했는지. 남지 않는 권한은 나중에 아무도 설명할 수 없습니다.</div>
+    <div class="scroll" style="margin-top:8px">
+      <table><thead><tr><th>시각</th><th>행동</th><th>대상</th><th>내용</th></tr></thead><tbody id="log"></tbody></table>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const key=()=>$('key').value.trim();
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const n=v=>(v==null?0:v).toLocaleString();
+const when=t=>t?new Date(t).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+const dayOnly=t=>t?new Date(t).toLocaleDateString('ko-KR',{year:'2-digit',month:'2-digit',day:'2-digit'}):'—';
+
+// 키는 이 브라우저에만 둔다. 주소에는 절대 싣지 않는다 —
+// 히스토리·리퍼러·서버 로그에 그대로 남기 때문이다.
+function saveKey(){ try{ localStorage.setItem('ff_admin_key', key()); }catch(_){}
+  msg('uMsg','이 브라우저에 기억했어요.','ok'); }
+try{ const k=localStorage.getItem('ff_admin_key'); if(k) $('key').value=k; }catch(_){}
+
+async function post(path, body){
+  if(!key()) return { error:'관리자 키를 입력해주세요.' };
+  try{
+    const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({...body,key:key()})});
+    return await r.json();
+  }catch(e){ return { error:'서버에 닿지 못했어요.' }; }
+}
+function msg(id,t,cls){ const e=$(id); if(!e) return; e.className='msg'+(cls?' '+cls:''); e.textContent=t; }
+
+function tab(p){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+  document.querySelectorAll('.pane').forEach(s=>s.classList.toggle('on',s.id==='p-'+p));
+  if(p==='dash') loadDash();
+  if(p==='report') loadReports();
+  if(p==='log') loadLog();
+  if(p==='coupon'){ loadTitles(); load(); tload(); }
+  if(p==='user' && !$('users').children.length) findUsers();
+}
+
+// ── 대시보드 ──
+async function loadDash(){
+  const o=await post('/api/admin/overview',{});
+  if(o.error) return msg('uMsg','⚠ '+o.error,'err');
+  const L=o.live||{};
+  $('live').innerHTML=[
+    ['접속 중',L.online,'hot'],['진행 중인 판',L.playing],['열린 방',L.rooms],
+    ['4인전 방',L.quad],['대기방',L.quadWaiting],
+    ['가동',(L.uptime>3600?Math.round(L.uptime/3600)+'시간':Math.round((L.uptime||0)/60)+'분')],
+    ['저장소',(L.store&&L.store.mode)||'?'],
+  ].map(([k,v,c])=>'<div class="kpi '+(c||'')+'"><b>'+(typeof v==='number'?n(v):esc(v))+'</b><span>'+k+'</span></div>').join('');
+  $('totals').innerHTML=[
+    ['전체 계정',o.users],['오늘 가입',o.newToday],
+    ['1일 활동',o.active1d],['7일 활동',o.active7d],['30일 활동',o.active30d],
+    ['정지',o.banned],['재갈',o.muted],['클랜',o.clans],
+    ['코인 총량',o.coins],['신고',o.reports],
+  ].map(([k,v])=>'<div class="kpi"><b>'+n(v)+'</b><span>'+k+'</span></div>').join('');
+
+  const days=(o.days||[]).slice().reverse();          // 왼쪽이 과거
+  const maxPv=Math.max(1,...days.map(d=>d.pv||0));
+  $('chart').innerHTML=days.map(d=>{
+    const h=Math.round((d.pv||0)/maxPv*100), hu=Math.round((d.uv||0)/maxPv*100);
+    return '<i style="height:'+Math.max(2,h)+'%" data-t="'+d.day+' · PV '+n(d.pv)+'"></i>'
+         + '<i class="uv" style="height:'+Math.max(2,hu)+'%" data-t="'+d.day+' · 순방문 '+n(d.uv)+'"></i>';
+  }).join('');
+  $('days').innerHTML=(o.days||[]).map(d=>'<tr><td>'+d.day+'</td><td class="n">'+n(d.pv)+'</td><td class="n">'+n(d.uv)
+    +'</td><td class="n">'+n(d.signups)+'</td><td class="n">'+n(d.games)+'</td><td class="n">'+n(d.multi)
+    +'</td><td class="n">'+n(d.botmatch)+'</td><td class="n">'+n(d.tutorial)+'</td><td class="n">'+n(d.peak)+'</td></tr>').join('')
+    || '<tr><td colspan="9" class="empty">아직 기록이 없어요</td></tr>';
+}
+
+// ── 플레이어 ──
+let picked=null;
+async function findUsers(){
+  msg('uMsg','찾는 중…');
+  const o=await post('/api/admin/users',{q:$('q').value.trim(),limit:100});
+  if(o.error) return msg('uMsg','⚠ '+o.error,'err');
+  msg('uMsg',o.total+'명 중 '+o.list.length+'명','ok');
+  $('users').innerHTML=o.list.map(u=>
+    '<tr class="row-user '+(u.banned?'ban':u.muted?'mute':'')+'" data-idl="'+esc(u.idl)+'" style="cursor:pointer">'
+    +'<td>'+esc(u.nick)+'</td><td>'+esc(u.id)+'</td><td class="n">'+u.level+'</td><td class="n">'+n(u.rp)
+    +'</td><td class="n">'+n(u.coins)+'</td><td class="n">'+u.wins+'/'+u.losses
+    +'</td><td>'+dayOnly(u.createdAt)+'</td><td>'+dayOnly(u.lastSeen)+'</td></tr>').join('')
+    || '<tr><td colspan="8" class="empty">찾은 사람이 없어요</td></tr>';
+}
+async function openUser(idl){
+  const o=await post('/api/admin/user',{idl});
+  const box=$('detail');
+  if(o.error){ box.style.display='block'; box.innerHTML='<div class="empty">⚠ '+esc(o.error)+'</div>'; return; }
+  picked=idl;
+  const p=o.profile, a=o.admin;
+  const tags=[];
+  if(a.ban) tags.push('<span class="tag bad">정지 '+(a.ban.until?when(a.ban.until)+'까지':'무기한')+'</span>');
+  if(a.mute) tags.push('<span class="tag warn">재갈 '+(a.mute.until?when(a.mute.until)+'까지':'무기한')+'</span>');
+  tags.push('<span class="tag">'+esc(a.provider)+'</span>');
+  box.style.display='block';
+  box.innerHTML=
+   '<div class="who"><span class="nick">'+esc(p.nick)+'</span><span class="tag">'+esc(p.id)+'</span>'+tags.join('')+'</div>'
+   +'<div class="kpis">'
+   +[['레벨',p.level],['RP',p.rp],['등급',p.rank],['코인',p.coins],['파편',p.shards],
+     ['전적',p.wins+'승 '+p.losses+'패'],['승률',p.winRate+'%'],['연승',p.streak],
+     ['아이템',a.itemCount],['칭호',a.titleCount],['연속출석',a.loginStreak],['초대',a.refCount]]
+     .map(([k,v])=>'<div class="kpi"><b>'+(typeof v==='number'?n(v):esc(v))+'</b><span>'+k+'</span></div>').join('')
+   +'</div>'
+   +'<div class="hint" style="margin-top:10px">가입 '+dayOnly(a.createdAt)+' · 최근 접속 '+when(a.lastSeen)
+   +(a.referredBy?' · 초대한 사람 '+esc(a.referredBy):'')+'</div>'
+   +'<div class="row" style="margin-top:14px">'
+   +'<div><label>기간(일, 0=무기한)</label><input id="banDays" type="number" value="3" min="0"></div>'
+   +'<div style="flex:2"><label>사유 (본인에게 보입니다)</label><input id="banWhy" placeholder="예: 채팅 욕설"></div>'
+   +'</div>'
+   +'<div class="row" style="margin-top:10px">'
+   +'<div style="flex:0 0 auto"><button class="d" onclick="doBan()">정지</button></div>'
+   +'<div style="flex:0 0 auto"><button class="d" onclick="doMute()">채팅 재갈</button></div>'
+   +'<div style="flex:0 0 auto"><button class="g" onclick="doUnban()">정지 해제</button></div>'
+   +'<div style="flex:0 0 auto"><button class="g" onclick="doUnmute()">재갈 해제</button></div>'
+   +'</div>'
+   +'<div class="row" style="margin-top:14px">'
+   +'<div><label>코인 조정 (+/-)</label><input id="coinDelta" type="number" value="0"></div>'
+   +'<div style="flex:2"><label>메모</label><input id="coinMemo" placeholder="예: 버그 보상"></div>'
+   +'<div style="flex:0 0 auto;display:flex;align-items:flex-end"><button class="b" onclick="doCoins()">적용</button></div>'
+   +'</div>'
+   +'<label style="margin-top:14px">쪽지 보내기</label>'
+   +'<textarea id="dmText" placeholder="이 사람에게만 갑니다"></textarea>'
+   +'<div style="margin-top:8px"><button class="b" onclick="doNotice()">보내기</button></div>'
+   +'<div class="msg" id="dMsg"></div>'
+   +(a.notices&&a.notices.length?'<div class="hint" style="margin-top:12px">최근 보낸 쪽지<br>'
+      +a.notices.map(x=>'· '+when(x.at)+' — '+esc(x.text)).join('<br>')+'</div>':'');
+}
+async function act(path, body, okText){
+  const o=await post(path, {idl:picked, ...body});
+  if(o.error) return msg('dMsg','⚠ '+o.error,'err');
+  msg('dMsg',okText,'ok');
+  openUser(picked); findUsers();
+}
+const doBan   =()=>{ if(confirm('정말 정지할까요? 접속 중이면 바로 끊깁니다.')) act('/api/admin/ban',{days:+$('banDays').value,reason:$('banWhy').value},'정지했어요.'); };
+const doMute  =()=>act('/api/admin/mute',{days:+$('banDays').value,reason:$('banWhy').value},'채팅을 막았어요.');
+const doUnban =()=>act('/api/admin/unban',{},'정지를 풀었어요.');
+const doUnmute=()=>act('/api/admin/unmute',{},'재갈을 풀었어요.');
+const doCoins =()=>{ const d=+$('coinDelta').value; if(!d) return msg('dMsg','0 은 의미가 없어요.','err');
+  if(confirm(d>0?d+' 코인을 줍니다.':(-d)+' 코인을 뺍니다. 계속할까요?'))
+    act('/api/admin/coins',{delta:d,memo:$('coinMemo').value},'코인을 조정했어요.'); };
+const doNotice=()=>act('/api/admin/notice',{text:$('dmText').value},'쪽지를 보냈어요.');
+
+// ── 공지 ──
+async function sendAll(){
+  const t=$('nAll').value.trim();
+  if(!t) return msg('nMsg','내용을 입력해주세요.','err');
+  if(!confirm('전체에게 보냅니다. 되돌릴 수 없어요. 계속할까요?')) return;
+  const o=await post('/api/admin/notice-all',{text:t,minLevel:+$('nLevel').value});
+  if(o.error) return msg('nMsg','⚠ '+o.error,'err');
+  msg('nMsg',o.count+'명에게 보냈어요.','ok'); $('nAll').value='';
+}
+
+// ── 신고 ──
+async function loadReports(){
+  const o=await post('/api/admin/reports',{});
+  if(o.error) return;
+  $('reports').innerHTML=(o.reports||[]).map(r=>
+    '<tr><td>'+when(r.at)+'</td><td>'+esc(r.byNick||r.by)+'</td><td>'+esc(r.targetNick||r.target)
+    +'</td><td style="white-space:normal;max-width:380px">'+esc(r.text||'')+'</td>'
+    +'<td><button class="g act-see" data-idl="'+esc(r.target)+'" style="padding:4px 9px;font-size:.72rem">보기</button></td></tr>').join('')
+    || '<tr><td colspan="5" class="empty">신고가 없어요</td></tr>';
+}
+
+// ── 운영 기록 ──
+const ACT={ban:'정지',unban:'정지 해제',mute:'재갈',unmute:'재갈 해제',coins:'코인 조정',notice:'쪽지',notice_all:'전체 공지'};
+async function loadLog(){
+  const o=await post('/api/admin/log',{});
+  if(o.error) return;
+  $('log').innerHTML=(o.list||[]).map(x=>
+    '<tr><td>'+when(x.at)+'</td><td>'+(ACT[x.action]||esc(x.action))+'</td><td>'+esc(x.target||'—')
+    +'</td><td style="white-space:normal">'+esc(x.detail?JSON.stringify(x.detail):'')+'</td></tr>').join('')
+    || '<tr><td colspan="4" class="empty">기록이 없어요</td></tr>';
+}
+
+// ── 쿠폰·임시계정 ──
+async function loadTitles(){
+  const sel=$('title'); if(sel.children.length>1) return;
+  const o=await post('/api/admin/titles',{});
+  if(o.error||!o.list) return;
+  sel.innerHTML='<option value="">— 없음 —</option>'+o.list.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.icon+' '+t.name)+'</option>').join('');
+}
+async function mk(){
+  msg('mkMsg',''); $('codes').innerHTML='';
+  const out=await post('/api/admin/coupon-new',{
+    coins:+$('coins').value, count:+$('count').value, maxUses:+$('maxUses').value,
+    days:+$('days').value, minLevel:+$('minLevel').value, memo:$('memo').value,
+    title:$('title').value, code:$('code').value.trim()});
+  if(out.error) return msg('mkMsg','⚠ '+out.error,'err');
+  const what=[]; if(out.coins) what.push(out.coins+'코인'); if(out.title) what.push('칭호 '+out.title);
+  msg('mkMsg',out.codes.length+'장 발행 완료'+(what.length?' (장당 '+what.join(' + ')+')':''),'ok');
+  $('codes').innerHTML=out.codes.map(c=>'<code>'+esc(c)+'</code>').join('');
+  load();
+}
+async function load(){
+  const out=await post('/api/admin/coupon-list',{});
+  if(out.error) return $('list').innerHTML='<div class="empty">⚠ '+esc(out.error)+'</div>';
+  const rows=out.coupons||[];
+  $('list').innerHTML=rows.length?'<table><thead><tr><th>코드</th><th class="n">코인</th><th>칭호</th><th class="n">사용</th><th>메모</th><th>발행</th></tr></thead><tbody>'
+    +rows.map(c=>'<tr'+(c.dead?' style="opacity:.45"':'')+'><td><code>'+esc(c.code)+'</code></td><td class="n">'+n(c.coins)
+    +'</td><td>'+esc(c.titleName||'—')+'</td><td class="n">'+c.uses+(c.maxUses?'/'+c.maxUses:'')
+    +'</td><td>'+esc(c.memo||'')+'</td><td>'+dayOnly(c.createdAt)+'</td></tr>').join('')+'</tbody></table>'
+    :'<div class="empty">발행한 쿠폰이 없어요</div>';
+}
+async function tmk(){
+  msg('tMsg',''); $('tCodes').innerHTML='';
+  const out=await post('/api/admin/temp-new',{count:+$('tCount').value, coins:+$('tCoins').value});
+  if(out.error) return msg('tMsg','⚠ '+out.error,'err');
+  msg('tMsg',out.accounts.length+'개 만들었어요. 이 화면을 벗어나면 코드는 다시 볼 수 없어요.','ok');
+  $('tCodes').innerHTML=out.accounts.map(x=>'<code>'+esc(x.id)+' · '+esc(x.code)+'</code>').join('');
+  tload();
+}
+async function tload(){
+  const out=await post('/api/admin/temp-list',{});
+  if(out.error) return;
+  const rows=out.accounts||[];
+  $('tList').innerHTML=rows.length?'<table><thead><tr><th>아이디</th><th>닉네임</th><th class="n">코인</th><th>만료</th><th></th></tr></thead><tbody>'
+    +rows.map(t=>'<tr'+(t.active?'':' style="opacity:.45"')+'><td>'+esc(t.id)+'</td><td>'+esc(t.nick||'')+'</td><td class="n">'+n(t.coins)+'</td><td>'+dayOnly(t.expiresAt)
+    +'</td><td><button class="g act-rot" data-id="'+esc(t.id)+'" style="padding:3px 8px;font-size:.7rem">재발급</button> '
+    +'<button class="d act-rev" data-id="'+esc(t.id)+'" style="padding:3px 8px;font-size:.7rem">폐기</button></td></tr>').join('')+'</tbody></table>'
+    :'<div class="empty">임시 계정이 없어요</div>';
+}
+async function trot(id){
+  const out=await post('/api/admin/temp-rotate',{id});
+  if(out.error) return msg('tMsg','⚠ '+out.error,'err');
+  msg('tMsg','새 코드 — 지금만 보입니다.','ok');
+  $('tCodes').innerHTML='<code>'+esc(id)+' · '+esc(out.code)+'</code>';
+}
+async function trev(id){ if(!confirm(id+' 을(를) 폐기할까요?')) return; await post('/api/admin/temp-revoke',{id}); tload(); }
+
+// 눌린 것을 찾아 읽는다. 값은 data-* 에 있고, onclick 문자열에는 아무것도 안 끼운다 —
+// 값을 문자열에 끼워 넣으면 따옴표 하나로 코드가 깨지고, 그 자리가 곧 구멍이 된다.
+document.addEventListener('click', (e) => {
+  const row = e.target.closest('#users tr.row-user');
+  if (row && row.dataset.idl) { openUser(row.dataset.idl); return; }
+  const see = e.target.closest('.act-see');
+  if (see) { tab('user'); $('q').value = see.dataset.idl || ''; findUsers(); return; }
+  const rot = e.target.closest('.act-rot');
+  if (rot) { trot(rot.dataset.id); return; }
+  const rev = e.target.closest('.act-rev');
+  if (rev) { trev(rev.dataset.id); return; }
+});
+
+loadDash();
+</script>

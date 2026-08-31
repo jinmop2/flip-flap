@@ -124,8 +124,12 @@ console.log('\n④ 쿠폰이 칭호를 준다 · 한 명만 쓴다');
   // 화면이 "🪙 0 코인을 받았어요" 라고 띄우면 안 된다
   ok('화면이 칭호를 따로 적는다', /res\.title/.test(cli) && /칭호/.test(cli));
   ok('코인 0 이면 코인 문구를 안 낸다', /if \(res\.amount\)/.test(cli));
-  ok('관리자 화면에 칭호 선택이 있다', /id="title"/.test(srv) && /accounts\.TITLES/.test(srv));
-  ok('관리자 화면에 코드 지정이 있다', /id="code"/.test(srv));
+  // 관리자 화면이 admin.html 로 나가면서, 칭호 목록은 서버가 심는 대신
+  // /api/admin/titles 로 받아 채운다 (화면은 정적 파일 하나가 됐다).
+  const adm = fs.readFileSync(src + '/admin.html', 'utf8');
+  ok('관리자 화면에 칭호 선택이 있다', /id="title"/.test(adm) && /api\/admin\/titles/.test(adm));
+  ok('칭호 목록을 주는 통로가 있다', /app\.post\('\/api\/admin\/titles'[\s\S]{0,300}accounts\.TITLES/.test(srv));
+  ok('관리자 화면에 코드 지정이 있다', /id="code"/.test(adm));
 }
 
 console.log('\n⑤ 싸이클링 (일일퀴스트)');
