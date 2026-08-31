@@ -105,12 +105,6 @@
     body.waiting #lobby .logo, body.waiting .logo-actions { display:none; }
     body.waiting #lobby { justify-content:center; }
     /* 낮은 화면에서는 대기 카드도 한 벌 줄여 한 화면에 담는다 */
-    /* 620 과 720 사이가 비어 있어, 그 구간에서는 212px 짜리 칸이 그대로
-       버티다 화면을 넘겼다. 한 단을 둔다. */
-    @media (max-height:700px) and (min-height:621px) {
-      .mode-card { aspect-ratio:auto; height:176px; }
-      .mc-emblem { width:50px; height:50px; }
-    }
     @media (max-height:700px) {
       body.waiting #lobby { padding-top:calc(70px + var(--safe-t)); padding-bottom:calc(62px + var(--safe-b)); }
       #waitCard { gap:8px; padding:14px 18px; }
@@ -2707,7 +2701,12 @@
     .mi-del:hover { border-color:#c05050; color:#ff9a9a; background:rgba(103,124,170,.08); }
     .mi-danger span { display:block; margin-top:7px; font-size:11px; color:#7a7f88; line-height:1.5; }
     /* 솔로/멀티 모드 카드 */
-    .mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; }
+    /* minmax(0,1fr) 이어야 한다. 그냥 1fr 은 minmax(auto,1fr) 이라 칸이 내용의
+       최소폭 밑으로 안 줄어든다 — 좁은 기기(280px 언저리)에서 카드 둘이 287px 을
+       차지해 오른쪽 카드가 화면 밖으로 밀리고 로비에 가로 스크롤이 생겼다.
+       칸 안의 것들도 min-width:0 을 줘야 실제로 줄어든다. */
+    .mode-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; width:100%; }
+    .mode-grid > * { min-width:0; }
     /* 가죽 케이스 안에 펠트 판이 깔린 모양. 예전엔 색만 다른 네모였는데,
        판 위에서 노는 게임인데 로비에 판이 한 조각도 안 보였다. */
     /* 케이스는 flex 컨테이너로 두지 않는다. <button> 을 flex 로 쓰면 사파리에서
@@ -2793,6 +2792,17 @@
       .rank-btn { padding:6px 15px; font-size:.76rem; }
       #lobby { gap:15px; }
       .lobby-btns > .mode-grid:not(.sub), .lobby-btns > .lobby-misc { margin-top:14px; }
+    }
+    /* 620 과 720 사이가 비어 있어, 그 구간에서는 212px 짜리 칸이 그대로
+       버티다 화면을 넘겼다. 한 단을 둔다.
+       이 블록은 원래 파일 앞쪽(스타일 맨 위)에 있었는데, 기본 .mode-card 규칙이
+       한참 뒤에 있어서 aspect-ratio:auto 가 도로 덮였다. height 만 살아남는 바람에
+       비율(1/1.28)이 높이에서 폭을 끌어내 카드가 137.5px 밑으로 안 줄었다 —
+       좁은 기기(폴드 커버 화면 280px 등)에서 로비에 가로 스크롤이 생긴 이유다.
+       기본 규칙 뒤로 옮겨 둔다. */
+    @media (max-height:700px) and (min-height:621px) {
+      .mode-card { aspect-ratio:auto; height:176px; }
+      .mc-emblem { width:50px; height:50px; }
     }
     @media (max-height:620px) {
       .logo h1, .logo .flap { font-size:2.5rem; }
@@ -3038,12 +3048,22 @@
     #soloModal .sm-body .mm-tile .mt-name { font-size:.76rem; line-height:1.25; }
     #soloModal .sm-body .mm-tile .mt-sub { font-size:.55rem; line-height:1.2; }
     #soloModal .mm-hero, #multiModal .mm-hero { padding:11px 13px; }
+    /* 넓은 화면에서는 두 줄로 나눠 담는다. 다만 칸을 화면 폭에 맡기면 안 된다 —
+       이 창은 화면 전체를 덮는 판이라, 1fr 두 개는 1440px 화면에서 700px 짜리
+       버튼 두 개가 된다. 실제로 PC 에서 창이 화면 끝까지 늘어나 균형이 깨져 보였다.
+       칸 폭을 묶고 가운데로 모은다 — 폰에서 보던 크기 그대로 두 줄이 된다. */
     @media (min-width:620px) {
       #soloModal .lb-box, #multiModal .lb-box {
-        display:grid; grid-template-columns:1fr 1fr; gap:0 26px;
+        display:grid; grid-template-columns:repeat(2, minmax(0, 320px));
+        justify-content:center; gap:0 26px;
         align-content:start; grid-auto-rows:min-content;
       }
-      #soloModal .lb-title, #multiModal .lb-title { grid-column:1/-1; }
+      #soloModal .lb-title, #multiModal .lb-title { grid-column:1/-1; max-width:666px; width:100%; margin-inline:auto; }
+    }
+    /* 한 줄로 담는 폭(620px 미만)이라도 화면이 넓어질 수 있다(가로 폰·태블릿 세로).
+       그때도 내용은 가운데 한 뼘 안에 둔다. */
+    @media (min-width:480px) and (max-width:619px) {
+      #soloModal .lb-box > *, #multiModal .lb-box > * { max-width:420px; width:100%; margin-inline:auto; }
     }
 
     /* ── 탭 화면은 모두 전체화면 ────────────────────────────────────

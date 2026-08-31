@@ -74,5 +74,30 @@ console.log('\n④ 칸 안쪽 셈이 맞는가 (여백·그림·글씨 합)');
   ok('큰 화면에서 안 잘린다', tall.ok, `펠트 ${tall.felt} / 내용 ${tall.need}`);
 }
 
+console.log('\n⑤ 좁은 기기에서 가로로 안 넘친다');
+{
+  // 폴드 커버 화면(280px)·큰 글씨·분할 화면에서 로비가 가로로 넘쳐 잘렸다. 원인 둘 —
+  //  ㉠ grid-template-columns:1fr 1fr 은 minmax(auto,1fr) 이라 칸이 내용의 최소폭 밑으로
+  //     안 줄어든다. minmax(0,1fr) 이어야 한다.
+  //  ㉡ 높이 620~700px 구간의 .mode-card 규칙이 기본 규칙보다 파일 앞에 있어
+  //     aspect-ratio:auto 가 도로 덮였다. height 만 살아남아 비율이 높이에서 폭을
+  //     끌어내(176÷1.28=137.5px) 칸이 그 밑으로 안 줄었다.
+  ok('모드 칸이 0까지 줄어들 수 있다', /grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/.test(html));
+  ok('칸 안의 것도 줄어든다', /\.mode-grid > \* \{ min-width:0; \}/.test(html));
+  const base = html.indexOf('.mode-card {');
+  const mid = html.indexOf('@media (max-height:700px) and (min-height:621px)');
+  ok('높이 규칙이 기본 규칙 뒤에 있다', base > 0 && mid > base, 'base=' + base + ' mid=' + mid);
+}
+
+console.log('\n⑥ 넓은 화면에서 창이 끝까지 늘어나지 않는다');
+{
+  // 솔로·멀티 창은 화면을 덮는 판이라, 1fr 두 개는 1440px 화면에서 700px 짜리
+  // 버튼 두 개가 된다 — PC 에서 균형이 깨져 보이던 것.
+  ok('칸 폭을 묶는다', /grid-template-columns:repeat\(2, minmax\(0, 320px\)\)/.test(html));
+  ok('가운데로 모은다', /justify-content:center; gap:0 26px;/.test(html));
+  ok('제목도 같이 묶인다', /grid-column:1\/-1; max-width:666px/.test(html));
+  ok('한 줄로 담는 폭에서도 가운데', /@media \(min-width:480px\) and \(max-width:619px\)/.test(html));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

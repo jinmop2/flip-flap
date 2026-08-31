@@ -7657,18 +7657,25 @@ function layTable(cfg) {
   right = Math.min(right, h.right - RAIL - 2);
   top = Math.max(top, h.top + RAIL + 2);
   bottom = Math.min(bottom, h.bottom - RAIL - 2);
-  table.style.left = Math.round(left - h.left) + 'px';
-  table.style.top = Math.round(top - h.top) + 'px';
-  table.style.width = Math.round(Math.max(60, right - left)) + 'px';
-  table.style.height = Math.round(Math.max(60, bottom - top)) + 'px';
+  // 잰 것은 화면 픽셀인데, 판은 zoom 이 걸린 칸 안에 있다.
+  // 그대로 쓰면 브라우저가 한 번 더 줄여서(×zoom) 판이 그만큼 작고 왼쪽으로 밀린다.
+  // 화면이 넓을수록 zoom 이 1 에 가까워 티가 안 나다가, 좁은 폰에서는 0.68 까지
+  // 내려가 판이 눈에 띄게 어긋났다 — PC 에서 레일이 판 밖으로 삐져나오던 것도 이것이다.
+  // rect ÷ offsetWidth 로 실제 배율을 구해 되돌린다(중첩 zoom 도 이 비율에 다 들어 있다).
+  const z = (h.width && host.offsetWidth) ? (h.width / host.offsetWidth) : 1;
+  const un = (v) => Math.round(v / (z || 1));
+  table.style.left = un(left - h.left) + 'px';
+  table.style.top = un(top - h.top) + 'px';
+  table.style.width = un(Math.max(60, right - left)) + 'px';
+  table.style.height = un(Math.max(60, bottom - top)) + 'px';
   table.classList.add('on');
-  centerBoard(cfg.zone, cfg.mid, top, bottom);
+  centerBoard(cfg.zone, cfg.mid, top, bottom, z);
 }
 
 // 덱·경매대·레일을 테이블 한가운데로. 칸 배치만으로는 아래 문구·버튼 칸 때문에
 // 위로 쏠리거나 아래로 처진다 — 테이블을 잡고 나서 그 한가운데에 맞춘다.
 // 테이블 크기는 앉은 자리로 정해지므로 여기서 내용을 밀어도 다시 안 흔들린다.
-function centerBoard(zoneId, midId, top, bottom) {
+function centerBoard(zoneId, midId, top, bottom, z) {
   const zone = document.getElementById(zoneId);
   // 경매대 상자가 아니라 카드가 앉는 칸을 기준으로 잡는다. 상자에는 이름표가
   // 붙어 있어 상자를 한가운데 두면 정작 카드는 그만큼 아래로 내려간다.
@@ -7678,7 +7685,8 @@ function centerBoard(zoneId, midId, top, bottom) {
   const m = mat.getBoundingClientRect();
   if (!m.height) return;
   const want = (top + bottom) / 2, now = m.top + m.height / 2;
-  zone.style.transform = `translateY(${Math.round(want - now)}px)`;
+  // transform 도 zoom 이 걸린 칸 안의 길이다 — 화면 픽셀을 그대로 쓰면 그만큼 덜 움직인다
+  zone.style.transform = `translateY(${Math.round((want - now) / (z || 1))}px)`;
 }
 
 // 덱·은행을 경매품 카드와 한 줄에 맞춘다.

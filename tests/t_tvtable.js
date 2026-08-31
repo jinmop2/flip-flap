@@ -43,8 +43,17 @@ ok('그래도 손패는 판 밖에 남는다',
    && /if \(myHandT != null\) bottom = Math\.min\(bottom, myHandT - 4\);/.test(lay));
 ok('좌우는 바짝 붙인다 — 가로로 두꺼우면 납작해 보인다', /const padX = 10;/.test(lay));
 // 덱·경매품은 테이블 한가운데 — 아래 문구 칸 때문에 저절로는 위로 쏠린다
-ok('판 위 물건을 테이블 한가운데로', /function centerBoard\(zoneId, midId, top, bottom\)/.test(cli)
-   && /centerBoard\(cfg\.zone, cfg\.mid, top, bottom\);/.test(cli));
+ok('판 위 물건을 테이블 한가운데로', /function centerBoard\(zoneId, midId, top, bottom, z\)/.test(cli)
+   && /centerBoard\(cfg\.zone, cfg\.mid, top, bottom, z\);/.test(cli));
+// 잰 것은 화면 픽셀인데 판은 zoom 이 걸린 칸 안에 있다. 그대로 쓰면 브라우저가
+// 한 번 더 줄여(×zoom) 판이 작고 왼쪽으로 밀린다 — PC(zoom 0.93)에서 레일이
+// 판 밖으로 삐져나오던 것이 이것이다. 폰은 zoom 이 1 이라 티가 안 났다.
+ok('zoom 을 되돌려 쓴다', /const z = \(h\.width && host\.offsetWidth\) \? \(h\.width \/ host\.offsetWidth\) : 1;/.test(cli)
+   && /const un = \(v\) => Math\.round\(v \/ \(z \|\| 1\)\);/.test(cli));
+ok('판 네 값이 모두 되돌려진다',
+   /table\.style\.left = un\(/.test(cli) && /table\.style\.top = un\(/.test(cli)
+   && /table\.style\.width = un\(/.test(cli) && /table\.style\.height = un\(/.test(cli));
+ok('가운데 맞춤도 되돌린다', /translateY\(\$\{Math\.round\(\(want - now\) \/ \(z \|\| 1\)\)\}px\)/.test(cli));
 ok('상자가 아니라 카드 칸을 가운데 맞춘다', /mid: 'tv-center'/.test(cli) && /mid: 'auctionItems'/.test(cli));
 ok('테이블을 잡은 뒤에 맞춘다 — 서로 물고 흔들리지 않게',
    cli.indexOf('table.classList.add(\'on\');') < cli.indexOf('centerBoard(cfg.zone'));
