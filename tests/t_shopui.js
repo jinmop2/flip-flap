@@ -101,5 +101,21 @@ console.log('⑤ 새로 들인 20종이 표에 빠짐없이 올랐다');
   ok('새 아바타는 그림이 있다', noArt.length === 0, noArt.join(' '));
 }
 
+console.log('⑥ 아이템은 꾹 누르면 설명이 뜬다');
+{
+  // 폰에는 마우스를 얹는다는 게 없어서 title 속성은 아무 소용이 없다.
+  // 내 아이템 칸도, 경매판에 얹힌 덤·보너스 카드도 같은 장치를 쓴다.
+  ok('누르는 장치가 있다', /function bindLongPress\(el, show\)/.test(cli));
+  ok('보여 줄 것을 밖에서 정할 수 있다', /const tell = show \|\| \(\(\) => explainItem\(el\.dataset\.item\)\);/.test(cli));
+  ok('내 아이템 칸에 걸려 있다', /slots\.querySelectorAll\('\.ib-slot\[data-item\]'\)\.forEach\(bindLongPress\);/.test(cli));
+  // 판에 덤이 떴는데 그게 뭔지 모르면, 이겨야 할지 져야 할지도 못 정한다
+  ok('경매판 아이템 카드에도 걸려 있다', /bindLongPress\(el, \(\) => explainLotItem\(card, kind\)\);/.test(cli));
+  ok('판 위 설명은 누가 갖는지를 말한다', /function explainLotItem\(card, kind\)/.test(cli)
+     && /진 쪽<\/b>이 가져요/.test(cli) && /뒤집은 사람이 그 자리에서 가져요/.test(cli));
+  ok('누르는 중인 게 보인다', /\.item-card\.lp-hold/.test(htm) && /\.ib-slot\.lp-hold/.test(htm));
+  // 설명을 보려다 물건을 써 버리면 안 된다
+  ok('설명 뒤 따라오는 click 은 삼킨다', /if \(fired\) \{ e\.preventDefault\(\); e\.stopImmediatePropagation\(\); fired = false; \}/.test(cli));
+}
+
 console.log('\n' + (fail ? '✗ ' + fail + '개 실패' : '✓ 전부 통과') + ' (' + pass + '/' + (pass + fail) + ')');
 process.exit(fail ? 1 : 0);

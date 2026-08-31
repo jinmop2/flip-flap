@@ -4667,6 +4667,9 @@
     /* 길게 누르는 중 — 눌리고 있다는 걸 눈으로도 알려 준다 */
     .ib-slot { -webkit-touch-callout:none; }
     .ib-slot.lp-hold { transform:scale(.93); filter:brightness(1.25); transition:transform .18s, filter .18s; }
+    /* 경매판에 얹힌 아이템 카드도 꾹 누르면 설명이 뜬다 */
+    .item-card.lp-able { -webkit-touch-callout:none; cursor:help; }
+    .item-card.lp-hold { transform:scale(.94); filter:brightness(1.25); transition:transform .18s, filter .18s; }
     .type-badge { font-size:.62rem; padding:2px 10px; border-radius:8px; font-weight:600; letter-spacing:1px; }
     /* 쓸 말이 없으면 상자도 안 뜬다. 경매 방식을 고르기 전에는 글자가 비는데,
        테두리와 바탕색은 그대로라 작은 초록 딱지가 혼자 떠 있었다.

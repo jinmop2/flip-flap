@@ -1443,8 +1443,10 @@ function renderItems(s) {
 // 손가락은 조금씩 떨리므로 10px 까지는 누른 것으로 친다. 길게 눌러 설명이 뜬 뒤에는
 // 손을 뗄 때 딸려 오는 click 을 한 번 삼킨다 — 안 그러면 설명을 보려다 물건을 쓴다.
 const LONG_PRESS_MS = 420;
-function bindLongPress(el) {
-  const id = el.dataset.item;
+// show 를 안 주면 el.dataset.item 의 물건을 설명한다 (내 아이템 칸).
+// 경매판에 얹힌 카드처럼 설명이 달라야 하는 자리는 show 를 따로 준다.
+function bindLongPress(el, show) {
+  const tell = show || (() => explainItem(el.dataset.item));
   let timer = null, fired = false, sx = 0, sy = 0;
   const stop = () => { clearTimeout(timer); timer = null; };
   el.addEventListener('pointerdown', (e) => {
@@ -1452,7 +1454,7 @@ function bindLongPress(el) {
     stop();
     timer = setTimeout(() => {
       fired = true; timer = null;
-      explainItem(id);
+      tell();
       vibe('turn');                     // 길게 눌렸다는 걸 손으로도 알린다
       el.classList.remove('lp-hold');
     }, LONG_PRESS_MS);
@@ -6506,7 +6508,25 @@ function makeItemCard(card) {
   tag.className = 'ic-tag'; tag.textContent = kind === 'bonus' ? '보너스' : '덤';
   el.append(tag, art, nm);
   el.title = (info.desc || '') + (kind === 'bonus' ? ' — 뒤집은 사람이 얻는다' : ' — 이 경매에서 진 쪽이 얻는다');
+  // 꾹 누르면 무슨 물건인지 알려 준다.
+  // 폰에는 마우스를 얹는다는 게 없어서 title 은 아무 소용이 없었다 —
+  // 판에 덤이 떴는데 그게 뭔지 알 길이 없으면, 이겨야 할지 져야 할지도 못 정한다.
+  el.classList.add('lp-able');
+  bindLongPress(el, () => explainLotItem(card, kind));
   return el;
+}
+
+// 경매판에 얹힌 아이템 설명. 내 손의 물건과 말이 달라야 한다 —
+// 아직 내 것이 아니고, 중요한 건 '언제 쓰나' 가 아니라 '누가 갖나' 다.
+function explainLotItem(card, kind) {
+  const info = ITEM_INFO[card.itemId] || {};
+  const name = card.name || info.name || '아이템';
+  const who = kind === 'bonus'
+    ? '뒤집은 사람이 그 자리에서 가져요.'
+    : '이 경매에서 <b>진 쪽</b>이 가져요.';
+  toast(`<b>${esc(name)}</b> — ${esc(info.desc || '')}<br>` +
+        `<span style="opacity:.75;font-size:.9em">${who}</span>`, 3400);
+  playSound('select');
 }
 function slotEl(label, card, opts = {}) {
   const w = document.createElement('div'); w.className = 'a-slot';
