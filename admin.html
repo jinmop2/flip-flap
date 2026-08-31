@@ -35,6 +35,7 @@
  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
  .scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px}
  tr.pick{background:#ffd94a18}
+ button.flt.on{background:#ffd94a22;color:var(--gold);border-color:var(--gold)}
  tr.ban td:first-child::after{content:' 정지';color:var(--bad);font-size:.7rem}
  tr.mute td:first-child::after{content:' 재갈';color:#ffc98a;font-size:.7rem}
  .msg{font-size:.8rem;margin-top:8px;min-height:16px}
@@ -59,8 +60,10 @@
 <header>
   <h1>⚙️ FLIP FLAP 운영</h1>
   <div class="keybox">
+    <input id="who" placeholder="내 이름 (기록에 남아요)" autocomplete="off" style="width:150px">
     <input id="key" type="password" placeholder="관리자 키" autocomplete="off">
-    <button class="g" onclick="saveKey()">기억</button>
+    <button class="b" id="inBtn" onclick="signIn()">들어가기</button>
+    <button class="g" id="outBtn" onclick="signOut()" style="display:none">나가기</button>
   </div>
 </header>
 
@@ -73,7 +76,17 @@
   <button data-p="log" onclick="tab('log')">운영 기록</button>
 </nav>
 
-<main>
+<div id="gate" style="max-width:1100px;margin:20px auto;padding:0 16px">
+  <div class="card">
+    <h2>운영 로그인</h2>
+    <div class="hint">키가 맞으면 2시간짜리 표를 받습니다. 그 뒤로는 키가 오가지 않아요 —
+      키를 매 요청마다 실어 보내면 그만큼 새 나갈 자리가 늘어납니다.<br>
+      이름은 기록에 남습니다. 키는 여럿이 나눠 쓰므로, 누가 했는지는 이름으로만 남아요.</div>
+    <div class="msg" id="gateMsg"></div>
+  </div>
+</div>
+
+<main style="display:none">
 <!-- ── 대시보드 ── -->
 <section class="pane on" id="p-dash">
   <div class="card">
@@ -102,6 +115,12 @@
     <div class="row">
       <div style="flex:3"><input id="q" placeholder="아이디 또는 닉네임 (비우면 최근 접속 순)" onkeydown="if(event.key==='Enter')findUsers()"></div>
       <div style="flex:0 0 auto"><button class="b" onclick="findUsers()">검색</button></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div style="flex:0 0 auto"><button class="g flt on" data-f="">전체</button></div>
+      <div style="flex:0 0 auto"><button class="g flt" data-f="banned">정지된 사람</button></div>
+      <div style="flex:0 0 auto"><button class="g flt" data-f="muted">재갈</button></div>
+      <div style="flex:0 0 auto"><button class="g flt" data-f="new">오늘 가입</button></div>
     </div>
     <div class="msg" id="uMsg"></div>
     <div class="scroll" style="margin-top:10px">
@@ -188,7 +207,7 @@
     <h2>운영 기록 <button class="g" style="float:right;padding:4px 10px;font-size:.75rem" onclick="loadLog()">새로고침</button></h2>
     <div class="hint">누가 언제 무엇을 했는지. 남지 않는 권한은 나중에 아무도 설명할 수 없습니다.</div>
     <div class="scroll" style="margin-top:8px">
-      <table><thead><tr><th>시각</th><th>행동</th><th>대상</th><th>내용</th></tr></thead><tbody id="log"></tbody></table>
+      <table><thead><tr><th>시각</th><th>누가</th><th>행동</th><th>대상</th><th>내용</th></tr></thead><tbody id="log"></tbody></table>
     </div>
   </div>
 </section>
@@ -202,19 +221,60 @@ const n=v=>(v==null?0:v).toLocaleString();
 const when=t=>t?new Date(t).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
 const dayOnly=t=>t?new Date(t).toLocaleDateString('ko-KR',{year:'2-digit',month:'2-digit',day:'2-digit'}):'—';
 
-// 키는 이 브라우저에만 둔다. 주소에는 절대 싣지 않는다 —
-// 히스토리·리퍼러·서버 로그에 그대로 남기 때문이다.
-function saveKey(){ try{ localStorage.setItem('ff_admin_key', key()); }catch(_){}
-  msg('uMsg','이 브라우저에 기억했어요.','ok'); }
-try{ const k=localStorage.getItem('ff_admin_key'); if(k) $('key').value=k; }catch(_){}
+// 표(세션). 키는 들어올 때 딱 한 번만 보낸다.
+// 키 자체는 어디에도 저장하지 않는다 — 브라우저에 남겨 두면 그게 곧 열쇠 복사본이다.
+let SESS = null, WHO = '';
+try{ SESS = sessionStorage.getItem('ff_adm_sess'); WHO = sessionStorage.getItem('ff_adm_who') || ''; }catch(_){}
 
-async function post(path, body){
-  if(!key()) return { error:'관리자 키를 입력해주세요.' };
+async function raw(path, body){
   try{
     const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({...body,key:key()})});
+      body:JSON.stringify(body)});
     return await r.json();
   }catch(e){ return { error:'서버에 닿지 못했어요.' }; }
+}
+// 평소 요청은 표만 싣는다
+async function post(path, body){
+  if(!SESS) return { error:'먼저 들어가주세요.' };
+  const out = await raw(path, {...body, sess:SESS});
+  // 표가 만료됐으면 다시 로그인 화면으로 (조용히 실패하면 왜 안 되는지 알 수 없다)
+  if(out && out.error && /들어가|키/.test(out.error)) { SESS=null; showGate(); }
+  return out;
+}
+
+async function signIn(){
+  const k=key(); const w=$('who').value.trim();
+  if(!k) return msg('gateMsg','관리자 키를 입력해주세요.','err');
+  msg('gateMsg','확인 중…');
+  const out = await raw('/api/admin/session', { key:k, who:w });
+  if(out.error) return msg('gateMsg','⚠ '+out.error,'err');
+  SESS=out.sess; WHO=out.who||w;
+  try{ sessionStorage.setItem('ff_adm_sess',SESS); sessionStorage.setItem('ff_adm_who',WHO); }catch(_){}
+  $('key').value='';                       // 키는 화면에도 안 남긴다
+  showMain();
+}
+async function signOut(){
+  if(SESS) raw('/api/admin/logout',{sess:SESS});
+  SESS=null;
+  try{ sessionStorage.removeItem('ff_adm_sess'); sessionStorage.removeItem('ff_adm_who'); }catch(_){}
+  showGate();
+}
+function showGate(){
+  document.getElementById('gate').style.display='';
+  document.querySelector('main').style.display='none';
+  document.querySelector('nav').style.display='none';
+  $('key').style.display=''; $('who').style.display='';
+  $('inBtn').style.display=''; $('outBtn').style.display='none';
+  msg('gateMsg','');
+}
+function showMain(){
+  document.getElementById('gate').style.display='none';
+  document.querySelector('main').style.display='';
+  document.querySelector('nav').style.display='';
+  $('key').style.display='none'; $('who').style.display='none';
+  $('inBtn').style.display='none'; $('outBtn').style.display='';
+  $('outBtn').textContent = WHO ? (WHO + ' · 나가기') : '나가기';
+  loadDash();
 }
 function msg(id,t,cls){ const e=$(id); if(!e) return; e.className='msg'+(cls?' '+cls:''); e.textContent=t; }
 
@@ -260,12 +320,17 @@ async function loadDash(){
 }
 
 // ── 플레이어 ──
-let picked=null;
+let picked=null, filter='';
+document.addEventListener('click',(e)=>{
+  const b=e.target.closest('button.flt'); if(!b) return;
+  document.querySelectorAll('button.flt').forEach(x=>x.classList.toggle('on',x===b));
+  filter=b.dataset.f||''; findUsers();
+});
 async function findUsers(){
   msg('uMsg','찾는 중…');
-  const o=await post('/api/admin/users',{q:$('q').value.trim(),limit:100});
+  const o=await post('/api/admin/users',{q:$('q').value.trim(),limit:100,filter});
   if(o.error) return msg('uMsg','⚠ '+o.error,'err');
-  msg('uMsg',o.total+'명 중 '+o.list.length+'명','ok');
+  msg('uMsg', o.total+'명 중 '+o.list.length+'명 보임'+(o.total>o.list.length?' — 더 좁혀 보세요':''),'ok');
   $('users').innerHTML=o.list.map(u=>
     '<tr class="row-user '+(u.banned?'ban':u.muted?'mute':'')+'" data-idl="'+esc(u.idl)+'" style="cursor:pointer">'
     +'<td>'+esc(u.nick)+'</td><td>'+esc(u.id)+'</td><td class="n">'+u.level+'</td><td class="n">'+n(u.rp)
@@ -295,7 +360,10 @@ async function openUser(idl){
    +'<div class="hint" style="margin-top:10px">가입 '+dayOnly(a.createdAt)+' · 최근 접속 '+when(a.lastSeen)
    +(a.referredBy?' · 초대한 사람 '+esc(a.referredBy):'')+'</div>'
    +'<div class="row" style="margin-top:14px">'
-   +'<div><label>기간(일, 0=무기한)</label><input id="banDays" type="number" value="3" min="0"></div>'
+   +'<div><label>기간(일)</label><input id="banDays" type="number" value="3" min="1"></div>'
+   +'<div style="flex:0 0 auto"><label>무기한</label>'
+   +'<label class="hint" style="display:flex;align-items:center;gap:5px;margin-top:6px">'
+   +'<input id="banPerm" type="checkbox" style="width:auto"> 기간 없이</label></div>'
    +'<div style="flex:2"><label>사유 (본인에게 보입니다)</label><input id="banWhy" placeholder="예: 채팅 욕설"></div>'
    +'</div>'
    +'<div class="row" style="margin-top:10px">'
@@ -313,6 +381,8 @@ async function openUser(idl){
    +'<textarea id="dmText" placeholder="이 사람에게만 갑니다"></textarea>'
    +'<div style="margin-top:8px"><button class="b" onclick="doNotice()">보내기</button></div>'
    +'<div class="msg" id="dMsg"></div>'
+   +'<div style="margin-top:14px"><button class="g" onclick="sameDevice()">같은 기기에서 만든 계정 보기</button></div>'
+   +'<div id="sameBox"></div>'
    +(a.notices&&a.notices.length?'<div class="hint" style="margin-top:12px">최근 보낸 쪽지<br>'
       +a.notices.map(x=>'· '+when(x.at)+' — '+esc(x.text)).join('<br>')+'</div>':'');
 }
@@ -322,14 +392,37 @@ async function act(path, body, okText){
   msg('dMsg',okText,'ok');
   openUser(picked); findUsers();
 }
-const doBan   =()=>{ if(confirm('정말 정지할까요? 접속 중이면 바로 끊깁니다.')) act('/api/admin/ban',{days:+$('banDays').value,reason:$('banWhy').value},'정지했어요.'); };
-const doMute  =()=>act('/api/admin/mute',{days:+$('banDays').value,reason:$('banWhy').value},'채팅을 막았어요.');
+const perm =()=>!!($('banPerm')&&$('banPerm').checked);
+const doBan   =()=>{
+  const p=perm();
+  if(!confirm(p?'기간 없이 정지합니다. 계속할까요?':'정말 정지할까요? 접속 중이면 바로 끊깁니다.')) return;
+  act('/api/admin/ban',{days:+$('banDays').value,reason:$('banWhy').value,permanent:p},'정지했어요.');
+};
+const doMute  =()=>act('/api/admin/mute',{days:+$('banDays').value,reason:$('banWhy').value,permanent:perm()},'채팅을 막았어요.');
 const doUnban =()=>act('/api/admin/unban',{},'정지를 풀었어요.');
 const doUnmute=()=>act('/api/admin/unmute',{},'재갈을 풀었어요.');
 const doCoins =()=>{ const d=+$('coinDelta').value; if(!d) return msg('dMsg','0 은 의미가 없어요.','err');
   if(confirm(d>0?d+' 코인을 줍니다.':(-d)+' 코인을 뺍니다. 계속할까요?'))
     act('/api/admin/coins',{delta:d,memo:$('coinMemo').value},'코인을 조정했어요.'); };
 const doNotice=()=>act('/api/admin/notice',{text:$('dmText').value},'쪽지를 보냈어요.');
+
+// 같은 기기에서 만들어진 계정. 지문은 소금 섞은 해시라 원본 IP 로 되돌릴 수 없다.
+// 같은 공유기·PC방·학교도 걸리므로 이것만으로 벌하면 안 된다 — 정황일 뿐이다.
+async function sameDevice(){
+  const box=$('sameBox');
+  box.innerHTML='<div class="hint" style="margin-top:8px">찾는 중…</div>';
+  const o=await post('/api/admin/same-device',{idl:picked});
+  if(o.error) return box.innerHTML='<div class="hint" style="margin-top:8px">⚠ '+esc(o.error)+'</div>';
+  if(o.note) return box.innerHTML='<div class="hint" style="margin-top:8px">'+esc(o.note)+'</div>';
+  const list=o.list||[];
+  box.innerHTML='<div class="hint" style="margin:10px 0 6px">같은 기기 지문 '+list.length+'개'
+    +(list.length>1?' — 같은 공유기·PC방도 이렇게 보입니다. 이것만으로 벌하지 마세요.':'')+'</div>'
+    +'<div class="scroll"><table><thead><tr><th>닉네임</th><th>아이디</th><th class="n">코인</th><th>가입</th><th></th></tr></thead><tbody>'
+    +list.map(u=>'<tr'+(u.me?' class="pick"':'')+'><td>'+esc(u.nick)+(u.banned?' <span class="tag bad">정지</span>':'')
+      +'</td><td>'+esc(u.id)+'</td><td class="n">'+n(u.coins)+'</td><td>'+dayOnly(u.createdAt)
+      +'</td><td>'+(u.me?'<span class="hint">지금 보는 계정</span>':'<button class="g act-see" data-idl="'+esc(u.idl)+'" style="padding:3px 8px;font-size:.7rem">보기</button>')+'</td></tr>').join('')
+    +'</tbody></table></div>';
+}
 
 // ── 공지 ──
 async function sendAll(){
@@ -353,14 +446,15 @@ async function loadReports(){
 }
 
 // ── 운영 기록 ──
-const ACT={ban:'정지',unban:'정지 해제',mute:'재갈',unmute:'재갈 해제',coins:'코인 조정',notice:'쪽지',notice_all:'전체 공지'};
+const ACT={ban:'정지',unban:'정지 해제',mute:'재갈',unmute:'재갈 해제',coins:'코인 조정',notice:'쪽지',notice_all:'전체 공지',login:'로그인',lock:'⚠ 키 잠금'};
 async function loadLog(){
   const o=await post('/api/admin/log',{});
   if(o.error) return;
   $('log').innerHTML=(o.list||[]).map(x=>
-    '<tr><td>'+when(x.at)+'</td><td>'+(ACT[x.action]||esc(x.action))+'</td><td>'+esc(x.target||'—')
+    '<tr'+(x.action==='lock'?' style="color:#ff9a9a"':'')+'><td>'+when(x.at)+'</td><td>'+esc(x.who||'—')
+    +'</td><td>'+(ACT[x.action]||esc(x.action))+'</td><td>'+esc(x.target||'—')
     +'</td><td style="white-space:normal">'+esc(x.detail?JSON.stringify(x.detail):'')+'</td></tr>').join('')
-    || '<tr><td colspan="4" class="empty">기록이 없어요</td></tr>';
+    || '<tr><td colspan="5" class="empty">기록이 없어요</td></tr>';
 }
 
 // ── 쿠폰·임시계정 ──
@@ -431,5 +525,5 @@ document.addEventListener('click', (e) => {
   if (rev) { trev(rev.dataset.id); return; }
 });
 
-loadDash();
+if(SESS) showMain(); else showGate();
 </script>

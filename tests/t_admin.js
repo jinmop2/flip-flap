@@ -60,7 +60,10 @@ console.log('\n④ 임시 계정 칸');
   ok('만들기 버튼', /onclick="tmk\(\)"/.test(html));
   ok('코드는 한 번만 보인다고 적어 둔다', /다시 볼 수 없어요|다시 못 봅니다/.test(html));
   ok('재발급·끄기는 data-id 로 넘긴다', /act-rot/.test(html) && /act-rev/.test(html));
-  ok('키는 본문으로만 보낸다', /body:JSON\.stringify\(\{\.\.\.body,key:key\(\)\}\)/.test(html));
+  // 키는 들어올 때 한 번만 보내고, 그 뒤로는 짧은 수명의 표를 쓴다.
+  // 키를 매 요청마다 실어 보내면 그만큼 새 나갈 자리가 늘어난다.
+  ok('평소 요청은 표만 싣는다', /raw\(path, \{\.\.\.body, sess:SESS\}\)/.test(html));
+  ok('키는 들어올 때만 보낸다', (html.match(/key:k/g) || []).length === 1);
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

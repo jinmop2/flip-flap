@@ -76,10 +76,13 @@ ok('상점·보상·쿠폰·미션에 락이 걸려 있다',
    /shopLocks|buyLocks/.test(acc) && /misLocks/.test(acc) && /miniLocks/.test(acc));
 
 console.log('\n⑥ 관리자 통로');
-ok('관리자 라우트는 전부 키를 본다', (() => {
+// 나가기(logout)만 예외다 — 들고 온 표를 버리는 일이라 권한이 필요 없고,
+// 표를 아는 사람은 이미 다 할 수 있는 사람이다.
+ok('관리자 라우트는 전부 문을 지난다', (() => {
   const lines = srv.split('\n');
   for (let i = 0; i < lines.length; i++) {
     if (!/^app\.(get|post)\('\/api\/admin/.test(lines[i])) continue;
+    if (/^app\.post\('\/api\/admin\/logout'/.test(lines[i])) continue;
     const blk = lines.slice(i, i + 4).join('\n');
     if (!/adminOk\(req, res\)/.test(blk)) return false;
   }
@@ -89,8 +92,13 @@ ok('관리자 라우트는 전부 키를 본다', (() => {
 // /stats · /reports 는 브라우저로 여는 화면이라 STATS_KEY 를 주소에서 받는데,
 // 그건 다른 키이고 Referrer-Policy·no-store 로 따로 막아 둔다.
 ok('ADMIN_KEY 는 본문으로만 받는다',
-   /if \(!req\.body \|\| !keyEq\(req\.body\.key, KEY\)\)/.test(srv)
+   /!keyEq\(req\.body\.key, KEY\)/.test(srv)
    && !/ADMIN_KEY[\s\S]{0,200}req\.query/.test(srv));
+// 문 앞에 잠금이 있다 — 경로마다 세는 요율 제한만으로는 경로를 돌려 가며 두드리는 걸 못 막는다
+ok('틀린 키를 한 계량기로 따로 센다', /const admFail = new Map\(\)/.test(srv)
+   && /function admMiss\(ip\)/.test(srv) && /ADM_FAIL_MAX/.test(srv));
+// 키는 들어올 때 한 번만 오간다 — 그 뒤로는 짧은 수명의 표
+ok('통과하면 짧은 수명의 표를 준다', /function admNewSession/.test(srv) && /ADM_SESS_MS/.test(srv));
 // 비교는 상수 시간으로. 문자열 !== 는 앞자리가 어디서 틀렸는지가 시간에 드러나서,
 // 이론상 한 글자씩 맞춰 나갈 수 있다. 코인 발행 권한이 걸린 키라 여기까지 막는다.
 ok('관리자 키 비교는 상수 시간이다', /function keyEq\(/.test(srv) && /crypto\.timingSafeEqual/.test(srv));

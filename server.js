@@ -136,10 +136,92 @@ function keyEq(a, b) {
   if (x.length !== y.length) return false;
   return crypto.timingSafeEqual(x, y);
 }
+// ── 관리자 문 ─────────────────────────────────────────────────────────────
+//
+// 키 하나로 코인 발행·계정 제재가 다 된다. 그래서 문 앞에 세 겹을 둔다.
+//
+//  ① 틀린 키를 반복하면 그 IP 를 잠근다.
+//     경로마다 따로 세는 요율 제한(rateLimit)만으로는 부족하다 — 통로가 스물세 개라
+//     경로를 돌려 가며 두드리면 한 경로당 한도는 안 걸리고 총 시도만 늘어난다.
+//     그래서 '관리자 문' 이라는 한 계량기로 따로 센다.
+//  ② 통과하면 짧은 수명의 표를 준다. 그 뒤로는 키가 아니라 표가 오간다 —
+//     키가 오가는 횟수를 한 번으로 줄인다.
+//  ③ 무엇을 누가 했는지 남긴다. 키는 공유되므로 이름을 같이 적는다.
+
+const ADM_FAIL_MAX = 8;                 // 이만큼 틀리면
+const ADM_LOCK_MS = 10 * 60 * 1000;     // 10분 잠근다
+const admFail = new Map();              // ip -> { n, at, until }
+
+function admLocked(ip) {
+  const e = admFail.get(ip);
+  if (!e || !e.until) return 0;
+  if (Date.now() > e.until) { admFail.delete(ip); return 0; }
+  return Math.ceil((e.until - Date.now()) / 1000);
+}
+function admMiss(ip) {
+  const now = Date.now();
+  let e = admFail.get(ip);
+  if (!e || now - e.at > ADM_LOCK_MS) e = { n: 0, at: now, until: 0 };
+  e.n++; e.at = now;
+  if (e.n >= ADM_FAIL_MAX) { e.until = now + ADM_LOCK_MS; e.n = 0; }
+  admFail.set(ip, e);
+  // 잠근 것도 기록에 남긴다 — 누가 두드리고 있는지는 알아야 한다
+  if (e.until) { try { accounts.adminLog('lock', null, { ip: admIpTag(ip) }); } catch (_) {} }
+}
+function admHit(ip) { admFail.delete(ip); }
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, e] of admFail) if (now - e.at > ADM_LOCK_MS * 2 && !e.until) admFail.delete(k);
+}, 10 * 60 * 1000);
+
+// IP 를 그대로 기록에 남기지 않는다 — 잠금 기록에도 지문만 남긴다.
+// 소금은 이 프로세스 안에서만 산다. 재시작하면 예전 지문과 비교가 안 되지만,
+// 잠금 기록은 "지금 누가 두드리고 있나" 를 보는 것이라 그걸로 충분하다.
+let _admSalt = null;
+function admIpTag(ip) {
+  if (!_admSalt) _admSalt = crypto.randomBytes(16).toString('hex');
+  return crypto.createHash('sha256').update(_admSalt + '|' + String(ip || '')).digest('hex').slice(0, 12);
+}
+
+// ── 운영 세션 ─────────────────────────────────────────────────────────────
+// 키를 매 요청마다 실어 보내면 그만큼 새 나갈 자리가 늘어난다(프록시 로그, 확장,
+// 실수로 켠 개발자 도구). 한 번만 키를 보내고, 그 뒤로는 짧은 수명의 표를 쓴다.
+const ADM_SESS_MS = 2 * 3600 * 1000;    // 2시간
+const admSess = new Map();              // token -> { who, ip, at }
+function admNewSession(who, ip) {
+  const t = crypto.randomBytes(24).toString('hex');
+  admSess.set(t, { who: String(who || '').slice(0, 24), ip, at: Date.now() });
+  return t;
+}
+function admSession(req) {
+  const t = req.body && req.body.sess;
+  if (!t) return null;
+  const e = admSess.get(t);
+  if (!e) return null;
+  if (Date.now() - e.at > ADM_SESS_MS) { admSess.delete(t); return null; }
+  return e;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, e] of admSess) if (now - e.at > ADM_SESS_MS) admSess.delete(k);
+}, 15 * 60 * 1000);
+
 function adminOk(req, res) {
   const KEY = ADMIN_KEY();
   if (!KEY) { res.status(403).json({ error: 'Render 환경변수에 ADMIN_KEY 를 설정해주세요.' }); return false; }
-  if (!req.body || !keyEq(req.body.key, KEY)) { res.status(403).json({ error: '잘못된 키입니다.' }); return false; }
+  const ip = ipOf(req);
+  const left = admLocked(ip);
+  if (left) { res.status(429).json({ error: `너무 여러 번 틀렸어요. ${Math.ceil(left / 60)}분 뒤에 다시 시도해주세요.` }); return false; }
+  // 표가 있으면 표로, 없으면 키로
+  const sess = admSession(req);
+  if (sess) { req.admWho = sess.who; accounts.setAdminWho(sess.who); return true; }
+  if (!req.body || !keyEq(req.body.key, KEY)) {
+    admMiss(ip);
+    res.status(403).json({ error: '잘못된 키입니다.' }); return false;
+  }
+  admHit(ip);
+  req.admWho = String((req.body && req.body.who) || '').slice(0, 24);
+  accounts.setAdminWho(req.admWho);
   return true;
 }
 // 백업 — 코인·전적·클랜은 한 번 날아가면 되돌릴 수 없다.
@@ -194,6 +276,9 @@ app.post('/api/admin/temp-revoke', rateLimit(20), (req, res) => {
   res.json(accounts.revokeTempCode((req.body || {}).id));
 });
 
+// 요청이 끝나면 이름을 비운다 — 다음 요청이 남의 이름으로 기록되면 안 된다
+app.use('/api/admin', (req, res, next) => { res.on('finish', () => accounts.setAdminWho('')); next(); });
+
 // ── 운영 API ───────────────────────────────────────────────────────────────
 // 전부 adminOk 를 지난다. 키는 본문으로만 받고, 무엇을 할지는 서버가 정한다.
 // 화면은 "누구에게 무엇을" 만 보내고 금액·기간의 한계는 accounts.js 가 자른다.
@@ -220,19 +305,24 @@ app.post('/api/admin/overview', rateLimit(60), (req, res) => {
 // 사람 찾기 · 자세히 보기
 app.post('/api/admin/users', rateLimit(60), (req, res) => {
   if (!adminOk(req, res)) return;
-  const { q, limit } = req.body || {};
-  res.json(accounts.adminSearch(q, limit));
+  const { q, limit, filter } = req.body || {};
+  res.json(accounts.adminSearch(q, limit, filter));
 });
 app.post('/api/admin/user', rateLimit(60), (req, res) => {
   if (!adminOk(req, res)) return;
   res.json(accounts.adminUser((req.body || {}).idl));
 });
+// 같은 기기에서 만들어진 계정들. 같은 공유기·PC방도 걸리므로 정황일 뿐이다.
+app.post('/api/admin/same-device', rateLimit(30), (req, res) => {
+  if (!adminOk(req, res)) return;
+  res.json(accounts.adminSameDevice((req.body || {}).idl));
+});
 
 // 제재 — 정지(게임 전체) · 재갈(말만)
 app.post('/api/admin/ban', rateLimit(30), (req, res) => {
   if (!adminOk(req, res)) return;
-  const { idl, days, reason } = req.body || {};
-  const out = accounts.adminBan(idl, days, reason);
+  const { idl, days, reason, permanent } = req.body || {};
+  const out = accounts.adminBan(idl, days, reason, permanent);
   // 켜 둔 창에서 계속 놀지 못하게 지금 붙어 있는 소켓도 끊는다
   if (out.ok) kickAccount(idl, accounts.banInfo({ ban: out.ban }));
   res.json(out);
@@ -243,8 +333,8 @@ app.post('/api/admin/unban', rateLimit(30), (req, res) => {
 });
 app.post('/api/admin/mute', rateLimit(30), (req, res) => {
   if (!adminOk(req, res)) return;
-  const { idl, days, reason } = req.body || {};
-  res.json(accounts.adminMute(idl, days, reason));
+  const { idl, days, reason, permanent } = req.body || {};
+  res.json(accounts.adminMute(idl, days, reason, permanent));
 });
 app.post('/api/admin/unmute', rateLimit(30), (req, res) => {
   if (!adminOk(req, res)) return;
@@ -270,7 +360,16 @@ app.post('/api/admin/notice-all', rateLimit(6), (req, res) => {
   if (!adminOk(req, res)) return;
   const { text, minLevel } = req.body || {};
   const out = accounts.adminNoticeAll(text, { minLevel });
-  if (out.ok) io.emit('admin_notice', { text: String(text).slice(0, 500) });
+  // 지금 접속한 사람에게 바로 띄운다. 예전엔 io.emit 으로 전부에게 뿌려서,
+  // 최소 레벨을 걸어 둬도 조건에 안 맞는 사람(게스트 포함)까지 창이 떴다.
+  if (out.ok) {
+    const msg = { text: String(text).slice(0, 500) };
+    for (const idl of out.idls || []) {
+      const sid = accountSockets.get(idl);
+      if (sid) io.to(sid).emit('admin_notice', msg);
+    }
+  }
+  delete out.idls;                       // 화면에 계정 목록까지 보낼 이유는 없다
   res.json(out);
 });
 
@@ -310,6 +409,21 @@ app.get('/admin', rateLimit(20), (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
+// 운영 로그인 — 키가 맞으면 짧은 수명의 표를 준다. 그 뒤로는 표만 오간다.
+app.post('/api/admin/session', rateLimit(20), (req, res) => {
+  if (!adminOk(req, res)) return;
+  const who = String((req.body && req.body.who) || '').replace(/[^가-힣a-zA-Z0-9 _.-]/g, '').slice(0, 24);
+  const sess = admNewSession(who, ipOf(req));
+  accounts.adminLog('login', null, { who: who || '(이름 없음)' });
+  res.json({ ok: true, sess, who, expiresIn: ADM_SESS_MS });
+});
+// 표 버리기 (로그아웃)
+app.post('/api/admin/logout', rateLimit(20), (req, res) => {
+  const t = req.body && req.body.sess;
+  if (t) admSess.delete(t);
+  res.json({ ok: true });
+});
+
 // 쿠폰에 얹을 칭호 목록 (관리자 화면 드롭다운)
 app.post('/api/admin/titles', rateLimit(30), (req, res) => {
   if (!adminOk(req, res)) return;

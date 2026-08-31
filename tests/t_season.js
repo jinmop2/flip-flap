@@ -55,7 +55,8 @@ console.log('\n④ 서버에 물려 있는가');
   // /stats·/reports 는 사람이 브라우저로 여는 읽기 전용 화면이라 쿼리를 쓰되,
   // 리퍼러·캐시로 키가 새 나가지 않게 헤더를 막아 둔다.
   // 비교 자체는 상수 시간(keyEq)으로 바뀌었다 — 여기서 보는 것은 '키를 본문에서 읽는가' 다.
-  ok('관리자 행동 통로는 본문 키만', /function adminOk\(req, res\)[\s\S]{0,240}keyEq\(req\.body\.key, KEY\)/.test(srv)
+  // 문이 세 겹(잠금·표·키)이 되면서 adminOk 가 길어졌다 — 창을 넓힌다.
+  ok('관리자 행동 통로는 본문 키만', /function adminOk\(req, res\)[\s\S]{0,900}keyEq\(req\.body\.key, KEY\)/.test(srv)
      && !/adminOk[\s\S]{0,200}req\.query/.test(srv));
   ok('키가 실린 화면은 리퍼러를 막는다', /Referrer-Policy', 'no-referrer'/.test(srv));
   ok('랭킹에 시즌이 실린다', /season: accounts\.seasonState\(\)/.test(srv));

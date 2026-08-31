@@ -3083,9 +3083,12 @@ function reportList(limit = 50) {
 //   ③ 누가 언제 무엇을 했는지 남긴다. 남지 않는 권한은 나중에 아무도 설명할 수 없다.
 
 const ADMIN_LOG_KEEP = 500;
+let adminWho = '';                      // 지금 조작 중인 사람 (서버가 매 요청 앞에 적어 준다)
+function setAdminWho(w) { adminWho = String(w || '').slice(0, 24); }
 function adminLog(action, target, detail) {
   db.adminLog = Array.isArray(db.adminLog) ? db.adminLog : [];
-  db.adminLog.push({ at: Date.now(), action, target: target || null, detail: detail || null });
+  db.adminLog.push({ at: Date.now(), action, target: target || null, detail: detail || null,
+                     who: adminWho || null });
   if (db.adminLog.length > ADMIN_LOG_KEEP) db.adminLog.splice(0, db.adminLog.length - ADMIN_LOG_KEEP);
   persistMeta('adminlog', db.adminLog);
 }
@@ -3107,9 +3110,19 @@ function banInfo(u) {
   if (u.ban.until && Date.now() > u.ban.until) return null;   // 기간이 지났다
   return { until: u.ban.until || 0, reason: u.ban.reason || '', at: u.ban.at || 0 };
 }
-function adminBan(idl, days, reason) {
+// 기간은 따로 읽는다. 예전엔 Math.max(0, days) 였는데, -5 를 잘못 넣으면 0 이 되고
+// 0 은 '무기한' 이라 오타가 가장 무거운 벌이 됐다. 무기한은 일부러 말해야 한다.
+function banDays(days, permanent) {
+  if (permanent) return { ok: true, days: 0 };
+  const d = Number(days);
+  if (!Number.isFinite(d) || d < 0) return { error: '기간은 0보다 커야 해요. 무기한이면 무기한을 골라주세요.' };
+  if (d < 1) return { error: '기간은 하루 이상이어야 해요. 무기한이면 무기한을 골라주세요.' };
+  return { ok: true, days: Math.min(3650, Math.floor(d)) };
+}
+function adminBan(idl, days, reason, permanent) {
   const u = userOf(idl); if (!u) return { error: '없는 계정이에요.' };
-  const d = Math.max(0, Math.min(3650, Number(days) || 0));
+  const p = banDays(days, permanent); if (p.error) return { error: p.error };
+  const d = p.days;
   u.ban = { at: Date.now(), until: d ? Date.now() + d * 86400000 : 0,
             reason: String(reason || '').slice(0, 200) };
   // 정지된 사람의 토큰은 끊는다 — 안 그러면 켜 둔 창에서 계속 논다
@@ -3133,9 +3146,10 @@ function muteInfo(u) {
   if (u.mute.until && Date.now() > u.mute.until) return null;
   return { until: u.mute.until || 0, reason: u.mute.reason || '' };
 }
-function adminMute(idl, days, reason) {
+function adminMute(idl, days, reason, permanent) {
   const u = userOf(idl); if (!u) return { error: '없는 계정이에요.' };
-  const d = Math.max(0, Math.min(365, Number(days) || 0));
+  const p = banDays(days, permanent); if (p.error) return { error: p.error };
+  const d = Math.min(365, p.days);
   u.mute = { at: Date.now(), until: d ? Date.now() + d * 86400000 : 0,
              reason: String(reason || '').slice(0, 200) };
   persist(String(idl).toLowerCase());
@@ -3171,16 +3185,27 @@ function adminNoticeAll(text, opts = {}) {
   const t = String(text || '').trim().slice(0, 500);
   if (!t) return { error: '내용을 입력해주세요.' };
   const minLevel = Math.max(0, Number(opts.minLevel) || 0);
-  let n = 0;
+  const hit = [];
   for (const [idl, u] of Object.entries(db.users)) {
     if (minLevel && levelOf(u.xp) < minLevel) continue;
     u.notices = Array.isArray(u.notices) ? u.notices : [];
     u.notices.push({ id: crypto.randomBytes(6).toString('hex'), text: t, at: Date.now(), read: false });
     if (u.notices.length > NOTICE_KEEP) u.notices.splice(0, u.notices.length - NOTICE_KEEP);
-    persist(idl); n++;
+    hit.push(idl);
   }
-  adminLog('notice_all', null, { text: t.slice(0, 80), count: n, minLevel });
-  return { ok: true, count: n };
+  // 저장은 나눠 한다. 예전엔 사람 수만큼 한꺼번에 질의를 던져서,
+  // 계정이 몇 백만 돼도 DB 에 그만큼이 동시에 꽂혔다.
+  let i = 0;
+  const flush = () => {
+    const end = Math.min(i + 25, hit.length);
+    for (; i < end; i++) persist(hit[i]);
+    if (i < hit.length) setTimeout(flush, 60);
+  };
+  flush();
+  adminLog('notice_all', null, { text: t.slice(0, 80), count: hit.length, minLevel });
+  // 지금 접속한 사람에게 바로 띄우는 것은 서버가 한다 — 누구에게 띄울지 알아야 하므로
+  // 대상 목록을 같이 돌려준다.
+  return { ok: true, count: hit.length, idls: hit };
 }
 // 본인이 읽는 쪽 — 안 읽은 것만 준다
 function myNotices(token) {
@@ -3200,11 +3225,19 @@ function markNoticesRead(token) {
 
 // ── 코인 조정 ───────────────────────────────────────────────────────────
 // 사고가 났을 때 되돌리는 용도다. 늘리는 것도 줄이는 것도 남긴다.
+// 한 번에 움직일 수 있는 양과, 가질 수 있는 최대치를 둘 다 막는다.
+// 예전엔 한계가 없어서 9,000,000,000,000,000 을 넣으면 그대로 들어갔다 —
+// 자바스크립트가 정수를 정확히 세는 한계(2^53)를 넘으면 숫자가 틀어지기 시작한다.
+const COIN_STEP_MAX = 1000000;      // 한 번에 100만
+const COIN_MAX = 100000000;         // 계정 최대 1억
 function adminCoins(idl, delta, memo) {
   const u = userOf(idl); if (!u) return { error: '없는 계정이에요.' };
-  const d = Math.trunc(Number(delta) || 0);
+  const raw = Number(delta);
+  if (!Number.isFinite(raw)) return { error: '숫자를 넣어주세요.' };
+  const d = Math.trunc(raw);
   if (!d) return { error: '0 은 의미가 없어요.' };
-  u.coins = Math.max(0, (u.coins || 0) + d);
+  if (Math.abs(d) > COIN_STEP_MAX) return { error: `한 번에 ${COIN_STEP_MAX.toLocaleString()} 까지만 움직일 수 있어요.` };
+  u.coins = Math.max(0, Math.min(COIN_MAX, (u.coins || 0) + d));
   persist(String(idl).toLowerCase());
   adminLog('coins', u.id, { delta: d, after: u.coins, memo: String(memo || '').slice(0, 100) });
   return { ok: true, coins: u.coins };
@@ -3212,23 +3245,53 @@ function adminCoins(idl, delta, memo) {
 
 // ── 조회 ────────────────────────────────────────────────────────────────
 // 찾기. 아이디·닉네임 어느 쪽으로도 찾힌다.
-function adminSearch(q, limit = 30) {
+// 찾기.
+//
+// 예전엔 400명을 채우면 곧바로 끊었다. 끊고 나서 정렬했으므로, 계정이 400 을
+// 넘는 순간 "최근 접속 순" 이 거짓말이 된다 — 먼저 만들어진 400명만 줄 세운
+// 것이라 나중에 들어온 사람은 목록에 아예 안 나왔다. 500명으로 재 보니
+// 401~500번은 이름을 정확히 쳐야만 찾혔다.
+// 이제 걸러 낸 것을 다 모아 줄을 세운 뒤 자른다. 총계도 진짜 총계다.
+function adminSearch(q, limit = 30, filter) {
   const s = String(q || '').trim().toLowerCase();
+  const f = String(filter || '').trim();
   const out = [];
   for (const [idl, u] of Object.entries(db.users)) {
     if (s && !idl.includes(s) && !String(u.nick || '').toLowerCase().includes(s)) continue;
+    const ban = banInfo(u), mute = muteInfo(u);
+    // 걸러 보기 — 정지된 사람만, 재갈만, 오늘 들어온 사람만
+    if (f === 'banned' && !ban) continue;
+    if (f === 'muted' && !mute) continue;
+    if (f === 'new' && (u.createdAt || 0) < Date.now() - 86400000) continue;
     out.push({
       idl, id: u.id, nick: u.nick, level: levelOf(u.xp), rp: u.rp || 0,
       coins: u.coins || 0, wins: u.wins || 0, losses: u.losses || 0,
       createdAt: u.createdAt || 0, lastSeen: u.lastSeen || 0,
       provider: u.provider || (u.temp ? 'temp' : 'id'),
-      banned: !!banInfo(u), muted: !!muteInfo(u),
+      banned: !!ban, muted: !!mute, ipt: u.ipt || null,
     });
-    if (out.length >= 400) break;                 // 안전장치
   }
-  // 최근에 만든 계정부터
+  // 최근에 본 사람부터 (본 적 없으면 만든 날로)
   out.sort((a, b) => (b.lastSeen || b.createdAt) - (a.lastSeen || a.createdAt));
   return { ok: true, total: out.length, list: out.slice(0, Math.min(200, Math.max(1, limit))) };
+}
+
+// 같은 기기에서 만들어진 계정 묶기.
+// 지문(ipt)은 가입할 때 남는다 — 원본 IP 가 아니라 소금 섞은 해시라 되돌릴 수 없다.
+// 한 사람이 계정을 여럿 굴리는지 보는 용도다. 같은 공유기·PC방도 걸리므로
+// 이것만으로 벌하면 안 되고, 다른 정황과 같이 봐야 한다.
+function adminSameDevice(idl) {
+  const me = userOf(idl); if (!me) return { error: '없는 계정이에요.' };
+  if (!me.ipt) return { ok: true, list: [], note: '이 계정에는 기기 지문이 없어요 (지문을 남기기 전에 만든 계정).' };
+  const out = [];
+  for (const [k, u] of Object.entries(db.users)) {
+    if (u.ipt !== me.ipt) continue;
+    out.push({ idl: k, id: u.id, nick: u.nick, coins: u.coins || 0,
+               createdAt: u.createdAt || 0, lastSeen: u.lastSeen || 0,
+               banned: !!banInfo(u), me: k === String(idl).toLowerCase() });
+  }
+  out.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  return { ok: true, list: out };
 }
 
 // 한 사람 자세히. 비밀번호 해시·소금·토큰은 절대 내보내지 않는다 —
@@ -3312,7 +3375,7 @@ module.exports = {
   // 운영 점검
   storeInfo, storeReady,
   // 운영 (관리자) — 전부 서버의 adminOk 를 통과한 뒤에만 불린다
-  adminOverview, adminSearch, adminUser, adminBan, adminUnban, adminMute, adminUnmute,
-  adminNotice, adminNoticeAll, adminCoins, adminLogList,
-  banInfo, muteInfo, myNotices, markNoticesRead, touchSeen,
+  adminOverview, adminSearch, adminUser, adminSameDevice, adminBan, adminUnban, adminMute, adminUnmute,
+  adminNotice, adminNoticeAll, adminCoins, adminLog, adminLogList,
+  banInfo, muteInfo, myNotices, markNoticesRead, touchSeen, setAdminWho,
 };
