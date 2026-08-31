@@ -404,7 +404,8 @@ const ncClass = c => (c && c !== 'rainbow') ? ' nc-on nc-' + c : '';
 const nickHTML = (nick, color) => color === 'rainbow'
   ? `<i class="nc-rainbow">${esc(nick)}</i>`
   : esc(nick);
-const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby', np_crystal: 'np-crystal', np_obsidian: 'np-obsidian', np_hanji: 'np-hanji', np_shard: 'np-shard', np_hwatu: 'np-hwatu', np_dawn: 'np-dawn', np_dragon: 'np-dragon' , np_tide: 'np-tide', np_frost: 'np-frost', np_najeon: 'np-najeon' };
+const NP_CLASS = { np_wood: 'np-wood', np_neon: 'np-neon', np_gold: 'np-gold', np_daily: 'np-daily', np_lv50: 'np-lv50', np_ruby: 'np-ruby', np_crystal: 'np-crystal', np_obsidian: 'np-obsidian', np_hanji: 'np-hanji', np_shard: 'np-shard', np_hwatu: 'np-hwatu', np_dawn: 'np-dawn', np_dragon: 'np-dragon' , np_tide: 'np-tide', np_frost: 'np-frost', np_najeon: 'np-najeon',
+  np_storm: 'np-storm', np_pixel: 'np-pixel', np_firework: 'np-firework' };
 const xpPct = p => Math.max(0, Math.min(100, Math.round((p.xpInLevel || 0) / (p.xpNeeded || 100) * 100)));
 const npClass = p => p && NP_CLASS[p] ? ' ' + NP_CLASS[p] : '';   // 명패 클래스
 // 이모지 → 직접 그린 SVG (art.js). 매핑에 없으면 원래 이모지 그대로.
@@ -2539,10 +2540,18 @@ window.openCoupon = function () {
 window.closeCoupon = function () {
   const m = document.getElementById('cpnModal'); if (m) m.classList.remove('show');
 };
-// 파편상점(교환소)으로 바로 — 들어가는 길이 없어 물건을 눌러 봐야 알았다
-window.openShardShop = function () {
+// 파편상점 — 자기 창을 가진다. 예전엔 뽑기 창의 '교환소' 탭이었는데,
+// 상점의 파편상점 버튼과 같은 곳이라 같은 것이 두 이름으로 있었다.
+window.openShardShop = async function () {
   closeShop();
-  Promise.resolve(openGacha()).then(() => gachaTab('exch')).catch(() => {});
+  document.getElementById('shardModal').classList.add('show');
+  if (!_gachaInfo) {
+    try { _gachaInfo = await fetchInto('gacha', () => apiPost('/api/gacha', { token: authToken() })); } catch (_) {}
+  }
+  renderExchange();
+};
+window.closeShardShop = function () {
+  const m = document.getElementById('shardModal'); if (m) m.classList.remove('show');
 };
 
 async function submitCoupon() {
@@ -2591,9 +2600,13 @@ function closeShop() { document.getElementById('shopModal').classList.remove('sh
 const CBP = { back_night: 'cb-night', back_gold: 'cb-gold', back_obang: 'cb-obang', back_ruby: 'cb-ruby', back_galaxy: 'cb-galaxy',
               back_crystal: 'cb-crystal', back_obsidian: 'cb-obsidian', back_hanji: 'cb-hanji' , back_shard: 'cb-shard', back_hwatu: 'cb-hwatu',
               back_dawn: 'cb-dawn', back_dragon: 'cb-dragon',
-              back_tide: 'cb-tide', back_frost: 'cb-frost', back_najeon: 'cb-najeon', back_lantern: 'cb-lantern' };
-const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest', tbl_crystal: 'tp-crystal', tbl_obsidian: 'tp-obsidian', tbl_hanji: 'tp-hanji', tbl_shard: 'tp-shard', tbl_hwatu: 'tp-hwatu', tbl_dawn: 'tp-dawn', tbl_dragon: 'tp-dragon' , tbl_tide: 'tp-tide', tbl_frost: 'tp-frost', tbl_najeon: 'tp-najeon', tbl_lantern: 'tp-lantern' };
-const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold', face_crystal: 'cfp-crystal', face_obsidian: 'cfp-obsidian', face_hanji: 'cfp-hanji', face_shard: 'cfp-shard', face_hwatu: 'cfp-hwatu', face_dragon: 'cfp-dragon' , face_tide: 'cfp-tide', face_frost: 'cfp-frost' };
+              back_tide: 'cb-tide', back_frost: 'cb-frost', back_najeon: 'cb-najeon', back_lantern: 'cb-lantern',
+              back_storm: 'cb-storm', back_origami: 'cb-origami', back_jelly: 'cb-jelly',
+              back_pixel: 'cb-pixel', back_haetae: 'cb-haetae' };
+const TBLP = { tbl_blue: 'tp-blue', tbl_purple: 'tp-purple', tbl_gold: 'tp-gold', tbl_forest: 'tp-forest', tbl_crystal: 'tp-crystal', tbl_obsidian: 'tp-obsidian', tbl_hanji: 'tp-hanji', tbl_shard: 'tp-shard', tbl_hwatu: 'tp-hwatu', tbl_dawn: 'tp-dawn', tbl_dragon: 'tp-dragon' , tbl_tide: 'tp-tide', tbl_frost: 'tp-frost', tbl_najeon: 'tp-najeon', tbl_lantern: 'tp-lantern',
+               tbl_storm: 'tp-storm', tbl_jelly: 'tp-jelly', tbl_firework: 'tp-firework' };
+const CFP  = { face_neon: 'cfp-neon', face_classic: 'cfp-classic', face_gold: 'cfp-gold', face_crystal: 'cfp-crystal', face_obsidian: 'cfp-obsidian', face_hanji: 'cfp-hanji', face_shard: 'cfp-shard', face_hwatu: 'cfp-hwatu', face_dragon: 'cfp-dragon' , face_tide: 'cfp-tide', face_frost: 'cfp-frost',
+               face_origami: 'cfp-origami', face_pixel: 'cfp-pixel', face_storm: 'cfp-storm' };
 // 상점 아이콘 = 게임 안 실물 미리보기 (카드백/테이블/카드앞면/명패/이모트/염색)
 const shopIcon = it => {
   if (CBP[it.id])  return `<div class="shop-cbprev card back ${CBP[it.id]}"><span class="bf flip">FLIP</span><span class="bf flap">FLAP</span></div>`;
@@ -2637,11 +2650,12 @@ const SHOP_GROUPS = [
 ];
 // 서버(accounts.js SLOT)와 짝이 맞아야 한다. 한쪽만 고치면 장착이 안 된다.
 // 낙찰 도장 — 모양마다 다른 클래스와 글자를 쓴다
-const STAMP_CLS = { stamp_win: 'st-win', stamp_seal: 'st-seal', stamp_star: 'st-star', stamp_crown: 'st-crown', stamp_flame: 'st-flame' , stamp_plum: 'st-plum', stamp_ink: 'st-ink' };
-const STAMP_TEXT = { stamp_win: 'WIN', stamp_seal: '落札', stamp_star: '★', stamp_crown: '♔', stamp_flame: '🔥' , stamp_plum: '梅', stamp_ink: '落' };
+const STAMP_CLS = { stamp_win: 'st-win', stamp_seal: 'st-seal', stamp_star: 'st-star', stamp_crown: 'st-crown', stamp_flame: 'st-flame' , stamp_plum: 'st-plum', stamp_ink: 'st-ink', stamp_crane: 'st-crane' };
+const STAMP_TEXT = { stamp_win: 'WIN', stamp_seal: '落札', stamp_star: '★', stamp_crown: '♔', stamp_flame: '🔥' , stamp_plum: '梅', stamp_ink: '落', stamp_crane: '鶴' };
 const stampLabel = (id) => STAMP_TEXT[id] || 'WIN';
 // 카드 놓을 때 파티클 · 승리 연출
-const PLACE_CLS = { place_dust: 'pf-dust', place_spark: 'pf-spark', place_ember: 'pf-ember', place_petal: 'pf-petal' };
+const PLACE_CLS = { place_dust: 'pf-dust', place_spark: 'pf-spark', place_ember: 'pf-ember', place_petal: 'pf-petal',
+                    place_stamp: 'pf-stamp', place_ripple: 'pf-ripple' };
 const VFX_CLS = { vfx_confetti: 'vx-confetti', vfx_coinrain: 'vx-coin', vfx_thunder: 'vx-thunder', vfx_firework: 'vx-firework', vfx_shard: 'vx-shard', vfx_aurora: 'vx-aurora' , vfx_petal: 'vx-petal', vfx_firefly: 'vx-firefly' };
 
 const EQUIP_SLOT = {
@@ -2660,6 +2674,10 @@ function shopVisible() {
 }
 // 등급은 값에서 뽑는다. 물건마다 등급을 따로 적어 두면 새로 넣을 때마다
 // 두 군데를 고쳐야 하고, 그러다 한쪽만 고쳐진 채 남는다.
+// 정렬용 값. 파편 전용품은 코인 값이 0 이라 그대로 비교하면 공짜처럼 맨 앞에 온다 —
+// 파편을 코인으로 환산해 같은 자에 놓는다(shopTier 와 같은 환산).
+function shopPrice(it) { return it.shard > 0 ? it.shard * 2.2 : (it.price || 0); }
+
 function shopTier(it) {
   const v = it.shard > 0 ? it.shard * 2.2 : it.price;   // 파편은 코인보다 귀하다
   // 문턱은 실제 값 분포에서 골랐다 — 24 / 25 / 27 로 고르게 갈린다.
@@ -2673,7 +2691,8 @@ function shopWallet() {
   const c = document.getElementById('shopCoins');
   const d = document.getElementById('shopShards');
   if (c) c.textContent = '🪙 ' + ((myAccount && myAccount.coins) || 0);
-  if (d) d.textContent = '🔷 ' + ((myAccount && myAccount.shards) || 0);
+  // 파편은 파편상점 버튼이 인다 — 지갑에 또 두면 같은 숫자가 두 번 보인다
+  if (d) d.textContent = String((myAccount && myAccount.shards) || 0);
 }
 
 function renderShop() {
@@ -2687,9 +2706,17 @@ function renderShop() {
   // 카드백과 명패가 뒤섞여 뭘 고르는 화면인지 알기 어려웠다.
   const ordered = [];
   for (const g of SHOP_GROUPS) {
-    const items = vis.filter((x) => g.types.includes(x.type));
+    // 묶음 안에서는 희귀도 순으로 놓는다 (일반 → 희귀 → 전설).
+    // 카탈로그에 적은 순서 그대로면 2600짜리 옆에 400짜리가 붙어, 무엇이
+    // 귀한 물건인지가 값을 하나하나 읽어야 보였다. 같은 등급끼리는 싼 것부터 —
+    // 살 수 있는 것이 먼저 눈에 들어오는 편이 고르기 쉽다.
+    const items = vis.filter((x) => g.types.includes(x.type))
+      .sort((a, b) => shopTier(a) - shopTier(b) || shopPrice(a) - shopPrice(b) || a.name.localeCompare(b.name));
     if (!items.length) continue;
     ordered.push({ head: g.name, count: items.length });
+    // 뽑기는 '꾸미기·기타' 맨 앞에 둔다. 사는 것들 사이에 같이 있어야
+    // 상점의 일부로 보인다 — 버튼으로 빼 두면 별개의 것처럼 보였다.
+    if (g.types.includes('ticket')) ordered.push({ gacha: true });
     for (const it of items) ordered.push(it);
   }
   // 어느 묶음에도 안 걸린 게 있으면 맨 뒤에 (새 종류를 넣고 분류를 깜빡했을 때)
@@ -2698,6 +2725,15 @@ function renderShop() {
   if (rest.length) { ordered.push({ head: '그 밖에', count: rest.length }); ordered.push(...rest); }
 
   ordered.forEach(it => {
+    if (it.gacha) {
+      const tile = document.createElement('div');
+      tile.className = 'shop-tile r-3 tile-gacha';
+      tile.innerHTML = `<span class="ico">${ico('🎁')}</span><span class="nm">뽑기</span>` +
+                       `<span class="pr">코인·파편으로</span>`;
+      tile.onclick = () => openGacha();
+      list.appendChild(tile);
+      return;
+    }
     if (it.head) {
       const h = document.createElement('div');
       h.className = 'shop-head';
@@ -3043,6 +3079,13 @@ function closeGacha() {
   document.getElementById('gachaModal').classList.remove('show');
 }
 
+// 파편상점 창의 지갑
+function shardWallet() {
+  const c = document.getElementById('sdCoins'), d = document.getElementById('sdShards');
+  if (c) c.innerHTML = `${ico('🪙')} ${(myAccount && myAccount.coins) || 0}`;
+  if (d) d.textContent = String((myAccount && myAccount.shards) || 0);
+}
+
 function gachaWallet() {
   document.getElementById('gcCoins').innerHTML = `${ico('🪙')} ${myAccount ? myAccount.coins || 0 : 0}`;
   document.getElementById('gcShards').textContent = myAccount ? myAccount.shards || 0 : 0;
@@ -3065,20 +3108,17 @@ function gachaWallet() {
 // ── 교환소 ─────────────────────────────────────────────────
 // 중복으로 쌓인 파편을 원하는 것과 바꾼다. 값은 서버가 등급에서 정하고
 // 여기서는 서버가 준 목록을 그리기만 한다.
+// 뽑기 창은 이제 탭이 없다(교환소는 파편상점으로 나갔다).
+// 남아 있을지 모르는 호출이 터지지 않게 자리만 지킨다.
 function gachaTab(which) {
-  const roll = which === 'roll';
-  document.getElementById('gcTabRoll').classList.toggle('active', roll);
-  document.getElementById('gcTabExch').classList.toggle('active', !roll);
-  document.getElementById('gcPaneRoll').style.display = roll ? '' : 'none';
-  document.getElementById('gcPaneExch').style.display = roll ? 'none' : '';
-  if (!roll) renderExchange();
+  if (which === 'exch') { closeGacha(); openShardShop(); }
 }
 
 function renderExchange() {
   const box = document.getElementById('gcShop');
   if (!box) return;
+  shardWallet();
   if (!_gachaInfo || !_gachaInfo.pool) { box.innerHTML = '<div class="gc-hint">목록을 불러오는 중…</div>'; return; }
-  gachaWallet();
   const have = myAccount ? myAccount.shards || 0 : 0;
   const mine = (myAccount && myAccount.items) || {};
   // 살 수 있는 것 → 파편이 모자란 것 → 이미 가진 것 순. 목표가 눈에 먼저 들어오게.
@@ -4778,6 +4818,7 @@ const ESC_TARGETS = [
   ['multiModal',   () => closeModePanels()],
   ['quadModal',    () => (typeof q4Close === 'function') && q4Close()],
   ['gachaModal',   () => closeGacha()],
+  ['shardModal',   () => closeShardShop()],
   ['createModal',  () => closeCreate()],
   ['codeModal',    () => closeCode()],
   // 폭탄으로 버릴 카드를 고르는 중이면 못 닫는다 — 고를 때까지 판이 기다린다
@@ -6257,8 +6298,10 @@ function screenFx(kind) {
 }
 
 // 내 테이블/카드앞면 스킨을 게임 화면에 적용 (내 시야 기준 코스메틱)
-const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal', tbl_obsidian: 'tbl-obsidian', tbl_hanji: 'tbl-hanji', tbl_shard: 'tbl-shard', tbl_hwatu: 'tbl-hwatu', tbl_dawn: 'tbl-dawn', tbl_dragon: 'tbl-dragon' , tbl_tide: 'tbl-tide', tbl_frost: 'tbl-frost', tbl_najeon: 'tbl-najeon', tbl_lantern: 'tbl-lantern' };
-const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal', face_obsidian: 'cf-obsidian', face_hanji: 'cf-hanji', face_shard: 'cf-shard', face_hwatu: 'cf-hwatu', face_dragon: 'cf-dragon' , face_tide: 'cf-tide', face_frost: 'cf-frost' };
+const TABLE_CLS = { tbl_blue: 'tbl-blue', tbl_purple: 'tbl-purple', tbl_gold: 'tbl-gold', tbl_forest: 'tbl-forest', tbl_crystal: 'tbl-crystal', tbl_obsidian: 'tbl-obsidian', tbl_hanji: 'tbl-hanji', tbl_shard: 'tbl-shard', tbl_hwatu: 'tbl-hwatu', tbl_dawn: 'tbl-dawn', tbl_dragon: 'tbl-dragon' , tbl_tide: 'tbl-tide', tbl_frost: 'tbl-frost', tbl_najeon: 'tbl-najeon', tbl_lantern: 'tbl-lantern',
+                    tbl_storm: 'tbl-storm', tbl_jelly: 'tbl-jelly', tbl_firework: 'tbl-firework' };
+const FACE_CLS  = { face_neon: 'cf-neon', face_classic: 'cf-classic', face_gold: 'cf-gold', face_crystal: 'cf-crystal', face_obsidian: 'cf-obsidian', face_hanji: 'cf-hanji', face_shard: 'cf-shard', face_hwatu: 'cf-hwatu', face_dragon: 'cf-dragon' , face_tide: 'cf-tide', face_frost: 'cf-frost',
+                    face_origami: 'cf-origami', face_pixel: 'cf-pixel', face_storm: 'cf-storm' };
 function applyMySkins() {
   // 경기장이 여럿이다(2인전·미니게임·트웰브). 하나만 칠하면 나머지가 맨 테이블이 된다.
   // 트웰브는 화면 전체가 아니라 가운데 테이블 판만 물든다(#tv.tbl-* #tv-table).

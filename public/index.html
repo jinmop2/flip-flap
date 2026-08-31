@@ -616,14 +616,17 @@
     @media (min-width:700px) {
       .lb-box.shop-box { max-width:720px; margin:0 auto; border-left:1.5px solid #8396b4; border-right:1.5px solid #8396b4; }
     }
-    /* 지갑 — 코인·파편 두 칸. 닫기 버튼에 가리지 않게 오른쪽 여백을 둔다. */
+    /* 지갑 — 코인. 파편은 파편상점 버튼이 이므로 여기 또 적지 않는다.
+       닫기 버튼에 가리지 않게 오른쪽 여백을 둔다. */
     .shop-wallet { display:flex; gap:5px; align-items:center; margin-right:42px; letter-spacing:0; }
     .shop-wallet > span { font-size:.86rem; font-weight:800; border-radius:9px; padding:3px 9px;
       background:rgba(144,167,200,.12); border:1px solid rgba(144,167,200,.35); white-space:nowrap; }
     .sw-coin  { color:#ffd94a; }
-    .sw-shard { color:#7fd4f0; }
-    /* 입구 버튼 셋 — 한 줄에 나란히. 작게 두어 물건 칸을 가리지 않는다. */
+    /* 입구 버튼 — 한 줄에 나란히. 작게 두어 물건 칸을 가리지 않는다. */
     .shop-entries { display:flex; gap:6px; margin:9px 0 2px; }
+    /* 뽑기 칸 — 사는 물건이 아니라 들어가는 문이라 값 대신 안내를 적는다 */
+    .shop-tile.tile-gacha .pr { color:#c8a86a; font-size:.62rem; }
+    .shop-tile.tile-gacha { cursor:pointer; }
     .shop-entry {
       flex:1; min-width:0; display:flex; align-items:center; justify-content:center; gap:5px;
       padding:8px 6px; border-radius:10px; cursor:pointer; font-family:inherit;
@@ -633,8 +636,11 @@
     }
     .shop-entry:hover, .shop-entry:active { filter:brightness(1.18); transform:translateY(-1px); }
     .shop-entry .g-ico { width:15px; height:15px; flex-shrink:0; }
-    .se-gacha { border-color:rgba(224,180,92,.5); color:#ffe6b0; }
     .se-shard { border-color:rgba(127,212,240,.45); color:#bfeaff; }
+    /* 파편상점 — 수량이 크게, 이름은 작게. 잔고가 먼저 눈에 들어와야 한다. */
+    .se-n { display:flex; align-items:center; gap:4px; font-size:.94rem; }
+    .se-n b { font-variant-numeric:tabular-nums; }
+    .se-l { font-size:.68rem; opacity:.72; font-weight:700; }
     @media (max-width:360px) { .shop-entry { font-size:.72rem; padding:7px 4px; } }
     .shop-msg { height:20px; flex-shrink:0; font-size:.78rem; text-align:center; color:#ffd94a; margin:2px 0 6px;
       overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
@@ -1071,7 +1077,7 @@
       background:rgba(0,0,0,.24); border-radius:14px; }
     /* 교환소는 칸이 이미 저마다 테두리를 갖고 있다. 그 위에 상자 배경까지
        깔면 아무것도 안 감싸는 네모 테두리 하나가 떠 있는 것처럼 보인다. */
-    #gcPaneExch #gcShop { background:none; border-radius:0; padding:6px 2px; }
+    #shardModal #gcShop { background:none; border-radius:0; padding:6px 2px; }
     .gc-hint { align-self:center; font-size:.76rem; color:#7a7f89; }
     /* 스포이드에 담아 둔 색 — 목록 맨 위에 한 줄로 */
     .pip-row { display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px;
@@ -1579,6 +1585,103 @@
       conic-gradient(from 200deg at 40% 40%, rgba(120,255,220,.4), rgba(255,190,235,.4) 45%, rgba(120,255,220,.4)),
       radial-gradient(ellipse at 50% 45%, #241b16, #0d0a08); background-blend-mode:screen, normal; }
     .shop-tblprev.tp-lantern { background:radial-gradient(ellipse at 50% 36%, #ffb478 0%, #1b56a0 42%, #0a2247 100%); }
+
+    /* ══ 뇌우 세트 — 먹구름 사이로 번개. 번쩍임은 아주 가끔만 —
+       계속 번쩍이면 판을 보는 눈이 피로해진다. ══ */
+    .card.back.cb-storm {
+      background:linear-gradient(165deg,#1b2233 0%,#2a3348 40%,#141a27 100%) !important;
+      border-color:#7f8fb0 !important;
+      box-shadow:0 3px 12px rgba(10,14,26,.6), inset 0 0 16px rgba(150,190,255,.12) !important;
+    }
+    .card.back.cb-storm::after {
+      content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+      background:linear-gradient(112deg, transparent 44%, rgba(190,225,255,.85) 47%, rgba(255,255,255,.95) 49%,
+                 rgba(190,225,255,.8) 51%, transparent 55%);
+      opacity:0; animation:cbBolt 5.5s ease-in-out infinite;
+    }
+    @keyframes cbBolt { 0%,90%,100%{opacity:0;} 92%{opacity:.9;} 94%{opacity:.15;} 96%{opacity:.7;} }
+    .card.back.cb-storm .bf { -webkit-text-fill-color:#cfe0ff; color:#cfe0ff; }
+    .np-storm { background:linear-gradient(135deg,#242d42,#141a27);
+      border:1px solid #8fa4c8; color:#dbe8ff !important;
+      box-shadow:0 0 9px rgba(150,190,255,.3), inset 0 1px 0 rgba(200,225,255,.22); }
+    .shop-tblprev.tp-storm { background:radial-gradient(ellipse at 50% 40%, #2c3750, #131926); }
+
+    .shop-cfprev.cfp-storm, .card.cf-storm {
+      background:linear-gradient(160deg,#212a3e,#131926) !important; }
+    .card.cf-storm .num, .shop-cfprev.cfp-storm { color:#cfe0ff !important; text-shadow:0 0 7px rgba(150,200,255,.6); }
+    .np-firework { background:
+        radial-gradient(circle at 26% 30%, rgba(255,190,90,.5) 0 8%, transparent 34%),
+        radial-gradient(circle at 74% 26%, rgba(120,220,255,.45) 0 8%, transparent 32%),
+        linear-gradient(135deg,#1d2440,#0b0f1c);
+      border:1px solid #8a93c8; color:#ffe9c8 !important;
+      box-shadow:0 0 8px rgba(255,190,110,.28), inset 0 1px 0 rgba(255,225,180,.22); }
+
+    /* ══ 색종이 세트 — 접은 자국. 종이라 광택이 없다. ══ */
+    .card.back.cb-origami { background:
+        linear-gradient(135deg, rgba(255,255,255,.16) 0 50%, rgba(0,0,0,.16) 50% 100%),
+        conic-gradient(from 45deg at 50% 50%, #e05b6a 0 25%, #f2b34a 25% 50%, #4ea8de 50% 75%, #63c48a 75% 100%) !important;
+      border-color:#ffe6b8 !important; box-shadow:0 3px 10px rgba(0,0,0,.45) !important; }
+    .card.back.cb-origami .bf { -webkit-text-fill-color:#fffdf6; color:#fffdf6; text-shadow:0 1px 2px rgba(0,0,0,.5); }
+    .shop-cfprev.cfp-origami, .card.cf-origami {
+      background:linear-gradient(135deg,#fff6e4,#ffe3c2) !important; }
+    .card.cf-origami .num, .shop-cfprev.cfp-origami { color:#8a4a2a !important; }
+    .shop-cfprev.cfp-origami { color:#8a4a2a; }
+
+    /* ══ 젤리 세트 — 말랑하고 투명하다. 안쪽에서 빛이 고인다. ══ */
+    .card.back.cb-jelly {
+      background:linear-gradient(165deg, rgba(255,120,190,.85), rgba(150,110,255,.8) 55%, rgba(90,200,255,.85)) !important;
+      border-color:rgba(255,255,255,.75) !important;
+      box-shadow:inset 0 6px 14px rgba(255,255,255,.55), inset 0 -8px 16px rgba(80,20,120,.35),
+                 0 4px 14px rgba(160,60,220,.4) !important;
+    }
+    .card.back.cb-jelly .bf { -webkit-text-fill-color:#fff; color:#fff; text-shadow:0 1px 3px rgba(120,20,90,.5); }
+    .shop-tblprev.tp-jelly { background:radial-gradient(ellipse at 50% 40%, #ff8fc4, #7a4bd0); }
+
+    /* ══ 도트 세트 — 옛 오락실. 흐림을 끄고 각을 살린다. ══ */
+    .card.back.cb-pixel {
+      image-rendering:pixelated;
+      background:
+        repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 3px, transparent 3px 6px),
+        repeating-linear-gradient(90deg, #2b1e5c 0 6px, #3a2a78 6px 12px) !important;
+      border-color:#8affd4 !important;
+      box-shadow:0 0 0 2px #10202a, 0 3px 10px rgba(0,0,0,.5) !important;
+      border-radius:4px !important;
+    }
+    .card.back.cb-pixel .bf { -webkit-text-fill-color:#8affd4; color:#8affd4; letter-spacing:1px; }
+    .np-pixel { background:#2b1e5c; border:2px solid #8affd4; color:#8affd4 !important;
+      border-radius:3px; box-shadow:0 0 0 2px #10202a; letter-spacing:1px; }
+    .shop-cfprev.cfp-pixel, .card.cf-pixel {
+      background:#101826 !important; border-radius:4px !important; image-rendering:pixelated; }
+    .card.cf-pixel .num, .shop-cfprev.cfp-pixel { color:#8affd4 !important; text-shadow:2px 2px 0 #1d3a4a; }
+
+    /* ══ 불꽃 테이블 — 밤하늘에 터진 자리 ══ */
+    .shop-tblprev.tp-firework { background:
+        radial-gradient(circle at 30% 32%, rgba(255,190,90,.9) 0 3%, transparent 12%),
+        radial-gradient(circle at 68% 26%, rgba(120,220,255,.85) 0 3%, transparent 11%),
+        radial-gradient(ellipse at 50% 60%, #1d2440, #0b0f1c); }
+
+    /* ══ 해태 — 파편으로만. 불을 먹는 짐승이라 붉은 기가 돈다. ══ */
+    .card.back.cb-haetae {
+      background:
+        radial-gradient(circle at 50% 34%, rgba(255,180,90,.34) 0 22%, transparent 46%),
+        linear-gradient(165deg,#3a1a12 0%,#5c2a16 48%,#26100b 100%) !important;
+      border-color:#e0a45c !important;
+      box-shadow:0 0 12px rgba(224,140,60,.42), inset 0 1px 0 rgba(255,210,150,.28) !important;
+    }
+    .card.back.cb-haetae .bf { -webkit-text-fill-color:#ffd9a8; color:#ffd9a8; }
+
+    /* ══ 카드 놓는 순간 ══ */
+    /* 쾅 — 놓은 자리에서 고리가 한 번 퍼진다 */
+    .pf-stamp { position:absolute; border:2px solid rgba(255,225,170,.9); border-radius:50%;
+      width:14px; height:14px; animation:pfStamp .42s ease-out forwards; }
+    @keyframes pfStamp { from { transform:scale(.3); opacity:1; } to { transform:scale(4.2); opacity:0; } }
+    /* 물결 — 고리가 세 겹으로 천천히 */
+    .pf-ripple { position:absolute; border:1.5px solid rgba(150,215,255,.75); border-radius:50%;
+      width:16px; height:16px; animation:pfRipple .8s ease-out forwards; }
+    @keyframes pfRipple { from { transform:scale(.25); opacity:.95; } to { transform:scale(5); opacity:0; } }
+
+    /* 종이학 도장 */
+    .st-crane { color:#cfe6ff; border-color:#8fb8dd; }
 
     /* 파편 명패 — 갈라진 결정. 금 간 자리로 빛이 샌다. */
     .np-shard { background:
@@ -3183,6 +3286,22 @@
       conic-gradient(from 200deg at 34% 34%, rgba(120,255,220,.16), rgba(180,190,255,.14) 30%, rgba(255,185,230,.16) 62%, rgba(120,255,220,.16)),
       radial-gradient(ellipse 90% 70% at 50% 45%, #241b16 0%, #16100d 66%, #090705 100%);
       border-color:#8a7550; }
+    /* 뇌우 테이블 — 먹구름이 낮게 깔린 판 */
+    #game.tbl-storm #game-table , #game4.tbl-storm #quad-table , #mini.tbl-storm , #tv.tbl-storm #tv-table { background:
+      radial-gradient(ellipse 70% 30% at 50% 8%, rgba(150,190,255,.14), transparent 70%),
+      radial-gradient(ellipse 90% 70% at 50% 46%, #2c3750 0%, #1a2234 62%, #0b0f1a 100%);
+      border-color:#7f8fb0; }
+    /* 젤리 테이블 — 부어 굳힌 판. 가장자리로 빛이 샌다 */
+    #game.tbl-jelly #game-table , #game4.tbl-jelly #quad-table , #mini.tbl-jelly , #tv.tbl-jelly #tv-table { background:
+      radial-gradient(ellipse 60% 40% at 50% 34%, rgba(255,255,255,.14), transparent 70%),
+      radial-gradient(ellipse 90% 70% at 50% 44%, #a04fb8 0%, #6d3aa0 58%, #34205c 100%);
+      border-color:#ffb0d8; }
+    /* 불꽃 테이블 — 밤하늘에 터진 자리가 남아 있다 */
+    #game.tbl-firework #game-table , #game4.tbl-firework #quad-table , #mini.tbl-firework , #tv.tbl-firework #tv-table { background:
+      radial-gradient(circle at 28% 22%, rgba(255,190,90,.22) 0 2%, transparent 14%),
+      radial-gradient(circle at 70% 18%, rgba(120,220,255,.2) 0 2%, transparent 13%),
+      radial-gradient(ellipse 90% 70% at 50% 46%, #1d2440 0%, #121729 62%, #070a14 100%);
+      border-color:#8a93c8; }
     /* 초롱 테이블 — 판 위쪽에 불빛이 걸려 있다 */
     #game.tbl-lantern #game-table , #game4.tbl-lantern #quad-table , #mini.tbl-lantern , #tv.tbl-lantern #tv-table { background:
       radial-gradient(ellipse 36% 22% at 50% 12%, rgba(255,180,110,.34), transparent 72%),
@@ -5913,12 +6032,8 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <!-- 지갑은 제목 줄에 같이 두면 닫기 버튼에 가려 파편 수가 잘렸다 -->
     <div class="gc-wallet"><span id="gcCoins">0</span> · <b id="gcShards">0</b> 파편</div>
 
-    <div class="gc-tabs">
-      <button class="gc-tab active" id="gcTabRoll" onclick="gachaTab('roll')">뽑기</button>
-      <button class="gc-tab" id="gcTabExch" onclick="gachaTab('exch')">교환소</button>
-    </div>
-
-    <!-- 뽑기 -->
+    <!-- 교환소 탭은 걷었다 — 파편상점과 같은 것을 두 군데서 보여 주고 있었다.
+         파편 쓰는 일은 파편상점 한 곳으로 모은다. -->
     <div id="gcPaneRoll" class="gc-pane">
       <div id="gcStage" class="gc-stage"><div class="gc-hint">아래 버튼을 눌러 뽑아보세요</div></div>
 
@@ -5933,13 +6048,19 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 
       <div class="gc-exch" id="gcExch"></div>
     </div>
+  </div>
+</div>
 
-    <!-- 교환소 — 중복으로 모은 파편을 원하는 것으로 바꾼다 -->
-    <div id="gcPaneExch" class="gc-pane" style="display:none">
-      <div class="gc-exch" id="gcExchTop"></div>
-      <div id="gcShop" class="gc-stage"></div>
-    </div>
-
+<!-- 파편상점 — 중복으로 모은 파편을 원하는 것으로 바꾼다.
+     예전엔 뽑기 창의 '교환소' 탭이었는데, 상점의 파편상점 버튼과 같은 곳이라
+     같은 것이 두 이름으로 있었다. 하나로 모으고 자기 창을 줬다. -->
+<div class="lb-modal" id="shardModal" onclick="if(event.target===this)closeShardShop()">
+  <div class="lb-box gacha-box">
+    <div class="lb-title"><span data-ico="🔷"></span> 파편상점
+      <span class="close-x" onclick="closeShardShop()">×</span></div>
+    <div class="gc-wallet"><span id="sdCoins">0</span> · <b id="sdShards">0</b> 파편</div>
+    <div class="gc-exch" id="gcExchTop"></div>
+    <div id="gcShop" class="gc-stage"></div>
   </div>
 </div>
 
@@ -6989,19 +7110,18 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
   <div class="lb-box shop-box">
     <div class="lb-title" style="display:flex;justify-content:space-between;align-items:center">
       <span><span data-ico="🛒"></span> 상점</span>
-      <!-- 지갑 — 코인과 파편을 같이 둔다. 파편으로만 살 수 있는 물건이 있는데
-           얼마나 있는지 보이지 않으면 그 줄을 왜 못 사는지 알 수 없다. -->
-      <span class="shop-wallet">
-        <span class="sw-coin" id="shopCoins">🪙 0</span><span class="sw-shard" id="shopShards">🔷 0</span>
-      </span>
+      <span class="shop-wallet"><span class="sw-coin" id="shopCoins">🪙 0</span></span>
       <span class="close-x" onclick="closeShop()">×</span>
     </div>
-    <!-- 입구 셋 — 뽑기·파편상점·쿠폰.
-         쿠폰은 여는 사람이 드문데 입력칸이 늘 한 줄을 먹고 있었다. 파편상점은
-         들어가는 길이 아예 없어 물건을 눌러 봐야 알았다. 셋 다 작은 버튼으로 모은다. -->
+    <!-- 입구 둘 — 파편상점·쿠폰.
+         뽑기는 상품 칸('꾸미기·기타')으로 내려갔다. 사는 것들 사이에 같이 있는 게
+         맞다 — 버튼으로 따로 빼 두면 상점과 별개의 것처럼 보인다.
+         파편상점 버튼은 지금 가진 파편을 인다. 파편으로만 살 수 있는 줄이 있는데
+         잔고가 안 보이면 왜 못 사는지도, 얼마나 모아야 하는지도 알 수 없다. -->
     <div class="shop-entries">
-      <button class="shop-entry se-gacha" onclick="openGacha()"><span data-ico="🎁"></span>뽑기</button>
-      <button class="shop-entry se-shard" onclick="openShardShop()"><span data-ico="🔷"></span>파편상점</button>
+      <button class="shop-entry se-shard" onclick="openShardShop()">
+        <span class="se-n"><span data-ico="🔷"></span><b id="shopShards">0</b></span><span class="se-l">파편상점</span>
+      </button>
       <button class="shop-entry se-cpn" onclick="openCoupon()"><span data-ico="🎟️"></span>쿠폰</button>
     </div>
     <!-- 선택한 상품 상세 + 구매 -->

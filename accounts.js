@@ -1115,6 +1115,44 @@ const SHOP = {
   stamp_plum: { name: '매화 도장', icon: '🌸', price: 750, type: 'stamp', desc: '낙찰 카드에 매화 도장' },
   stamp_ink:  { name: '먹 도장',   icon: '🖌', price: 700, type: 'stamp', desc: '낙찰 카드에 먹으로 찍은 도장' },
 
+  // ══ 여기부터 20종 더 ══════════════════════════════════════════════════
+  // 세트로 묶었다. 낱개로 흩어 놓는 것보다 한 벌을 맞추는 재미가 오래간다.
+
+  // ── 뇌우 세트 — 먹구름 사이로 번개. 이 판에서 가장 시끄러운 줄.
+  //    (승리 연출 '벼락' 은 이미 있어서 빼고, 대신 카드 앞면을 넣었다) ──
+  back_storm: { name: '뇌우 카드백',   icon: '⛈', price: 1200, type: 'cardback', desc: '먹구름 사이로 번개가 지나는 뒷면' },
+  np_storm:   { name: '뇌우 명패',     icon: '⛈', price: 1100, type: 'plate',    desc: '번개가 스치는 먹구름 명패' },
+  tbl_storm:  { name: '뇌우 테이블',   icon: '⛈', price: 1300, type: 'table',    desc: '번개가 치는 밤 테이블' },
+  face_storm: { name: '뇌우 앞면',     icon: '⛈', price: 1100, type: 'cardface', desc: '숫자에 번개가 스치는 앞면' },
+
+  // ── 색종이 세트 — 접은 자국이 남은 종이. 밝고 가볍다. ──
+  back_origami: { name: '색종이 카드백', icon: '🎨', price: 600, type: 'cardback', desc: '접은 자국이 남은 색종이 뒷면' },
+  face_origami: { name: '색종이 앞면',   icon: '🎨', price: 700, type: 'cardface', desc: '숫자가 접힌 종이처럼 꺾인 앞면' },
+  stamp_crane:  { name: '종이학 도장',   icon: '🕊', price: 650, type: 'stamp',    desc: '낙찰 카드에 종이학 도장' },
+
+  // ── 젤리 세트 — 말랑하고 투명하다. 어두운 판에서 혼자 밝다. ──
+  back_jelly: { name: '젤리 카드백', icon: '🍬', price: 800,  type: 'cardback', desc: '말랑한 젤리 같은 뒷면' },
+  tbl_jelly:  { name: '젤리 테이블', icon: '🍬', price: 950,  type: 'table',    desc: '젤리를 부어 굳힌 테이블' },
+  ava_gummy:  { name: '곰젤리',      icon: '🧸', price: 700,  type: 'avatar',   desc: '한 입 크기 곰젤리' },
+
+  // ── 도트 세트 — 옛 오락실. 픽셀이 각져 보이도록 흐림을 끈다. ──
+  back_pixel: { name: '도트 카드백', icon: '👾', price: 850,  type: 'cardback', desc: '옛 오락실 도트 뒷면' },
+  face_pixel: { name: '도트 앞면',   icon: '👾', price: 950,  type: 'cardface', desc: '숫자가 픽셀로 찍힌 앞면' },
+  np_pixel:   { name: '도트 명패',   icon: '👾', price: 800,  type: 'plate',    desc: '픽셀로 찍은 명패' },
+  ava_pixcat: { name: '도트 고양이', icon: '🐱', price: 900,  type: 'avatar',   desc: '픽셀로 찍은 고양이' },
+
+  // ── 불꽃놀이 ──
+  tbl_firework: { name: '불꽃 테이블', icon: '🎆', price: 1200, type: 'table', desc: '불꽃이 터지는 밤하늘 테이블' },
+  np_firework:  { name: '불꽃 명패',   icon: '🎆', price: 1000, type: 'plate', desc: '불꽃이 터지는 밤하늘 명패' },
+
+  // ── 카드 놓는 순간 ──
+  place_stamp:  { name: '쾅! 놓기',  icon: '💥', price: 900,  type: 'place', desc: '카드를 도장 찍듯 쾅 내려놓아요' },
+  place_ripple: { name: '물결 놓기', icon: '💧', price: 750,  type: 'place', desc: '카드를 놓으면 물결이 퍼져요' },
+
+  // ── 해태 — 파편으로만 닿는 자리. 불을 먹는 짐승이다. ──
+  ava_haetae:  { name: '해태',        icon: '🦁', price: 0, type: 'avatar',   shard: 850, desc: '불을 먹는다는 짐승, 해태' },
+  back_haetae: { name: '해태 카드백', icon: '🦁', price: 0, type: 'cardback', shard: 900, desc: '해태가 새겨진 카드 뒷면' },
+
 };
 
 // ── 명패 효과 ──────────────────────────────────────────────────────────────

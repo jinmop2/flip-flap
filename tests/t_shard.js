@@ -211,10 +211,12 @@ console.log('\n⑤-b 파편 명패 효과 (파편 획득 +10%)');
 
 console.log('\n⑥ 화면에 교환소가 배선돼 있는가');
 {
-  ok('교환소 탭 버튼', html.includes('id="gcTabExch"'));
+  // 뽑기 창의 '교환소' 탭과 상점의 '파편상점' 버튼이 같은 곳이었다 —
+  // 같은 것이 두 이름으로 있어서 파편상점 하나로 모았다.
+  ok('파편상점 창', html.includes('id="shardModal"'));
   ok('파편 전용 칸 CSS', /\.gc-buy\.t-only\s*\{/.test(html));
   ok('전용품을 따로 묶어 보여준다', /파편으로만 얻는 것/.test(cli));
-  ok('교환소 화면', html.includes('id="gcPaneExch"'));
+  ok('파편상점 지갑', html.includes('id="sdShards"'));
   ok('상품이 들어갈 자리', html.includes('id="gcShop"'));
   ok('탭 전환 함수', /function gachaTab/.test(cli));
   ok('목록 그리는 함수', /function renderExchange/.test(cli));

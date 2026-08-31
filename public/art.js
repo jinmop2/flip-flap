@@ -345,6 +345,41 @@ const AVATAR_ART = {
     <path d="M19 37 a6 3 0 0 0 10 0" stroke="${FS}" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`,
   // 올빼미 — 밤새 판을 읽는 눈. 큰 눈 두 개가 성격이다.
   // 호랑이 탈 — 탈춤의 그 얼굴. 눈썹과 이마 줄무늬로 알아본다.
+  // 곰젤리 — 반투명한 몸. 안쪽이 비쳐 보이게 두 겹으로 칠한다.
+  ava_gummy: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="14" cy="15" r="4.6" fill="#ff7fb0" stroke="${FS}" stroke-width="2"/>
+    <circle cx="34" cy="15" r="4.6" fill="#ff7fb0" stroke="${FS}" stroke-width="2"/>
+    <ellipse cx="24" cy="19" rx="9.5" ry="8.5" fill="#ff8fbe" stroke="${FS}" stroke-width="2.2"/>
+    <ellipse cx="24" cy="33" rx="11" ry="10" fill="#ff7fb0" stroke="${FS}" stroke-width="2.2"/>
+    <ellipse cx="10.5" cy="31" rx="4.4" ry="5.4" fill="#ff8fbe" stroke="${FS}" stroke-width="2"/>
+    <ellipse cx="37.5" cy="31" rx="4.4" ry="5.4" fill="#ff8fbe" stroke="${FS}" stroke-width="2"/>
+    <ellipse cx="20" cy="15.5" rx="3.4" ry="4" fill="#ffd0e4" opacity=".85"/>
+    <circle cx="20.5" cy="18.5" r="1.6" fill="${FS}"/><circle cx="27.5" cy="18.5" r="1.6" fill="${FS}"/>
+    <ellipse cx="24" cy="22" rx="1.7" ry="1.3" fill="${FS}"/>
+    <ellipse cx="24" cy="33" rx="5.5" ry="4.6" fill="#ffc2dd" opacity=".7"/>
+  </svg>`,
+  // 도트 고양이 — 픽셀. 곡선을 쓰지 않고 네모만 쌓는다.
+  ava_pixcat: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+    <path d="M10 12 h6 v6 h-6 z M32 12 h6 v6 h-6 z" fill="#8affd4"/>
+    <path d="M10 18 h28 v18 h-28 z" fill="#8affd4"/>
+    <path d="M14 16 h4 v4 h-4 z M30 16 h4 v4 h-4 z" fill="#2b1e5c"/>
+    <path d="M15 23 h4 v4 h-4 z M29 23 h4 v4 h-4 z" fill="#101826"/>
+    <path d="M22 28 h4 v3 h-4 z" fill="#101826"/>
+    <path d="M12 30 h5 v2 h-5 z M31 30 h5 v2 h-5 z" fill="#101826"/>
+    <path d="M18 33 h12 v3 h-12 z" fill="#5ad9ad"/>
+  </svg>`,
+  // 해태 — 불을 먹는다는 짐승. 갈기를 세우고 뿔이 하나.
+  ava_haetae: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M24 4 l2.6 5.5 h-5.2 z" fill="#ffd08a" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M24 9 C10 9 5 20 7 30 C9 40 18 44 24 44 C30 44 39 40 41 30 C43 20 38 9 24 9 z" fill="#e08a3c" stroke="${FS}" stroke-width="2.2"/>
+    <path d="M9 18 l-4 -4 M39 18 l4 -4 M7 27 l-5 -1 M41 27 l5 -1 M11 36 l-4 4 M37 36 l4 4" stroke="#c0632a" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+    <ellipse cx="24" cy="29" rx="11" ry="9.5" fill="#ffb968"/>
+    <circle cx="18.5" cy="24" r="3.3" fill="#fff"/><circle cx="29.5" cy="24" r="3.3" fill="#fff"/>
+    <circle cx="19" cy="24.4" r="1.8" fill="${FS}"/><circle cx="30" cy="24.4" r="1.8" fill="${FS}"/>
+    <path d="M24 28 l-3 2.6 h6 z" fill="${FS}"/>
+    <path d="M17 35 q7 5 14 0" stroke="${FS}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M20 36.5 l1.5 2.5 M24 37 l0 2.8 M28 36.5 l-1.5 2.5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+  </svg>`,
   ava_tiger: `<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
     <path d="M11 14 l-2 -7 7 3 z" fill="#e0913a" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>
     <path d="M37 14 l2 -7 -7 3 z" fill="#e0913a" stroke="${FS}" stroke-width="2" stroke-linejoin="round"/>

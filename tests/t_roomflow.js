@@ -148,7 +148,8 @@ ok('UI 잔소리는 기타 탭으로 옮겼다',
 }
 
 // 파편 상점 · 방에서 나가면 멀티 창으로
-ok('교환소에 상자 테두리가 없다', /#gcPaneExch #gcShop \{[^}]*background:none/.test(htm));
+// 교환소는 '파편상점' 이라는 제 이름과 제 창을 갖게 됐다(뽑기 창의 탭이 아니다)
+ok('파편상점에 상자 테두리가 없다', /#shardModal #gcShop \{[^}]*background:none/.test(htm));
 ok('지갑이 제목 줄 밖으로 나왔다',
    /<div class="gc-wallet">/.test(htm) && !/class="lb-title"[^>]*>\s*<span><span data-ico="🎁"/.test(htm));
 ok('방을 나오면 멀티 창으로 돌아온다',

@@ -47,7 +47,10 @@ ok('낙찰 도장이 장착한 모양을 쓴다', /winnerProf.*winStamp|STAMP_CL
 ok('움직임 줄이기 설정 존중', /prefers-reduced-motion/.test(cli));
 
 console.log('\n⑥ 뽑기 입구가 있는가');
-ok('상점 안 뽑기 버튼', /openGacha\(\)/.test(html));
+// 뽑기는 상점 머리의 버튼에서 '꾸미기·기타' 묶음의 상품 칸으로 내려갔다 —
+// 사는 것들 사이에 같이 있어야 상점의 일부로 보인다.
+ok('상점 안 뽑기 칸', /tile\.onclick = \(\) => openGacha\(\);/.test(cli)
+   && /if \(g\.types\.includes\('ticket'\)\) ordered\.push\(\{ gacha: true \}\);/.test(cli));
 ok('ESC 로 닫힌다', /'gachaModal'/.test(cli));
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
