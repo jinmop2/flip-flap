@@ -1733,7 +1733,7 @@ const SOCKET_GAP = {
   // 방·매칭 — 하나 만드는 데 방 목록 방송까지 딸려 온다
   create_room: 1500, quick_join: 1200, quick_match: 1200, quick_any: 1200, join_room: 800,
   tv_solo: 1200, mini_sit: 1000, mini_quick: 1200, tour_join: 1000,
-  room_start: 800, room_mode: 300, room_kick: 500, rematch: 800,
+  room_start: 800, room_mode: 300, room_kick: 500, rematch: 800, back_to_room: 600,
   challenge_friend: 1000, spec_challenge: 1000, challenge_accept: 800, spectate: 800,
   // 판 안의 수 — 사람이 누르는 간격보다 훨씬 짧게 잡아 둔다
   tv_act: 150, submit_bid: 200, use_item: 300, pick_card: 150,
@@ -2623,6 +2623,35 @@ io.on('connection', (socket) => {
   });
 
   // 재대결 (같은 방에서 새 게임)
+  // 판이 끝난 뒤 대기실로 되돌린다.
+  //
+  // 예전엔 끝나고 갈 데가 둘뿐이었다 — '한 판 더'(같은 모드로 즉시) 아니면
+  // '로비로'(새로고침). 로비로는 방을 통째로 버리므로, 같은 사람들과 다른 모드로
+  // 한 판 더 하려면 방을 다시 만들고 코드를 다시 나눠야 했다.
+  // 이제 방이 살아 있는 채 대기실로 돌아간다 — 거기서 모드를 고르고 시작한다.
+  //
+  // 방이 없는 판(랭크·빠른대전으로 맺어진 자리)에는 돌아갈 대기실이 없다.
+  // 그쪽은 '한 판 더' 가 그대로 맞는 길이다.
+  socket.on('back_to_room', () => {
+    const roomId = socket.roomId, room = rooms[roomId];
+    if (!room) return socket.emit('opponent_left');     // 방이 이미 사라졌다
+    if (!room.hostStart) return;                        // 대기실이 없는 방
+    // 판이 아직 안 끝났으면 되돌리지 않는다 — 여기는 도중에 나가는 길이 아니다
+    const done = (!room.game && !room.tv)
+              || (room.game && room.game.phase === 'game_over')
+              || (room.tv && room.tv.over);
+    if (!done) return;
+    endClock(room);
+    clearTimeout(room.tvNext); clearTimeout(room.tvThink);
+    room.game = null; room.tv = null; room.tvDone = false;
+    room.rematch = [false, false];
+    room.stour = null;
+    // 한 사람이 눌러도 방에 있는 모두가 같이 돌아간다. 판은 이미 끝났고,
+    // 둘 다 눌러야 움직이면 서로 상대가 누르기를 기다리다 멈춘다.
+    pushRoomLobby(roomId);
+    broadcastRooms();
+  });
+
   socket.on('rematch', () => {
     const room = rooms[socket.roomId];
     if (!room) return socket.emit('opponent_left');

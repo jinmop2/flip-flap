@@ -5696,6 +5696,9 @@ function joinRoom() {
 // 예전엔 상대가 들어오는 순간 바로 시작해서 "무슨 판인지" 고를 새가 없었다.
 // 방장이 고르고 눌러서 시작한다. 다인전은 엔진이 달라서 그쪽 대기방으로 넘긴다.
 let roomModeCur = 'classic', roomIsHost = false, roomReady = false;
+// 대기실을 거쳐 들어온 방인가. 판이 끝났을 때 '방으로' 를 내밀지 정한다 —
+// 랭크·빠른대전으로 맺어진 자리에는 돌아갈 대기실이 없다.
+let fromRoom = false;
 
 window.roomMode = function (m) {
   if (!roomIsHost) return toast('방장만 고를 수 있어요.');
@@ -5738,6 +5741,10 @@ window.closeRoomInvite = function () {
 // 대기실 상태 — 사람이 들어오고 나갈 때마다 온다.
 // 방장·손님이 서로 다른 것을 봐야 해서 서버가 사람마다 따로 보낸다.
 socket.on('room_lobby', (r) => {
+  fromRoom = true;
+  // 판을 하다 돌아온 것이면 판 화면부터 걷는다 — 새로고침 없이 대기실로 잇는다.
+  // 새로고침하면 소켓이 바뀌어 방에서 튕기고, 화면도 통째로 깜빡인다.
+  if (document.body.classList.contains('ingame')) leaveGameScreen();
   // 들어온 사람 모두 대기실 화면으로. 예전엔 방을 만든 사람만 이 화면을 봤다.
   // 팝업을 먼저 닫는다 — 예전엔 들어와도 방 목록 창이 위에 그대로 떠 있어서
   // 소리와 효과만 나고 "안 들어가진 것처럼" 보였다.
@@ -5794,6 +5801,22 @@ socket.on('room_lobby', (r) => {
   const note = document.getElementById('wcGuestNote');
   if (note) note.style.display = roomIsHost ? 'none' : '';
 });
+// 판 화면을 걷는다 — 새로고침 없이. 대회(대진표)로 돌아갈 때 쓰던 것과 같은 길이다.
+function leaveGameScreen() {
+  const go = document.getElementById('gameOver'); if (go) go.style.display = 'none';
+  const g = document.getElementById('game'); if (g) g.style.display = 'none';
+  const gt = document.getElementById('game-table'); if (gt) gt.classList.remove('on');
+  const tb = document.getElementById('tv-table'); if (tb) tb.classList.remove('on');
+  document.body.classList.remove('ingame', 'twelve');
+  const lb = document.getElementById('lobby'); if (lb) lb.style.display = 'flex';
+  stopTitleBlink();
+  try { clearSession(); } catch (_) {}
+}
+// 판이 끝났다 — 같은 사람들과 방에 돌아가 모드를 고르고 다시 한다
+window.backToRoom = function () {
+  socket.emit('back_to_room');
+};
+
 // 방장이 자리 하나를 비운다. 남의 화면을 마음대로 끄는 일이라 한 번 묻는다.
 window.roomKick = function (seat) {
   const nick = (_lastSeats && _lastSeats[seat] && _lastSeats[seat].nick) || '이 사람';
@@ -5916,6 +5939,7 @@ function shareInvite(btn) {
 }
 // 대기실을 걷고 로비를 다시 보여 준다. 새로고침 없이 화면만 되돌린다.
 function leaveWaitUI() {
+  fromRoom = false;
   document.getElementById('waitCard').style.display = 'none';
   document.getElementById('lobbyMain').style.display = '';
   document.body.classList.remove('waiting');
@@ -6213,6 +6237,10 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
   // 대회 경기는 재대결·로비 대신 대진표로 돌아간다.
   // 로비 버튼은 새로고침을 하는데, 새로고침하면 소켓이 바뀌어 자리를 잃는다.
   const goBtns = document.getElementById('goBtns');
+  // 대기실을 거쳐 들어온 방이면 '방으로' 를 내민다.
+  // 예전엔 '한 판 더'(같은 모드로 즉시)와 '로비로'(새로고침)뿐이라,
+  // 같은 사람들과 다른 모드로 한 판 더 하려면 방을 다시 만들고 코드를 다시 나눠야 했다.
+  roomBackBtn(goBtns, fromRoom && !isVsBot && !isStourMatch && !isTourMatch);
   // 솔로 대회도 같다 — '한 판 더' 는 대회 밖의 판을 열고, '로비로' 는 새로고침을 한다.
   // 둘 다 대회를 하던 흐름을 끊는다. 대진표로 돌아가는 길 하나만 남긴다.
   if (isStourMatch && goBtns) {
@@ -6238,6 +6266,23 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
   }
   setTimeout(() => { document.getElementById('gameOver').style.display = 'flex'; showRewards(); }, delay);
 });
+
+// 결과창에 '방으로' 를 붙이거나 뗀다. 방이 살아 있는 판에서만 뜬다.
+function roomBackBtn(goBtns, on) {
+  if (!goBtns) return;
+  let b = document.getElementById('roomBackBtn');
+  if (!on) { if (b) b.style.display = 'none'; return; }
+  if (!b) {
+    b = document.createElement('button');
+    b.id = 'roomBackBtn'; b.className = 'btn btn-gold'; b.style.width = 'auto';
+    b.innerHTML = '🚪 방으로';
+    b.onclick = () => backToRoom();
+    goBtns.insertBefore(b, goBtns.firstChild);
+  }
+  b.style.display = '';
+  // '한 판 더' 는 같은 모드로 바로 다시 하는 길이라 그대로 둔다 —
+  // 모드를 바꾸고 싶을 때만 방으로 간다.
+}
 
 // 결과창에 '대진표로' 하나만 남긴다 (솔로 대회 전용)
 function stourOnlyBackBtn(goBtns) {
@@ -7252,7 +7297,10 @@ function tvShowOver(win, endBy) {
   // 새로고침(tvQuitNow → fastReload)뿐이라, 대회에서 트웰브가 걸리면
   // 여기서 반드시 끊겼다 — "한 판 하면 끊긴다" 의 가장 잦은 경로였다.
   if (isStourMatch && btns) stourOnlyBackBtn(btns);
-  else { const sb = document.getElementById('stourBackBtn'); if (sb) sb.style.display = 'none'; }
+  else {
+    const sb = document.getElementById('stourBackBtn'); if (sb) sb.style.display = 'none';
+    roomBackBtn(btns, fromRoom && !tvBot);      // 트웰브도 방에서 왔으면 방으로 돌아간다
+  }
   setTimeout(() => { document.getElementById('gameOver').style.display = 'flex'; showRewards(); }, delay);
 }
 // 완성한 세트의 종류 (없으면 0)
