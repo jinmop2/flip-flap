@@ -39,7 +39,8 @@ ok('가로줄 시절 밀어내기가 없다', !/#q-opps \{ margin-top:/.test(htm
 console.log('\n③ 아래는 2인전과 같은 배치');
 ok('내 자리는 손패 위 흐름에 있다', /#q-mebar \{ align-self:center;/.test(html)
    && /<div id="q-myacq"><\/div>[\s\S]{0,300}<div id="q-mebar">[\s\S]{0,300}<div id="q-myhand">/.test(html));
-ok('확정은 손패 다음이다', /<div id="q-myhand"><\/div>\s*<div id="q-actions">/.test(html));
+// 사이에 주석이 들어가도 순서는 순서다 — 보는 것은 '손패 다음' 이다.
+ok('확정은 손패 다음이다', /<div id="q-myhand"><\/div>\s*(<!--[\s\S]*?-->\s*)?<div id="q-actions">/.test(html));
 ok('확정을 띄우지 않는다', !/#q-actions \{ position:absolute/.test(html));
 ok('이모트는 왼쪽 아래', /#q-emoteSlot \{ position:absolute; left:14px; bottom:/.test(html));
 ok('이모트를 데려오고 돌려준다', /q4MoveEmote\('q-emoteSlot'\)/.test(c4) && /q4MoveEmote\('game'\)/.test(c4));

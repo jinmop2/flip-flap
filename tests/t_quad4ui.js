@@ -163,10 +163,32 @@ console.log('\n⑧ 화면이 흔들지 않는가');
   // 실제로 방식 버튼이 나타날 때 매트가 25px 튀었다.
   ok('카드 자리가 고정 크기', /\.q-scard \{[^}]*width:58px[^}]*height:81px/.test(html));
   ok('빈 자리도 같은 크기', /\.q-hole \{[^}]*width:58px[^}]*height:81px/.test(html));
-  ok('방식 버튼이 자리를 늘 잡는다', /#q-typeBtns \{[^}]*visibility:hidden/.test(html));
-  ok('방식 버튼을 display 로 껐다 켜지 않는다', !/#q-typeBtns \{ display:none/.test(html));
+  // 방식 버튼은 매트 한가운데를 떠나 손패 아래 확정 버튼 자리로 갔다.
+  // 매트 안에 있을 때는 나타날 때마다 매트가 25px 튀어서 visibility 로 감춰야 했는데,
+  // 지금은 #q-actions 가 min-height 로 줄을 잡고 있어 display 로 껐다 켜도 안 흔들린다.
+  // (세 상태 — 방식만·확정만·둘 다 없음 — 을 재 보니 줄 높이 44px, 매트 위치 그대로였다)
+  ok('방식 버튼이 확정 버튼과 같은 줄에 있다',
+     /<div id="q-actions">[\s\S]{0,400}id="q-typeBtns"/.test(html));
+  ok('그 줄이 손패 다음이다', html.indexOf('id="q-myhand"') < html.indexOf('id="q-actions"'));
+  ok('줄이 늘 자리를 잡는다', /#q-actions \{[^}]*min-height:44px/.test(html));
+  ok('둘이 같은 자리를 나눠 쓴다', /#q-actions:has\(#q-typeBtns\.show\) \.q-confirm-slot \{ display:none; \}/.test(html));
   ok('확정 버튼도 자리를 잡는다', /\.q-confirm-slot \{[^}]*height:44px/.test(html));
+  // 판 한가운데는 카드 몫이다 — 버튼이 경매품을 가리면 안 된다
+  ok('방식 버튼이 판 안에 없다', !/<div id="q-table">[\s\S]*?id="q-typeBtns"[\s\S]*?<div id="q-me">/.test(html));
   ok('배팅 자리가 라벨까지 담는다', /#q-mybid \{ height:104px/.test(html));
+}
+
+console.log('\n⑧-2 셋이 붙는 판에서 경매대가 꼭대기에 붙지 않는가');
+{
+  // 판의 윗변을 경매대에서 뽑으면 경매대가 늘 판 꼭대기에 붙는다 —
+  // 윗변이 경매대를 따라다니기 때문이다(내리면 판도 같이 내려가 제자리걸음).
+  // 다른 변처럼 사람에게서 뽑아야 경매대가 판 안쪽에 뜬다.
+  ok('셋일 때 윗변을 옆자리에서 뽑는다', /const sideTop = \(\(\) => \{/.test(cli)
+     && /q\('\.q-opp\.at-l'\), b2 = q\('\.q-opp\.at-r'\)/.test(cli));
+  ok('옆자리가 없을 때만 경매대로 되돌아간다',
+     /sideTop != null \? Math\.min\(sideTop - RAIL, mat\.top - 10\)\s*\n?\s*: mat\.top - RAIL - 8/.test(cli));
+  // 경매대는 판 아래쪽으로 내려온다 — 위만 붙어 있으면 아래 절반이 통째로 빈다
+  ok('셋이면 경매대를 아래로 맞춘다', /body\.q-n3 #q-table \{[^}]*justify-content:safe flex-end/.test(html));
 }
 
 console.log('\n⑨ 빈 자리와 뒷면을 구분하는가');

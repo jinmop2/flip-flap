@@ -2129,7 +2129,11 @@
       justify-content:safe center; gap:6px; position:relative;
       /* 위쪽 자리와 그 사람이 낸 카드가 앉을 자리를 비운다 */
       padding-top:172px; }
-    body.q-n3 #q-table { padding-top:48px; }
+    /* 셋이 붙는 판은 위에 아무도 안 앉는다. 그래서 위쪽 여백만 줄이면 경매대가
+       판 꼭대기에 붙어 버린다 — 판의 아래 절반(내 배팅이 놓이는 자리)이 통째로 비고,
+       덱이 '중앙' 이 아니라 '위' 에 있는 것으로 보였다.
+       아래 맞춤으로 두어 경매대가 판 한가운데 가까이 내려온다. */
+    body.q-n3 #q-table { padding-top:48px; padding-bottom:24px; justify-content:safe flex-end; }
     /* 턴바 — 그냥 글자 줄이라 판 위에 떠 있는 메모처럼 보였다. 알약에 담는다. */
     #q-turnbar { display:flex; gap:9px; align-items:center; font-size:.62rem; font-weight:700;
       color:#c3cedf; padding:4px 12px; border-radius:999px;
@@ -2238,9 +2242,11 @@
       min-height:18px; padding:0 8px; }
     /* 방식 버튼이 나타났다 사라지면 #q-table 이 가운데 정렬이라 매트가 통째로
        위아래로 튄다(측정 25px). 보이든 안 보이든 자리를 늘 잡아 둔다. */
-    #q-typeBtns { display:flex; gap:8px; height:46px; align-items:center;
-      visibility:hidden; flex-shrink:0; }
-    #q-typeBtns.show { visibility:visible; }
+    /* 확정 버튼과 같은 자리에 겹쳐 둔다 — 방식을 고를 때와 카드를 확정할 때는
+       서로 다른 단계라 둘이 같이 뜰 일이 없다. 자리를 나눠 두면 그만큼 손패가 밀린다. */
+    #q-typeBtns { display:none; gap:8px; align-items:center; flex-shrink:0; }
+    #q-typeBtns.show { display:flex; }
+    #q-actions:has(#q-typeBtns.show) .q-confirm-slot { display:none; }
     .q-tbtn { display:flex; flex-direction:column; align-items:center; gap:1px; cursor:pointer;
       background:linear-gradient(160deg,#2a2f37,#151a21); border:1.5px solid var(--gold);
       color:#deecff; border-radius:10px; padding:7px 12px; font-family:inherit; }
@@ -7412,10 +7418,6 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <div id="q-startPanel">
       <button class="btn btn-gold" style="width:auto" id="q-startBtn" onclick="q4StartNow()">시작</button>
     </div>
-    <div id="q-typeBtns">
-      <button class="q-tbtn" onclick="q4Type('open')"><b><span data-ico="👁"></span> 오픈</b><span>경매품 공개 · 배팅 비밀</span></button>
-      <button class="q-tbtn" onclick="q4Type('close')"><b><span data-ico="🙈"></span> 클로즈</b><span>경매품 비밀 · 배팅 공개</span></button>
-    </div>
   </div>
 
   <!-- 하단: 나 -->
@@ -7431,7 +7433,16 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
       </div>
     </div>
     <div id="q-myhand"></div>
-    <div id="q-actions"><div class="q-confirm-slot"><button id="q-confirm" onclick="q4Confirm()"></button></div></div>
+    <!-- 손패 아래 한 자리에 '무엇을 누를 차례인가' 를 모은다.
+         방식 고르기가 판 한가운데에 있으면 경매품을 가리고, 누르는 자리도
+         출품 확정과 달라 매번 눈이 옮겨 다녀야 했다. 둘 다 여기서 나온다. -->
+    <div id="q-actions">
+      <div class="q-confirm-slot"><button id="q-confirm" onclick="q4Confirm()"></button></div>
+      <div id="q-typeBtns">
+        <button class="q-tbtn" onclick="q4Type('open')"><b><span data-ico="👁"></span> 오픈 경매</b><span>경매품 공개 · 배팅 비밀</span></button>
+        <button class="q-tbtn" onclick="q4Type('close')"><b><span data-ico="🙈"></span> 클로즈 경매</b><span>경매품 비밀 · 배팅 공개</span></button>
+      </div>
+    </div>
   </div>
 
   <!-- 화면 맨 아래 — 왼쪽에 이모트, 가운데에 확정. 2인전과 같은 자리다.

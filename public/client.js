@@ -115,8 +115,19 @@ function quadLayTable() {
 
   let left = left0 != null ? left0 : mat.left - RAIL;
   let right = right0 != null ? right0 : mat.right + RAIL;
-  // 셋이 붙는 판은 위에 아무도 안 앉는다 — 경매대 위로 레일만큼만 올린다
-  let top = top0 != null ? top0 : mat.top - RAIL - 8;
+  // 셋이 붙는 판은 위에 아무도 안 앉는다. 그렇다고 윗변을 경매대에서 뽑으면
+  // 경매대가 늘 판 꼭대기에 붙는다 — 윗변이 경매대를 따라다니기 때문이다.
+  // (경매대를 내리면 판도 같이 내려가 제자리걸음이 된다.)
+  // 그래서 옆에 앉은 사람에게서 뽑는다. 다른 변이 사람에게서 나오는 것과 같다.
+  const sideTop = (() => {
+    const a = q('.q-opp.at-l'), b2 = q('.q-opp.at-r');
+    const t = [a, b2].map((e) => { const r = e && e.getBoundingClientRect(); return r && r.height ? r.top : null; })
+                     .filter((x) => x != null);
+    return t.length ? Math.min(...t) : null;
+  })();
+  let top = top0 != null ? top0
+          : sideTop != null ? Math.min(sideTop - RAIL, mat.top - 10)
+          : mat.top - RAIL - 8;
   // 아래 변은 내가 앉은 자리를 지난다. 손패는 판 밖이다(손에 들고 있는 것이니까).
   let bottom = me0 != null ? me0 : (myhand ? myhand.top - 6 : mat.bottom + RAIL);
 
