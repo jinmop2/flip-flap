@@ -680,8 +680,7 @@
     /* 로고가 다 뜨기 전까지 그 아래 것들은 아예 안 보인다.
        예전엔 로비가 한 번 스쳤다 로고가 덮는 것처럼 보였다. */
     html.booting #lobby, html.booting #title, html.booting #profileBar,
-    html.booting #navBar, html.booting #game, html.booting #tv,
-    html.booting .bonus-btn { visibility:hidden; }
+    html.booting #navBar, html.booting #game, html.booting #tv { visibility:hidden; }
     #splash {
       position:fixed; inset:0; z-index:100; background:
         url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/><feColorMatrix type='matrix' values='0 0 0 0 0.12 0 0 0 0 0.16 0 0 0 0 0.26 0 0 0 0.32 0'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>"),
@@ -728,8 +727,10 @@
     }
     #setBtn:hover { background:rgba(144,167,200,.22); color:#dcebff; }
     #setBtn .svgi { width:19px; height:19px; }
-    /* 설정 자리를 비워 둔다 — 코인·RP 배지가 그 아래로 안 들어가게 */
+    /* 설정 자리를 비워 둔다 — 코인·RP 배지가 그 아래로 안 들어가게.
+       보너스 버튼이 떠 있는 동안은 두 칸(38 × 2)을 비운다. */
     .pb-right { margin-right:38px; }
+    body.has-bonus .pb-right, body.has-bonus .pb-login { margin-right:76px; }
     .pb-xp { height:5px; background:#090f1a; overflow:hidden; border-radius:0 0 16px 16px; order:2; }
     .pb-xpfill { height:100%; width:0%; background:linear-gradient(90deg,#c8912e,#ffd97a); transition:width .5s; }
     #profileBar { display:flex; flex-direction:column; }
@@ -807,7 +808,7 @@
       position:absolute; top:5px; right:calc(50% - 14px);
       width:7px; height:7px; border-radius:50%; background:var(--gold);
     }
-    body.ingame #navBar, body.ingame #profileBar, body.ingame .bonus-btn,
+    body.ingame #navBar, body.ingame #profileBar,
     body.quad4 #navBar { display:none !important; }
 
     /* ── 내 정보 ── */
@@ -1934,7 +1935,7 @@
       background:radial-gradient(ellipse at 50% 34%, #2c5a44 0%, #17392a 62%, #0d2419 100%);
       padding:calc(6px + var(--safe-t)) 8px calc(6px + var(--safe-b)); gap:6px; overflow:hidden; }
     body.quad4 #game4 { display:flex; }
-    body.quad4 #lobby, body.quad4 #profileBar, body.quad4 .bonus-btn { display:none !important; }
+    body.quad4 #lobby, body.quad4 #profileBar { display:none !important; }
 
     /* 상단 상대 3명 */
     /* ── 다인전 자리 — 판을 둘러 앉는다 ──────────────────────────────
@@ -2775,14 +2776,10 @@
     .lobby-top.learn .top-link .tl-ico { font-size:1.05rem; }
 
     /* 부가 — 한 줄에 모아 작게 */
-    /* 보너스 — 톱니 바로 밑, 같은 34px. 프로필 바는 overflow:hidden 이라 그 안에
-       넣으면 잘린다. 바깥에 fixed 로 띄우고 바의 오른쪽 끝에 맞춘다:
-       바는 가운데 정렬 min(480px,100%) 라 오른쪽 끝이 50% + min(240px,50vw),
-       거기서 버튼 폭 34 + 여백 10 을 뺀다 — 톱니의 right:10px 과 같은 줄이 된다. */
+    /* 보너스 — 프로필 바 안, 톱니 바로 왼쪽에 같은 크기로. 로비 바닥에 띄웠더니
+       바와 따로 노는 것처럼 보였다. 톱니와 같은 방식(절대 배치)으로 세운다. */
     .bonus-btn {
-      position:fixed; z-index:31;
-      top:calc(var(--safe-t) + 83px);
-      left:calc(50% + min(240px, 50vw) - 44px);
+      position:absolute; top:calc(50% - 17px); right:48px; z-index:2;
       width:34px; height:34px; border-radius:10px; padding:0; cursor:pointer;
       display:flex; align-items:center; justify-content:center;
       background:rgba(0,0,0,.34); color:#ffd97a;
@@ -2794,12 +2791,52 @@
     .bonus-btn[disabled] { opacity:.55; cursor:default; transform:none; }
     .bonus-btn .svgi { width:19px; height:19px; }
     /* 남은 횟수 — 오른쪽 위 작은 딱지 */
+    /* ── 보너스 창 ── */
+    .bn-ico {
+      align-self:center; width:64px; height:64px; border-radius:18px;
+      display:flex; align-items:center; justify-content:center;
+      color:#ffd97a; background:rgba(0,0,0,.34);
+      border:1.5px solid rgba(224,180,92,.5);
+      box-shadow:inset 0 1px 0 rgba(255,235,180,.18);
+    }
+    .bn-ico .svgi { width:32px; height:32px; }
+    .bn-body { text-align:center; display:flex; flex-direction:column; gap:5px; }
+    .bn-amt { font-family:'Fredoka'; font-size:1.5rem; font-weight:800; color:#ffd97a; }
+    .bn-how { font-size:.82rem; color:#c3cedf; }
+    .bn-how b { color:#dcebff; }
+    .bn-cnt { font-size:.75rem; color:#8fa0b8; }
+    .bn-cnt b { color:#ffd97a; }
+    .bn-claim {
+      min-height:46px; border-radius:14px; cursor:pointer;
+      font-family:'Fredoka'; font-size:.9rem; font-weight:800; letter-spacing:.02em;
+      background:linear-gradient(180deg,#243354,#16203a); color:#ffe6b0;
+      border:1.5px solid rgba(224,180,92,.5);
+      box-shadow:inset 0 1px 0 rgba(255,235,180,.18), 0 3px 10px rgba(0,0,0,.4); transition:.15s;
+    }
+    .bn-claim:hover, .bn-claim:active { filter:brightness(1.14); transform:translateY(-1px); }
+    .bn-claim[disabled] { opacity:.55; cursor:default; transform:none; }
+    .bn-msg { text-align:center; font-size:.84rem; color:#ffd97a; min-height:1.2em; }
+    .bn-msg .bn-err { color:#ff9a8a; }
+
     .bonus-btn .bn-left {
       position:absolute; top:-5px; right:-5px;
       min-width:15px; height:15px; padding:0 3px; border-radius:8px;
       font-family:'Fredoka'; font-size:.56rem; font-weight:800; line-height:14px;
       color:#1a1206; background:linear-gradient(180deg,#ffd97a,#c8912e);
       border:1px solid #26314a; box-shadow:0 1px 3px rgba(0,0,0,.5);
+    }
+
+    /* 아주 좁은 기기(320px) — 보너스 버튼이 한 칸 더 먹으면서 닉네임이 27px 까지
+       눌렸다. 이 폭에서만 여백·간격·배지를 촘촘하게 해 닉네임 자리를 되찾는다.
+       바탕 규칙보다 뒤에 둬야 이긴다. */
+    @media (max-width:360px) {
+      .pb-body { padding:10px 10px 14px; gap:7px; }
+      .pb-badge { padding:2px 6px; }
+      .pb-right { gap:4px; }
+      #setBtn { right:6px; }
+      .bonus-btn { right:44px; }
+      .pb-right, .pb-login { margin-right:34px; }
+      body.has-bonus .pb-right, body.has-bonus .pb-login { margin-right:72px; }
     }
     .lobby-misc { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; }
     /* 테두리를 걷어 더 조용하게. 대신 누를 자리는 44px 로 넓힌다 —
@@ -5241,8 +5278,7 @@
       background:radial-gradient(ellipse 92% 74% at 50% 50%, transparent 42%, rgba(0,0,0,.55) 78%, #000 100%);
     }
     body.twelve #tv { display:flex; }
-    body.twelve #lobby, body.twelve #navBar, body.twelve #profileBar,
-    body.twelve .bonus-btn { display:none !important; }
+    body.twelve #lobby, body.twelve #navBar, body.twelve #profileBar { display:none !important; }
 
     /* 판에 찍힌 상표 — 화면이 아니라 테이블 한가운데다(테이블의 자식이다) */
     #tableLogoTv, #tableLogo, #tableLogoQ {
@@ -5715,16 +5751,16 @@
     <div class="pb-body" id="pbBody"></div>
     <!-- 설정 — 글자 없이 아이콘만. 프로필을 누르면 내 정보가 열리므로
          이 버튼은 누름이 위로 안 퍼지게 막는다. -->
+    <!-- 보너스 — 지금은 무료, 나중에 광고. 톱니 왼쪽에 같은 크기로 뜬다.
+         프로필을 누르면 내 정보가 열리므로 누름이 위로 안 퍼지게 막는다. -->
+    <button class="bonus-btn" id="bonusBtn" style="display:none" title="보너스 코인"
+            onclick="event.stopPropagation();doBonus()">
+      <svg class="svgi" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><path d="M10.2 9.6v4.8l4.4-2.4z" fill="currentColor" stroke-width="1.4"/></svg>
+    </button>
     <button id="setBtn" title="설정" onclick="event.stopPropagation();navGo('settings')">
       <svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
   </div>
-
-  <!-- 보너스 — 지금은 무료, 나중에 광고. 톱니 바로 밑에 같은 크기로 뜬다.
-       프로필 바 안에 두면 overflow:hidden 에 잘려서 바깥에 뒀다. -->
-  <button class="bonus-btn" id="bonusBtn" style="display:none" title="보너스 코인" onclick="doBonus()">
-    <svg class="svgi" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><path d="M10.2 9.6v4.8l4.4-2.4z" fill="currentColor" stroke-width="1.4"/></svg>
-  </button>
 
   <!-- 상대 정보 — 판에서 상대 닉네임을 누르면 열린다 -->
   <div class="lb-modal" id="oppModal" onclick="if(event.target===this)closeOppInfo()">
@@ -6123,6 +6159,22 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <div class="gc-wallet"><span id="sdCoins">0</span> · <b id="sdShards">0</b> 파편</div>
     <div class="gc-exch" id="gcExchTop"></div>
     <div id="gcShop" class="gc-stage"></div>
+  </div>
+</div>
+
+<!-- 보너스 — 버튼은 이 창을 열기만 하고, 받는 건 여기서 한다.
+     누르자마자 코인이 들어오면 광고를 붙였을 때 흐름이 통째로 달라진다.
+     지금부터 같은 창을 쓰면 나중에 가운데에 광고만 끼우면 된다. -->
+<div class="lb-modal" id="bonusModal" onclick="if(event.target===this)closeBonus()">
+  <div class="lb-box" style="width:320px">
+    <div class="lb-title"><span data-ico="🎁"></span> 보너스 코인
+      <span class="close-x" onclick="closeBonus()">×</span></div>
+    <div class="bn-ico">
+      <svg class="svgi" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><path d="M10.2 9.6v4.8l4.4-2.4z" fill="currentColor" stroke-width="1.4"/></svg>
+    </div>
+    <div class="bn-body" id="bnBody"></div>
+    <button class="bn-claim" id="bnClaim" onclick="claimBonus()">보상 받기</button>
+    <div class="bn-msg" id="bnMsg"></div>
   </div>
 </div>
 

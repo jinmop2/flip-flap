@@ -14,6 +14,7 @@ const root = path.join(__dirname, '..');
 const acc = fs.readFileSync(path.join(root, 'accounts.js'), 'utf8');
 const srv = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 const cli = fs.readFileSync(path.join(root, 'public/client.js'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
 
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra !== undefined ? '  ' + extra : ''))); };
@@ -49,7 +50,16 @@ console.log('③ 화면은 표를 나르기만 한다');
   ok('금액은 서버가 준 값을 쓴다', /got\.amount/.test(cli) && !/bonus-claim'[\s\S]{0,120}coins:/.test(cli));
   ok('잔액은 서버 프로필로 갈아 끼운다', /myAccount = got\.profile; renderAccount\(\);/.test(cli));
   ok('연타를 막는다', /if \(_bonusBusy\) return;/.test(cli));
-  ok('남은 몫이 없으면 버튼을 감춘다', /if \(!r \|\| r\.error \|\| !r\.left\) \{ b\.style\.display = 'none'; return; \}/.test(cli));
+  ok('남은 몫이 없으면 버튼을 감춘다',
+     /const hide = \(\) => \{ b\.style\.display = 'none';/.test(cli)
+     && /if \(!_bonusState \|\| !_bonusState\.left\) return hide\(\);/.test(cli));
+  // 버튼이 바로 지급하면 광고를 끼울 자리가 없다 — 창을 거쳐야 한다
+  ok('버튼은 창을 열기만 한다',
+     /window\.doBonus = function \(\) \{[\s\S]{0,220}classList\.add\('show'\)/.test(cli)
+     && !/window\.doBonus[\s\S]{0,400}bonus-start/.test(cli));
+  ok('받는 건 창 안의 단추다', /window\.claimBonus = async function/.test(cli)
+     && /id="bnClaim"[^>]*onclick="claimBonus\(\)"/.test(html));
+  ok('창은 뒤로가기로도 닫힌다', /\['bonusModal',\s*\(\) => closeBonus\(\)\]/.test(cli));
   // 광고를 끼울 자리가 코드에 남아 있어야 나중에 헷갈리지 않는다
   ok('광고를 끼울 자리가 적혀 있다', /광고 모드면 여기서 광고를 보여 주고/.test(cli));
 }

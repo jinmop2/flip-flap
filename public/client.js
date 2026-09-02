@@ -407,13 +407,20 @@ socket.on('auth_retry', () => {
 // AD_MODE=ad 로 켜고, 여기 '표를 받고 → 광고를 보고 → 표를 돌려준다' 사이에
 // 광고 재생만 끼우면 된다. 금액도 횟수도 서버가 정하므로 화면은 손댈 게 없다.
 let _bonusBusy = false;
+let _bonusState = null;      // 창을 그릴 때 다시 물어보지 않으려고 들고 있는다
+
 async function refreshBonus() {
   const b = document.getElementById('bonusBtn');
   if (!b) return;
-  if (!myAccount) { b.style.display = 'none'; return; }
+  const hide = () => { b.style.display = 'none'; document.body.classList.remove('has-bonus'); };
+  if (!myAccount) { _bonusState = null; return hide(); }
   const r = await apiPost('/api/bonus', { token: authToken() });
-  if (!r || r.error || !r.left) { b.style.display = 'none'; return; }
+  // 다 받았어도 상태는 들고 있는다 — 마지막 한 번을 창 안에서 받았을 때
+  // 그 창이 "오늘 0번 남음" 을 계속 보여 줘야 한다.
+  _bonusState = (r && !r.error) ? r : null;
+  if (!_bonusState || !_bonusState.left) return hide();
   b.style.display = '';
+  document.body.classList.add('has-bonus');
   b.disabled = false;
   b.title = `${r.ad ? '광고 보고' : '무료'} 🪙 +${r.coins} — 오늘 ${r.left}번 남음`;
   // 아이콘은 마크업에 그대로 두고 남은 횟수 딱지만 갈아 끼운다
@@ -421,23 +428,64 @@ async function refreshBonus() {
   if (!tag) { tag = document.createElement('span'); tag.className = 'bn-left'; b.appendChild(tag); }
   tag.textContent = r.left;
 }
-window.doBonus = async function () {
+
+// 버튼은 창을 열기만 한다. 받는 건 창 안의 '보상 받기' 다 —
+// 광고를 붙이면 그 사이에 광고가 들어갈 자리다.
+window.doBonus = function () {
+  const m = document.getElementById('bonusModal');
+  if (!m) return;
+  m.classList.add('show');
+  drawBonus();
+};
+window.closeBonus = function () {
+  const m = document.getElementById('bonusModal');
+  if (m) m.classList.remove('show');
+};
+
+function drawBonus(msg) {
+  const body = document.getElementById('bnBody');
+  const btn = document.getElementById('bnClaim');
+  const note = document.getElementById('bnMsg');
+  if (!body || !btn || !note) return;
+  const s = _bonusState;
+  if (!s) {
+    body.innerHTML = '<div class="bn-how">로그인하면 받을 수 있어요.</div>';
+    btn.style.display = 'none'; note.innerHTML = msg || ''; return;
+  }
+  body.innerHTML =
+    `<div class="bn-amt">${ico('🪙')} +${s.coins}</div>` +
+    `<div class="bn-how">${s.ad
+      ? `광고를 <b>${s.minSec}초</b> 이상 보면 코인을 받아요.`
+      : '오늘 그냥 드리는 보너스예요.'}</div>` +
+    `<div class="bn-cnt">오늘 <b>${s.left}</b>번 남음 · 하루 ${s.perDay}번</div>`;
+  btn.style.display = s.left ? '' : 'none';
+  btn.disabled = !s.left || _bonusBusy;
+  btn.textContent = _bonusBusy
+    ? (s.ad ? '광고 보는 중…' : '받는 중…')
+    : (s.ad ? '광고 보고 받기' : '보상 받기');
+  note.innerHTML = msg || '';
+}
+
+window.claimBonus = async function () {
   if (_bonusBusy) return;
-  _bonusBusy = true;
-  const b = document.getElementById('bonusBtn');
-  if (b) { b.disabled = true; }
+  _bonusBusy = true; drawBonus();
+  let said = '';
   try {
     const st = await apiPost('/api/bonus-start', { token: authToken() });
-    if (st.error) { toast('⚠️ ' + esc(st.error)); return; }
+    if (st.error) { said = `<span class="bn-err">${esc(st.error)}</span>`; return; }
     // 광고 모드면 여기서 광고를 보여 주고, 끝난 뒤에 표를 돌려준다.
     // 지금은 광고가 없으므로 바로 돌려준다 (서버의 최소 시간도 0 이다).
     if (st.minSec) await new Promise((go) => setTimeout(go, st.minSec * 1000 + 300));
     const got = await apiPost('/api/bonus-claim', { token: authToken(), ticket: st.ticket });
-    if (got.error) { toast('⚠️ ' + esc(got.error)); return; }
+    if (got.error) { said = `<span class="bn-err">${esc(got.error)}</span>`; return; }
     myAccount = got.profile; renderAccount();
-    toast(`${ico('🪙')} <b>${got.amount}</b> 받았어요!` + (got.left ? ` (오늘 ${got.left}번 더)` : ''), 2400);
     playSound('setwin');
-  } finally { _bonusBusy = false; refreshBonus(); }
+    said = `${ico('🪙')} <b>${got.amount}</b> 받았어요!`;
+  } finally {
+    _bonusBusy = false;
+    await refreshBonus();
+    drawBonus(said);
+  }
 };
 
 // 안 읽은 운영 쪽지. 여럿이면 하나씩 차례로 보여 준다.
@@ -4906,6 +4954,7 @@ const ESC_TARGETS = [
   ['quadModal',    () => (typeof q4Close === 'function') && q4Close()],
   ['gachaModal',   () => closeGacha()],
   ['shardModal',   () => closeShardShop()],
+  ['bonusModal',   () => closeBonus()],
   ['createModal',  () => closeCreate()],
   ['codeModal',    () => closeCode()],
   // 폭탄으로 버릴 카드를 고르는 중이면 못 닫는다 — 고를 때까지 판이 기다린다
