@@ -412,7 +412,7 @@ let _bonusState = null;      // 창을 그릴 때 다시 물어보지 않으려�
 async function refreshBonus() {
   const b = document.getElementById('bonusBtn');
   if (!b) return;
-  const hide = () => { b.style.display = 'none'; document.body.classList.remove('has-bonus'); };
+  const hide = () => { b.style.display = 'none'; };
   if (!myAccount) { _bonusState = null; return hide(); }
   const r = await apiPost('/api/bonus', { token: authToken() });
   // 다 받았어도 상태는 들고 있는다 — 마지막 한 번을 창 안에서 받았을 때
@@ -420,7 +420,6 @@ async function refreshBonus() {
   _bonusState = (r && !r.error) ? r : null;
   if (!_bonusState || !_bonusState.left) return hide();
   b.style.display = '';
-  document.body.classList.add('has-bonus');
   b.disabled = false;
   b.title = `${r.ad ? '광고 보고' : '무료'} 🪙 +${r.coins} — 오늘 ${r.left}번 남음`;
   // 아이콘은 마크업에 그대로 두고 남은 횟수 딱지만 갈아 끼운다

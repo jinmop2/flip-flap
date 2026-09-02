@@ -6,11 +6,14 @@ const ok = (n, c, x) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, con
 const htm = fs.readFileSync(R + '/public/index.html', 'utf8');
 const cli = fs.readFileSync(R + '/public/client.js', 'utf8');
 
-console.log('\n① 프로필 바 — 설정 톱니 자리를 비워 둔다');
-// 톱니는 절대 배치라 흐름에서 빠져 있다. 오른쪽 끝에 오는 것들이 저마다
-// 그만큼 비워 두지 않으면 그 위에 깔린다. 로그인 버튼이 그랬다 —
-// 버튼 오른쪽 28px 을 누르면 로그인이 아니라 설정이 열렸다.
-ok('톱니는 오른쪽 끝 절대 배치', /#setBtn \{[\s\S]{0,120}position:absolute;[\s\S]{0,60}right:10px;/.test(htm));
+console.log('\n① 프로필 바 — 오른쪽 단추 줄 자리를 비워 둔다');
+// 톱니와 보너스는 .pb-acts 에 세로로 쌓여 절대 배치로 빠져 있다. 오른쪽 끝에
+// 오는 것들이 저마다 그만큼 비워 두지 않으면 그 위에 깔린다. 로그인 버튼이
+// 그랬다 — 버튼 오른쪽 28px 을 누르면 로그인이 아니라 설정이 열렸다.
+ok('단추 줄은 오른쪽 끝 절대 배치',
+   /\.pb-acts \{[\s\S]{0,160}position:absolute;[\s\S]{0,60}right:10px;/.test(htm));
+// 세로로 쌓으므로 비워야 할 폭은 단추 한 칸 그대로다
+ok('단추는 세로로 쌓는다', /\.pb-acts \{[\s\S]{0,220}flex-direction:column;/.test(htm));
 const gap = (htm.match(/#setBtn \{[\s\S]{0,200}?width:(\d+)px/) || [])[1];
 ok('코인·RP 가 톱니 자리를 비운다', /\.pb-right \{ margin-right:38px; \}/.test(htm));
 ok('로그인 버튼도 같이 비운다', /\.pb-login \{ margin-left:auto; margin-right:38px;/.test(htm));
