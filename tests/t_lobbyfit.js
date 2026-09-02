@@ -91,12 +91,20 @@ console.log('\n⑤ 좁은 기기에서 가로로 안 넘친다');
 
 console.log('\n⑥ 넓은 화면에서 창이 끝까지 늘어나지 않는다');
 {
-  // 솔로·멀티 창은 화면을 덮는 판이라, 1fr 두 개는 1440px 화면에서 700px 짜리
-  // 버튼 두 개가 된다 — PC 에서 균형이 깨져 보이던 것.
-  ok('칸 폭을 묶는다', /grid-template-columns:repeat\(2, minmax\(0, 320px\)\)/.test(html));
-  ok('가운데로 모은다', /justify-content:center; gap:0 26px;/.test(html));
-  ok('제목도 같이 묶인다', /grid-column:1\/-1; max-width:666px/.test(html));
-  ok('한 줄로 담는 폭에서도 가운데', /@media \(min-width:480px\) and \(max-width:619px\)/.test(html));
+  // 솔로·멀티 창은 화면을 덮는 판이라 max-width 가 없다. 넓은 화면에서 그대로 두면
+  // 내용이 화면 끝까지 늘어난다.
+  //
+  // 620px 이상에서 두 줄로 나누던 규칙이 있었는데, 두 창 다 그 방식이 안 맞았다.
+  //  · 솔로는 직계 자식이 제목과 .sm-list 둘뿐이라, 모드 여섯이 통째로 왼쪽 칸에
+  //    들어가고 오른쪽 칸이 영원히 빈다 — PC 에서 버튼이 왼쪽에만 몰려 보이던 것.
+  //  · 멀티는 나뉘기는 하는데 소제목('빠른 입장')이 왼쪽, 그 아래 있어야 할 칸들이
+  //    오른쪽에 떨어져 이름표와 내용이 갈라졌다.
+  // 세로로 읽는 목록을 두 줄로 접는 것 자체가 안 맞는다 — 한 줄을 가운데 세운다.
+  ok('둘 다 한 뼘으로 묶고 가운데 세운다',
+     /#soloModal \.lb-box > \*, #multiModal \.lb-box > \* \{ max-width:420px; width:100%; margin-inline:auto; \}/.test(html));
+  ok('두 줄로 접지 않는다',
+     !/#soloModal \.lb-box, #multiModal \.lb-box \{[\s\S]{0,160}display:grid/.test(html)
+     && !/#multiModal \.lb-box \{[\s\S]{0,160}grid-template-columns/.test(html));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

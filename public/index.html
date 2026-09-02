@@ -3048,23 +3048,19 @@
     #soloModal .sm-body .mm-tile .mt-name { font-size:.76rem; line-height:1.25; }
     #soloModal .sm-body .mm-tile .mt-sub { font-size:.55rem; line-height:1.2; }
     #soloModal .mm-hero, #multiModal .mm-hero { padding:11px 13px; }
-    /* 넓은 화면에서는 두 줄로 나눠 담는다. 다만 칸을 화면 폭에 맡기면 안 된다 —
-       이 창은 화면 전체를 덮는 판이라, 1fr 두 개는 1440px 화면에서 700px 짜리
-       버튼 두 개가 된다. 실제로 PC 에서 창이 화면 끝까지 늘어나 균형이 깨져 보였다.
-       칸 폭을 묶고 가운데로 모은다 — 폰에서 보던 크기 그대로 두 줄이 된다. */
-    @media (min-width:620px) {
-      #soloModal .lb-box, #multiModal .lb-box {
-        display:grid; grid-template-columns:repeat(2, minmax(0, 320px));
-        justify-content:center; gap:0 26px;
-        align-content:start; grid-auto-rows:min-content;
-      }
-      #soloModal .lb-title, #multiModal .lb-title { grid-column:1/-1; max-width:666px; width:100%; margin-inline:auto; }
-    }
-    /* 한 줄로 담는 폭(620px 미만)이라도 화면이 넓어질 수 있다(가로 폰·태블릿 세로).
-       그때도 내용은 가운데 한 뼘 안에 둔다. */
-    @media (min-width:480px) and (max-width:619px) {
-      #soloModal .lb-box > *, #multiModal .lb-box > * { max-width:420px; width:100%; margin-inline:auto; }
-    }
+    /* 이 두 창은 화면을 덮는 판이라 max-width 가 없다. 넓은 화면에서 그대로 두면
+       내용이 화면 끝까지 늘어난다.
+
+       예전엔 620px 이상에서 두 줄로 나눴는데, 두 창 다 그 방식이 안 맞았다.
+       · 솔로는 직계 자식이 제목과 .sm-list 둘뿐이다. 모드 여섯은 그 안에 들어 있어서
+         여섯이 통째로 왼쪽 칸에 들어가고 오른쪽 칸은 영원히 빈다 —
+         PC 에서 버튼이 왼쪽 절반에만 몰려 보이던 것이 이것이다.
+       · 멀티는 자식이 여럿이라 나뉘기는 하는데, 소제목('빠른 입장')이 왼쪽 칸에,
+         그 아래 있어야 할 칸들이 오른쪽 칸에 떨어졌다. 이름표와 내용이 갈라졌다.
+
+       세로로 읽는 목록을 두 줄로 접는 것 자체가 안 맞는다. 폰에서 보던 한 줄을
+       그대로 가운데 세운다 — 넓은 화면에서도 읽는 차례가 그대로다. */
+    #soloModal .lb-box > *, #multiModal .lb-box > * { max-width:420px; width:100%; margin-inline:auto; }
 
     /* ── 탭 화면은 모두 전체화면 ────────────────────────────────────
        아래 탭으로 오가는 구조라, 작은 상자가 가운데 뜨는 것보다 화면을
