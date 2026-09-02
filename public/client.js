@@ -422,10 +422,6 @@ async function refreshBonus() {
   b.style.display = '';
   b.disabled = false;
   b.title = `${r.ad ? '광고 보고' : '무료'} 🪙 +${r.coins} — 오늘 ${r.left}번 남음`;
-  // 아이콘은 마크업에 그대로 두고 남은 횟수 딱지만 갈아 끼운다
-  let tag = b.querySelector('.bn-left');
-  if (!tag) { tag = document.createElement('span'); tag.className = 'bn-left'; b.appendChild(tag); }
-  tag.textContent = r.left;
 }
 
 // 버튼은 창을 열기만 한다. 받는 건 창 안의 '보상 받기' 다 —
