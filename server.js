@@ -47,6 +47,12 @@ tr:nth-child(even){background:rgba(255,255,255,.03)}h1{color:#ffd94a;font-size:1
 ${rows.map(r => `<tr><td>${r.day}</td>${td(r.pv)}${td(r.uv)}${td(r.signups)}${td(r.games)}${td(r.multi)}${td(r.botmatch)}${td(r.tutorial)}${td(r.peak)}</tr>`).join('')}
 </table>`);
 });
+// 개인정보 처리방침 — 스토어(플레이·앱스토어) 심사에 공개 주소가 필요하고,
+// 무엇을 모으는지 이용자가 볼 수 있어야 한다.
+app.get('/privacy', rateLimit(30), (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.sendFile(path.join(__dirname, 'privacy.html'));
+});
 app.get('/health', (req, res) => res.json({
   ok: true, rooms: Object.keys(rooms).length, uptime: Math.round(process.uptime()),
   store: accounts.storeInfo(),   // 지금 어디에 저장 중인지 (DB 연결 확인용)
@@ -590,6 +596,12 @@ app.post('/api/mission-claim', rateLimit(40), (req, res) => { const { token, id 
 app.post('/api/tutorial-done', rateLimit(20), (req, res) => { const { token } = req.body || {}; const out = accounts.claimTutorial(token); if (out.claimed) stats.bump('tutorial'); res.json(out); });
 // 친구 초대 — IP 를 넘긴다. 같은 곳에서 온 초대는 초대자 보상을 한 번만 친다.
 app.post('/api/refer', rateLimit(10), (req, res) => { const { token, ref } = req.body || {}; res.json(accounts.applyReferral(token, ref, ipOf(req))); });
+// ── 보너스 (지금은 무료, 나중에 광고) ──
+// 금액도 횟수도 서버가 정한다. 화면은 '표를 받아' '돌려줄' 뿐이다.
+app.post('/api/bonus',       rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.bonusState(token)); });
+app.post('/api/bonus-start', rateLimit(20), (req, res) => { const { token } = req.body || {}; res.json(accounts.bonusStart(token)); });
+app.post('/api/bonus-claim', rateLimit(20), (req, res) => { const { token, ticket } = req.body || {}; res.json(accounts.bonusClaim(token, ticket)); });
+
 // 운영 쪽지 — 본인이 읽는 쪽. 안 읽은 것만 준다.
 app.post('/api/notices',      rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.myNotices(token)); });
 app.post('/api/notices-read', rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.markNoticesRead(token)); });

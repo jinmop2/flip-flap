@@ -369,6 +369,7 @@ async function restoreSession() {
       // 소켓 쪽 인사가 준비 전에 닿았을 수 있다 — 계정을 다시 붙여 둔다
       if (socket.connected) socket.emit('auth', { token: tk });
       showNotices();                      // 안 읽은 운영 쪽지가 있으면 보여 준다
+      refreshBonus();                     // 오늘 남은 보너스가 있으면 버튼을 띄운다
       return;
     }
     if (!(r.netFail || r.httpFail)) { localStorage.removeItem('ff_auth'); return; }   // 진짜로 무효
@@ -401,6 +402,41 @@ socket.on('auth_retry', () => {
     if (tk && socket.connected) socket.emit('auth', { token: tk });
   }, 1200);
 });
+// ── 보너스 ────────────────────────────────────────────────────────────────
+// 지금은 광고 없이 그냥 준다(하루 3회 × 30). 광고망 승인이 나면 서버에서
+// AD_MODE=ad 로 켜고, 여기 '표를 받고 → 광고를 보고 → 표를 돌려준다' 사이에
+// 광고 재생만 끼우면 된다. 금액도 횟수도 서버가 정하므로 화면은 손댈 게 없다.
+let _bonusBusy = false;
+async function refreshBonus() {
+  const b = document.getElementById('bonusBtn');
+  if (!b) return;
+  if (!myAccount) { b.style.display = 'none'; return; }
+  const r = await apiPost('/api/bonus', { token: authToken() });
+  if (!r || r.error || !r.left) { b.style.display = 'none'; return; }
+  b.style.display = '';
+  b.disabled = false;
+  b.innerHTML = `${ico('🪙')} ${r.ad ? '광고 보고' : '무료'} <b>+${r.coins}</b>` +
+                `<span class="bn-left">오늘 ${r.left}번 남음</span>`;
+}
+window.doBonus = async function () {
+  if (_bonusBusy) return;
+  _bonusBusy = true;
+  const b = document.getElementById('bonusBtn');
+  if (b) { b.disabled = true; b.innerHTML = '받는 중…'; }
+  try {
+    const st = await apiPost('/api/bonus-start', { token: authToken() });
+    if (st.error) { toast('⚠️ ' + esc(st.error)); return; }
+    // 광고 모드면 여기서 광고를 보여 주고, 끝난 뒤에 표를 돌려준다.
+    // 지금은 광고가 없으므로 바로 돌려준다 (서버의 최소 시간도 0 이다).
+    if (st.minSec) await new Promise((go) => setTimeout(go, st.minSec * 1000 + 300));
+    const got = await apiPost('/api/bonus-claim', { token: authToken(), ticket: st.ticket });
+    if (got.error) { toast('⚠️ ' + esc(got.error)); return; }
+    myAccount = got.profile; renderAccount();
+    toast(`${ico('🪙')} <b>${got.amount}</b> 받았어요!` + (got.left ? ` (오늘 ${got.left}번 더)` : ''), 2400);
+    playSound('setwin');
+  } finally { _bonusBusy = false; refreshBonus(); }
+};
+
 // 안 읽은 운영 쪽지. 여럿이면 하나씩 차례로 보여 준다.
 async function showNotices() {
   const r = await apiPost('/api/notices', { token: authToken() });

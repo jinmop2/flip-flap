@@ -2077,6 +2077,90 @@ function claimDaily(token) {
   return { claimed: true, amount, plateBonus, streak: u.loginStreak, streakBonus, decay, titles, profile: profileOf(u) };
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+//  보너스 — 지금은 무료, 나중에 광고
+// ══════════════════════════════════════════════════════════════════════════
+//
+// 광고 붙이기는 두 단계로 나눈다.
+//   지금 : 광고 없이 '무료 보너스' 로 돈다 (하루 3회 × 30코인)
+//   나중 : 광고망 승인이 나면 AD_MODE=ad 로 켠다 (하루 5회 × 50코인)
+// 서버가 하는 일은 두 경우가 같다. 광고는 '표를 받아 오는 방법' 이 하나 더
+// 끼는 것뿐이라, 지금 만들어 두면 나중에 화면만 갈아 끼우면 된다.
+//
+// 왜 표(nonce)를 쓰는가:
+//   보상을 화면이 정하게 두면 그게 곧 코인 발행기다. 그래서
+//     ① 서버가 일회용 표를 내주고        (몇 번째인지·언제 냈는지 적어 둔다)
+//     ② 화면이 광고를 본 뒤 표를 돌려주면
+//     ③ 서버가 표를 확인하고 금액을 정해 지급한다.
+//   금액도 횟수도 화면은 손대지 못한다.
+//
+// 광고 모드에서 특히 중요한 것은 ③의 '얼마나 지났나' 다. 리워드 광고는
+// 최소 15초짜리라, 표를 받자마자 돌려준다면 광고를 안 본 것이다.
+//
+// 더 나은 길(나중): AdMob·H5 Ads 모두 서버 측 검증(SSV)을 지원한다. 광고 서버가
+// 우리 서버로 서명된 콜백을 직접 보내는 방식이라, 화면은 보상 판단에 끼지 못한다.
+// 그때는 claimBonus 를 그 콜백에서 부르면 된다 — 아래 구조는 그대로 쓴다.
+const AD_MODE = process.env.AD_MODE === 'ad';        // 광고 켜짐 여부 (기본: 무료 보너스)
+const BONUS = AD_MODE
+  ? { perDay: 5, coins: 50, minSec: 15 }             // 광고를 본 값
+  : { perDay: 3, coins: 30, minSec: 0 };             // 광고 없이 그냥 주는 값
+const BONUS_TICKET_TTL = 10 * 60 * 1000;             // 표는 10분이면 상한다
+const bonusTickets = new Map();                      // 표 → { idl, at, day }
+const bonusLocks = new Set();                        // 재진입(중복 수령) 방지
+
+// 오늘 몇 번 받았나. 날이 바뀌면 저절로 0 부터다.
+function bonusUsedToday(u) {
+  const today = kstDayIndex();
+  if (!u.bonus || u.bonus.day !== today) return 0;
+  return u.bonus.n || 0;
+}
+// 화면에 보여 줄 상태 (남은 횟수·금액·광고 여부)
+function bonusState(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  const used = bonusUsedToday(u);
+  return { ok: true, ad: AD_MODE, used, perDay: BONUS.perDay,
+           left: Math.max(0, BONUS.perDay - used), coins: BONUS.coins, minSec: BONUS.minSec };
+}
+// ① 표를 낸다
+function bonusStart(token) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  if (bonusUsedToday(u) >= BONUS.perDay) return { error: '오늘 몫은 다 받았어요. 내일 다시 오세요.' };
+  // 표가 쌓이지 않게, 낼 때마다 상한 것을 걷는다
+  const now = Date.now();
+  if (bonusTickets.size > 2000) for (const [k, v] of bonusTickets) if (now - v.at > BONUS_TICKET_TTL) bonusTickets.delete(k);
+  const t = crypto.randomBytes(18).toString('hex');
+  bonusTickets.set(t, { idl, at: now, day: kstDayIndex() });
+  return { ok: true, ticket: t, minSec: BONUS.minSec, coins: BONUS.coins };
+}
+// ③ 표를 확인하고 지급한다
+function bonusClaim(token, ticket) {
+  const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
+  if (!u) return { error: '로그인이 필요해요.' };
+  if (bonusLocks.has(idl)) return { error: '잠시 후 다시 시도해 주세요.' };
+  bonusLocks.add(idl);
+  try {
+    const e = bonusTickets.get(String(ticket || ''));
+    if (!e) return { error: '보상 표가 없어요. 다시 시도해 주세요.' };
+    if (e.idl !== idl) return { error: '보상 표가 없어요. 다시 시도해 주세요.' };   // 남의 표
+    const now = Date.now();
+    if (now - e.at > BONUS_TICKET_TTL) { bonusTickets.delete(ticket); return { error: '시간이 지났어요. 다시 시도해 주세요.' }; }
+    if (e.day !== kstDayIndex()) { bonusTickets.delete(ticket); return { error: '날이 바뀌었어요. 다시 시도해 주세요.' }; }
+    // 광고 모드에서는 최소 시간을 채워야 한다 — 안 그러면 안 본 것이다
+    if (BONUS.minSec && now - e.at < BONUS.minSec * 1000) return { error: '아직 끝나지 않았어요.' };
+    // 한도는 표를 낼 때가 아니라 줄 때 다시 본다 (표를 여러 장 받아 두는 것 방지)
+    const used = bonusUsedToday(u);
+    if (used >= BONUS.perDay) { bonusTickets.delete(ticket); return { error: '오늘 몫은 다 받았어요. 내일 다시 오세요.' }; }
+    bonusTickets.delete(ticket);                        // 한 장은 한 번만
+    u.bonus = { day: kstDayIndex(), n: used + 1 };
+    u.coins = Math.max(0, (u.coins || 0) + BONUS.coins);
+    persist(idl);
+    return { ok: true, amount: BONUS.coins, left: BONUS.perDay - (used + 1),
+             perDay: BONUS.perDay, profile: profileOf(u) };
+  } finally { bonusLocks.delete(idl); }
+}
+
 // ── 친구 초대 보상 — 초대받은 신규 계정과 초대자 둘 다 +100 (플래그 1회) ──
 const REFER_COINS = 100, REFER_CAP = 50;   // 초대자 최대 50회까지 지급
 function applyReferral(token, refCode, ip) {
@@ -3363,6 +3447,7 @@ module.exports = {
   gachaInfo, rollGacha, exchangeShard, usePipette, GACHA_TIER, TIER_OF, SHARD_ONLY, bonusOf,
   missionList, claimMission, titleList, dmList, dmSend, dmUnread,
   flushNow,
+  bonusState, bonusStart, bonusClaim,
   tourEnter, tourRefund, tourPrize, miniStake, miniPay, betrayEvent, cycleProgress, CYCLE_KINDS, CYCLE_REWARD, claimTutorial, applyReferral, deleteAccount,
   // 친구
   friendList, sendFriendReq, acceptFriendReq, declineFriendReq, cancelFriendReq, removeFriend,
