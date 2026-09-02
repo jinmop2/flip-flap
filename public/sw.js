@@ -2,7 +2,7 @@
 // 전략: 네트워크 우선(배포 즉시 반영), 실패 시 캐시 폴백. 소켓/API는 건드리지 않음.
 // 판을 올리면 옛 캐시를 버린다. 안 올리면 깨어나는 동안 그물이 끊겨
 // 캐시로 물러난 사람이 옛 화면을 계속 보게 된다.
-const VER = 'ff-v4';
+const VER = 'ff-v5';
 const CORE = ['/', '/client.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {
