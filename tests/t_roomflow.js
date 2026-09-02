@@ -224,7 +224,25 @@ ok('프로필 바가 위', /#profileBar \{[\s\S]{0,120}position:fixed; top:0/.te
 ok('메뉴바가 아래', /#navBar \{[\s\S]{0,120}position:fixed; bottom:0/.test(htm));
 ok('프로필 바에 금테가 없다', /#profileBar \{[\s\S]{0,260}border:none/.test(htm));
 ok('메뉴바에 금테가 없다', /\n    #navBar \{[\s\S]{0,320}border:none/.test(htm));
-ok('로비 여백이 뒤바뀐 순서에 맞다', /#lobby \{ padding-top:calc\(84px[^}]*padding-bottom:calc\(72px/.test(htm));
+// 숫자를 그대로 박아 두면 바 높이를 손댈 때마다 이 시험을 고쳐야 하고,
+// 정작 어긋났는지는 못 잡는다. 프로필 바 높이를 CSS 에서 셈해 비교한다.
+{
+  const px = (re) => Number((htm.match(re) || [])[1]);
+  const padT = px(/\.pb-body \{[^}]*padding:(\d+)px/);
+  const padB = px(/\.pb-body \{[^}]*padding:\d+px \d+px (\d+)px/);
+  const ava  = px(/\.pb-ava \{[\s\S]{0,60}height:(\d+)px/);
+  const xp   = px(/\.pb-xp \{[^}]*height:(\d+)px/);
+  // 줄 시작으로 못 박지 않으면 'body.waiting #lobby' 를 먼저 문다
+  const top  = px(/\n    #lobby \{ padding-top:calc\((\d+)px/);
+  const wait = px(/body\.waiting #lobby \{ padding-top:calc\((\d+)px/);
+  const barH = padT + ava + padB + xp;
+  ok('로비 윗 여백이 프로필 바를 덮고도 남는다',
+     top >= barH && top - barH <= 20, `바 ${barH}px · 여백 ${top}px`);
+  ok('로비 아랫 여백이 메뉴바 자리다', /\n    #lobby \{[^}]*padding-bottom:calc\(72px/.test(htm));
+  // 대기실은 일부러 조금 덜 비운다(로고를 접어 카드에 자리를 준다). 그래도
+  // 바 높이가 바뀌면 같이 따라와야 한다 — 안 그러면 카드가 바 밑으로 들어간다.
+  ok('대기실 여백도 바를 따라간다', barH - wait <= 8, `바 ${barH}px · 대기실 ${wait}px`);
+}
 ok('레벨 배지가 사진 아래로', /\.pb-lv \{ position:absolute; top:calc\(100% - 6px\)/.test(htm));
 
 // 랭킹은 메뉴바로, 설정은 프로필 바 오른쪽에 아이콘만

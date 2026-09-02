@@ -57,7 +57,12 @@ console.log('② 화면은 확실할 때만 로그인을 지운다');
 
 console.log('③ 깨어나는 동안 옛 화면에 갇히지 않는다');
 {
-  ok('서비스워커 캐시 판이 올랐다', /const VER = 'ff-v4';/.test(sw));
+  // 판 번호를 그대로 박아 두면 올릴 때마다 이 시험을 고쳐야 한다.
+  // 정작 중요한 건 "판이 있고, 판이 바뀌면 옛 캐시를 버린다" 는 쪽이다.
+  const ver = (sw.match(/const VER = '(ff-v\d+)';/) || [])[1];
+  ok('서비스워커에 캐시 판이 있다', !!ver, ver || '못 찾음');
+  ok('판이 바뀌면 옛 캐시를 버린다',
+     /keys\.filter\(k => k !== VER\)\.map\(k => caches\.delete\(k\)\)/.test(sw));
   ok('5xx 면 캐시로 물러난다', /res\.status >= 500[\s\S]{0,140}caches\.match/.test(sw));
   ok('API·소켓은 여전히 캐시하지 않는다', sw.includes('socket.io|api|auth|health'.replace('socket.io','socket\\.io')));
 }
