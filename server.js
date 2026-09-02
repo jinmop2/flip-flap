@@ -47,12 +47,14 @@ tr:nth-child(even){background:rgba(255,255,255,.03)}h1{color:#ffd94a;font-size:1
 ${rows.map(r => `<tr><td>${r.day}</td>${td(r.pv)}${td(r.uv)}${td(r.signups)}${td(r.games)}${td(r.multi)}${td(r.botmatch)}${td(r.tutorial)}${td(r.peak)}</tr>`).join('')}
 </table>`);
 });
-// 개인정보 처리방침 — 스토어(플레이·앱스토어) 심사에 공개 주소가 필요하고,
-// 무엇을 모으는지 이용자가 볼 수 있어야 한다.
-app.get('/privacy', rateLimit(30), (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.sendFile(path.join(__dirname, 'privacy.html'));
-});
+// 처리방침·약관·확률 — 셋 다 바깥에 공개돼 있어야 한다.
+// 처리방침은 스토어 심사가, 확률은 게임산업법이 요구한다.
+for (const [route, file] of [['/privacy', 'privacy.html'], ['/terms', 'terms.html'], ['/rates', 'rates.html']]) {
+  app.get(route, rateLimit(30), (req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.sendFile(path.join(__dirname, file));
+  });
+}
 app.get('/health', (req, res) => res.json({
   ok: true, rooms: Object.keys(rooms).length, uptime: Math.round(process.uptime()),
   store: accounts.storeInfo(),   // 지금 어디에 저장 중인지 (DB 연결 확인용)
