@@ -680,7 +680,8 @@
     /* 로고가 다 뜨기 전까지 그 아래 것들은 아예 안 보인다.
        예전엔 로비가 한 번 스쳤다 로고가 덮는 것처럼 보였다. */
     html.booting #lobby, html.booting #title, html.booting #profileBar,
-    html.booting #navBar, html.booting #game, html.booting #tv { visibility:hidden; }
+    html.booting #navBar, html.booting #game, html.booting #tv,
+    html.booting .bonus-btn { visibility:hidden; }
     #splash {
       position:fixed; inset:0; z-index:100; background:
         url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/><feColorMatrix type='matrix' values='0 0 0 0 0.12 0 0 0 0 0.16 0 0 0 0 0.26 0 0 0 0.32 0'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>"),
@@ -806,7 +807,7 @@
       position:absolute; top:5px; right:calc(50% - 14px);
       width:7px; height:7px; border-radius:50%; background:var(--gold);
     }
-    body.ingame #navBar, body.ingame #profileBar,
+    body.ingame #navBar, body.ingame #profileBar, body.ingame .bonus-btn,
     body.quad4 #navBar { display:none !important; }
 
     /* ── 내 정보 ── */
@@ -1933,7 +1934,7 @@
       background:radial-gradient(ellipse at 50% 34%, #2c5a44 0%, #17392a 62%, #0d2419 100%);
       padding:calc(6px + var(--safe-t)) 8px calc(6px + var(--safe-b)); gap:6px; overflow:hidden; }
     body.quad4 #game4 { display:flex; }
-    body.quad4 #lobby, body.quad4 #profileBar { display:none !important; }
+    body.quad4 #lobby, body.quad4 #profileBar, body.quad4 .bonus-btn { display:none !important; }
 
     /* 상단 상대 3명 */
     /* ── 다인전 자리 — 판을 둘러 앉는다 ──────────────────────────────
@@ -2774,18 +2775,32 @@
     .lobby-top.learn .top-link .tl-ico { font-size:1.05rem; }
 
     /* 부가 — 한 줄에 모아 작게 */
-    /* 보너스 — 눈에 띄되 모드 카드를 이기지는 않게. 남은 몫을 숫자로 인다. */
+    /* 보너스 — 톱니 바로 밑, 같은 34px. 프로필 바는 overflow:hidden 이라 그 안에
+       넣으면 잘린다. 바깥에 fixed 로 띄우고 바의 오른쪽 끝에 맞춘다:
+       바는 가운데 정렬 min(480px,100%) 라 오른쪽 끝이 50% + min(240px,50vw),
+       거기서 버튼 폭 34 + 여백 10 을 뺀다 — 톱니의 right:10px 과 같은 줄이 된다. */
     .bonus-btn {
-      margin-top:14px; width:100%; min-height:46px; border-radius:14px; cursor:pointer;
-      font-family:'Fredoka'; font-size:.86rem; font-weight:800; letter-spacing:.02em;
-      display:flex; align-items:center; justify-content:center; gap:7px;
-      background:linear-gradient(180deg,#243354,#16203a); color:#ffe6b0;
-      border:1.5px solid rgba(224,180,92,.5);
-      box-shadow:inset 0 1px 0 rgba(255,235,180,.18), 0 3px 10px rgba(0,0,0,.4); transition:.15s;
+      position:fixed; z-index:31;
+      top:calc(var(--safe-t) + 83px);
+      left:calc(50% + min(240px, 50vw) - 44px);
+      width:34px; height:34px; border-radius:10px; padding:0; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.34); color:#ffd97a;
+      border:1px solid rgba(224,180,92,.55);
+      box-shadow:0 3px 10px rgba(0,0,0,.45);
+      transition:background .15s, color .15s, transform .15s;
     }
-    .bonus-btn:hover, .bonus-btn:active { filter:brightness(1.14); transform:translateY(-1px); }
+    .bonus-btn:hover, .bonus-btn:active { background:rgba(224,180,92,.2); color:#ffe6b0; transform:translateY(-1px); }
     .bonus-btn[disabled] { opacity:.55; cursor:default; transform:none; }
-    .bonus-btn .bn-left { font-size:.68rem; opacity:.75; font-weight:700; }
+    .bonus-btn .svgi { width:19px; height:19px; }
+    /* 남은 횟수 — 오른쪽 위 작은 딱지 */
+    .bonus-btn .bn-left {
+      position:absolute; top:-5px; right:-5px;
+      min-width:15px; height:15px; padding:0 3px; border-radius:8px;
+      font-family:'Fredoka'; font-size:.56rem; font-weight:800; line-height:14px;
+      color:#1a1206; background:linear-gradient(180deg,#ffd97a,#c8912e);
+      border:1px solid #26314a; box-shadow:0 1px 3px rgba(0,0,0,.5);
+    }
     .lobby-misc { display:flex; justify-content:center; gap:6px; flex-wrap:wrap; }
     /* 테두리를 걷어 더 조용하게. 대신 누를 자리는 44px 로 넓힌다 —
        예전엔 높이가 26px 라 손가락으로 정확히 짚기 어려웠다. */
@@ -5226,7 +5241,8 @@
       background:radial-gradient(ellipse 92% 74% at 50% 50%, transparent 42%, rgba(0,0,0,.55) 78%, #000 100%);
     }
     body.twelve #tv { display:flex; }
-    body.twelve #lobby, body.twelve #navBar, body.twelve #profileBar { display:none !important; }
+    body.twelve #lobby, body.twelve #navBar, body.twelve #profileBar,
+    body.twelve .bonus-btn { display:none !important; }
 
     /* 판에 찍힌 상표 — 화면이 아니라 테이블 한가운데다(테이블의 자식이다) */
     #tableLogoTv, #tableLogo, #tableLogoQ {
@@ -5685,8 +5701,6 @@
     </div>
 
     <!-- 부가 — 눈에 덜 띄게 아래로 -->
-    <!-- 보너스 — 지금은 무료, 나중에 광고. 남은 몫이 있을 때만 뜬다. -->
-    <button class="bonus-btn" id="bonusBtn" style="display:none" onclick="doBonus()"></button>
     <div class="lobby-misc">
       <button class="misc-link" onclick="inviteFriend()"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>친구 초대</button>
       <button class="misc-link" id="installBtn" style="display:none" onclick="installApp()"><span data-ico="📲"></span> 앱으로 추가</button>
@@ -5705,6 +5719,12 @@
       <svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
   </div>
+
+  <!-- 보너스 — 지금은 무료, 나중에 광고. 톱니 바로 밑에 같은 크기로 뜬다.
+       프로필 바 안에 두면 overflow:hidden 에 잘려서 바깥에 뒀다. -->
+  <button class="bonus-btn" id="bonusBtn" style="display:none" title="보너스 코인" onclick="doBonus()">
+    <svg class="svgi" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><path d="M10.2 9.6v4.8l4.4-2.4z" fill="currentColor" stroke-width="1.4"/></svg>
+  </button>
 
   <!-- 상대 정보 — 판에서 상대 닉네임을 누르면 열린다 -->
   <div class="lb-modal" id="oppModal" onclick="if(event.target===this)closeOppInfo()">

@@ -415,14 +415,17 @@ async function refreshBonus() {
   if (!r || r.error || !r.left) { b.style.display = 'none'; return; }
   b.style.display = '';
   b.disabled = false;
-  b.innerHTML = `${ico('🪙')} ${r.ad ? '광고 보고' : '무료'} <b>+${r.coins}</b>` +
-                `<span class="bn-left">오늘 ${r.left}번 남음</span>`;
+  b.title = `${r.ad ? '광고 보고' : '무료'} 🪙 +${r.coins} — 오늘 ${r.left}번 남음`;
+  // 아이콘은 마크업에 그대로 두고 남은 횟수 딱지만 갈아 끼운다
+  let tag = b.querySelector('.bn-left');
+  if (!tag) { tag = document.createElement('span'); tag.className = 'bn-left'; b.appendChild(tag); }
+  tag.textContent = r.left;
 }
 window.doBonus = async function () {
   if (_bonusBusy) return;
   _bonusBusy = true;
   const b = document.getElementById('bonusBtn');
-  if (b) { b.disabled = true; b.innerHTML = '받는 중…'; }
+  if (b) { b.disabled = true; }
   try {
     const st = await apiPost('/api/bonus-start', { token: authToken() });
     if (st.error) { toast('⚠️ ' + esc(st.error)); return; }
