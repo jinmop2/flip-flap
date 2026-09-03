@@ -235,7 +235,10 @@ console.log('\n⑪ 치팅하지 않는가');
 // 강한 카드를 내고 그대로 진다. 실제로 그렇게 지고 있었다.
 {
   const fs2 = require('fs'), path2 = require('path');
-  const srv = fs2.readFileSync(path2.join(__dirname, '..', 'server.js'), 'utf8');
+  // AI 는 ai2.js 로 옮겨갔다 — 서버와 화면이 같은 셈을 써야 오프라인에서
+  // AI 가 다르게 두지 않는다. 두 파일을 같이 본다.
+  const srv = fs2.readFileSync(path2.join(__dirname, '..', 'server.js'), 'utf8') + '\n'
+            + fs2.readFileSync(path2.join(__dirname, '..', 'ai2.js'), 'utf8');
   ok('뒤집힌 판을 아는 배팅이 있다', /function decideBidReverse\(hand, prize, myAcq, oppAcq, visOpp, deckLeft\)/.test(srv));
   ok('뒤집혔으면 그 셈을 쓴다', /if \(g\.itemMode && g\.fx && g\.fx\.reverse\) \{\s*\n\s*bid = decideBidReverse/.test(srv));
   ok('뒤집힘에서는 약한 카드로 이긴다', /const byWeak = \[\.\.\.hand\]\.sort\(\(a, b\) => strength\(b\) - strength\(a\)\)/.test(srv));

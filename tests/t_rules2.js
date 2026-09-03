@@ -199,6 +199,34 @@ console.log('\n⑧ 경매 정산 — 누가 이기고 카드가 어디로 가나
   }
 }
 
+console.log('\n⑨ AI 도 같은 잣대로');
+{
+  const asrc = fs.readFileSync(path.join(__dirname, '..', 'ai2.js'), 'utf8');
+  for (const bad of ['rooms', 'io.to', 'accounts.', 'socket', 'broadcast'])
+    ok(`살림살이가 안 섞였다 — ${bad}`, !asrc.includes(bad));
+  ok('감싸서 이름이 안 샌다', /^\(function \(\) \{\n'use strict';/m.test(asrc) && /\n\}\)\(\);\s*$/.test(asrc));
+  {
+    const vm = require('vm');
+    const win = { RULES2: R };
+    const ctx = vm.createContext({ window: win });
+    vm.runInContext(asrc, ctx);
+    const leaked = Object.keys(ctx).filter((k) => k !== 'window');
+    ok('전역에 새는 이름이 없다', leaked.length === 0, leaked.join(','));
+    ok('창에는 AI2 만 더 붙는다', Object.keys(win).sort().join() === 'AI2,RULES2', Object.keys(win).join());
+    // 서버가 쓰는 것과 같은 답을 내는가
+    const A = win.AI2;
+    ok('목표 종류를 고른다', A.cpuTarget([C(3, 1), C(3, 2)], [C(3, 3)]) === 3);
+    ok('필요한 판엔 최강을 낸다',
+       A.cpuDecideBid([C(2, 1), C(6, 9)], [C(3, 1), C(3, 2)], [C(3, 3), C(3, 4)], 'hard').kind === 2);
+    ok('필요 없으면 약한 카드를 흘린다',
+       A.cpuDecideBid([C(2, 1), C(6, 9)], [C(6, 1), C(6, 2)], [C(3, 3), C(3, 4)], 'normal').kind === 6);
+  }
+  ok('서버가 이 파일을 쓴다',
+     /require\('\.\/ai2'\)/.test(fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8')));
+  ok('화면도 이 파일을 읽는다',
+     /<script src="\/ai2\.js">/.test(fs.readFileSync(path.join(__dirname, '..', 'public/index.html'), 'utf8')));
+}
+
 console.log('');
 if (fail) { console.log(`✗ ${fail}개 실패 (${pass}/${pass + fail})`); process.exit(1); }
 console.log(`✓ 전부 통과 (${pass}/${pass})`);
