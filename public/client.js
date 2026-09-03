@@ -838,6 +838,10 @@ function renderAccount() {
       <button class="pb-login" onclick="event.stopPropagation();openAuth('login')">로그인</button>`;
     if (fill) fill.style.width = '0%';
   }
+  // 가진 이모트도 여기서 같이 맞춘다. 예전엔 부르는 자리를 따로 뒀는데
+  // 로그인 경로가 빠져 있어, 산 이모트가 새로고침 한 번에 사라졌다.
+  // 프로필이 바뀌면 반드시 여기를 지나므로 빠뜨릴 자리가 없다.
+  try { refreshEmotes(); } catch (_) {}
 }
 
 // ── 내 정보 (프로필 · 인벤토리 · 전적) ──
@@ -4931,11 +4935,71 @@ let gcTab = 'friend', gcWith = null;      // 지금 보고 있는 탭 / 대화 �
 let gcUnread = {};                        // idl → 안 읽은 수
 
 function gameChatOpen() { const p = document.getElementById('gameChat'); return !!p && p.classList.contains('show'); }
+
+// ── 채팅창 옮기기 ─────────────────────────────────────────────────────────
+// 판 위에 떠 있는 창이라 카드를 가린다. 손잡이를 잡고 끌어 옮길 수 있게 한다.
+// 옮긴 자리는 기억해 두되, 화면 밖으로는 못 나가게 매번 다시 가둔다 —
+// 폰을 돌리거나 작은 기기로 바꾸면 기억한 자리가 화면 밖일 수 있다.
+function gcClamp(el, x, y) {
+  const w = el.offsetWidth, h = el.offsetHeight;
+  const maxX = Math.max(0, window.innerWidth - w);
+  const maxY = Math.max(0, window.innerHeight - h);
+  return { x: Math.min(Math.max(0, x), maxX), y: Math.min(Math.max(0, y), maxY) };
+}
+function gcPlace(x, y) {
+  const el = document.getElementById('gameChat'); if (!el) return;
+  const p = gcClamp(el, x, y);
+  el.style.left = p.x + 'px';
+  el.style.top = p.y + 'px';
+  el.style.right = 'auto'; el.style.bottom = 'auto';
+  try { localStorage.setItem('ff_chatpos', JSON.stringify(p)); } catch (_) {}
+}
+// 열 때마다 기억한 자리로. 없으면 원래 자리를 그대로 쓴다.
+function gcRestorePos() {
+  const el = document.getElementById('gameChat'); if (!el) return;
+  let p = null;
+  try { p = JSON.parse(localStorage.getItem('ff_chatpos') || 'null'); } catch (_) {}
+  if (!p || typeof p.x !== 'number' || typeof p.y !== 'number') return;
+  const c = gcClamp(el, p.x, p.y);
+  el.style.left = c.x + 'px'; el.style.top = c.y + 'px';
+  el.style.right = 'auto'; el.style.bottom = 'auto';
+}
+(function initChatDrag() {
+  const grip = document.querySelector('#gameChat .gcx-grip');
+  const el = document.getElementById('gameChat');
+  if (!grip || !el) return;
+  let dx = 0, dy = 0, on = false;
+  const down = (e) => {
+    const t = e.touches ? e.touches[0] : e;
+    const r = el.getBoundingClientRect();
+    dx = t.clientX - r.left; dy = t.clientY - r.top;
+    on = true; el.classList.add('dragging');
+    e.preventDefault();
+  };
+  const move = (e) => {
+    if (!on) return;
+    const t = e.touches ? e.touches[0] : e;
+    gcPlace(t.clientX - dx, t.clientY - dy);
+    e.preventDefault();
+  };
+  const up = () => { if (!on) return; on = false; el.classList.remove('dragging'); };
+  grip.addEventListener('mousedown', down);
+  grip.addEventListener('touchstart', down, { passive: false });
+  window.addEventListener('mousemove', move);
+  window.addEventListener('touchmove', move, { passive: false });
+  window.addEventListener('mouseup', up);
+  window.addEventListener('touchend', up);
+  // 화면이 바뀌면 기억한 자리가 밖일 수 있다 — 다시 가둔다
+  window.addEventListener('resize', () => { if (gameChatOpen()) gcRestorePos(); });
+})();
 window.toggleGameChat = function (force) {
   const p = document.getElementById('gameChat'); if (!p) return;
   const show = force === undefined ? !p.classList.contains('show') : force;
   p.classList.toggle('show', show);
   if (!show) return;
+  gcRestorePos();   // 지난번에 옮겨 둔 자리로
+  p.classList.add('intro');                       // 열 때 한 번만 미끄러져 들어온다
+  setTimeout(() => p.classList.remove('intro'), 260);
   if (!myAccount) { document.getElementById('gcFriendList').innerHTML =
       '<div class="gc-empty">로그인하면 채팅할 수 있어요</div>'; return; }
   gameChatTab(gcTab);
