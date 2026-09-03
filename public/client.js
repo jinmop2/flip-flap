@@ -1,5 +1,15 @@
 const socket = io({ transports: ['websocket', 'polling'] });   // 웹소켓 우선 — 폴링 왕복 생략, 연결 빨라짐
 
+// ── 그물 없이 두는 판 ─────────────────────────────────────────────────────
+// 오프라인 판이 돌고 있으면 판 신호를 서버로 안 보내고 화면이 직접 처리한다.
+// 부르는 쪽은 socket.emit 그대로 쓴다 — 여기서만 갈라진다.
+const OFF_EVENTS = ['draw_card', 'offer_card', 'choose_auction', 'pick_card', 'submit_bid'];
+const _emit = socket.emit.bind(socket);
+socket.emit = function (ev, data) {
+  if (window.OFFLINE && OFFLINE.live() && OFF_EVENTS.includes(ev)) return OFFLINE.act(ev, data);
+  return _emit(ev, data);
+};
+
 // ── 화면 높이 동기화 ──────────────────────────────────────
 // 모바일 브라우저는 주소창이 떠 있어도 100vh 를 "주소창 숨김 기준"으로 계산한다.
 // 그러면 게임판이 화면보다 커져 하단(내 손패·프로필)이 잘린다.
@@ -5304,7 +5314,22 @@ function closeModePanels() {
   document.getElementById('multiModal').classList.remove('show');
   window.dispatchEvent(new Event('ff:panelclose'));
 }
-function soloPlay(d) { closeModePanels(); difficulty = d; createRoom(true); }
+function soloPlay(d) {
+  closeModePanels(); difficulty = d;
+  // 그물이 끊겨 있으면 화면이 혼자 굴린다. 규칙도 상대도 서버가 쓰는 그 파일이라
+  // 판정은 온라인과 같다 — 다만 코인·전적은 안 남는다(서버만 줄 수 있다).
+  if (!socket.connected && window.OFFLINE && OFFLINE.ready) return offlineStart(d);
+  createRoom(true);
+}
+// 오프라인 판 시작 — game_start / state_update / game_over 를 화면에 그대로 흘려
+// 넣는다. 화면은 서버에서 온 것인지 아닌지 알 필요가 없다.
+function offlineStart(d) {
+  clearSession();
+  onGameStart({ vsBot: true, difficulty: d, roomId: null,
+                nicks: [getNick(), 'AI'], profiles: null });
+  toast('📴 그물 없이 두는 판이에요. 코인·전적은 안 쌓여요.', 3400);
+  OFFLINE.start(d, { onState: onStateUpdate, onOver: onGameOver });
+}
 
 // ── 튜토리얼 — 쉬움 AI와 실전 + 단계별 코치 ─────────────────
 // 원칙: 한 번에 한 가지만, 짧게, "지금 뭘 클릭할지"를 반짝임으로 표시
@@ -6260,7 +6285,9 @@ socket.on('spec_challenge_fail', () => {
 });
 
 socket.on('error', msg => alert(msg));
-socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spectate, itemMode, tour, graceLeft }) => {
+// 서버에서 오든 오프라인 엔진에서 오든 이 세 길로만 들어온다.
+// 화면이 둘을 구별할 필요가 없어야 오프라인이 "다른 게임" 이 되지 않는다.
+function onGameStart({ vsBot, difficulty: diff, roomId, nicks, profiles, spectate, itemMode, tour, graceLeft }) {
   isTourMatch = !!tour;          // 대회 경기면 끝난 뒤 대진표로 돌아간다
   isVsBot = vsBot;
   isSpec = !!spectate;
@@ -6303,9 +6330,9 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spe
   // 컴퓨터에서는 그런 게 없어 타원 테이블이 아예 안 그려졌다 —
   // 카드가 맨바닥에 흩어진 것처럼 보인 이유다.
   scheduleRelayout();
-});
+}
 let drewNow = false;
-socket.on('state_update', s => {
+function onStateUpdate(s) {
   // 관전자 상태 → 플레이어 화면 형태로 변환 (아래=P1, 위=P2)
   if (s.spec) {
     s = {
@@ -6348,7 +6375,7 @@ socket.on('state_update', s => {
   if (mine && !prevMyAction && document.hidden) { startTitleBlink(); playSound('ping'); }
   if (!mine) stopTitleBlink();
   prevMyAction = mine;
-});
+}
 let boardCelebrated = false;
 let needsDeal = false;   // 게임 시작 딜 모션 1회 플래그
 function localSet(acq) {
@@ -6454,7 +6481,10 @@ socket.on('special', () => {
   t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
   setTimeout(() => { t.style.display = 'none'; }, 2600);
 });
-socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex: mi, spec, nicks }) => {
+socket.on('game_start',  onGameStart);
+socket.on('state_update', onStateUpdate);
+socket.on('game_over',    onGameOver);
+function onGameOver({ winner, setKind, timeout, byProgress, forfeit, myIndex: mi, spec, nicks }) {
   if (spec) {   // 관전자: 중립 결과 화면
     const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
     title.textContent = '게임 종료'; title.style.color = '#c8a000';
@@ -6546,7 +6576,7 @@ socket.on('game_over', ({ winner, setKind, timeout, byProgress, forfeit, myIndex
     const sback = document.getElementById('stourBackBtn'); if (sback) sback.style.display = 'none';
   }
   setTimeout(() => { document.getElementById('gameOver').style.display = 'flex'; showRewards(); }, delay);
-});
+}
 
 // 결과창에 '방으로' 를 붙이거나 뗀다. 방이 살아 있는 판에서만 뜬다.
 function roomBackBtn(goBtns, on) {

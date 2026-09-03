@@ -52,8 +52,10 @@ ok('가로 설계 크기가 따로 있다', /LAND_W = 940, LAND_H = 520/.test(cl
 // 사라지고 화면 전체가 펠트인 큰 판이 떴다. 눕힌 폰만 그 배치를 쓴다.
 ok('눕힌 폰에서만 가로 배치', /vw > vh \* 1\.15 && vh < 560/.test(cli));
 // 판을 열 때 테이블을 재지 않으면, 리사이즈가 없는 컴퓨터에서는 영영 안 그려진다
+// game_start 처리기가 이름 있는 함수(onGameStart)가 되면서 닫는 모양이 '});' 에서
+// '}' 로 바뀌었다 — 오프라인 판도 같은 길로 들어가야 해서 이름을 붙였다.
 ok('판을 열면 테이블을 잰다',
-   /startBGM\('game'\);[\s\S]{0,320}scheduleRelayout\(\);\n\}\);/.test(cli)
+   /startBGM\('game'\);[\s\S]{0,320}scheduleRelayout\(\);\n\}/.test(cli)
    && /tvOpen\(\) \{[\s\S]{0,420}scheduleRelayout\(\);/.test(cli));
 // 카드를 줄였으면 그 안 글자도 줄여야 한다 — 낮고 넓은 화면에서 숫자가 카드 밖으로 나갔다
 {
