@@ -10,6 +10,12 @@
 // 여기 두면 안 되는 것: 무엇을 누구에게 보낼지, 언제 기다릴지, 코인·전적.
 // 그건 판의 규칙이 아니라 살림살이다.
 
+// 브라우저에서는 <script> 로 읽히므로 안쪽 이름이 전역으로 샌다.
+// client.js 에도 is21·strength 같은 이름이 있어 그대로 두면 통째로 죽는다
+// (실제로 그렇게 한 번 죽였다). 감싸서 RULES2 하나만 내놓는다.
+(function () {
+'use strict';
+
 const SPEC = [[2,2],[3,5],[4,7],[6,10]];
 
 function initDeck() {
@@ -218,3 +224,5 @@ const RULES2 = {
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = RULES2;
 if (typeof window !== 'undefined') window.RULES2 = RULES2;
+
+})();

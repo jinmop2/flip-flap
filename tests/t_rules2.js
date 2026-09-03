@@ -16,6 +16,20 @@ console.log('① 규칙만 들어 있다');
   for (const bad of ['require(', 'io.to', 'socket', 'rooms[', 'accounts.', 'setTimeout', 'broadcast'])
     ok(`살림살이가 안 섞였다 — ${bad}`, !src.includes(bad));
   ok('서버가 이 파일을 쓴다', /require\('\.\/rules2'\)/.test(fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8')));
+  // 브라우저에서는 <script> 로 읽힌다. 감싸지 않으면 안쪽 이름이 전역으로 새어
+  // client.js 의 같은 이름과 부딪혀 화면이 통째로 죽는다 — 실제로 한 번 죽였다.
+  ok('감싸서 이름이 안 샌다', /^\(function \(\) \{\n'use strict';/m.test(src) && /\n\}\)\(\);\s*$/.test(src));
+  ok('내놓는 것은 RULES2 하나', /window\.RULES2 = RULES2;/.test(src));
+  {
+    // 실제로 브라우저처럼 읽어 본다 — 전역에 이름이 새는지
+    const vm = require('vm');
+    const win = {};
+    const ctx = vm.createContext({ window: win, globalThis: undefined });
+    vm.runInContext(src, ctx);
+    const leaked = Object.keys(ctx).filter((k) => !['window', 'globalThis'].includes(k));
+    ok('전역에 새는 이름이 없다', leaked.length === 0, leaked.join(','));
+    ok('창에는 RULES2 만 붙는다', Object.keys(win).join() === 'RULES2', Object.keys(win).join());
+  }
 }
 
 console.log('\n② 덱');
