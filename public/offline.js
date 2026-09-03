@@ -12,8 +12,7 @@
 (function () {
 'use strict';
 
-const R = window.RULES2, A = window.AI2;
-if (!R || !A) return;                       // 규칙이나 상대가 없으면 아예 나서지 않는다
+const R = window.RULES2, A = window.AI2;   // 없으면 클래식만 못 연다 — 다른 모드는 자기 엔진을 쓴다
 
 const AI_SEAT = 2;                          // 사람은 늘 1번, 상대가 2번
 let g = null;                               // 지금 굴러가는 판
@@ -225,9 +224,199 @@ function act(ev, data) {
   }
 }
 
+// ══ TWELVE ════════════════════════════════════════════════════════════════
+// 규칙도 상대도 twelve.js 가 전부 쥔다 — 서버가 쓰는 그 파일이다. 여기서는
+// 서버의 tvPush/tvBot 이 하던 살림살이만 옮겨 적는다.
+const T = window.TWELVE;
+let tg = null, tvTimer = null, tvNext = null, tvClockId = null, tvDiff = 'hard';
+const tvLater = (fn, ms) => { clearTimeout(tvTimer); tvTimer = setTimeout(fn, ms); };
+
+function tvPush() {
+  if (!tg) return;
+  say('tv_state', T.viewFor(tg, 1));
+  if (tg.over) return tvFinish();
+  // 정산은 저절로 넘어간다 — 여기서 버튼을 한 번 더 누르게 하면 흐름만 끊긴다
+  if (tg.phase === 'settled') {
+    clearTimeout(tvNext);
+    tvNext = setTimeout(() => {
+      if (!tg || tg.over || tg.phase !== 'settled') return;
+      T.nextTurn(tg); tvPush(); tvBot();
+    }, 2600);
+  }
+}
+// AI 자리를 둘 수 있는 만큼 둔다. 사람 차례가 오면 멈춘다.
+function tvBot() {
+  if (!tg || tg.over) return;
+  if (!T.applyAi(tg, 2, Math.random, tvDiff)) return;   // 둔 게 없으면 아무것도 안 보낸다
+  tvPush();
+  const wait = (tg.phase === 'bid' || tg.phase === 'close') ? 2200 : 1500;
+  if (!tg.over) tvLater(tvBot, wait);
+}
+function tvFinish() {
+  const gg = tg;
+  clearTimeout(tvTimer); clearTimeout(tvNext); clearInterval(tvClockId);
+  tvClockId = null;
+  say('tv_over', { win: gg.winner === 1, endBy: gg.endBy, view: T.viewFor(gg, 1) });
+}
+function tvStart(d) {
+  if (!T) return false;
+  stopAll();
+  tvDiff = ['easy', 'hard', 'expert'].includes(d && d.diff) ? d.diff : 'hard';
+  const label = tvDiff === 'easy' ? '쉬움' : tvDiff === 'expert' ? '전문가' : '보통';
+  tg = T.createGame({ first: 1 });
+  say('tv_begin', { roomId: null, me: 1, vsBot: true,
+                    nicks: [me(), 'TWELVE AI'],
+                    profiles: [null, { nick: 'TWELVE AI', guest: true, cpuDiff: label }] });
+  offNote();
+  tvPush(); tvBot();
+  tvClockId = setInterval(() => {
+    if (!tg || tg.over) return;
+    const ap = T.activePlayer(tg);
+    if (ap) {
+      tg.time[ap] = Math.max(0, tg.time[ap] - 1);
+      if (tg.time[ap] <= 0) { T.timeout(tg, ap); return tvPush(); }
+    }
+    say('tv_clock', { time: tg.time, active: ap, me: 1 });
+  }, 1000);
+  return true;
+}
+function tvAct(data) {
+  if (!tg || tg.over) return true;
+  let ok = false;
+  switch (data.act) {
+    case 'draw':     ok = T.draw(tg, 1); break;
+    case 'offer':    ok = tg.phase === 'choose' ? T.reoffer(tg, 1, data.cardId) : T.offer(tg, 1, data.cardId); break;
+    case 'choose':   ok = T.chooseType(tg, 1, data.type); break;
+    case 'raise':    ok = T.raise(tg, 1, data.amount); break;
+    case 'fold':     ok = T.fold(tg, 1); break;
+    case 'closeBet': ok = T.closeBet(tg, 1, data.amount); break;
+    case 'take':     ok = T.closeTake(tg, 1); break;
+    case 'decline':  ok = T.closeDecline(tg, 1); break;
+    case 'next':     ok = T.nextTurn(tg); break;
+    default: return true;
+  }
+  if (!ok) { tvPush(); return true; }
+  tvPush();
+  // 내가 두자마자 받아치면 정신이 없다 — 값을 부르는 대목은 더 길게
+  tvLater(tvBot, (tg.phase === 'bid' || tg.phase === 'close') ? 1400 : 900);
+  return true;
+}
+
+// ══ 다인전 ════════════════════════════════════════════════════════════════
+// 판은 game4, 상대는 ai4, 무엇을 보여줄지는 view4 — 셋 다 서버가 쓰는 파일이다.
+// 서버4의 step() 이 하던 일을 그대로 옮겨 적었다. 규칙은 한 줄도 안 적는다.
+const G4 = window.GAME4, A4 = window.AI4;
+const V4 = window.VIEW4 ? window.VIEW4.make(null) : null;
+const QT = { draw: 650, offer: 750, type: 650, bid: 480, showdown: 900, reveal: 1150, settle: 1750, next: 260 };
+let qg = null, qr = null, qTimer = null, qClockId = null;
+
+const qHuman = (g) => {
+  const isHuman = (i) => !qr.seats[i].isBot;
+  if (g.phase === 'draw' || g.phase === 'offer' || g.phase === 'choose_type')
+    return isHuman(g.auctioneer) ? g.auctioneer : null;
+  if (g.phase === 'bidding') for (let i = 0; i < qr.seats.length; i++) if (isHuman(i) && G4.canBid(g, i)) return i;
+  return null;
+};
+function qPush() { if (qg && V4) say('g4_state', V4.stateFor(qg, 0, null, qr)); }
+function qLater(ms) { clearTimeout(qTimer); qTimer = setTimeout(() => { try { qStep(); } catch (e) { console.error(e); } }, ms); }
+function qShowdown() { qg.phase = 'showdown'; qPush(); qLater(qg.auction && qg.auction.closed ? Math.round(QT.showdown / 2) : QT.showdown); }
+
+function qStep() {
+  if (!qg) return;
+  const g = qg;
+  switch (g.phase) {
+    case 'game_over':
+      clearInterval(qClockId); qClockId = null;
+      qPush(); return say('g4_over', V4.stateFor(g, 0, null, qr));
+    case 'draw':
+      if (qHuman(g) === g.auctioneer) return qPush();
+      G4.draw(g); qPush(); return qLater(QT.offer);
+    case 'offer': {
+      if (qHuman(g) === g.auctioneer) return qPush();
+      const c = A4.chooseConsign(g, g.auctioneer);
+      G4.offer(g, g.auctioneer, c.id); qPush(); return qLater(QT.type);
+    }
+    case 'choose_type':
+      if (qHuman(g) === g.auctioneer) return qPush();
+      G4.chooseType(g, g.auctioneer, A4.chooseType(g, g.auctioneer));
+      qPush(); return qLater(QT.bid);
+    case 'bidding': {
+      if (qHuman(g) !== null) return qPush();
+      const pending = [];
+      for (let i = 0; i < qr.seats.length; i++) if (qr.seats[i].isBot && G4.canBid(g, i)) pending.push(i);
+      if (pending.length) {
+        const c = A4.chooseBid(g, pending[0]);
+        if (c) G4.bid(g, pending[0], c.id);
+        qPush();
+        if (G4.allBidsIn(g)) return qShowdown();
+        return qLater(QT.bid);
+      }
+      if (G4.allBidsIn(g) || !G4.bidderSeats(g).length) return qShowdown();
+      return qPush();
+    }
+    case 'showdown': g.phase = 'reveal'; qPush(); return qLater(QT.reveal);
+    case 'reveal':   G4.settle(g); qPush(); return qLater(QT.settle);
+    case 'settled':  G4.advance(g); qPush(); return qLater(QT.next);
+    default: return qPush();
+  }
+}
+function qStart(d) {
+  if (!G4 || !A4 || !V4) return false;
+  stopAll();
+  const n = (Number(d && d.n) === 3) ? 3 : 4;
+  const names = [me()];
+  for (let i = 1; i < n; i++) names.push('AI ' + i);
+  qg = G4.createGame4(names, { n });
+  // 서버의 방 자리표를 흉내 낸 것. 사람은 0번 하나, 나머지는 AI 다.
+  qr = { seats: names.map((_, i) => ({ sid: i === 0 ? 'me' : null, isBot: i !== 0, token: null })),
+         solo: true, rp: null, waitSeat: null, waitUntil: null };
+  say('g4_begin', { roomId: null, me: 0, n, solo: true,
+                    seats: qr.seats.map((x, i) => ({ name: names[i], isBot: x.isBot })) });
+  offNote();
+  qPush(); qLater(QT.next);
+  qClockId = setInterval(() => {
+    if (!qg || !qg.clock || qg.phase === 'game_over') return;
+    const seat = qHuman(qg);
+    if (seat === null) return;
+    qg.clock[seat] = Math.max(0, (qg.clock[seat] || 0) - 1);
+    say('g4_clock', { clock: qg.clock, seat });
+  }, 1000);
+  return true;
+}
+function qAct(data) {
+  if (!qg) return true;
+  const g = qg, mySeat = 0;
+  let ok = false;
+  if (data.type === 'draw' && g.phase === 'draw' && g.auctioneer === mySeat) ok = G4.draw(g);
+  else if (data.type === 'offer' && g.phase === 'offer' && g.auctioneer === mySeat) ok = G4.offer(g, mySeat, data.cardId);
+  else if (data.type === 'auctionType' && g.phase === 'choose_type' && g.auctioneer === mySeat) ok = G4.chooseType(g, mySeat, data.val);
+  else if (data.type === 'bid' && g.phase === 'bidding') ok = G4.bid(g, mySeat, data.cardId);
+  if (!ok) { qPush(); return true; }
+  qPush(); qLater(QT.next);
+  return true;
+}
+
+// ══ 공통 ══════════════════════════════════════════════════════════════════
+// 서버가 쏘던 것을 화면에 그대로 건넨다. client.js 가 socket.on 으로 달아 둔
+// 바로 그 자리로 간다 — 그래서 온라인과 오프라인이 같은 화면 코드를 쓴다.
+function say(ev, data) { try { window.FFDELIVER && window.FFDELIVER(ev, data); } catch (e) { console.error(e); } }
+function me() { try { return (typeof getNick === 'function' && getNick()) || '나'; } catch (_) { return '나'; } }
+function offNote() {
+  try { typeof toast === 'function' && toast('📴 그물 없이 두는 판이에요. 코인·전적은 안 쌓여요.', 3400); } catch (_) {}
+}
+function stopAll() {
+  clearTimeout(timer); g = null;
+  clearTimeout(tvTimer); clearTimeout(tvNext); clearInterval(tvClockId); tvClockId = null; tg = null;
+  clearTimeout(qTimer); clearInterval(qClockId); qClockId = null; qg = null; qr = null;
+}
+
+const CLASSIC = ['pick_card', 'draw_card', 'offer_card', 'choose_auction', 'submit_bid', 'bid_card'];
+
 window.OFFLINE = {
   ready: true,
   start(difficulty, hooks) {
+    if (!R || !A) return false;
+    stopAll();
     diff = difficulty || 'normal';
     onState = hooks && hooks.onState;
     onOver = hooks && hooks.onOver;
@@ -236,8 +425,28 @@ window.OFFLINE = {
     aiStep();
   },
   act,
-  stop() { clearTimeout(timer); g = null; },
-  live() { return !!g; },
+  stop: stopAll,
+  live() { return !!(g || tg || qg); },
+  // 어떤 모드를 그물 없이 열 수 있는지 — 화면이 버튼을 그릴 때 물어본다
+  can(mode) {
+    if (mode === 'classic') return !!(R && A);
+    if (mode === 'twelve') return !!T;
+    if (mode === 'quad') return !!(G4 && A4 && V4);
+    return false;
+  },
+  // 서버로 가던 신호를 가로챈다. 우리가 처리했으면 true.
+  handle(ev, data) {
+    data = data || {};
+    if (g && CLASSIC.includes(ev)) { act(ev, data); return true; }
+    if (tg && ev === 'tv_act') return tvAct(data);
+    if (qg && ev === 'g4_act') return qAct(data);
+    if ((tg || qg || g) && (ev === 'leave_room' || ev === 'g4_leave')) { stopAll(); return true; }
+    // 시작 신호는 그물이 끊겼을 때만 받는다 — 붙어 있으면 서버가 여는 게 맞다
+    if (window.FFONLINE ? window.FFONLINE() : (typeof navigator !== 'undefined' && navigator.onLine)) return false;
+    if (ev === 'tv_solo') return tvStart(data);
+    if (ev === 'g4_start') return qStart(data);
+    return false;
+  },
 };
 
 })();

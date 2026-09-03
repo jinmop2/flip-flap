@@ -8,7 +8,12 @@
 //      관심 없는 판에서는 일부러 최약을 던져 다음 판 화력을 챙긴다.
 //   4. 최소 필요 배팅 — 이길 만큼만 지르고 남는 화력을 아낀다.
 //   5. 종반 — 덱이 마르면 세트 근접도가 곧 승부라 견제를 더 세게 한다.
-const G = require('./game4');
+// __ff_wrapped — 서버와 브라우저가 같은 파일을 읽는다. 감싸지 않으면
+// top-level const 가 브라우저 전역으로 새어 client.js 와 부딪힌다.
+(function () {
+'use strict';
+const __ff_m = (typeof module !== 'undefined' && module.exports) ? module : { exports: {} };
+const G = (typeof require === 'function' ? require('./game4') : window.GAME4);
 
 // 판단 기준값. 3인·4인을 따로 쓸어봤는데 두 인원 모두 같은 값이 가장 좋았다.
 // 전반적으로 예전보다 낮다 — 예전 AI 는 너무 신중해서, 이길 수 있는 판을
@@ -17,7 +22,8 @@ const G = require('./game4');
 // 덱 구성이 바뀌면 다시 맞춰야 한다 — 6종이 절반인 지금 덱에서 예전 값(0.12)은
 // 3인전에서 상대를 과대평가해 매판 과잉 배팅을 했다.
 // 좌석 수를 맞춘 맞대결로 쓸어 고른 값: 4인 +6.7%p / 3인 +0.2%p (예전 +6.9 / -6.7)
-const PCT = global.__AIPCT !== undefined ? global.__AIPCT : 0.18;
+const __G = (typeof global !== 'undefined') ? global : {};   // 브라우저엔 global 이 없다
+const PCT = __G.__AIPCT !== undefined ? __G.__AIPCT : 0.18;
 const TUNE = {
   concede: 0.7,   // 이 아래면 최약을 던져 다음 판 화력을 챙긴다
   contest: 1.5,   // 클로즈에서 진행자를 이기러 갈 최소 욕심
@@ -252,4 +258,7 @@ function chooseType(g, seat) {
   return r < 0.5 ? 'open' : 'close';
 }
 
-module.exports = { chooseBid, chooseConsign, chooseType, pickStyles, STYLES };
+__ff_m.exports = { chooseBid, chooseConsign, chooseType, pickStyles, STYLES };
+
+if (typeof window !== 'undefined') window.AI4 = __ff_m.exports;
+})();

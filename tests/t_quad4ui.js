@@ -195,7 +195,8 @@ console.log('\n⑨ 빈 자리와 뒷면을 구분하는가');
 {
   // 아직 아무것도 없는데 뒷면이 깔려 있으면 "이미 카드가 놓였다" 로 잘못 읽힌다.
   // 다만 클로즈에서 가려진 출품은 뒷면이 맞다 — 이 둘을 갈라야 한다.
-  ok('서버가 존재 여부를 따로 준다', /hasOffer: !!a\.offered/.test(fs.readFileSync(src + '/server4.js', 'utf8')));
+  // 자리마다 보여줄 것을 고르는 일은 view4.js 로 옮겼다 — 화면도 같은 파일을 읽는다
+  ok('서버가 존재 여부를 따로 준다', /hasOffer: !!a\.offered/.test(fs.readFileSync(src + '/view4.js', 'utf8')));
   ok('빈 자리 요소', /function slotHole/.test(c4));
   ok('셋을 갈라 그린다', /a\.hasOffer \? card4\(null\)/.test(c4));
   ok('뽑기 전에도 빈 자리', /\$\('q-center'\)\.appendChild\(slotHole\(\)\)/.test(c4));
@@ -305,7 +306,7 @@ console.log('\n⑬ 나가기 확인 · 친구 초대 · 상대 명패');
      && /enterWaiting\(\);\s*\n\s*socket\.emit\('g4_accept'/.test(c4));
 
   // 상대 명패·칭호 — 토큰은 게임 자리가 아니라 방 자리에 있다
-  ok('방 자리에서 토큰을 찾는다', /room\.seats\[i\]\.token/.test(s4));
+  ok('방 자리에서 토큰을 찾는다', /room\.seats\[i\]\.token/.test(s4 + fs.readFileSync(src + '/view4.js', 'utf8')));
   ok('게임 자리에서 찾지 않는다', !/\(!s\.isBot && s\.token\)/.test(s4));
   ok('명패·닉색을 입힌다', /npClass\(p\.profile\.plate\)/.test(c4));
   ok('칭호도 보여준다', /titleTag\(p\.profile\.titleInfo\)/.test(c4));

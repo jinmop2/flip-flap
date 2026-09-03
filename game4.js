@@ -34,6 +34,11 @@
 //
 // 3인 덱은 4인 덱에서 8장을 덜어낸 것이다(2종 1·3종 1·4종 2·6종 4).
 // 같은 카드 한 벌로 두 인원을 모두 지원하는 게 실물로 만들 때도 유리하다.
+// __ff_wrapped — 서버와 브라우저가 같은 파일을 읽는다. 감싸지 않으면
+// top-level const 가 브라우저 전역으로 새어 client.js 와 부딪힌다.
+(function () {
+'use strict';
+const __ff_m = (typeof module !== 'undefined' && module.exports) ? module : { exports: {} };
 const DECK38 = [[2, 4], [3, 6], [4, 10], [6, 18]];   // 4인 — 총 38장
 const DECK30 = [[2, 3], [3, 5], [4, 8], [6, 14]];    // 3인 — 총 30장
 const SPECS = { 3: DECK30, 4: DECK38 };
@@ -312,6 +317,9 @@ function advance(g) {
   g.phase = 'draw';
 }
 
-module.exports = { SPECS, HAND, specOf, createGame4, draw, offer, chooseType, bid, canBid, openedBid, openedBids, turnToBid,
+__ff_m.exports = { SPECS, HAND, specOf, createGame4, draw, offer, chooseType, bid, canBid, openedBid, openedBids, turnToBid,
                    settle, advance, bidderSeats, allBidsIn, checkSet, needLeft,
                    progress, rankSeats, beats, strength, isTop, isBot_, initDeck4 };
+
+if (typeof window !== 'undefined') window.GAME4 = __ff_m.exports;
+})();

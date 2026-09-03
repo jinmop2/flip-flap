@@ -79,7 +79,7 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
 });
 // 2인전 규칙 — 서버와 화면이 같은 파일을 읽어야 판정이 안 갈라진다.
 // public 안에 복사본을 두면 언젠가 한쪽만 고치게 된다.
-for (const f of ['rules2.js', 'ai2.js']) {
+for (const f of ['rules2.js', 'ai2.js', 'twelve.js', 'game4.js', 'ai4.js', 'items.js', 'view4.js']) {
   app.get('/' + f, (req, res) => {
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');

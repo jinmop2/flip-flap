@@ -914,7 +914,12 @@
       q4Room = d.roomId; mySeat = d.me || 0; lastRecv = Date.now(); q4Pend = null;
       // 앱을 껐다 켜도 돌아올 수 있게 남겨 둔다. 기억에만 두면 새로고침 한 번에
       // 돌아갈 방을 잊어버린다.
-      try { localStorage.setItem('ff_q4', JSON.stringify({ room: q4Room, seat: mySeat })); } catch (_) {}
+      // 방 번호가 없으면(그물 없이 두는 판) 적어 두지 않는다 — 적어 두면
+      // 판이 끝난 뒤에도 "게임 중" 으로 남아 로비에서 자꾸 되돌아가려 한다.
+      try {
+        if (q4Room) localStorage.setItem('ff_q4', JSON.stringify({ room: q4Room, seat: mySeat }));
+        else localStorage.removeItem('ff_q4');
+      } catch (_) {}
       resetFx();   // 새 판 — 딜·뒤집기 연출을 처음부터 다시
       $('q-startPanel').classList.remove('show');
       const total = d.n || (d.seats || []).length || 4;

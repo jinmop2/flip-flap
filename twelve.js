@@ -25,6 +25,11 @@
 // 칩이 0이 되면 그 경매에서 세트를 완성하지 못한 쪽이 진다.
 // 덱이 떨어지면 세트에 가장 가까운 쪽이 이긴다.
 
+// __ff_wrapped — 서버와 브라우저가 같은 파일을 읽는다. 감싸지 않으면
+// top-level const 가 브라우저 전역으로 새어 client.js 와 부딪힌다.
+(function () {
+'use strict';
+const __ff_m = (typeof module !== 'undefined' && module.exports) ? module : { exports: {} };
 const SPEC = [[2, 2], [3, 5], [4, 7], [6, 10]];   // 종류 → 그 종류의 장수
 const START_CHIPS = 20;
 const HAND = 6;
@@ -789,7 +794,7 @@ function chooseFallback(g, me) {
   if (g.lot) { g.lot.closeBet = 0; closeDecline(g, me === 1 ? 2 : 1); }
 }
 
-module.exports = {
+__ff_m.exports = {
   SPEC, START_CHIPS, HAND, CENTER,
   createGame, draw, offer, reoffer, chooseType,
   canChoose, canRaise, minRaise, maxRaise, raise, fold, canFold,
@@ -800,3 +805,6 @@ module.exports = {
   imagine, playout, mcCeiling,
   aiAct, applyAi,
 };
+
+if (typeof window !== 'undefined') window.TWELVE = __ff_m.exports;
+})();

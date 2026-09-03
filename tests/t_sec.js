@@ -5,7 +5,8 @@ let pass = 0, fail = 0;
 const ok = (n, c, x) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (x ? '  ' + x : ''))); };
 
 const srv  = fs.readFileSync(R + '/server.js', 'utf8');
-const srv4 = fs.readFileSync(R + '/server4.js', 'utf8');
+const srv4 = fs.readFileSync(R + '/server4.js', 'utf8')
+            + fs.readFileSync(R + '/view4.js', 'utf8');   // 자리별 상태는 view4 로 옮겼다
 const acc  = fs.readFileSync(R + '/accounts.js', 'utf8');
 const twv  = fs.readFileSync(R + '/twelve.js', 'utf8');
 const sut  = fs.readFileSync(R + '/sutda.js', 'utf8');

@@ -334,7 +334,8 @@ ok('옛 배지 요소는 걷어냈다', !/id="friendBadge"/.test(htm) && !/id="c
   const c4 = read('public/client4.js');
   ok('다인전에 관전 통로가 있다', /safe\(socket, 'g4_spectate'/.test(s4));
   ok('관전자에게도 상태를 보낸다', /for \(const sid of r\.specs \|\| \[\]\)/.test(s4));
-  ok('관전자에게 손패는 안 보낸다', /function stateForSpec[\s\S]{0,200}st\.myHand = \[\];/.test(s4));
+  ok('관전자에게 손패는 안 보낸다',
+     /function stateForSpec[\s\S]{0,200}st\.myHand = \[\];/.test(read('view4.js')));
   ok('앉아 있는 사람은 관전이 아니다', /r\.seats\.some\(\(s\) => s\.sid === socket\.id\)\) return;/.test(s4));
   ok('친구 목록이 다인전도 알려준다', /watchQuad: watchable \? false : !!w4/.test(srv));
   ok('어느 문을 두드릴지 가른다', /if \(quad\) socket\.emit\('g4_spectate'/.test(cli));

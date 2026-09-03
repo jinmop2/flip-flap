@@ -4,10 +4,19 @@
 const socket = (typeof io === 'function')
   ? io({ transports: ['websocket', 'polling'] })   // 웹소켓 우선 — 폴링 왕복 생략, 연결 빨라짐
   : (() => {
+      // 듣는 것만은 진짜로 받아 둔다. 그래야 그물 없이 두는 판이 서버 대신
+      // 같은 자리로 상태를 건넬 수 있다 — 화면 코드는 하나로 끝난다.
+      const L = {};
       const noop = () => {};
-      const s = { connected: false, id: null, on: noop, off: noop, once: noop,
-                  emit: noop, connect: noop, disconnect: noop,
-                  io: { reconnection: noop, opts: {} } };
+      const s = {
+        connected: false, id: null,
+        on(ev, fn) { (L[ev] || (L[ev] = [])).push(fn); return this; },
+        off(ev, fn) { if (L[ev]) L[ev] = fn ? L[ev].filter((f) => f !== fn) : []; return this; },
+        once(ev, fn) { const one = (d) => { s.off(ev, one); fn(d); }; return s.on(ev, one); },
+        emit: noop, connect: noop, disconnect: noop,
+        io: { reconnection: noop, opts: {} },
+        listeners(ev) { return (L[ev] || []).slice(); },
+      };
       // 그물이 돌아오면 한 번만 다시 읽는다. 그래야 온라인으로 이어서 할 수 있다.
       window.addEventListener('online', () => { if (typeof io !== 'function') location.reload(); }, { once: true });
       return s;
@@ -16,11 +25,17 @@ const socket = (typeof io === 'function')
 // ── 그물 없이 두는 판 ─────────────────────────────────────────────────────
 // 오프라인 판이 돌고 있으면 판 신호를 서버로 안 보내고 화면이 직접 처리한다.
 // 부르는 쪽은 socket.emit 그대로 쓴다 — 여기서만 갈라진다.
-const OFF_EVENTS = ['draw_card', 'offer_card', 'choose_auction', 'pick_card', 'submit_bid'];
 const _emit = socket.emit.bind(socket);
 socket.emit = function (ev, data) {
-  if (window.OFFLINE && OFFLINE.live() && OFF_EVENTS.includes(ev)) return OFFLINE.act(ev, data);
+  if (window.OFFLINE && OFFLINE.handle(ev, data)) return;
   return _emit(ev, data);
+};
+// 오프라인 판이 서버 노릇을 할 때, 상태를 socket.on 으로 달아 둔 그 자리로
+// 건넨다. 온라인이든 아니든 화면을 그리는 코드는 하나뿐이다.
+window.FFONLINE = () => !!socket.connected;
+window.FFDELIVER = function (ev, data) {
+  const ls = typeof socket.listeners === 'function' ? socket.listeners(ev) : [];
+  for (const fn of ls) { try { fn(data); } catch (e) { console.error('[오프라인] ' + ev, e); } }
 };
 
 // ── 화면 높이 동기화 ──────────────────────────────────────
@@ -336,6 +351,9 @@ window.dcGiveUp = function () {
 // 예전엔 ff_sess(2인전만 쓰는 열쇠)로 판단해서, 다인전에서 끊기면 아무것도
 // 안 뜨고 화면만 멈춰 있었다. 눌러 볼 것조차 없는 게 "재접속이 안 된다" 였다.
 function inLiveGame() {
+  // 그물 없이 두는 판에는 돌아갈 서버가 없다. 여기서 true 를 주면 판 위에
+  // "다시 잇는 중…" 덮개가 올라와, 멀쩡히 돌아가는 판을 가린다.
+  if (window.OFFLINE && OFFLINE.live()) return false;
   if (localStorage.getItem('ff_sess')) return true;          // 2인전·트웰브
   try { if (JSON.parse(localStorage.getItem('ff_q4') || 'null')) return true; } catch (_) {}   // 다인전
   const c = document.body.classList;

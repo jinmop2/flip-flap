@@ -28,6 +28,11 @@
 //  ctx = { g, me, opp, arg, helpers }   me/opp 는 1 또는 2
 //  성공 → { ok: true, msg, fx? }   실패 → { error }
 
+// __ff_wrapped — 서버와 브라우저가 같은 파일을 읽는다. 감싸지 않으면
+// top-level const 가 브라우저 전역으로 새어 client.js 와 부딪힌다.
+(function () {
+'use strict';
+const __ff_m = (typeof module !== 'undefined' && module.exports) ? module : { exports: {} };
 const SPEC_NEED = { 2: 2, 3: 3, 4: 4, 6: 6 };
 
 // 배팅 전(=승부에 개입 가능한) 페이즈
@@ -426,4 +431,7 @@ function isBehind(g, who) {
 const CATALOG = Object.fromEntries(Object.entries(ITEMS).map(([id, it]) =>
   [id, { name: it.name, icon: it.icon, tier: it.tier, desc: it.desc, phases: it.phases, needsCard: !!it.needsCard, loserOnly: !!it.loserOnly }]));
 
-module.exports = { ITEMS, CATALOG, MAX_HOLD, use, canUse, grant, give, pick, freshFx, rollItem, newItemDeck, isBehind };
+__ff_m.exports = { ITEMS, CATALOG, MAX_HOLD, use, canUse, grant, give, pick, freshFx, rollItem, newItemDeck, isBehind };
+
+if (typeof window !== 'undefined') window.ITEMS_M = __ff_m.exports;
+})();
