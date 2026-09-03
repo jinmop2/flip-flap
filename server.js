@@ -759,7 +759,8 @@ app.get('/auth/kakao/callback', rateLimit(30), async (req, res) => {
 const rules2 = require('./rules2');
 const { SPEC, initDeck, strength, is610, is21, aBeatsB,
         checkSet, progress, needLeft, strengthSum, resolveByProgress,
-        activePlayer, stateFor } = rules2;
+        activePlayer, stateFor,
+        judgeAuction, applyAuction, canContinue } = rules2;
 
 // ── 게임 상태 ──────────────────────────────────────────────
 
@@ -2874,13 +2875,9 @@ function settle(roomId) {
   const room = rooms[roomId]; if (!room?.game) return;
   const g = room.game;
   if (g.phase !== 'reveal' || !g.auction) return;   // 재경매 아이템으로 되돌아간 경우 등
-  const p1Bid = g.auction.p1Bid, p2Bid = g.auction.p2Bid;
-  const prize = [g.auction.centerCard, g.auction._offeredCard];
-  const tipCard = g.auction.tipCard || null;      // 🏷 덤 카드 — 진 쪽이 가져간다
-
-  // 뒤집개(반전) — 이번 경매만 약한 카드가 이긴다. 배신 규칙은 무시하고 순수 강함으로 비교.
-  const reversed = !!(g.itemMode && g.fx.reverse);
-  const p1Wins = reversed ? strength(p1Bid) > strength(p2Bid) : aBeatsB(p1Bid, p2Bid);
+  // 누가 이겼나는 규칙이 정한다 — 여기(서버)는 그 결과로 무엇을 할지만 맡는다
+  const d = judgeAuction(g);
+  const { p1Bid, p2Bid, prize, tipCard, reversed, p1Wins, special } = d;
 
   // 전문가 AI 카운팅 메모리 갱신 (리빌에서 전부 공개되는 정보만 — 치팅 아님)
   if (room.cpuIndex !== undefined && room.difficulty === 'expert' && room.aiMem) {
@@ -2897,8 +2894,6 @@ function settle(roomId) {
     });
   }
 
-  // 졸개의 배신 발동 감지 (반전 중에는 강약이 뒤집히므로 배신 연출 없음)
-  const special = !reversed && ((is610(p1Bid) && is21(p2Bid)) || (is610(p2Bid) && is21(p1Bid)));
   if (special) {
     room.players.forEach(sid => { if (sid) io.to(sid).emit('special', {}); });
     // 배신 성공자(6-10을 낸 승자) 미션·칭호 반영
@@ -2906,13 +2901,8 @@ function settle(roomId) {
     if (room.tokens && room.tokens[actor]) accounts.betrayEvent(room.tokens[actor]);
   }
 
-  if (p1Wins) g.p1Acquired.push(...prize); else g.p2Acquired.push(...prize);
-  // 배팅 카드 교환 — 에누리가 걸리면 교환 자체가 무효가 되어 각자 자기 카드를 회수한다.
-  // 한쪽만 회수시키면 그쪽은 +2, 상대는 0이 되어 상대 손패가 계속 말라붙는다(진행 불가로 이어짐).
-  const noSwap = !!(g.itemMode && (g.fx.noSwap[1] || g.fx.noSwap[2]));
-  if (noSwap) { g.p1Hand.push(p1Bid); g.p2Hand.push(p2Bid); }
-  else { g.p2Hand.push(p1Bid); g.p1Hand.push(p2Bid); }
-  g.auction = null;
+  // 카드가 어디로 가는지도 규칙이다
+  applyAuction(g, d);
 
   // 폭탄 — 낙찰받은 쪽이 손패 1장을 버린다. 폭탄을 건 사람도 예외가 아니다.
   // 사람이면 무엇을 버릴지 고르게 하고, AI 는 안 쓸 카드를 알아서 버린다.
@@ -2979,10 +2969,7 @@ function settle(roomId) {
   }
   // 다음 턴을 실제로 둘 수 있는지 확인 — 진행자는 출품+배팅으로 2장, 상대는 배팅으로 1장이 필요하다.
   // 모자란 채로 넘어가면 낼 카드가 없어 조용히 교착된다. 그럴 땐 세트 근접도로 판정.
-  const nextAuc = g.auctioneer === 1 ? 2 : 1;
-  const aucHand = (nextAuc === 1 ? g.p1Hand : g.p2Hand).length;
-  const othHand = (nextAuc === 1 ? g.p2Hand : g.p1Hand).length;
-  if (g.centerDeck.length === 0 || aucHand < 2 || othHand < 1) return endByProgress(roomId);
+  if (!canContinue(g)) return endByProgress(roomId);
   // 정산 결과를 눈으로 확인할 시간 — 카드가 승자 더미로 날아가 안착하고, 늘어난 세트를 본 뒤 다음 턴
   g.phase = 'settled';
   broadcast(roomId);

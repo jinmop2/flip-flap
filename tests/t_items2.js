@@ -230,7 +230,9 @@ console.log('\n⑧ 아이템 카드는 따로 있다 — 뽑히면 경매품이 
   ok('정해만 두고 주지는 않는다', /function pick\(g\) \{/.test(src)
      && !/function pick\(g\) \{[\s\S]{0,200}g\.items/.test(src));
   ok('덤은 패자에게', /if \(g\.itemMode && tipCard\) \{\s*\n\s*const loser = p1Wins \? 2 : 1;/.test(srv));
-  ok('덤이 없으면 아이템도 없다', /const tipCard = g\.auction\.tipCard \|\| null;/.test(srv));
+  // 정산 판정이 rules2 로 옮겨가면서 덤은 judgeAuction 이 실어 나른다.
+  // 없으면 null 이라 아래 'if (g.itemMode && tipCard)' 가 건너뛴다.
+  ok('덤이 없으면 아이템도 없다', /tipCard: a\.tipCard \|\| null,/.test(srv));
 
   // 둘 다 보여야 셈에 넣는다
   ok('양쪽에 보낸다', /tipCard: a\.tipCard \|\| null,/.test(srv) && /bonusCard: a\.bonusCard \|\| null,/.test(srv));

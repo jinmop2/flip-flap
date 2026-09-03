@@ -168,6 +168,45 @@ function stateFor(game, pi) {
   return base;
 }
 
+// ── 경매 정산 ─────────────────────────────────────────────────────────────
+// 정산은 세 가지가 한 덩어리로 붙어 있었다 — 누가 이겼나(판정), 카드가 어디로
+// 가나(적용), 그리고 코인·전적·연출(살림살이). 앞의 둘만 여기 둔다.
+// 살림살이는 방과 소켓을 알아야 하므로 서버에 남는다.
+
+// 누가 이겼나. 판을 건드리지 않고 답만 낸다.
+function judgeAuction(g) {
+  const a = g.auction;
+  const p1Bid = a.p1Bid, p2Bid = a.p2Bid;
+  const prize = [a.centerCard, a._offeredCard];
+  // 뒤집개 — 이번 경매만 약한 카드가 이긴다. 배신 규칙은 무시하고 순수 강함으로.
+  const reversed = !!(g.itemMode && g.fx && g.fx.reverse);
+  const p1Wins = reversed ? strength(p1Bid) > strength(p2Bid) : aBeatsB(p1Bid, p2Bid);
+  // 졸개의 배신 — 반전 중에는 강약이 뒤집히므로 배신이 아니다
+  const special = !reversed
+    && ((is610(p1Bid) && is21(p2Bid)) || (is610(p2Bid) && is21(p1Bid)));
+  return { p1Bid, p2Bid, prize, tipCard: a.tipCard || null, reversed, p1Wins, special };
+}
+
+// 낙찰 결과를 판에 적는다. 카드가 어디로 가는지까지가 규칙이다.
+function applyAuction(g, d) {
+  if (d.p1Wins) g.p1Acquired.push(...d.prize); else g.p2Acquired.push(...d.prize);
+  // 배팅 카드 교환 — 에누리가 걸리면 교환이 무효가 되어 각자 자기 카드를 회수한다.
+  // 한쪽만 회수시키면 그쪽은 +2, 상대는 0이 되어 상대 손패가 말라붙는다.
+  const noSwap = !!(g.itemMode && g.fx && (g.fx.noSwap[1] || g.fx.noSwap[2]));
+  if (noSwap) { g.p1Hand.push(d.p1Bid); g.p2Hand.push(d.p2Bid); }
+  else { g.p2Hand.push(d.p1Bid); g.p1Hand.push(d.p2Bid); }
+  g.auction = null;
+}
+
+// 다음 턴을 실제로 둘 수 있나. 진행자는 출품+배팅으로 2장, 상대는 배팅으로 1장이
+// 필요하다. 모자란 채로 넘어가면 낼 카드가 없어 조용히 교착된다.
+function canContinue(g) {
+  const nextAuc = g.auctioneer === 1 ? 2 : 1;
+  const aucHand = (nextAuc === 1 ? g.p1Hand : g.p2Hand).length;
+  const othHand = (nextAuc === 1 ? g.p2Hand : g.p1Hand).length;
+  return g.centerDeck.length > 0 && aucHand >= 2 && othHand >= 1;
+}
+
 // 서버(require)와 브라우저(<script>) 양쪽에서 같은 파일을 읽는다.
 // 빌드 도구를 들이면 이 한 파일 때문에 온 저장소에 설정이 붙는다 —
 // 열두 줄로 끝나는 일이라 그러지 않는다.
@@ -175,6 +214,7 @@ const RULES2 = {
   SPEC, initDeck, strength, is610, is21, aBeatsB,
   checkSet, progress, needLeft, strengthSum, resolveByProgress,
   activePlayer, stateFor,
+  judgeAuction, applyAuction, canContinue,
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = RULES2;
 if (typeof window !== 'undefined') window.RULES2 = RULES2;
