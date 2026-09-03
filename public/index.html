@@ -3277,6 +3277,24 @@
     /* 상대 끊김 카운트다운 오버레이 */
     #graceOverlay { display:none; position:fixed; inset:0; background:rgba(2,4,8,.72); z-index:38; align-items:center; justify-content:center; }
     #graceOverlay.show { display:flex; }
+    /* 내가 끊겼을 때 — 상대 끊김 창보다 위에 뜬다(둘 다 뜰 일은 없지만,
+       내 연결이 끊긴 사실이 항상 더 급하다) */
+    #dcOverlay { display:none; position:fixed; inset:0; background:rgba(2,4,8,.82);
+      backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+      z-index:44; align-items:center; justify-content:center;
+      padding:calc(20px + var(--safe-t)) 20px calc(20px + var(--safe-b)); }
+    #dcOverlay.show { display:flex; }
+    .dc-btn { margin-top:14px; min-height:48px; padding:0 26px; border-radius:14px; cursor:pointer;
+      font-family:'Fredoka'; font-size:.95rem; font-weight:800; letter-spacing:.02em;
+      background:linear-gradient(180deg,#c3d8f8,#8da4c5); color:#141b26;
+      border:1.5px solid rgba(220,235,255,.6);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 4px 12px rgba(0,0,0,.45); transition:.15s; }
+    .dc-btn:hover, .dc-btn:active { filter:brightness(1.1); transform:translateY(-1px); }
+    .dc-btn[disabled] { opacity:.55; cursor:default; transform:none; }
+    .dc-give { margin-top:9px; background:none; border:none; cursor:pointer;
+      font-family:'Fredoka'; font-size:.78rem; font-weight:600; color:#8794a8;
+      text-decoration:underline; text-underline-offset:3px; }
+    .dc-give:hover { color:#dcebff; }
     .grace-box { text-align:center; background:#0f141c; border:1px solid rgba(135,157,205,.35); border-radius:20px; padding:28px 40px; }
     .grace-title { font-size:1rem; color:#ff9a9a; font-weight:700; margin-bottom:8px; }
     .grace-count { font-family:'Bangers',cursive; font-size:4rem; color:#ff6b6b; line-height:1; text-shadow:0 0 20px rgba(129,151,198,.5); }
@@ -6467,6 +6485,18 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 </div>
 
 <!-- 상대 연결 끊김 카운트다운 -->
+<!-- 내가 끊겼을 때. 남은 시간과 돌아오는 단추를 같이 준다 —
+     여태 끊긴 사람에게는 "재접속 중…" 다섯 글자밖에 없었다. -->
+<div id="dcOverlay">
+  <div class="grace-box">
+    <div class="grace-title"><span data-ico="⚠"></span> 연결이 끊겼어요</div>
+    <div class="grace-count" id="dcCount">60</div>
+    <div class="grace-sub" id="dcSub">이 안에 돌아오면 판을 이어서 합니다</div>
+    <button class="dc-btn" id="dcBtn" onclick="tryReconnect()">다시 연결</button>
+    <button class="dc-give" onclick="dcGiveUp()">로비로 나가기</button>
+  </div>
+</div>
+
 <div id="graceOverlay">
   <div class="grace-box">
     <div class="grace-title"><span data-ico="⚠"></span> 상대 연결 끊김</div>

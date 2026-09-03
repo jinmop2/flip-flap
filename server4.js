@@ -35,7 +35,13 @@ const AFK_AFTER = 2;        // 연속 이만큼 넘기면 자리비움으로 본
 // 25 + 6 + 6 ≈ 37초 — 남은 사람이 기다릴 만한 한계선.
 const AFK_GIVEUP = 3;
 const ORPHAN_MS = 120000;   // 솔로 — 접속이 끊긴 뒤 이만큼 지나면 방을 정리
-const SEAT_GRACE = 20000;   // 멀티 — 이만큼 안 돌아오면 그 자리는 AI가 대신한다
+// AI 가 대신 두기 시작하는 시각과, 그 사람이 돌아올 수 있는 시각은 다른 문제다.
+// 하나로 묶어 두면 늘릴 때 남은 사람이 멈춰 기다리고(재 보니 165초), 줄이면
+// 돌아올 수가 없다. 그래서 둘로 나눈다 —
+//   · AI 는 20초 뒤에 곧바로 대신 둔다. 판은 절대 안 멈춘다.
+//   · 자리는 60초까지 임자의 것이다. 그 안에 돌아오면 AI 를 밀어내고 이어 한다.
+const SEAT_GRACE = 20000;    // 멀티 — 이만큼 지나면 AI 가 대신 둔다(판이 안 멈추게)
+const SEAT_RECLAIM = 60000;  // 그래도 이때까지는 임자가 돌아와 자리를 되찾을 수 있다
 
 // 대기 인원에 따라 몇 인용으로 시작할지. 3명이 모이면 AI를 끼우지 않고 셋이 한다.
 //   4명 이상 → 4인 / 3명 → 3인(전원 사람) / 2명 → 3인(사람2+AI1) / 1명 → 4인(사람1+AI3)
@@ -464,10 +470,16 @@ function attach4(io, hooks = {}) {
         if (r.solo) {                                   // 솔로는 판을 잠시 보관했다가 정리
           if (now - s.orphanAt > ORPHAN_MS) { destroy(roomId, '유예 만료'); break; }
         } else if (now - s.orphanAt > SEAT_GRACE) {     // 멀티는 남은 사람을 위해 AI가 대신
-          s.isBot = true; s.sid = null; s.orphanAt = null; s.left = true;
+          // left 로 표시하지 않는다 — 스스로 나간 게 아니라 끊긴 것뿐이다.
+          // orphanAt 도 지우지 않는다. 언제부터 비었는지를 알아야
+          // 되찾을 수 있는 시간인지 판단할 수 있다.
+          s.isBot = true; s.sid = null; s.aiSince = now;
           r.game.seats[i].isBot = true;
           changed = true;
-          dbg('자리를 AI가 대신', roomId, i);
+          dbg('자리를 AI가 대신(되찾기 가능)', roomId, i);
+        } else if (s.isBot && !s.left && s.orphanAt && now - s.orphanAt > SEAT_RECLAIM) {
+          s.orphanAt = null; s.left = true;             // 되찾을 시간이 지났다 — 이제 AI 자리다
+          dbg('자리를 아주 넘김', roomId, i);
         }
       }
       if (!rooms4[roomId] || r.dead) continue;
@@ -658,7 +670,14 @@ function attach4(io, hooks = {}) {
       if (!r || r.dead) return socket.emit('g4_gone');
       const seat = Number(data.seat);
       const s = r.seats[seat];
-      if (!s || s.isBot) return socket.emit('g4_gone');   // 이미 AI가 대신하고 있으면 못 돌아온다
+      if (!s) return socket.emit('g4_gone');
+      // AI 가 대신 두고 있어도 60초 안이면 자리는 아직 임자의 것이다.
+      // 스스로 나간 자리(left)와 시간이 다 지난 자리만 못 돌아온다.
+      if (s.isBot && (s.left || !s.orphanAt || Date.now() - s.orphanAt > SEAT_RECLAIM)) {
+        return socket.emit('g4_gone');
+      }
+      s.isBot = false; s.aiSince = null;                 // AI 를 밀어내고 자리를 되찾는다
+      if (r.game && r.game.seats[seat]) r.game.seats[seat].isBot = false;
       s.sid = socket.id; s.orphanAt = null;
       socket.g4room = roomId; socket.g4seat = seat;
       dbg('이어하기', roomId, 'seat=' + seat);

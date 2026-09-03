@@ -32,7 +32,12 @@ console.log('① 아무 일 없을 때는 쉬어야 한다');
   // 매칭 대기 카운트다운이 하나 늘었다(8). 상시로 도는 게 아니라 대기 창이
   // 열려 있는 동안만 돈다 — 매칭 성사·취소·판 시작 어디로 끝나든 꺼진다.
   const always = [...cli.matchAll(/setInterval\(/g)].length + [...c4.matchAll(/setInterval\(/g)].length;
-  ok('상시 타이머가 늘지 않았다', always <= 8, `${always}개`);
+  // 끊김 카운트다운이 하나 늘었다(9). 이것도 상시가 아니다 — 연결이 끊겨
+  // 창이 떠 있는 동안만 돌고, 0 이 되거나 다시 붙으면 스스로 끈다.
+  ok('상시 타이머가 늘지 않았다', always <= 9, `${always}개`);
+  ok('끊김 카운트다운은 스스로 끈다',
+     /if \(dcLeft <= 0\) \{ clearInterval\(dcTimer\); dcTimer = null; \}/.test(cli)
+     && /function dcHide\(\)[\s\S]{0,200}clearInterval\(dcTimer\)/.test(cli));
   ok('매칭 카운트다운은 반드시 꺼진다',
      (cli.match(/matchCountdownStop\(\)/g) || []).length >= 4
      && /function matchCountdownStop\(\) \{ clearInterval\(_mmTick\); \}/.test(cli));

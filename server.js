@@ -1283,7 +1283,10 @@ setInterval(() => {
     }
     // 교착 안전장치 — AI전에서 사람 차례가 아닌데 판이 오래 멈춰 있으면 되살린다.
     // 정상 흐름의 최대 정지는 5초 남짓(쇼다운·공개·정산)이라 오탐 여지가 없다.
-    if (room.vsBot && room.progressAt && g.phase !== 'game_over') {
+    // 유예 중(사람이 끊겨 돌아오기를 기다리는 중)에는 건드리지 않는다.
+    // 안 그러면 AI 차례라고 판단해 판을 혼자 진행시키고, 32초에 진행도 판정으로
+    // 끝내 버린다 — 60초를 주기로 한 약속이 무의미해진다.
+    if (room.vsBot && !room.graceTimer && room.progressAt && g.phase !== 'game_over') {
       const idle = Date.now() - room.progressAt;
       const humanTurn = ap && room.cpuIndex !== undefined && ap !== room.cpuIndex + 1;
       if (!humanTurn && idle > 20000) {
@@ -1864,15 +1867,21 @@ io.on('connection', (socket) => {
   // 새로고침/끊김 후 재접속
   socket.on('rejoin', ({ roomId, pid } = {}) => {
     const room = rooms[roomId];
-    if (!room || !room.game || room.game.phase === 'game_over') return socket.emit('rejoin_failed');
+    // 왜 못 돌아가는지 알려 준다 — "이전 게임이 끝났어요" 와 "그 방이 아니에요"
+    // 는 사람이 할 일이 다르다.
+    if (!room) return socket.emit('rejoin_failed', { why: 'gone' });
+    if (!room.game || room.game.phase === 'game_over') return socket.emit('rejoin_failed', { why: 'over' });
     const slot = room.pids.indexOf(pid);
-    if (slot === -1) return socket.emit('rejoin_failed');
+    if (slot === -1) return socket.emit('rejoin_failed', { why: 'notmine' });
     room.players[slot] = socket.id;
     socket.leave('lobby');
     socket.join(roomId); socket.roomId = roomId; socket.playerIndex = slot; socket.pid = pid;
     if (room.graceTimer) { clearInterval(room.graceTimer); room.graceTimer = null; }  // 유예 정지(남은 시간 유지)
     if (!room.clockOn) startClock(roomId);               // 멈췄던 시계 재개
-    socket.emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId, nicks: room.nicks, profiles: room.profiles });
+    socket.emit('game_start', { vsBot: room.vsBot, difficulty: room.difficulty, roomId,
+      nicks: room.nicks, profiles: room.profiles, itemMode: room.itemMode,
+      // 돌아온 사람에게 자기 남은 유예를 알려 준다
+      graceLeft: (room.graceLeft || [60, 60])[slot], strikes: (room.dcCount || [0, 0])[slot] });
     broadcast(roomId);
     const other = room.players[1 - slot];               // 재접속 알림은 상대에게만
     if (other) io.to(other).emit('opp_reconnected');
@@ -2564,15 +2573,20 @@ io.on('connection', (socket) => {
     // 게임 종료 상태거나 둘 다 끊김 → 즉시 정리.
     // 다만 돌아가던 판이었으면 지우기 전에 결과를 남긴다 — AI 전은 상대가
     // 없으니 여기로 곧장 떨어져 여태 아무 기록도 안 남았다.
-    if (!room.game || room.game.phase === 'game_over' || (!room.players[0] && !room.players[1])) {
+    // AI 전은 사람이 하나라 상대 자리가 늘 null 이다. 그래서 "둘 다 끊김" 에
+    // 걸려 그 자리에서 방이 지워지고 패배가 기록됐다 — 지하철에서 한 번
+    // 끊기면 이기던 판을 진다. 멀티는 60초를 주는데 솔로는 0초였다.
+    // 판이 돌아가던 중이면 사람이 하나든 둘이든 같은 유예를 준다.
+    if (!room.game || room.game.phase === 'game_over') {
       abandonIfLive(roomId, slot);
       if (room.graceTimer) { clearInterval(room.graceTimer); room.graceTimer = null; }
       endClock(room); delete rooms[roomId]; broadcastRooms(); return;
     }
-    // 튕김 횟수 누적 — 3회 이상이면 즉시 몰수패
+    // 예전엔 튕김 3회면 그 자리에서 몰수패였다. 지하철에서 두 번 끊기면 세
+    // 번째에 지는 셈이라 너무 가혹했다 — 판단은 누적 유예 시간에만 맡긴다.
+    // 횟수는 몇 번 끊겼는지 알려 주는 데만 쓴다.
     room.dcCount = room.dcCount || [0, 0];
     room.dcCount[slot]++;
-    if (room.dcCount[slot] >= 3) return forfeitPlayer(roomId, slot);
     // 유예 카운트다운 (누적 60초 — 재접속하면 정지, 또 끊기면 남은 시간부터)
     endClock(room);
     room.graceLeft = room.graceLeft || [60, 60];
@@ -2594,6 +2608,8 @@ function forfeitPlayer(roomId, slot) {
   if (room.graceTimer) { clearInterval(room.graceTimer); room.graceTimer = null; }
   endClock(room);
   const winner = slot === 0 ? 2 : 1;
+  // 아무도 안 남았으면(AI 전에서 사람이 안 돌아온 경우) 알릴 데가 없다.
+  // 전적은 남기고 방만 치운다.
   if (room.game) room.game.phase = 'game_over';
   finishStats(room, winner, true);
   room.players.forEach((s, i) => { if (s && i !== slot) io.to(s).emit('game_over', { winner, forfeit: true, myIndex: i + 1 }); });
@@ -3120,7 +3136,9 @@ function tourMakeMatch(index, seatA, seatB) {
 
   rooms[roomId] = {
     players: [p0.key, p1.isBot ? null : p1.key],
-    pids: [null, null],
+    // pid 를 안 넣어 두면 rejoin 이 자리를 못 찾는다 — 60초 유예를 줘도
+    // 돌아올 방법이 없었다. 대회에서 한 번 끊기면 그대로 몰수패였다.
+    pids: [s0 && s0.pid ? s0.pid : null, (!p1.isBot && s1 && s1.pid) ? s1.pid : null],
     nicks: [prof0.nick, prof1.nick],
     profiles: [prof0, prof1],
     tokens: [p0.token || null, p1.isBot ? null : (p1.token || null)],
@@ -3133,7 +3151,9 @@ function tourMakeMatch(index, seatA, seatB) {
   };
   if (p1.isBot) { rooms[roomId].cpuIndex = 1; rooms[roomId].aiMem = ai.createMem(); }
 
-  const join = (sk, idx) => { if (!sk) return; sk.leave('lobby'); sk.join(roomId); sk.roomId = roomId; sk.playerIndex = idx; };
+  const join = (sk, idx) => { if (!sk) return; sk.leave('lobby'); sk.join(roomId); sk.roomId = roomId; sk.playerIndex = idx;
+    // 자리에 적어 둔 pid 와 소켓의 pid 가 같아야 돌아올 때 짝이 맞는다
+    if (sk.pid) rooms[roomId].pids[idx] = sk.pid; };
   join(s0, 0); if (s1) join(s1, 1);
   rooms[roomId].game = createGame(false);
   rooms[roomId].startedAt = Date.now();

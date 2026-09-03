@@ -259,9 +259,86 @@ socket.on('dup_login', () => {   // 다른 기기에서 같은 계정 로그인 
   alert('다른 기기(또는 창)에서 같은 계정으로 접속했어요.\n이 창의 연결을 종료합니다.');
   location.href = location.origin + location.pathname;
 });
-socket.on('disconnect', () => setConn('연결 끊김 — 재접속 중…', 'bad'));
+let dcLeft = 60, dcTimer = null, dcTries = 0;
+function dcShow(left) {
+  const ov = document.getElementById('dcOverlay'); if (!ov) return;
+  dcLeft = Math.max(0, left);
+  ov.classList.add('show');
+  const paint = () => {
+    const n = document.getElementById('dcCount'); if (n) n.textContent = dcLeft;
+    const s = document.getElementById('dcSub');
+    if (s) s.textContent = dcLeft > 0
+      ? '이 안에 돌아오면 판을 이어서 합니다'
+      : '시간이 지났어요. 로비로 나가 주세요.';
+  };
+  paint();
+  if (dcTimer) clearInterval(dcTimer);
+  dcTimer = setInterval(() => {
+    dcLeft--; paint();
+    if (dcLeft <= 0) { clearInterval(dcTimer); dcTimer = null; }
+    else if (!socket.connected && dcLeft % 5 === 0) tryReconnect(true);   // 5초마다 조용히 재시도
+  }, 1000);
+}
+function dcHide() {
+  const ov = document.getElementById('dcOverlay'); if (ov) ov.classList.remove('show');
+  if (dcTimer) { clearInterval(dcTimer); dcTimer = null; }
+  dcTries = 0;
+  const b = document.getElementById('dcBtn'); if (b) { b.disabled = false; b.textContent = '다시 연결'; }
+}
+// 손으로 누르는 재접속. 소켓이 스스로 포기했을 때 사람이 돌아올 유일한 길이다.
+window.tryReconnect = function (quiet) {
+  const b = document.getElementById('dcBtn');
+  if (!quiet && b) { b.disabled = true; b.textContent = '연결 중…'; }
+  dcTries++;
+  try {
+    if (!socket.connected) socket.connect();
+    // 이미 붙어 있는데 방에 못 들어간 경우 — 곧장 다시 청한다
+    else {
+      const s = localStorage.getItem('ff_sess');
+      if (s) socket.emit('rejoin', { roomId: s, pid: PID });
+      // 다인전은 방·자리를 따로 적어 둔다 — 2인전과 열쇠가 다르다
+      let q4 = null;
+      try { q4 = JSON.parse(localStorage.getItem('ff_q4') || 'null'); } catch (_) {}
+      if (q4 && q4.room) socket.emit('g4_resume', { roomId: q4.room, seat: q4.seat || 0 });
+    }
+  } catch (_) {}
+  if (!quiet) setTimeout(() => { if (b) { b.disabled = false; b.textContent = '다시 연결'; } }, 2500);
+};
+window.dcGiveUp = function () {
+  dcHide(); clearSession();
+  location.href = location.origin + location.pathname;
+};
+
+// 판이 돌아가던 중인가 — 2인전·다인전·트웰브를 다 본다.
+// 예전엔 ff_sess(2인전만 쓰는 열쇠)로 판단해서, 다인전에서 끊기면 아무것도
+// 안 뜨고 화면만 멈춰 있었다. 눌러 볼 것조차 없는 게 "재접속이 안 된다" 였다.
+function inLiveGame() {
+  if (localStorage.getItem('ff_sess')) return true;          // 2인전·트웰브
+  try { if (JSON.parse(localStorage.getItem('ff_q4') || 'null')) return true; } catch (_) {}   // 다인전
+  const c = document.body.classList;
+  return c.contains('ingame') || c.contains('quad4') || c.contains('twelve');
+}
+socket.on('disconnect', () => {
+  setConn('연결 끊김 — 재접속 중…', 'bad');
+  // 판이 돌아가던 중에 끊겼으면 큰 창을 띄운다. 로비에서 끊긴 건 작은 글씨로 충분하다.
+  if (inLiveGame()) dcShow(dcLeft);
+});
+// 앱을 다시 보면 곧바로 확인한다 — 폰은 화면을 끄면 소켓을 재우고,
+// 다시 켜도 스스로 못 깨어나는 때가 있다. "자꾸 끊긴다" 의 큰 몫이 이것이다.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (!socket.connected && inLiveGame()) tryReconnect(true);
+});
+window.addEventListener('online', () => { if (!socket.connected) tryReconnect(true); });
 socket.on('connect_error', (e) => { setConn('서버 연결 실패', 'bad'); console.error('socket connect_error:', e && e.message); });
-socket.on('rejoin_failed', () => { clearSession(); toast('⚠️ 이전 게임이 끝나 로비로 돌아가요', 2400); setTimeout(fastReload, 1500); });
+socket.on('rejoin_failed', ({ why } = {}) => {
+  dcHide(); clearSession();
+  const msg = why === 'notmine' ? '⚠️ 그 방의 자리가 아니에요'
+            : why === 'gone'    ? '⚠️ 방이 사라졌어요'
+            :                     '⚠️ 이전 게임이 끝나 로비로 돌아가요';
+  toast(msg, 2400);
+  setTimeout(fastReload, 1500);
+});
 function showGrace(left) {
   document.getElementById('graceCount').textContent = Math.max(0, left ?? 60);
   document.getElementById('graceOverlay').classList.add('show');
@@ -6183,7 +6260,7 @@ socket.on('spec_challenge_fail', () => {
 });
 
 socket.on('error', msg => alert(msg));
-socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spectate, itemMode, tour }) => {
+socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spectate, itemMode, tour, graceLeft }) => {
   isTourMatch = !!tour;          // 대회 경기면 끝난 뒤 대진표로 돌아간다
   isVsBot = vsBot;
   isSpec = !!spectate;
@@ -6192,6 +6269,10 @@ socket.on('game_start', ({ vsBot, difficulty: diff, roomId, nicks, profiles, spe
   gameNicks = nicks || null;
   gameProfiles = profiles || null;
   if (roomId && !isSpec) saveSession(roomId);   // 관전은 재접속 세션 저장 안 함
+  // 돌아왔다 — 끊김 창을 걷고, 서버가 알려 준 남은 유예로 맞춘다.
+  // 화면이 세던 값은 어림이라 실제와 어긋날 수 있다.
+  dcHide();
+  if (typeof graceLeft === 'number') dcLeft = graceLeft;
   // 관전 모드: 이모트 숨김 + 관전 배너
   const ew = document.getElementById('emoteWrap'); if (ew) ew.style.display = isSpec ? 'none' : '';
   // 재대결/매칭/재접속 대비 초기화

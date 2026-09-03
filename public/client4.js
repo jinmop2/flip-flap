@@ -882,6 +882,7 @@
     try { if (typeof startBGM === 'function') startBGM('lobby'); } catch (_) {}
     q4MoveEmote('game');   // 2인전 화면이 제자리다 — 안 돌려주면 거기서 사라진다
     q4Live = false; q4 = null; q4Room = null; q4Pend = null;
+    try { localStorage.removeItem('ff_q4'); } catch (_) {}
     $('q-startPanel').classList.remove('show');
     document.body.classList.remove('quad4', 'q-n3', 'q-waiting');
     $('q-over').classList.remove('show');
@@ -911,6 +912,9 @@
       q4Spec = !!d.watching;                       // 관전이면 아무것도 못 낸다
       document.body.classList.toggle('q-spec', q4Spec);
       q4Room = d.roomId; mySeat = d.me || 0; lastRecv = Date.now(); q4Pend = null;
+      // 앱을 껐다 켜도 돌아올 수 있게 남겨 둔다. 기억에만 두면 새로고침 한 번에
+      // 돌아갈 방을 잊어버린다.
+      try { localStorage.setItem('ff_q4', JSON.stringify({ room: q4Room, seat: mySeat })); } catch (_) {}
       resetFx();   // 새 판 — 딜·뒤집기 연출을 처음부터 다시
       $('q-startPanel').classList.remove('show');
       const total = d.n || (d.seats || []).length || 4;
@@ -962,10 +966,20 @@
     });
     socket.on('g4_gone', () => {
       if (!q4Live) return;
+      try { localStorage.removeItem('ff_q4'); } catch (_) {}
       $('q-status').textContent = '연결이 끊겨 판을 이어갈 수 없어요.';
       setTimeout(() => { alert('접속이 끊겨 판이 종료됐어요. 다시 시작해주세요.'); window.q4Quit(); }, 400);
     });
-    socket.on('connect', () => { if (q4Live && q4Room) resume(); });
+    socket.on('connect', () => {
+      if (q4Live && q4Room) return resume();
+      // 앱을 껐다 켠 경우 — 기억은 비었지만 남겨 둔 자리가 있을 수 있다
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem('ff_q4') || 'null'); } catch (_) {}
+      if (saved && saved.room) {
+        q4Room = saved.room; mySeat = saved.seat || 0;
+        socket.emit('g4_resume', { roomId: q4Room, seat: mySeat });
+      }
+    });
   }
 
   function resume() {
