@@ -18,7 +18,7 @@ function browser() {
   const win = {};
   for (const [f, name] of [['rules2.js', 'RULES2'], ['ai2.js', 'AI2'], ['twelve.js', 'TWELVE'],
                            ['game4.js', 'GAME4'], ['ai4.js', 'AI4'], ['items.js', 'ITEMS_M'],
-                           ['view4.js', 'VIEW4']]) {
+                           ['view4.js', 'VIEW4'], ['items2.js', 'ITEMS2']]) {
     const ctx = vm.createContext({ window: win, module: undefined, require: undefined, console });
     vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx);
     if (!win[name]) throw new Error(f + ' 이 window.' + name + ' 을 안 붙였다');
@@ -120,6 +120,25 @@ console.log('\n③-3 다인전을 그물 없이 한 판');
   ok('멈추면 사라진다', b.O.live() === false);
 }
 
+console.log('\n③-4 아이템전을 그물 없이 한 판');
+{
+  // 아이템 효과는 items.js, 승패는 rules2, 그 사이 셈은 items2 — 전부 서버가 쓰는 파일이다.
+  // 여기서 보는 것은 "판이 아이템 차림으로 서고, 실제로 아이템이 손에 들어오는가".
+  const b = browser();
+  ok('아이템전을 열 수 있다', b.O.can('item'));
+  let last = null, over = null;
+  ok('아이템 판이 선다', b.O.start('normal', { onState: (x) => { last = x; }, onOver: (o) => { over = o; } }, true) !== false);
+  ok('아이템 모드로 알린다', !!last && last.itemMode === true, last ? String(last.itemMode) : '상태 없음');
+  ok('내 아이템 칸이 있다', !!last && Array.isArray(last.myItems), last ? typeof last.myItems : '?');
+  ok('아이템 덱은 안 내보낸다', !!last && last.itemDeck === undefined);
+  ok('상대 손패는 여전히 안 보인다', !!last && last.oppHand === undefined);
+  // 덱에 아이템 카드가 실제로 섞였는가 — 보통 카드보다 많아진다
+  ok('덱에 아이템 카드가 섞였다', !!last && last.centerDeckSize > 12, last ? String(last.centerDeckSize) : '?');
+  ok('가짜 아이템은 안 먹힌다', (() => { b.O.act('use_item', { itemId: '__proto__' });
+                                         const f = b.last('item_fail'); return b.O.live(); })());
+  b.O.stop();
+}
+
 console.log('\n④ 화면이 오프라인 엔진으로 갈라 보낸다');
 {
   ok('갈라 보내는 자리가 있다',
@@ -142,7 +161,10 @@ console.log('\n④ 화면이 오프라인 엔진으로 갈라 보낸다');
   ok('한 길로 들어간다', /function onGameStart\(/.test(cli) && /function onStateUpdate\(/.test(cli)
      && /function onGameOver\(/.test(cli));
   ok('소켓도 그 길을 쓴다', /socket\.on\('state_update', onStateUpdate\)/.test(cli));
-  ok('오프라인도 그 길을 쓴다', /OFFLINE\.start\(d, \{ onState: onStateUpdate, onOver: onGameOver \}\)/.test(cli));
+  ok('오프라인도 그 길을 쓴다',
+     /OFFLINE\.start\(d, \{ onState: onStateUpdate, onOver: onGameOver \}/.test(cli));
+  ok('아이템전도 그물 없이 연다',
+     /if \(!socket\.connected && window\.OFFLINE && OFFLINE\.can\('item'\)\)\s*\n\s*return offlineStart\(difficulty, true\);/.test(cli));
   ok('그물이 있으면 서버로 간다', /if \(!socket\.connected && window\.OFFLINE && OFFLINE\.ready\) return offlineStart\(d\);/.test(cli));
   // 그물 없이 두는 판에는 돌아갈 서버가 없다. 재접속 덮개가 올라오면
   // 멀쩡히 돌아가는 판을 가린다 — 실제로 그랬다.

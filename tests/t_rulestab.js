@@ -111,7 +111,8 @@ console.log('\n⑥ 부적 (상대 아이템 1회 차단)');
   const it = fs.readFileSync(src + '/items.js', 'utf8');
   // stateFor 는 rules2.js 로 옮겨갔다 — 둘을 같이 본다
   const srv = fs.readFileSync(src + '/server.js', 'utf8') + '\n'
-            + fs.readFileSync(src + '/rules2.js', 'utf8');
+            + fs.readFileSync(src + '/rules2.js', 'utf8') + '\n'
+            + fs.readFileSync(src + '/items2.js', 'utf8');
   ok('아이템이 있다', /ward: \{[\s\S]{0,120}name: '부적'/.test(it));
   ok('희귀다', /name: '부적', icon: '🧿', tier: 'rare'/.test(it));
   // 이번 턴에만 산다 = fx 에 둔다 (fx 는 턴마다 새로 만든다)
@@ -136,7 +137,8 @@ console.log('\n⑦ 방 만들기 · 모드 고르기');
 {
   // stateFor 는 rules2.js 로 옮겨갔다 — 둘을 같이 본다
   const srv = fs.readFileSync(src + '/server.js', 'utf8') + '\n'
-            + fs.readFileSync(src + '/rules2.js', 'utf8');
+            + fs.readFileSync(src + '/rules2.js', 'utf8') + '\n'
+            + fs.readFileSync(src + '/items2.js', 'utf8');
   // 방 이름은 미리 채워 둔다 — 빈칸이면 뭘 적어야 하나 망설이게 된다
   ok('방 이름 기본값을 채운다', /el\.value = `\$\{\(typeof getNick/.test(cli));
   ok('바로 고칠 수 있게 선택해 둔다', /el\.focus\(\); el\.select\(\)/.test(cli));

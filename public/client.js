@@ -1673,6 +1673,9 @@ window.startItemGame = function (diff) {
   // 난이도를 고를 수 있다. 예전엔 '보통' 으로만 붙어서, 클래식에서는 고르는데
   // 아이템전만 못 고르는 게 이상했다.
   difficulty = ['easy', 'hard', 'expert'].includes(diff) ? diff : 'normal';
+  // 그물이 끊겨 있으면 화면이 혼자 굴린다 — 아이템 효과도 서버가 쓰는 그 파일이 낸다
+  if (!socket.connected && window.OFFLINE && OFFLINE.can('item'))
+    return offlineStart(difficulty, true);
   socket.emit('create_room', { vsBot: true, difficulty, pid: PID, nick: getNick(), itemMode: true });
 };
 
@@ -5418,12 +5421,12 @@ function soloPlay(d) {
 }
 // 오프라인 판 시작 — game_start / state_update / game_over 를 화면에 그대로 흘려
 // 넣는다. 화면은 서버에서 온 것인지 아닌지 알 필요가 없다.
-function offlineStart(d) {
+function offlineStart(d, itemMode) {
   clearSession();
-  onGameStart({ vsBot: true, difficulty: d, roomId: null,
+  onGameStart({ vsBot: true, difficulty: d, roomId: null, itemMode: !!itemMode,
                 nicks: [getNick(), 'AI'], profiles: null });
   toast('📴 그물 없이 두는 판이에요. 코인·전적은 안 쌓여요.', 3400);
-  OFFLINE.start(d, { onState: onStateUpdate, onOver: onGameOver });
+  OFFLINE.start(d, { onState: onStateUpdate, onOver: onGameOver }, !!itemMode);
 }
 
 // ── 튜토리얼 — 쉬움 AI와 실전 + 단계별 코치 ─────────────────

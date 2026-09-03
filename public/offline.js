@@ -13,6 +13,7 @@
 'use strict';
 
 const R = window.RULES2, A = window.AI2;   // 없으면 클래식만 못 연다 — 다른 모드는 자기 엔진을 쓴다
+const IT = window.ITEMS_M, I2 = window.ITEMS2;   // 아이템전 — 효과는 items, 셈은 items2
 
 const AI_SEAT = 2;                          // 사람은 늘 1번, 상대가 2번
 let g = null;                               // 지금 굴러가는 판
@@ -29,10 +30,10 @@ function push() { if (g && onState) onState(R.stateFor(g, 0)); }
 
 // 판 하나를 차린다. 서버의 createGame(classic) 과 같은 모양이라야
 // 화면이 온라인과 똑같이 그린다.
-function newGame() {
+function newGame(itemMode) {
   const deck = R.initDeck();
   const all = R.initDeck();
-  return {
+  const game = {
     centerDeck: deck.slice(0, 12),
     p1Hand: deck.slice(12, 18),
     p2Hand: deck.slice(18, 24),
@@ -41,16 +42,38 @@ function newGame() {
     time: { 1: 300, 2: 300 },
     pick: { cards: [all[0], all.find((c) => c.id !== all[0].id)], choices: [null, null], revealed: false },
   };
+  if (itemMode) {
+    // 서버의 createGame(itemMode) 과 같은 차림. 아이템 덱은 화면에 안 내보낸다 —
+    // 다음에 뭐가 나올지 보이면 안 된다.
+    game.itemMode = true;
+    I2.mixItemCards(game.centerDeck);
+    game.itemDeck = IT.newItemDeck();
+    game.items = { 1: [], 2: [] };
+    game.itemUsed = { 1: false, 2: false };
+    game.fx = IT.freshFx();
+  }
+  return game;
 }
 
 function startTurn() {
   g.auction = { centerCard: null, _offeredCard: null, auctionType: null,
                 p1Bid: null, p2Bid: null, p1Submitted: false, p2Submitted: false, special: false };
   g.phase = 'draw';
+  if (g.itemMode) {   // 이번 경매 한정 효과·사용권은 턴마다 초기화
+    g.fx = IT.freshFx();
+    g.itemUsed = { 1: false, 2: false };
+  }
 }
 
-// 덱에서 한 장. 오프라인은 클래식만 굴리므로 아이템 카드는 없다.
+// 덱에서 한 장. 아이템전이면 보너스·덤 카드가 섞여 있는데, 그 처리는
+// 서버가 쓰는 바로 그 함수(items2.drawCenter)가 한다.
 function drawCenter() {
+  if (I2) {
+    const bonus = I2.drawCenter(g);
+    // 보너스로 무엇을 얻었는지는 둘 다 본다 — 공개라야 셈에 넣을 수 있다
+    for (const b of (bonus || [])) say('bonus_card', { seat: b.seat, item: b.item });
+    return;
+  }
   const card = g.centerDeck.shift();
   if (!card) { g.auction.centerCard = null; return; }
   g.auction.centerCard = card;
@@ -86,10 +109,34 @@ function aiBid() {
   return hand.find((c) => c.id === (card && card.id)) || hand[0];
 }
 
+// 상대가 아이템을 쓸지 정한다. 무엇을 쓸지는 items2 가 고른다 — 서버와 같은 셈이다.
+function aiUseItem() {
+  if (!g || !g.itemMode || !I2 || g.itemUsed[AI_SEAT]) return false;
+  if (Math.random() > (I2.AI_USE_RATE[diff] !== undefined ? I2.AI_USE_RATE[diff] : 0.6)) return false;
+  const id = I2.pickItem(g, AI_SEAT, diff);
+  if (!id) return false;
+  const arg = (id === 'swap') ? I2.swapArg(g, AI_SEAT) : undefined;
+  if (id === 'swap' && !arg) return false;
+  const out = IT.use(g, AI_SEAT, id, arg);
+  if (out.error) return false;
+  // 뭘 당했는지 모르면 억울하기만 하다. 엿본 카드(reveal)는 쓴 사람 몫이라 안 준다.
+  say('item_used', { byMe: false, itemId: id, name: out.name, icon: out.icon, msg: out.msg,
+                     blocked: !!out.blocked, reveal: null, fx: out.fx || null, seat: AI_SEAT });
+  push();
+  return true;
+}
+
 // 상대 차례면 잠깐 뒤에 둔다. 곧바로 두면 사람이 무슨 일이 일어났는지 못 본다.
 function aiStep() {
   if (!g || g.phase === 'game_over') return;
   const me = AI_SEAT;
+  // 아이템전 — 자기 차례가 오면 먼저 아이템을 쓸지 본다. 연출을 볼 시간을 주고 이어서 둔다.
+  if (g.itemMode && !g.itemUsed[me] && ['draw', 'offer', 'choose_type', 'bidding'].includes(g.phase)) {
+    const myTurn = ['draw', 'offer', 'choose_type'].includes(g.phase)
+      ? g.auctioneer === me
+      : !(g.auction && g.auction.p2Submitted);
+    if (myTurn && aiUseItem()) return later(aiStep, 1500);
+  }
   if (g.phase === 'pick' && g.pick.choices[1] === null) {
     return later(() => {
       if (!g || g.phase !== 'pick') return;
@@ -149,6 +196,15 @@ function reveal() {
   later(() => {
     if (!g || g.phase !== 'showdown') return;
     g.phase = 'reveal'; push();
+    // 재경매는 공개 시점에만 쓸 수 있다. 여기서 안 봐 주면 AI 손에 영영 남는다.
+    if (g.itemMode && I2) setTimeout(() => {
+      if (!g || g.phase !== 'reveal' || !I2.wantRedo(g, AI_SEAT, diff)) return;
+      const out = IT.use(g, AI_SEAT, 'redo');
+      if (out.error) return;
+      say('item_used', { byMe: false, itemId: 'redo', name: out.name, icon: out.icon,
+                         msg: out.msg, reveal: null, fx: out.fx || null, seat: AI_SEAT });
+      push(); later(aiStep, 900);
+    }, 800);
     later(() => { if (!g || g.phase !== 'reveal') return; settle(); }, 2400);
   }, 1000);
 }
@@ -156,7 +212,32 @@ function reveal() {
 function settle() {
   // 누가 이겼는지도, 카드가 어디로 가는지도 규칙이 정한다
   const d = R.judgeAuction(g);
+  const tipCard = d.tipCard;
+  if (d.special) say('special', {});
   R.applyAuction(g, d);
+
+  if (g.itemMode) {
+    // 폭탄 — 낙찰받은 쪽이 손패 1장을 버린다. 폭탄을 건 사람도 예외가 아니다.
+    if (g.fx && g.fx.bomb) {
+      const winner = d.p1Wins ? 1 : 2;
+      const wHand = winner === 1 ? g.p1Hand : g.p2Hand;
+      if (wHand.length && winner === AI_SEAT) {
+        const junk = I2.bombJunk(wHand, winner === 1 ? g.p1Acquired : g.p2Acquired);
+        wHand.splice(wHand.indexOf(junk), 1);
+        say('bomb_blew', { seat: winner, card: junk });
+      } else if (wHand.length) {
+        g.bombPick = winner;              // 이 사람이 고를 때까지 판이 기다린다
+        say('bomb_pick', { hand: wHand });
+      }
+    }
+    // 덤이 얹힌 경매에서만 아이템이 나온다 — 그리고 진 쪽이 가져간다.
+    // 앞선 쪽에 주면 눈덩이가 된다.
+    if (tipCard) {
+      const loser = d.p1Wins ? 2 : 1;
+      const got = IT.give(g, loser, tipCard.itemId);   // 앞면으로 보여 준 바로 그 아이템
+      if (got) say('tip_card', { seat: loser, item: got });
+    }
+  }
 
   const s1 = R.checkSet(g.p1Acquired), s2 = R.checkSet(g.p2Acquired);
   if (s1 || s2) {
@@ -211,11 +292,40 @@ function act(ev, data) {
     g.phase = 'bidding';
     push(); aiStep(); return;
   }
+  // ── 아이템전 ──
+  if (ev === 'use_item') {
+    if (!g.itemMode || !IT) return;
+    // 재경매는 '진 쪽'만 쓸 수 있다 — 이긴 사람이 물려서 판을 끄면 안 된다
+    if (data.itemId === 'redo' && g.phase === 'reveal' && g.auction) {
+      const rev = !!(g.fx && g.fx.reverse);
+      const p1W = rev ? R.strength(g.auction.p1Bid) > R.strength(g.auction.p2Bid)
+                      : R.aBeatsB(g.auction.p1Bid, g.auction.p2Bid);
+      if (p1W) return say('item_fail', '이긴 경매는 다시 할 수 없어요.');
+    }
+    const out = IT.use(g, 1, data.itemId, data.cardId);
+    if (out.error) return say('item_fail', out.error);
+    say('item_used', { byMe: true, itemId: data.itemId, name: out.name, icon: out.icon,
+                       msg: out.msg, blocked: !!out.blocked, reveal: out.reveal || null,
+                       fx: out.fx || null, seat: 1 });
+    push(); aiStep(); return;
+  }
+  if (ev === 'bomb_discard') {
+    if (!g.itemMode || g.bombPick !== 1) return;
+    const i = g.p1Hand.findIndex((c) => String(c.id) === String(data.cardId));
+    if (i < 0) return;
+    const gone = g.p1Hand.splice(i, 1)[0];
+    g.bombPick = null;
+    say('bomb_blew', { seat: 1, card: gone });
+    push(); return;
+  }
   if (ev === 'bid_card' || ev === 'submit_bid') {
     if (g.phase !== 'bidding' || g.auction.p1Submitted) return;
     if (R.activePlayer(g) !== 1) return;             // 클로즈 순서를 지킨다
     const c = g.p1Hand.find((x) => String(x.id) === String(data.cardId));
     if (!c) return;
+    // 재경매로 묶인 카드는 다시 못 낸다 — 그게 이 아이템의 전부다
+    if (g.itemMode && g.fx && g.fx.banned && g.fx.banned[1] === data.cardId)
+      return say('item_error', '방금 낸 카드는 다시 낼 수 없어요.');
     g.p1Hand.splice(g.p1Hand.indexOf(c), 1);
     g.auction.p1Bid = c; g.auction.p1Submitted = true;
     push();
@@ -410,17 +520,19 @@ function stopAll() {
   clearTimeout(qTimer); clearInterval(qClockId); qClockId = null; qg = null; qr = null;
 }
 
-const CLASSIC = ['pick_card', 'draw_card', 'offer_card', 'choose_auction', 'submit_bid', 'bid_card'];
+const CLASSIC = ['pick_card', 'draw_card', 'offer_card', 'choose_auction', 'submit_bid', 'bid_card',
+                 'use_item', 'bomb_discard'];
 
 window.OFFLINE = {
   ready: true,
-  start(difficulty, hooks) {
+  start(difficulty, hooks, itemMode) {
     if (!R || !A) return false;
+    if (itemMode && !(IT && I2)) return false;
     stopAll();
     diff = difficulty || 'normal';
     onState = hooks && hooks.onState;
     onOver = hooks && hooks.onOver;
-    g = newGame();
+    g = newGame(!!itemMode);
     push();
     aiStep();
   },
@@ -430,6 +542,7 @@ window.OFFLINE = {
   // 어떤 모드를 그물 없이 열 수 있는지 — 화면이 버튼을 그릴 때 물어본다
   can(mode) {
     if (mode === 'classic') return !!(R && A);
+    if (mode === 'item') return !!(R && A && IT && I2);
     if (mode === 'twelve') return !!T;
     if (mode === 'quad') return !!(G4 && A4 && V4);
     return false;

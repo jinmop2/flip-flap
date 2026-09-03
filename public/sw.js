@@ -2,7 +2,7 @@
 // 전략: 네트워크 우선(배포 즉시 반영), 실패 시 캐시 폴백. 소켓/API는 건드리지 않음.
 // 판을 올리면 옛 캐시를 버린다. 안 올리면 깨어나는 동안 그물이 끊겨
 // 캐시로 물러난 사람이 옛 화면을 계속 보게 된다.
-const VER = 'ff-v10';
+const VER = 'ff-v11';
 // 그물이 아예 없는 채로 앱을 켜도 판이 열려야 한다. 그러려면 판을 굴리는 데
 // 필요한 것이 미리 담겨 있어야 한다 — 한 번이라도 온라인으로 열어 본 뒤부터다.
 // socket.io 가 빠지면 client.js 첫 줄에서 io 를 못 찾아 화면이 통째로 죽는다.
@@ -11,7 +11,7 @@ const CORE = ['/', '/client.js', '/client4.js', '/manifest.webmanifest',
               '/socket.io/socket.io.js',
               '/rules2.js', '/ai2.js', '/offline.js',
               // 트웰브·다인전도 그물 없이 두려면 엔진이 손에 있어야 한다
-              '/twelve.js', '/game4.js', '/ai4.js', '/items.js', '/view4.js',
+              '/twelve.js', '/game4.js', '/ai4.js', '/items.js', '/view4.js', '/items2.js',
               '/i18n.js', '/art.js', '/item-icons.js'];
 
 self.addEventListener('install', e => {

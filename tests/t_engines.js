@@ -10,7 +10,8 @@ let n = 0, bad = 0;
 const ok = (m, c, x) => { n++; if (c) console.log('  ✓ ' + m); else { bad++; console.log('  ✗ ' + m + (x ? ' — ' + x : '')); } };
 
 const FILES = [['twelve.js', 'TWELVE'], ['game4.js', 'GAME4'], ['ai4.js', 'AI4'],
-               ['items.js', 'ITEMS_M'], ['rules2.js', 'RULES2'], ['ai2.js', 'AI2']];
+               ['items.js', 'ITEMS_M'], ['rules2.js', 'RULES2'], ['ai2.js', 'AI2'],
+               ['view4.js', 'VIEW4'], ['items2.js', 'ITEMS2']];
 
 console.log('\n① 전역이 새지 않는다');
 const win = {};

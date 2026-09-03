@@ -7,7 +7,7 @@ const items = require('../items.js');
 // stateFor(무엇을 보여 줄까)는 rules2.js 로 옮겨갔다 — 서버와 화면이 같은
 // 규칙을 써야 오프라인에서 판정이 안 갈라진다. 둘을 이어 붙여 본다.
 const htm = read('public/index.html'), cli = read('public/client.js'),
-      srv = read('server.js') + '\n' + read('rules2.js');
+      srv = read('server.js') + '\n' + read('rules2.js') + '\n' + read('items2.js');
 const { ITEM_ICONS } = require('../public/item-icons.js');
 
 let pass = 0, fail = 0;
@@ -55,7 +55,8 @@ console.log('\n② 폭탄 — 먹는 쪽이 버린다');
   // 건 사람도 예외가 아니다 — 서버는 '낙찰자' 만 보고 버리게 한다
   ok('건 사람도 먹으면 버린다', /if \(g\.itemMode && g\.fx\.bomb\) \{\s*\n\s*const winner = p1Wins \? 1 : 2;/.test(srv));
   ok('사람이면 직접 고른다', /io\.to\(sid\)\.emit\('bomb_pick'/.test(srv));
-  ok('AI 는 알아서 버린다', /const t = cpuTarget\(acq, wHand\);/.test(srv));
+  ok('AI 는 알아서 버린다', /I2\.bombJunk\(wHand, acq\)/.test(srv)
+     && /function bombJunk\(hand, acq\)[\s\S]{0,200}cpuTarget\(acq, hand\)/.test(srv));
   ok('고를 때까지 판이 기다린다', /g\.bombPick = winner;/.test(srv));
   ok('고른 카드만 지운다', /socket\.on\('bomb_discard'[\s\S]{0,420}hand\.splice\(i, 1\)/.test(srv));
   ok('남의 차례엔 못 지운다', /if \(!g\.itemMode \|\| g\.bombPick !== me\) return;/.test(srv));
