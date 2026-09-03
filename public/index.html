@@ -3144,7 +3144,7 @@
     .lb-title { font-size:1.05rem; font-weight:700; color:#dcebff; }
     /* 닫기 — 동그란 판을 걷어내고 굵은 엑스만 남긴다. 글자 × 는 획이 얇고
        글꼴마다 모양이 달라서, 선 두 개를 직접 긋는다. */
-    .lb-title .close-x { position:absolute; top:calc(10px + var(--safe-t)); right:10px; width:46px; height:46px;
+    .lb-title .close-x { position:absolute; top:10px; right:10px; width:46px; height:46px;
       cursor:pointer; color:transparent; font-size:0; line-height:0;
       background:none; border:none; -webkit-tap-highlight-color:transparent; z-index:2; }
     .lb-title .close-x::before, .lb-title .close-x::after {
@@ -3154,6 +3154,13 @@
     .lb-title .close-x::after  { transform:translate(-50%,-50%) rotate(-45deg); }
     .lb-title .close-x:hover::before, .lb-title .close-x:hover::after,
     .lb-title .close-x:active::before, .lb-title .close-x:active::after { background:#fff; }
+    /* 화면 맨 위까지 차는 창만 노치를 피한다. 가운데 뜨는 창은 노치와
+       상관이 없는데도 같이 밀려 × 가 제목 줄에서 벗어나 있었다. */
+    #shopModal .close-x, #myInfoModal .close-x, #lbModal .close-x,
+    #missionModal .close-x, #friendsModal .close-x, #clanModal .close-x,
+    #gachaModal .close-x, #soloModal .close-x, #multiModal .close-x {
+      top: calc(10px + var(--safe-t));
+    }
     .lb-btns { display:flex; gap:8px; margin-top:4px; }
     /* 공용 확인 다이얼로그 */
     .confirm-box { align-items:center; text-align:center; gap:10px; padding:26px 24px; }
@@ -5833,9 +5840,11 @@
       <button class="wc-mode" data-m="quad" onclick="roomMode('quad')">
         <b>다인전</b><small>3·4인</small>
       </button>
+      <!-- 미니게임 — 위 주석 참고. 입구만 막았다.
       <button class="wc-mode" data-m="mini" onclick="roomMode('mini')">
         <b>미니게임</b><small>두 장 승부</small>
       </button>
+      -->
       <button class="wc-mode wc-rand" data-m="random" onclick="roomMode('random')">
         <b>🎲 랜덤</b><small>클래식·아이템·TWELVE 중 하나</small>
       </button>
@@ -5962,6 +5971,11 @@
         </div>
       </div>
 
+      <!-- 미니게임 — 섯다식 배팅이라 국내에서 사행성 모사로 분류될 수 있다.
+           그렇게 되면 구글·애플의 자체등급분류 대상에서 빠져 게임위 직접 심의가
+           필요하다. 출시를 몇 주 밀 값어치가 없어 입구만 막았다.
+           서버·판정·화면 코드는 그대로 두었으므로 이 덩어리만 되살리면 돌아온다. -->
+      <!--
       <div class="sm-item t-mini" data-m="mini">
         <button class="sm-head" onclick="soloPick('mini')">
           <span class="sm-ico">🎴</span>
@@ -5984,6 +5998,7 @@
             </button>
           </div>
         </div>
+      -->
       </div>
 
       <div class="sm-item t-tour" data-m="tour">
@@ -6196,10 +6211,12 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
         <span class="tp-ico">👥</span>
         <span class="tp-txt"><b>다인전</b><small>셋·넷이서 · 지는 것도 수가 되는 판</small></span>
       </button>
+      <!-- 미니게임 — 위 주석 참고.
       <button class="tut-pk t-mini" onclick="tutStart('mini')">
         <span class="tp-ico">🎴</span>
         <span class="tp-txt"><b>미니게임</b><small>두 장으로 겨루는 섯다식 판</small></span>
       </button>
+      -->
     </div>
     <button class="btn btn-ink" onclick="tutPickClose()">닫기</button>
   </div>
