@@ -402,6 +402,61 @@ socket.on('auth_retry', () => {
     if (tk && socket.connected) socket.emit('auth', { token: tk });
   }, 1200);
 });
+// ── 알림 ──────────────────────────────────────────────────────────────────
+// 앱을 안 보고 있을 때 도전장을 알린다.
+// 아이폰은 두 가지가 다 맞아야 온다 — iOS 16.4 이상 + 홈 화면에 추가한 상태.
+// 사파리 탭에서는 구독 자체가 안 되므로, 그 경우엔 켜는 자리를 안 보여 준다.
+const pushCan = () => !!(window.isSecureContext && 'serviceWorker' in navigator
+  && 'PushManager' in window && 'Notification' in window);
+// 홈 화면에 추가한 상태인가 (아이폰에서 알림이 오는 유일한 조건)
+const standalone = () => !!(window.matchMedia('(display-mode: standalone)').matches
+  || window.navigator.standalone);
+
+function b64ToBytes(b64) {
+  const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+  const s = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(s); const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+async function pushState() {
+  if (!pushCan() || !myAccount) return { can: false };
+  if (isIOS() && !standalone()) return { can: false, needHome: true };
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    return { can: true, on: !!sub, perm: Notification.permission };
+  } catch (_) { return { can: false }; }
+}
+
+window.togglePush = async function () {
+  const st = await pushState();
+  if (!st.can) return;
+  const reg = await navigator.serviceWorker.ready;
+  const cur = await reg.pushManager.getSubscription();
+  if (cur) {                                    // 끄기
+    const endpoint = cur.endpoint;
+    try { await cur.unsubscribe(); } catch (_) {}
+    await apiPost('/api/push-off', { token: authToken(), endpoint });
+    toast('알림을 껐어요.', 1800);
+    return applySettings();
+  }
+  // 켜기 — 권한은 반드시 사람이 누른 자리에서 물어야 한다
+  let perm = Notification.permission;
+  if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch (_) {} }
+  if (perm !== 'granted') { toast('⚠️ 기기 설정에서 알림을 허용해 주세요.', 2600); return applySettings(); }
+  const { key } = await fetch('/api/push-key').then((r) => r.json()).catch(() => ({}));
+  if (!key) { toast('⚠️ 지금은 알림을 켤 수 없어요.', 2400); return applySettings(); }
+  try {
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key) });
+    const r = await apiPost('/api/push-on', { token: authToken(), sub: sub.toJSON() });
+    if (r && r.error) { try { await sub.unsubscribe(); } catch (_) {} toast('⚠️ ' + esc(r.error), 2400); }
+    else toast('🔔 알림을 켰어요. 도전장이 오면 알려 드릴게요.', 2600);
+  } catch (_) { toast('⚠️ 알림을 켜지 못했어요.', 2400); }
+  applySettings();
+};
+
 // ── 보너스 ────────────────────────────────────────────────────────────────
 // 지금은 광고 없이 그냥 준다(하루 3회 × 30). 광고망 승인이 나면 서버에서
 // AD_MODE=ad 로 켜고, 여기 '표를 받고 → 광고를 보고 → 표를 돌려준다' 사이에
@@ -1775,6 +1830,7 @@ function flyTipCard(item, mine) {
   setTimeout(() => {
     dest.classList.add('got-item');
     playSound('select');                       // 도착 — 들어왔다는 소리
+    if (mine) vibe('got');                     // 그리고 손으로도
     setTimeout(() => dest.classList.remove('got-item'), 420);
   }, BONUS_FLY_MS - 120);
   return BONUS_FLY_MS;
@@ -4025,6 +4081,16 @@ function applySettings() {   // 저장된 상태를 화면·오디오에 반영
   if (vr) vr.style.display = canVibe() ? '' : 'none';
   const cur = (window.FF && FF.lang()) || 'ko';
   document.querySelectorAll('.sp-segb[data-lang]').forEach((b) => b.classList.toggle('on', b.dataset.lang === cur));
+  // 알림 — 물어보는 데 시간이 걸려서(서비스워커 준비 대기) 따로 떼어 둔다
+  pushState().then((st) => {
+    const row = document.getElementById('spPushRow');
+    const note = document.getElementById('spPushNote');
+    if (!row || !note) return;
+    row.style.display = st.can ? '' : 'none';
+    // 아이폰에서 사파리 탭으로 들어온 사람에게는 왜 못 켜는지 알려 준다
+    note.style.display = st.needHome ? '' : 'none';
+    set('togPush', !!st.on);
+  }).catch(() => {});
 }
 // 언어를 바꾸면 이미 그려진 화면을 그 자리에서 다시 칠한다.
 // 새로고침을 시키면 진행 중인 판이 끊긴다.
@@ -4067,6 +4133,8 @@ function toggleGuide() {
 // 짧고 드물게. 매 손짓마다 울리면 그 순간부터 성가신 기능이 된다.
 const VIBE = {
   tap: 8,                       // 내가 무언가를 놓았다
+  pick: 5,                      // 카드를 고르는 중 — 아주 가볍게
+  place: [0, 11, 28, 16],       // 카드를 확정해서 놓았다 — 두 번 톡
   turn: [0, 14],                // 내 차례가 왔다
   win: [0, 18, 60, 26, 60, 40], // 이겼다
   lose: [0, 40, 90, 40],        // 졌다
@@ -6962,7 +7030,7 @@ function renderAuction(changed) {
       const cardEl = makeCard(revealed ? p.cards[slot] : null, { reveal: !!revealed });
       if (!isSpec && s.phase === 'pick' && p.myChoice == null && !isOpp) {
         cardEl.classList.add('selectable', 'pickable');
-        cardEl.addEventListener('click', () => { playSound('flip'); socket.emit('pick_card', { slot }); });
+        cardEl.addEventListener('click', () => { playSound('flip'); vibe('place'); socket.emit('pick_card', { slot }); });
       }
       if (isMine) cardEl.style.outline = '2px solid var(--gold)';
       wrap.appendChild(cardEl);
@@ -7012,10 +7080,10 @@ function renderAuction(changed) {
     // 요소가 다시 그려지면 click 만 조용히 없어진다. pointerup 은 늘 온다.
     const bo = document.createElement('button'); bo.className = 'btn btn-gold btn-sm'; bo.textContent = '오픈 경매';
     bo.title = '경매품 공개 · 배팅 비공개';
-    onPress(bo, () => { playSound('card'); socket.emit('choose_auction', { type: 'open' }); });
+    onPress(bo, () => { playSound('card'); vibe('place'); socket.emit('choose_auction', { type: 'open' }); });
     const bc = document.createElement('button'); bc.className = 'btn btn-ink btn-sm'; bc.textContent = '클로즈 경매';
     bc.title = '경매품 비공개 · 배팅 공개';
-    onPress(bc, () => { playSound('card'); socket.emit('choose_auction', { type: 'closed' }); });
+    onPress(bc, () => { playSound('card'); vibe('place'); socket.emit('choose_auction', { type: 'closed' }); });
     row.appendChild(bo); row.appendChild(bc); action.appendChild(row);
   }
 
@@ -7172,7 +7240,7 @@ function renderHand() {
         socket.emit('offer_card', { cardId: c.id });
       } });
     else if (bidding)
-      cardEl = makeCard(card, { selectable: true, tapOnSlot: true, selected: selectedBidCard?.id === card.id, onClick: c => { selectedBidCard = selectedBidCard?.id === c.id ? null : c; paintBidSel(); } });
+      cardEl = makeCard(card, { selectable: true, tapOnSlot: true, selected: selectedBidCard?.id === card.id, onClick: c => { selectedBidCard = selectedBidCard?.id === c.id ? null : c; vibe('pick'); paintBidSel(); } });
     else
       cardEl = makeCard(card);
     const slot = document.createElement('div'); slot.className = 'fan-slot';

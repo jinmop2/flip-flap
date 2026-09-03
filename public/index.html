@@ -3907,6 +3907,8 @@
     #settingsPanel .sp-row:hover { background:rgba(144,167,200,.1); }
     /* 언어는 켜고 끄는 게 아니라 고르는 것이라 토글 대신 두 칸 버튼 */
     /* 약관·처리방침·확률 — 로비에 늘 띄워 둘 것이 아니라 여기 모아 둔다 */
+    #settingsPanel .sp-pushnote { cursor:default; }
+    #settingsPanel .sp-pushnote:hover { background:none; }
     #settingsPanel .sp-docs { cursor:default; justify-content:center; gap:14px; flex-wrap:wrap; padding-top:12px; }
     #settingsPanel .sp-docs:hover { background:none; }
     .sp-doc { font-size:.72rem; color:#8794a8; text-decoration:none; border-bottom:1px solid rgba(135,148,168,.3); padding-bottom:1px; }
@@ -6483,6 +6485,11 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <div class="sp-row" onclick="toggleSfx()"><span class="sp-lbl">🔊 효과음</span><span class="sp-toggle" id="togSfx"><span class="sp-knob"></span></span></div>
     <div class="sp-row" onclick="toggleGuide()"><span class="sp-lbl"><span data-ico="💡"></span> 턴 안내</span><span class="sp-toggle" id="togGuide"><span class="sp-knob"></span></span></div>
     <div class="sp-row" id="spVibeRow" onclick="toggleVibe()"><span class="sp-lbl">📳 진동</span><span class="sp-toggle" id="togVibe"><span class="sp-knob"></span></span></div>
+    <div class="sp-row" id="spPushRow" style="display:none" onclick="togglePush()">
+      <span class="sp-lbl">🔔 알림</span><span class="sp-toggle" id="togPush"><span class="sp-knob"></span></span></div>
+    <div class="sp-row sp-pushnote" id="spPushNote" style="display:none">
+      <span class="sp-lbl" style="font-weight:500;font-size:.72rem;color:#8794a8;white-space:normal">
+        🔔 알림은 <b>홈 화면에 추가</b>한 뒤에 켤 수 있어요</span></div>
     <div class="sp-row sp-docs">
       <a class="sp-doc" href="/terms" target="_blank" rel="noopener">이용약관</a>
       <a class="sp-doc" href="/privacy" target="_blank" rel="noopener">개인정보 처리방침</a>

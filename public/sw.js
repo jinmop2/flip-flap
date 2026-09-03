@@ -2,7 +2,7 @@
 // 전략: 네트워크 우선(배포 즉시 반영), 실패 시 캐시 폴백. 소켓/API는 건드리지 않음.
 // 판을 올리면 옛 캐시를 버린다. 안 올리면 깨어나는 동안 그물이 끊겨
 // 캐시로 물러난 사람이 옛 화면을 계속 보게 된다.
-const VER = 'ff-v6';
+const VER = 'ff-v7';
 const CORE = ['/', '/client.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -36,4 +36,48 @@ self.addEventListener('fetch', e => {
       })
       .catch(() => caches.match(e.request, { ignoreSearch: url.pathname === '/' }))
   );
+});
+
+// ── 알림 ──────────────────────────────────────────────────────────────────
+// 앱을 안 보고 있을 때 도전장 같은 것을 알린다. 보내는 쪽(서버)이 무엇을
+// 넣었는지 믿지 않는다 — 글자는 잘라 쓰고, 여는 주소는 우리 것만 쓴다.
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) {}
+  const cut = (s, n) => String(s == null ? '' : s).replace(/\s+/g, ' ').slice(0, n);
+  let title = 'FLIP FLAP';
+  let body = '';
+  let url = '/';
+  if (d.kind === 'challenge') {
+    title = '도전장이 왔어요';
+    body = cut(d.from, 20) + ' 님이 한 판 하자고 합니다';
+    if (typeof d.roomId === 'string' && /^[A-Za-z0-9_-]{1,24}$/.test(d.roomId)) url = '/?room=' + d.roomId;
+  } else if (d.kind === 'turn') {
+    title = '내 차례예요';
+    body = cut(d.body, 60) || '판이 기다리고 있어요';
+  } else {
+    body = cut(d.body, 80);
+    if (!body) return;                       // 무슨 말인지 모르면 아예 안 띄운다
+  }
+  e.waitUntil(self.registration.showNotification(title, {
+    body, icon: '/icon-192.png', badge: '/icon-192.png',
+    tag: d.kind || 'ff', renotify: false, data: { url },
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const raw = (e.notification.data && e.notification.data.url) || '/';
+  // 우리 쪽 주소로만 연다
+  const url = new URL(raw, self.location.origin);
+  if (url.origin !== self.location.origin) return;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    for (const c of list) {
+      if (new URL(c.url).origin === self.location.origin && 'focus' in c) {
+        c.navigate(url.href).catch(() => {});
+        return c.focus();
+      }
+    }
+    return self.clients.openWindow(url.href);
+  }));
 });

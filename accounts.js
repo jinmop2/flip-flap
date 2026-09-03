@@ -3434,7 +3434,54 @@ function touchSeen(token) {
   persist(idl);
 }
 
+// ── 알림 구독 ────────────────────────────────────────────────────────────
+// 한 사람이 폰·태블릿·PC 로 여러 번 구독할 수 있어서 목록으로 둔다.
+// endpoint 가 그 기기의 고유 주소라 그걸 열쇠로 삼는다.
+const PUSH_MAX = 5;                 // 기기 다섯 대까지. 오래된 것부터 밀어낸다.
+function pushSave(token, sub) {
+  const u = byToken(token);
+  if (!u) return { error: '로그인이 필요해요.' };
+  if (!sub || typeof sub.endpoint !== 'string' || !sub.endpoint.startsWith('https://')) {
+    return { error: '구독 정보가 올바르지 않아요.' };
+  }
+  if (!sub.keys || typeof sub.keys.p256dh !== 'string' || typeof sub.keys.auth !== 'string') {
+    return { error: '구독 정보가 올바르지 않아요.' };
+  }
+  // 화면이 보내는 값이라 필요한 것만 골라 담는다 — 통째로 담으면 무엇이 들어올지 모른다
+  const clean = { endpoint: sub.endpoint.slice(0, 500),
+                  keys: { p256dh: String(sub.keys.p256dh).slice(0, 200),
+                          auth: String(sub.keys.auth).slice(0, 100) },
+                  at: Date.now() };
+  u.push = (u.push || []).filter((p) => p.endpoint !== clean.endpoint);
+  u.push.push(clean);
+  while (u.push.length > PUSH_MAX) u.push.shift();
+  persist(u.idl);
+  return { ok: true, count: u.push.length };
+}
+function pushDrop(token, endpoint) {
+  const u = byToken(token);
+  if (!u) return { error: '로그인이 필요해요.' };
+  const before = (u.push || []).length;
+  u.push = (u.push || []).filter((p) => p.endpoint !== endpoint);
+  if (u.push.length !== before) persist(u.idl);
+  return { ok: true, count: u.push.length };
+}
+// 보낼 대상 — 서버가 알림을 쏠 때 쓴다
+function pushSubsOf(idl) {
+  const u = db.users[Object.prototype.hasOwnProperty.call(db.users, idl) ? idl : null];
+  return (u && u.push) || [];
+}
+// 죽은 구독(410/404)은 지운다 — 안 지우면 매번 실패한다
+function pushForget(idl, endpoint) {
+  if (!Object.prototype.hasOwnProperty.call(db.users, idl)) return;
+  const u = db.users[idl]; if (!u || !u.push) return;
+  const before = u.push.length;
+  u.push = u.push.filter((p) => p.endpoint !== endpoint);
+  if (u.push.length !== before) persist(idl);
+}
+
 module.exports = {
+  pushSave, pushDrop, pushSubsOf, pushForget,
   createTempAccounts, rotateTempCode, revokeTempCode, tempAccountList, codeLogin,
   signup, login, kakaoLogin, googleLogin, setNick, byToken, meByToken, recordResult, applyRp4, claimDaily, myRank,
   viceOf, clanCoinBonus,

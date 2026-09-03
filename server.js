@@ -5,6 +5,7 @@ const io = require('socket.io')(http);
 const path = require('path');
 const crypto = require('crypto');
 const accounts = require('./accounts');
+const webpush = require('web-push');
 const ai = require('./expert4');        // 전문가 AI — 지금은 v4 (v3 + 출품 몬테카를로 + 덤 인식)
 const items = require('./items');       // 아이템전(이벤트 모드) 아이템 12종
 const twelve = require('./twelve');     // TWELVE — 칩으로 사는 경매 (모드 하나)
@@ -600,6 +601,49 @@ app.post('/api/tutorial-done', rateLimit(20), (req, res) => { const { token } = 
 app.post('/api/refer', rateLimit(10), (req, res) => { const { token, ref } = req.body || {}; res.json(accounts.applyReferral(token, ref, ipOf(req))); });
 // ── 보너스 (지금은 무료, 나중에 광고) ──
 // 금액도 횟수도 서버가 정한다. 화면은 '표를 받아' '돌려줄' 뿐이다.
+// ── 알림 ─────────────────────────────────────────────────────────────────
+// 웹 푸시. 키가 없으면 통째로 꺼진 채로 돈다 — 없다고 서버가 죽으면 안 된다.
+// 아이폰은 홈 화면에 추가한 웹앱에서만, 그리고 iOS 16.4 이상에서만 온다.
+const VAPID_PUB = process.env.VAPID_PUBLIC || '';
+const VAPID_KEY = process.env.VAPID_PRIVATE || '';
+const PUSH_ON = !!(VAPID_PUB && VAPID_KEY);
+if (PUSH_ON) {
+  webpush.setVapidDetails('mailto:jinmo9@yonsei.ac.kr', VAPID_PUB, VAPID_KEY);
+} else {
+  console.log('ℹ 알림 꺼짐 — VAPID_PUBLIC / VAPID_PRIVATE 환경변수가 없습니다.');
+}
+
+// 한 사람에게 보낸다. 기기가 여럿이면 다 보낸다.
+// 죽은 구독(410 Gone · 404)은 그 자리에서 지운다 — 안 지우면 매번 실패한다.
+async function pushTo(idl, payload) {
+  if (!PUSH_ON) return 0;
+  const subs = accounts.pushSubsOf(idl);
+  if (!subs.length) return 0;
+  const body = JSON.stringify(payload);
+  let sent = 0;
+  await Promise.all(subs.map(async (s) => {
+    try {
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, body, { TTL: 600 });
+      sent++;
+    } catch (e) {
+      const code = e && e.statusCode;
+      if (code === 410 || code === 404) accounts.pushForget(idl, s.endpoint);
+    }
+  }));
+  return sent;
+}
+
+app.get('/api/push-key', rateLimit(60), (req, res) => res.json({ key: VAPID_PUB || null }));
+app.post('/api/push-on',  rateLimit(20), (req, res) => {
+  const { token, sub } = req.body || {};
+  if (!PUSH_ON) return res.json({ error: '지금은 알림을 켤 수 없어요.' });
+  res.json(accounts.pushSave(token, sub));
+});
+app.post('/api/push-off', rateLimit(20), (req, res) => {
+  const { token, endpoint } = req.body || {};
+  res.json(accounts.pushDrop(token, String(endpoint || '')));
+});
+
 app.post('/api/bonus',       rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.bonusState(token)); });
 app.post('/api/bonus-start', rateLimit(20), (req, res) => { const { token } = req.body || {}; res.json(accounts.bonusStart(token)); });
 app.post('/api/bonus-claim', rateLimit(20), (req, res) => { const { token, ticket } = req.body || {}; res.json(accounts.bonusClaim(token, ticket)); });
@@ -1910,6 +1954,9 @@ io.on('connection', (socket) => {
     const sid = accountSockets.get(idl);
     if (!sid) return socket.emit('friend_challenge_fail', '상대가 지금 접속 중이 아니에요.');
     io.to(sid).emit('friend_challenge', { from: me.nick, roomId, password: room.password || '' });
+    // 앱을 안 보고 있어도 도전장은 알아야 한다 — 화면을 안 켜 놨으면 알림으로.
+    // 닉네임은 사람이 쓴 글이라 그대로 넣지 않는다(알림 본문에서 잘라 쓴다).
+    pushTo(idl, { kind: 'challenge', from: String(me.nick || '').slice(0, 20), roomId }).catch(() => {});
     socket.emit('friend_challenge_sent', { nick: accounts.nickOfIdl(idl) });
   });
 
