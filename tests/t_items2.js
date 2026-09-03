@@ -4,7 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 const items = require('../items.js');
-const htm = read('public/index.html'), cli = read('public/client.js'), srv = read('server.js');
+// stateFor(무엇을 보여 줄까)는 rules2.js 로 옮겨갔다 — 서버와 화면이 같은
+// 규칙을 써야 오프라인에서 판정이 안 갈라진다. 둘을 이어 붙여 본다.
+const htm = read('public/index.html'), cli = read('public/client.js'),
+      srv = read('server.js') + '\n' + read('rules2.js');
 const { ITEM_ICONS } = require('../public/item-icons.js');
 
 let pass = 0, fail = 0;

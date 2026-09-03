@@ -79,6 +79,46 @@ console.log('\n⑤ 덱이 떨어졌을 때 — 무승부가 거의 안 나와야
   ok(`무작위 ${N}판에서 무승부가 1% 미만`, draws / N < 0.01, draws + '판');
 }
 
+console.log('\n⑥ 누구 차례인가');
+{
+  const g = (phase, auctioneer, sub = {}) => ({ phase, auctioneer, auction: { p1Submitted: false, p2Submitted: false, ...sub } });
+  ok('뽑기·출품·방식은 진행자', R.activePlayer(g('draw', 1)) === 1 && R.activePlayer(g('offer', 2)) === 2
+     && R.activePlayer(g('choose_type', 1)) === 1);
+  // 클로즈에서 진행자가 나중에 낸다 — 출품 손실과 후공 정보이득이 상쇄된다
+  ok('배팅은 진행자가 먼저', R.activePlayer(g('bidding', 1)) === 1);
+  ok('진행자가 냈으면 상대 차례', R.activePlayer(g('bidding', 1, { p1Submitted: true })) === 2);
+  ok('공개 중엔 아무도 아니다', R.activePlayer(g('reveal', 1)) === 0);
+}
+
+console.log('\n⑦ 보여 줄 몫만 추린다 — 감추는 것도 규칙이다');
+{
+  const A = C(2, 1), B = C(6, 3), CEN = C(4, 2), OFF = C(3, 1);
+  const base = () => ({
+    phase: 'bidding', turn: 3, auctioneer: 1, centerDeck: [1, 2, 3],
+    p1Hand: [A], p2Hand: [B], p1Acquired: [CEN], p2Acquired: [],
+    time: {}, pick: null,
+    auction: { centerCard: CEN, _offeredCard: OFF, tipCard: null, bonusCard: null,
+               auctionType: 'open', p1Bid: A, p2Bid: B, p1Submitted: true, p2Submitted: true },
+  });
+  const v1 = R.stateFor(base(), 0);
+  ok('내 손패만 준다', v1.myHand.length === 1 && v1.myHand[0].kind === 2);
+  ok('상대 손패는 장수만', v1.oppHandLen === 1 && v1.oppHand === undefined);
+  // 오픈 경매 = 배팅이 비공개. 공개 단계 전에는 상대 카드를 주면 안 된다
+  ok('오픈에서 상대 배팅을 안 준다', v1.auction.oppBid === null);
+  ok('낸 사실은 알려 준다', v1.auction.oppBidSubmitted === true);
+  const g2 = base(); g2.phase = 'reveal';
+  ok('공개 단계에서는 준다', R.stateFor(g2, 0).auction.oppBid.kind === 6);
+  // 클로즈 = 낸 즉시 공개
+  const g3 = base(); g3.auction.auctionType = 'closed';
+  ok('클로즈는 내는 즉시 보인다', R.stateFor(g3, 0).auction.oppBid.kind === 6);
+  // 덱은 장수만
+  ok('덱은 장수만', R.stateFor(base(), 0).centerDeckSize === 3 && R.stateFor(base(), 0).centerDeck === undefined);
+  ok('자리 번호가 맞다', R.stateFor(base(), 0).myIndex === 1 && R.stateFor(base(), 1).myIndex === 2);
+  // 2번 자리에서 보면 내 것과 상대 것이 뒤바뀌어야 한다
+  const v2 = R.stateFor(base(), 1);
+  ok('반대 자리도 제 몫만', v2.myHand[0].kind === 6 && v2.myAcq.length === 0 && v2.oppAcq.length === 1);
+}
+
 console.log('');
 if (fail) { console.log(`✗ ${fail}개 실패 (${pass}/${pass + fail})`); process.exit(1); }
 console.log(`✓ 전부 통과 (${pass}/${pass})`);

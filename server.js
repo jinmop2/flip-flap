@@ -758,7 +758,8 @@ app.get('/auth/kakao/callback', rateLimit(30), async (req, res) => {
 // 여기서는 이름만 풀어 두고 아래 코드는 그대로 둔다(부르는 자리가 백 군데다).
 const rules2 = require('./rules2');
 const { SPEC, initDeck, strength, is610, is21, aBeatsB,
-        checkSet, progress, needLeft, strengthSum, resolveByProgress } = rules2;
+        checkSet, progress, needLeft, strengthSum, resolveByProgress,
+        activePlayer, stateFor } = rules2;
 
 // ── 게임 상태 ──────────────────────────────────────────────
 
@@ -886,17 +887,6 @@ function resolvePick(game) {
 }
 
 // 현재 시간이 흐르는(행동해야 하는) 플레이어. 없으면 0
-function activePlayer(g) {
-  switch (g.phase) {
-    case 'draw': case 'offer': case 'choose_type':
-      return g.auctioneer;
-    case 'bidding': {
-      const aucBid = g.auctioneer === 1 ? g.auction.p1Submitted : g.auction.p2Submitted;
-      return aucBid ? (g.auctioneer === 1 ? 2 : 1) : g.auctioneer;  // 진행자 먼저
-    }
-    default: return 0;  // pick, reveal, game_over
-  }
-}
 
 // 덱에서 중앙 카드 뽑기 (draw → offer)
 // 중앙 카드 뒤집기.
@@ -1395,77 +1385,6 @@ const rooms = {};
 const accountSockets = new Map();   // idl → socketId (같은 계정 동시접속 차단)
 const makeRoomId = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 
-function stateFor(game, pi) {
-  const isP1 = pi === 0;
-  const isAuctioneer = (pi + 1) === game.auctioneer;
-  const a = game.auction;
-  let auction = null;
-  if (a) {
-    const oppBidCard  = isP1 ? a.p2Bid : a.p1Bid;
-    const oppSubmitted = isP1 ? a.p2Submitted : a.p1Submitted;
-    // 오픈=비공개배팅(공개 안됨, reveal에서만) / 클로즈=공개배팅(제출 즉시 공개)
-    const showOpp = game.phase === 'reveal' || (a.auctionType === 'closed' && oppSubmitted);
-    // 출품카드 공개: 오픈이거나, reveal이거나, 방식 선택 중(choose_type)엔 진행자 본인만
-    let showOffered = a.auctionType === 'open' || game.phase === 'reveal'
-                      || (game.phase === 'choose_type' && isAuctioneer);
-    // 연막탄 — 걸린 쪽은 경매품 자체를 못 본다 (공개되는 reveal 단계는 예외)
-    const smoked = game.itemMode && game.fx && game.fx.smokeAgainst === pi + 1 && game.phase !== 'reveal';
-    if (smoked) showOffered = false;
-    auction = {
-      centerCard: smoked ? null : a.centerCard,
-      offeredCard: showOffered ? a._offeredCard : null,
-      // 아이템 카드는 둘 다 본다 — 저 판에 아이템이 걸렸는지 알아야 얼마를 지를지 정한다
-      tipCard: a.tipCard || null,
-      bonusCard: a.bonusCard || null,
-      smoked,
-      auctionType: a.auctionType,
-      myBid:           isP1 ? a.p1Bid : a.p2Bid,
-      oppBidSubmitted: oppSubmitted,
-      oppBid: showOpp ? oppBidCard : null,
-    };
-  }
-  // 선공 뽑기 정보 (공개 전엔 카드 내용 숨김)
-  let pick = null;
-  if (game.pick && (game.phase === 'pick' || game.phase === 'pick_reveal')) {
-    pick = {
-      myChoice:  game.pick.choices[pi],
-      oppChoice: game.pick.choices[1 - pi],
-      cards: game.pick.revealed ? game.pick.cards : [null, null],
-    };
-  }
-  const base = {
-    phase: game.phase, turn: game.turn, auctioneer: game.auctioneer,
-    centerDeckSize: game.centerDeck.length,
-    myHand: isP1 ? game.p1Hand : game.p2Hand,
-    oppHandLen: isP1 ? game.p2Hand.length : game.p1Hand.length,
-    myAcq:  isP1 ? game.p1Acquired : game.p2Acquired,
-    oppAcq: isP1 ? game.p2Acquired : game.p1Acquired,
-    auction, pick, myIndex: pi + 1,
-    time: game.time, active: activePlayer(game),
-  };
-  if (game.itemMode) {
-    const me = pi + 1;
-    base.itemMode = true;
-    base.myItems = (game.items[me] || []).slice();
-    base.oppItemCount = (game.items[me === 1 ? 2 : 1] || []).length;
-    base.itemUsed = !!game.itemUsed[me];
-    base.fx = {
-      reverse: game.fx.reverse,
-      smokedMe: game.fx.smokeAgainst === me,
-      smokedOpp: game.fx.smokeAgainst === (me === 1 ? 2 : 1),
-      noSwapMe: !!game.fx.noSwap[me],
-      // 내가 건 부적만 알려준다 — 상대 것을 알려주면 값싼 걸 던져 태우면 그만이라 뜻이 없어진다
-      wardMe: !!game.fx.ward[me],
-      peek: game.fx.peek[me] || null,   // 돋보기로 훔쳐본 상대 카드 (나에게만)
-      // 폭탄은 양쪽 다 안다 — 알아야 "이겨도 되나" 를 저울질할 수 있다
-      bomb: !!game.fx.bomb,
-      banned: game.fx.banned ? (game.fx.banned[me] || null) : null,
-      scan: game.fx.scan ? (game.fx.scan[me] == null ? null : game.fx.scan[me]) : null,
-    };
-    base.bombPick = game.bombPick === me;
-  }
-  return base;
-}
 
 // 관전자용 상태 — 공개 정보만 (양쪽 손패 내용은 숨김)
 function stateForSpec(game) {
