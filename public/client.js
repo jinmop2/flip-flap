@@ -1736,6 +1736,49 @@ function flyBonusCard(item, mine) {
   }, BONUS_FLY_MS - 120);
   return BONUS_FLY_MS;
 }
+// 덤은 판 위에 앞면으로 놓여 있다가 진 쪽에게 간다. 그 경로를 보여 준다 —
+// 보너스는 덱에서 나오지만 덤은 이미 판에 있으므로 출발점이 다르다.
+socket.on('tip_card', ({ seat, item }) => {
+  const mine = !!(state && seat === state.myIndex);
+  const ms = flyTipCard(item, mine);
+  if (mine) setTimeout(() => showItemGet(item), ms);
+  else setTimeout(() => toast(`${ico('🏷')} 상대가 덤으로 <b>${esc(item.name)}</b> 를 얻었어요`, 2600), ms);
+});
+let _tipEl = null;    // 판에 놓인 덤 카드
+function flyTipCard(item, mine) {
+  // 출발점은 판에 놓인 덤 카드. 정산 신호가 올 때쯤이면 판이 다시 그려져
+  // 그 마디가 사라졌거나 크기가 0 일 수 있어서, 실제로 잴 수 있는 것을 고른다.
+  const rectOf = (el) => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return (r.width > 2 && r.height > 2) ? r : null;
+  };
+  const from = rectOf(_tipEl)
+            || rectOf(document.querySelector('#auctionItems .item-card'))
+            || rectOf(document.getElementById('auctionItems'))
+            || rectOf(document.getElementById('deckStack'));
+  const dest = document.getElementById(mine ? 'itemSlots' : 'oppItemBadge');
+  const to = rectOf(dest) || rectOf(document.getElementById(mine ? 'itemBar' : 'oppbar'));
+  if (!from || !to || !dest || document.hidden) return 120;
+  const ghost = makeItemCard({ kind: 'tip', itemId: item.id, name: item.name, tier: item.tier });
+  ghost.classList.add('fly-card', 'fly-bonus');
+  ghost.style.left = from.left + 'px'; ghost.style.top = from.top + 'px';
+  ghost.style.width = from.width + 'px'; ghost.style.height = from.height + 'px';
+  document.body.appendChild(ghost);
+  void ghost.offsetWidth;
+  const dx = (to.left + to.width / 2) - (from.left + from.width / 2);
+  const dy = (to.top + to.height / 2) - (from.top + from.height / 2);
+  ghost.style.transform = `translate(${dx}px, ${dy}px) scale(.35) rotate(${mine ? -8 : 8}deg)`;
+  ghost.style.opacity = '0';
+  playSound('deal');
+  setTimeout(() => { try { ghost.remove(); } catch (_) {} }, BONUS_FLY_MS + 120);
+  setTimeout(() => {
+    dest.classList.add('got-item');
+    playSound('select');                       // 도착 — 들어왔다는 소리
+    setTimeout(() => dest.classList.remove('got-item'), 420);
+  }, BONUS_FLY_MS - 120);
+  return BONUS_FLY_MS;
+}
 socket.on('bomb_blew', ({ seat, card }) => {
   _bombOn = false;
   const go = document.getElementById('iuGo'); if (go) go.style.display = '';
@@ -2034,7 +2077,6 @@ function playItemChangeFx(u) {
   }
 }
 
-socket.on('item_get', it => showItemGet(it));
 socket.on('item_fail', msg => toast('⚠️ ' + esc(msg || '지금은 쓸 수 없어요.')));
 socket.on('item_used', u => {
   playItemFx(u);
@@ -6940,7 +6982,9 @@ function renderAuction(changed) {
   if (a.tipCard) {
     const w = document.createElement('div'); w.className = 'a-slot';
     const l = document.createElement('div'); l.className = 'a-label'; l.textContent = '덤 (진 쪽)';
-    w.appendChild(l); w.appendChild(makeItemCard(a.tipCard));
+    const tc = makeItemCard(a.tipCard);
+    _tipEl = tc;                     // 정산 때 여기서 출발한다
+    w.appendChild(l); w.appendChild(tc);
     items.appendChild(w);
   }
   items.appendChild(slotEl('중앙 카드', a.centerCard, { animate: drewNow, draw: drewNow }));

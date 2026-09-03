@@ -3033,8 +3033,12 @@ function settle(roomId) {
     // 카드에 앞면으로 보여 준 바로 그 아이템을 준다 — 다시 뽑으면 거짓말이 된다
     const got = items.give(g, loser, tipCard.itemId);
     if (got) {
-      const sid = room.players[loser - 1];
-      if (sid) io.to(sid).emit('item_get', got);
+      // 덤이 어디로 갔는지 둘 다 봐야 한다. 예전엔 받는 쪽에만 알려서
+      // 상대 아이템이 소리 없이 늘어나 있었다 — 무엇을 가져갔는지도 모른 채.
+      // 받았다는 팝업은 카드가 도착한 뒤에 화면이 띄운다(보너스와 같은 방식).
+      room.players.forEach((s2) => {
+        if (s2) io.to(s2).emit('tip_card', { seat: loser, item: got });
+      });
       if (room.cpuIndex === loser - 1) room.cpuItemPending = true;   // AI가 받음
     }
   }

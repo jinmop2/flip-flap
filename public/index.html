@@ -4648,6 +4648,13 @@
     .pile-group .card .c-num { font-size:2rem; padding-bottom:2px; }
     .pile-group .card .c-rank { font-size:.72rem; padding:1px 4px; min-width:16px; }   /* 겹쳐도 보이게 콤팩트하게 */
     .pile-group .card:hover { transform:translateY(-8px); z-index:15; box-shadow:0 10px 18px rgba(0,0,0,.55); }
+    /* 덮인 카드는 숫자를 감춘다. 드러난 폭이 28px 인데 숫자는 40px 이라
+       왼쪽 절반이 옆 카드 옆으로 삐져나와 얼룩처럼 보였다.
+       어차피 같은 무늬끼리 모아 놓은 더미라 숫자는 맨 위 한 장이면 되고,
+       덮인 카드는 등급 배지만 보이면 어느 카드인지 다 읽힌다.
+       (.pile-count 는 span 이라 :last-of-type 이 맨 위 카드를 정확히 짚는다) */
+    .pile-group .card:not(:last-of-type) .c-num { opacity:0; }
+    .pile-group .card:hover .c-num { opacity:1; }   /* 들어 올리면 다시 보인다 */
     .pile-empty { font-size:.7rem; color:rgba(209,226,252,.28); letter-spacing:1px; font-weight:600; }
     .pile-empty::before { content:'─  '; opacity:.6; }
     .pile-empty::after  { content:'  ─'; opacity:.6; }
