@@ -1,4 +1,17 @@
-const socket = io({ transports: ['websocket', 'polling'] });   // 웹소켓 우선 — 폴링 왕복 생략, 연결 빨라짐
+// io 가 없으면 여기서 터지고 아래가 통째로 안 돈다 — 로딩 화면이 영영 안 걷힌다.
+// 캐시가 비었거나 첫 실행이 오프라인이면 실제로 그렇게 된다. 그럴 땐 붙지 않는
+// 가짜 소켓으로 화면을 띄우고, 그물이 돌아오면 그때 제대로 다시 읽는다.
+const socket = (typeof io === 'function')
+  ? io({ transports: ['websocket', 'polling'] })   // 웹소켓 우선 — 폴링 왕복 생략, 연결 빨라짐
+  : (() => {
+      const noop = () => {};
+      const s = { connected: false, id: null, on: noop, off: noop, once: noop,
+                  emit: noop, connect: noop, disconnect: noop,
+                  io: { reconnection: noop, opts: {} } };
+      // 그물이 돌아오면 한 번만 다시 읽는다. 그래야 온라인으로 이어서 할 수 있다.
+      window.addEventListener('online', () => { if (typeof io !== 'function') location.reload(); }, { once: true });
+      return s;
+    })();
 
 // ── 그물 없이 두는 판 ─────────────────────────────────────────────────────
 // 오프라인 판이 돌고 있으면 판 신호를 서버로 안 보내고 화면이 직접 처리한다.
