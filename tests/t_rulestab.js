@@ -12,19 +12,24 @@ const i18n = fs.readFileSync(src + '/public/i18n.js', 'utf8');
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra !== undefined ? '  ' + extra : ''))); };
 
-console.log('① 일곱 개 탭');
+console.log('① 다섯 개 탭');
 {
-  const TABS = [['2', '2인용'], ['3', '3인용'], ['4', '4인용'], ['item', '아이템전'],
-                ['mini', '미니게임'], ['twelve', 'TWELVE'], ['etc', '기타']];
+  // 3인용·4인용을 '다인전' 하나로 합치고 미니게임을 뺐다. 순서도 정했다 —
+  // 처음 배우는 순서(클래식 → 아이템전 → TWELVE)가 앞이다.
+  const TABS = [['2', '클래식'], ['item', '아이템전'], ['twelve', 'TWELVE'],
+                ['quad', '다인전'], ['etc', '기타']];
   for (const [key, label] of TABS) {
     ok(`${label} 탭`, html.includes(`data-rt="${key}"`) && html.includes(`rulesTab('${key}')`));
   }
   // 창마다 같은 탭 줄을 갖고 있어야 어디서 열어도 오갈 수 있다
-  const modals = ['rulesModal', 'rules4Modal', 'rulesItemModal', 'rulesMiniModal',
+  const modals = ['rulesModal', 'rules4Modal', 'rulesItemModal',
                   'rulesTwelveModal', 'rulesEtcModal'];
   for (const m of modals) ok(`${m} 에 탭이 있다`, new RegExp(`id="${m}"[\\s\\S]{0,600}rules-tabs`).test(html));
-  ok('탭 줄이 창 수만큼 있다', (html.match(/class="rules-tabs"/g) || []).length === modals.length,
-     String((html.match(/class="rules-tabs"/g) || []).length));
+  // 미니 설명서는 주석으로만 남아 있어 탭 줄이 한 벌 더 세어진다
+  const rows = (html.replace(/<!--[\s\S]*?-->/g, '').match(/class="rules-tabs"/g) || []).length;
+  ok('탭 줄이 창 수만큼 있다', rows === modals.length, String(rows));
+  ok('탭 순서가 정한 대로다',
+     /data-rt="2"[\s\S]{0,200}data-rt="item"[\s\S]{0,200}data-rt="twelve"[\s\S]{0,200}data-rt="quad"[\s\S]{0,200}data-rt="etc"/.test(html));
 }
 
 console.log('\n② 탭은 상자 밖에 있다');
@@ -52,13 +57,15 @@ console.log('\n③ 기본은 2인용');
      && /contains\('quad4'\)\) return c\.contains\('q-n3'\) \? '3' : '4'/.test(cli)
      && /rulesTab\(currentMode\(\)\)/.test(cli));
   ok('한 번에 하나만 열린다', /mid === id \? 'flex' : 'none'/.test(cli));
-  ok('켜진 탭을 칠한다', /classList\.toggle\('on', b\.dataset\.rt === name\)/.test(cli));
+  // '3'·'4' 로 들어와도 칠해지는 칸은 '다인전' 하나다
+  ok('켜진 탭을 칠한다', /const lit = \(name === '3' \|\| name === '4'\) \? 'quad' : name;/.test(cli)
+     && /classList\.toggle\('on', b\.dataset\.rt === lit\)/.test(cli));
 }
 
-console.log('\n④ 3인용·4인용은 같은 글, 다른 숫자');
+console.log('\n④ 다인전 — 3인·4인이 같은 글, 다른 숫자');
 {
   // 같은 글을 두 벌로 두면 한쪽만 고치게 된다 — 상자는 하나를 같이 쓴다
-  ok('두 탭이 같은 창을 본다', /'3': 'rules4Modal', '4': 'rules4Modal'/.test(cli));
+  ok('셋 다 같은 창을 본다', /'3': 'rules4Modal', '4': 'rules4Modal', quad: 'rules4Modal'/.test(cli));
   ok('다른 숫자만 따로 띄운다', /RULES_N = \{ '3': \{ hand: 7, deck: 17 \}, '4': \{ hand: 6, deck: 14 \} \}/.test(cli));
   ok('안내 줄이 있다', /id="rules4Note"/.test(html));
   ok('안내 줄도 상자 밖', /rules-tabs[\s\S]{0,700}id="rules4Note"[\s\S]{0,400}class="rules-box"/.test(html));
@@ -88,7 +95,7 @@ console.log('\n⑤ 아이템전 설명서');
      !box.includes('60%') && !box.includes('32%') && !/전설 \(\d종\)<\/span><span>8%/.test(box));
   ok('한 벌로 섞어 뽑는다고 적혀 있다',
      /function newItemDeck\(\) \{ return shuffle\(Object\.keys\(ITEMS\)\); \}/.test(it)
-     && box.includes('한 벌로 섞어') && box.includes('등급은 안 따진다'));
+     && box.includes('한 벌로 섞어') && box.includes('등급은 안 따집니다'));
   // 12개 아이템 이름이 다 적혀 있어야 한다
   const names = [...it.matchAll(/name: '([^']+)', icon:/g)].map((m) => m[1]);
   const missing = names.filter((n) => !box.includes(n));

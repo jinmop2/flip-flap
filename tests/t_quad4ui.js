@@ -433,7 +433,7 @@ console.log('\n⑨ 다인전 설명서');
   ok('손패 둘 다 6장', /HAND = \{ 3: 6, 4: 6 \}/.test(g4src)
      && /<span>3인<\/span><span>30장<\/span><span>6장<\/span><span>12장<\/span>/.test(box)
      && /<span>4인<\/span><span>38장<\/span><span>6장<\/span><span>14장<\/span>/.test(box));
-  ok('진행자도 같이 낸다', /전원<\/b>이 배팅 카드를 낸다/.test(box));
+  ok('진행자도 같이 낸다', /전원<\/b>이 배팅 카드를 냅니다/.test(box));
   ok('클로즈는 순차 공개', /<b>시계방향으로 한 명씩<\/b>/.test(box));
   ok('역순 분배', /약하게 부른 사람이 가장 강한 카드<\/b>/.test(box));
   // 최약 카드는 덤마다 다르다 — 2인전 6-10 을 그대로 베끼면 틀린 설명이 된다

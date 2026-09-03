@@ -20,6 +20,10 @@
 
 
     // ── 상품 58종과 화면 문구 — 나중에 넣고 영어 짝을 안 만들어 뒀던 것들 ──
+    '개인정보 처리방침': 'Privacy Policy',
+    '클래식': 'Classic',
+    '다인전': 'Multiplayer',
+    '기타': 'More',
     '파편상점': 'Shard Shop',
     '쿠폰': 'Coupon',
     '개 · 누르면 그 자리에서 확정으로 바뀝니다': ' \u00b7 tap to convert on the spot',
@@ -420,9 +424,6 @@
     '이 모이면 열려요. 다섯 명부터는 8강이 되고, 남는 자리는 AI 가 채웁니다.':
       ' opens it. Five or more makes it a top-8, and AI fills any empty seat.',
     // 룰북 탭
-    '2인용': '1v1',
-    '3인용': '3 players',
-    '4인용': '4 players',
     // ── 로비·기본 ──
     '랭킹': 'Ranking',
     '게임방법': 'How to Play',

@@ -1,0 +1,11 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html",  "x": 0,    "y": 0, "w": 780, "h": 1180 },
+    { "file": "Icons.dc.html", "x": 900,  "y": 0, "w": 780, "h": 1180 }
+  ],
+  "annotations": [
+    { "id": "how-read", "x": 0, "y": -132, "w": 640,
+      "text": "왼쪽 — 지금 쓰는 색·글꼴을 코드에서 그대로 옮긴 것과, 손보면 티가 나는 네 곳.\n오른쪽 — 앱 아이콘 네 방향." }
+  ],
+  "launch": { "view": "canvas" }
+}

@@ -1,0 +1,169 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #070b17; font-family: 'Fredoka', system-ui, sans-serif; color: #dde4ee; }
+    a { color: #e0b45c; } a:hover { color: #f0c97e; }
+    .sw { width: 100%; height: 46px; border-radius: 9px; border: 1px solid rgba(160,185,225,.18); }
+    .lbl { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #6b7a92; font-weight: 600; }
+    .num { font-family: 'Fredoka'; font-variant-numeric: tabular-nums; font-size: 12px; color: #8fa2c2; }
+  </style>
+</helmet>
+
+<div style="padding: 42px 46px 52px; display: flex; flex-direction: column; gap: 38px">
+
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <div class="lbl">FLIP FLAP · 지금 쓰는 값</div>
+    <div style="font-family: 'Bangers', cursive; font-size: 44px; letter-spacing: .02em; color: #eaf0fb; line-height: 1.02">
+      디자인 체계
+    </div>
+    <div style="font-size: 13.5px; color: #8fa2c2; max-width: 66ch; line-height: 1.75">
+      새 색을 만들지 않았습니다. 코드에서 실제로 쓰는 값을 그대로 옮겨 적은 것입니다 —
+      어디를 손보면 티가 나는지 한눈에 보려고 모았습니다.
+    </div>
+  </div>
+
+  <!-- 바탕 -->
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <div class="lbl">바탕 · 글자</div>
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div class="sw" style="background: #070b17"></div>
+        <div style="font-size: 12px; font-weight: 600">바탕</div><div class="num">#070b17</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div class="sw" style="background: #152037"></div>
+        <div style="font-size: 12px; font-weight: 600">바 · 카드</div><div class="num">#152037</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div class="sw" style="background: #dde4ee"></div>
+        <div style="font-size: 12px; font-weight: 600">글자</div><div class="num">#dde4ee</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div class="sw" style="background: #8fa2c2"></div>
+        <div style="font-size: 12px; font-weight: 600">흐린 글자</div><div class="num">#8fa2c2</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div class="sw" style="background: #e0b45c"></div>
+        <div style="font-size: 12px; font-weight: 600">금 · 강조</div><div class="num">#e0b45c</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 카드 넉 장 -->
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <div class="lbl">카드 — 이 넉 장이 규칙의 전부입니다</div>
+    <div style="display: flex; gap: 14px; flex-wrap: wrap">
+      <div style="display: flex; flex-direction: column; gap: 7px; align-items: center">
+        <div style="width: 74px; height: 104px; border-radius: 11px; border: 2.5px solid #e05055;
+                    background: linear-gradient(160deg, #7a1a1e, #c1272d); display: flex;
+                    align-items: center; justify-content: center; font-size: 42px; font-weight: 700; color: #fff">2</div>
+        <div class="num">2장 · 가장 강함</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 7px; align-items: center">
+        <div style="width: 74px; height: 104px; border-radius: 11px; border: 2.5px solid #4a90c0;
+                    background: linear-gradient(160deg, #0f2e42, #1a5276); display: flex;
+                    align-items: center; justify-content: center; font-size: 42px; font-weight: 700; color: #fff">3</div>
+        <div class="num">5장</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 7px; align-items: center">
+        <div style="width: 74px; height: 104px; border-radius: 11px; border: 2.5px solid #e5c060;
+                    background: linear-gradient(160deg, #8a6f1f, #c9962c); display: flex;
+                    align-items: center; justify-content: center; font-size: 42px; font-weight: 700; color: #fff">4</div>
+        <div class="num">7장</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 7px; align-items: center">
+        <div style="width: 74px; height: 104px; border-radius: 11px; border: 2.5px solid #7a6250;
+                    background: linear-gradient(160deg, #2e2118, #4a3728); display: flex;
+                    align-items: center; justify-content: center; font-size: 42px; font-weight: 700; color: #fff">6</div>
+        <div class="num">10장 · 가장 약함</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 7px; align-items: center">
+        <div style="width: 74px; height: 104px; border-radius: 11px; border: 2.5px solid #6f8a80;
+                    background: linear-gradient(160deg, #182c28, #2c4f47); display: flex;
+                    align-items: center; justify-content: center; font-size: 13px; color: #9fb4d8">판</div>
+        <div class="num">#2c4f47</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 글꼴 -->
+  <div style="display: flex; flex-direction: column; gap: 14px">
+    <div class="lbl">글꼴 — 두 벌</div>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="font-family: 'Bangers', cursive; font-size: 40px; color: #eaf0fb; letter-spacing: .02em">FLIP FLAP · BANGERS</div>
+      <div class="num">제목·로고에만. 본문에 쓰면 읽기 어렵습니다.</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="font-family: 'Fredoka'; font-size: 21px; font-weight: 700; color: #dde4ee">Fredoka 700 — 버튼과 제목</div>
+      <div style="font-family: 'Fredoka'; font-size: 15px; font-weight: 500; color: #a9b8cf">Fredoka 500 — 본문. 숫자가 또렷해서 카드 숫자에도 씁니다.</div>
+    </div>
+  </div>
+
+  <!-- 지금 어긋나 있는 것 -->
+  <div style="display: flex; flex-direction: column; gap: 14px; border-top: 1px solid #1c2740; padding-top: 26px">
+    <div class="lbl" style="color: #e0b45c">손보면 티가 나는 곳</div>
+
+    <div style="display: flex; flex-direction: column; gap: 16px">
+      <div style="display: grid; grid-template-columns: 26px 1fr; gap: 0 14px">
+        <div style="font-family: 'Bangers'; font-size: 21px; color: #e0b45c; line-height: 1">1</div>
+        <div style="display: flex; flex-direction: column; gap: 5px">
+          <div style="font-size: 14.5px; font-weight: 600; color: #eaf0fb">변수 이름이 값과 어긋나 있습니다</div>
+          <div style="font-size: 13px; color: #8fa2c2; line-height: 1.7; max-width: 60ch">
+            <code style="background:#131c2e;padding:1px 5px;border-radius:4px;font-size:12px">--gold</code> 의 실제 값은
+            <b style="color:#9fb4d8">#9fb4d8</b> — 금색이 아니라 백금입니다. 6천 줄에 걸쳐 쓰여서 그대로 두었다는 주석이 달려 있는데,
+            그래서 새 화면을 만들 때마다 "금색인 줄 알고" 잘못 쓰게 됩니다. 실제 금색은 곳곳에 <b>#e0b45c</b> 로 직접 적혀 있습니다.
+          </div>
+          <div style="font-size: 12.5px; color: #6b7a92">→ <code style="background:#131c2e;padding:1px 5px;border-radius:4px;font-size:12px">--platinum</code> 을 새로 두고 새 코드부터 그걸 쓰면, 한 번에 안 바꿔도 됩니다.</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 26px 1fr; gap: 0 14px">
+        <div style="font-family: 'Bangers'; font-size: 21px; color: #e0b45c; line-height: 1">2</div>
+        <div style="display: flex; flex-direction: column; gap: 5px">
+          <div style="font-size: 14.5px; font-weight: 600; color: #eaf0fb">금색이 변수로 없습니다</div>
+          <div style="font-size: 13px; color: #8fa2c2; line-height: 1.7; max-width: 60ch">
+            강조에 쓰는 <b style="color:#e0b45c">#e0b45c</b> 가 CSS 변수가 아니라 낱낱이 박혀 있습니다.
+            그래서 자리마다 미세하게 다른 금색이 섞였습니다 — <b style="color:#ffd94a">#ffd94a</b>,
+            <b style="color:#ffd97a">#ffd97a</b>, <b style="color:#c8912e">#c8912e</b> 가 같이 쓰입니다.
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 26px 1fr; gap: 0 14px">
+        <div style="font-family: 'Bangers'; font-size: 21px; color: #e0b45c; line-height: 1">3</div>
+        <div style="display: flex; flex-direction: column; gap: 5px">
+          <div style="font-size: 14.5px; font-weight: 600; color: #eaf0fb">노치 셈이 자리마다 다릅니다</div>
+          <div style="font-size: 13px; color: #8fa2c2; line-height: 1.7; max-width: 60ch">
+            오늘만 세 군데에서 같은 버그가 나왔습니다 — 설명서 탭, 프로필 바 단추, 창 닫기 ×.
+            <code style="background:#131c2e;padding:1px 5px;border-radius:4px;font-size:12px">--safe-t</code> 를 더할 자리와 안 더할 자리를 코드가 매번 다시 정하고 있어서입니다.
+          </div>
+          <div style="font-size: 12.5px; color: #6b7a92">→ "화면 맨 위에 붙는 것"에만 더한다는 규칙을 한 줄로 못 박고, 그 밖에는 안 쓰기.</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 26px 1fr; gap: 0 14px">
+        <div style="font-family: 'Bangers'; font-size: 21px; color: #e0b45c; line-height: 1">4</div>
+        <div style="display: flex; flex-direction: column; gap: 5px">
+          <div style="font-size: 14.5px; font-weight: 600; color: #eaf0fb">로비가 비어 보입니다</div>
+          <div style="font-size: 13px; color: #8fa2c2; line-height: 1.7; max-width: 60ch">
+            화면의 절반이 빈 어두운 바닥입니다. 로고와 버튼 두 개 사이가 특히 넓습니다.
+            스토어 스크린샷을 찍을 때도 이 한 장이 제일 약했습니다.
+          </div>
+          <div style="font-size: 12.5px; color: #6b7a92">→ 오늘 몇 판 했는지, 지금 몇 명이 붙어 있는지 같은 <b style="color:#8fa2c2">살아 있는 숫자</b> 한 줄이면 빈 자리가 뜻을 얻습니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

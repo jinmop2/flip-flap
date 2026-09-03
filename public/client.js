@@ -4591,7 +4591,8 @@ window.miniRank = function (show) {
   box.classList.add('show');
 };
 
-window.toggleRulesMini = function (show) { show ? rulesTab('mini') : rulesClose(); };
+// 미니게임을 뺀 동안 이 설명서도 없다 — 부르면 클래식으로 보낸다
+window.toggleRulesMini = function (show) { show ? rulesTab('2') : rulesClose(); };
 
 // ── 토너먼트 (8강 · 2인전) ───────────────────────────────────
 // 화면은 네 모습을 오간다: 참가 안내 → 대기(30초) → 대진표 → 결과.
@@ -4922,8 +4923,10 @@ socket.on('clan_chat', ({ msg }) => {
 //
 // 3인용·4인용은 규칙이 같고 손패·덱 장수만 다르다. 그래서 상자는 하나를 같이 쓰고,
 // 다른 숫자만 탭 아래 한 줄로 띄운다 — 같은 글을 두 벌로 두면 한쪽만 고치게 된다.
-const RULES_MODALS = { '2': 'rulesModal', '3': 'rules4Modal', '4': 'rules4Modal',
-  item: 'rulesItemModal', mini: 'rulesMiniModal', twelve: 'rulesTwelveModal', etc: 'rulesEtcModal' };
+// 3인용·4인용을 '다인전' 한 칸으로 합쳤다 — 규칙이 같고 손패·덱 수만 달라서
+// 탭을 둘로 나눌 값어치가 없었다. 판 안에서 부르는 옛 이름('3','4')도 받는다.
+const RULES_MODALS = { '2': 'rulesModal', '3': 'rules4Modal', '4': 'rules4Modal', quad: 'rules4Modal',
+  item: 'rulesItemModal', twelve: 'rulesTwelveModal', etc: 'rulesEtcModal' };
 const RULES_N = { '3': { hand: 7, deck: 17 }, '4': { hand: 6, deck: 14 } };
 let rulesCur = '2';
 
@@ -4936,12 +4939,17 @@ window.rulesTab = function (name) {
   }
   // 지금 보이는 창의 탭만 칠한다 (창마다 같은 탭 줄을 갖고 있다)
   const box = document.getElementById(id);
-  if (box) for (const b of box.querySelectorAll('.rt')) b.classList.toggle('on', b.dataset.rt === name);
+  // '3'·'4' 로 들어와도 칠해지는 칸은 '다인전' 하나다
+  const lit = (name === '3' || name === '4') ? 'quad' : name;
+  if (box) for (const b of box.querySelectorAll('.rt')) b.classList.toggle('on', b.dataset.rt === lit);
   const note = document.getElementById('rules4Note');
   if (note) {
     const n = RULES_N[name];
-    note.style.display = n ? '' : 'none';
-    if (n) note.innerHTML = `${name}인전 — 손패 <b>${n.hand}장</b> · 중앙 덱 <b>${n.deck}장</b> (규칙은 3·4인 공통)`;
+    note.style.display = (lit === 'quad') ? '' : 'none';
+    // 판 안에서 열면 지금 인원의 수치를, 로비에서 열면 둘 다 보여 준다
+    note.innerHTML = n
+      ? `지금은 <b>${name}인전</b> — 손패 <b>${n.hand}장</b> · 중앙 덱 <b>${n.deck}장</b>`
+      : '3인전 — 손패 <b>7장</b> · 덱 <b>17장</b>　·　4인전 — 손패 <b>6장</b> · 덱 <b>14장</b>';
   }
 };
 function rulesClose() {
@@ -4956,7 +4964,6 @@ function currentMode() {
   const c = document.body.classList;
   if (c.contains('twelve')) return 'twelve';
   if (c.contains('quad4')) return c.contains('q-n3') ? '3' : '4';
-  if (c.contains('mini-on')) return 'mini';
   if (c.contains('item-mode')) return 'item';
   return '2';
 }

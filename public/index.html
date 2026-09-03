@@ -3906,6 +3906,11 @@
     }
     #settingsPanel .sp-row:hover { background:rgba(144,167,200,.1); }
     /* 언어는 켜고 끄는 게 아니라 고르는 것이라 토글 대신 두 칸 버튼 */
+    /* 약관·처리방침·확률 — 로비에 늘 띄워 둘 것이 아니라 여기 모아 둔다 */
+    #settingsPanel .sp-docs { cursor:default; justify-content:center; gap:14px; flex-wrap:wrap; padding-top:12px; }
+    #settingsPanel .sp-docs:hover { background:none; }
+    .sp-doc { font-size:.72rem; color:#8794a8; text-decoration:none; border-bottom:1px solid rgba(135,148,168,.3); padding-bottom:1px; }
+    .sp-doc:hover { color:#dcebff; border-bottom-color:#dcebff; }
     #settingsPanel .sp-lang { cursor:default; }
     #settingsPanel .sp-lang:hover { background:none; }
     /* 영어로 바꾸면 '언어' 가 'Language' 로 길어져 줄이 두 줄로 접혔다.
@@ -3918,6 +3923,8 @@
       padding:5px 10px; background:transparent; color:#bbc0ca; -webkit-tap-highlight-color:transparent; }
     .sp-segb + .sp-segb { border-left:1px solid rgba(131,150,180,.45); }
     .sp-segb.on { background:linear-gradient(180deg,#c3d8f8,#8da4c5); color:#1a1f27; }
+    .title-terms { font-size:.68rem; color:#6b7688; text-align:center; margin-top:8px; line-height:1.55; max-width:270px; }
+    .title-terms a { color:#8fa2c2; text-underline-offset:2px; }
     .nick-lang { display:flex; align-items:center; justify-content:center; gap:9px; margin:-2px 0 2px; }
     .nick-lang .nl-lbl { font-size:.72rem; font-weight:700; color:#9faec5; }
     #settingsPanel .sp-lbl { font-size:.86rem; font-weight:600; color:#dee8f6; }
@@ -4388,6 +4395,14 @@
     .r-callout{ font-size:.8rem; line-height:1.7; color:#bbc0ca; }
     .r-callout b{ color:#dcebff; }
 
+    /* 설명서 그림 — 글을 안 읽는 사람이 그림만 보고도 알아채게. 카드 색은
+       판에서 쓰는 색 그대로다(2 빨강 · 3 파랑 · 4 노랑 · 6 갈색). */
+    .r-diagram { width:100%; max-width:340px; height:auto; display:block; margin:10px auto 4px; }
+    .r-diagram .rd-num { font-family:'Fredoka'; font-weight:700; font-size:23px; fill:#fff; text-anchor:middle; }
+    .r-diagram .rd-cap { font-family:'Fredoka'; font-weight:600; font-size:9.5px; fill:#8fa2c2; text-anchor:middle; }
+    .r-diagram .rd-cap.rd-gold { fill:#e0b45c; }
+    .r-diagram .rd-who { font-family:'Fredoka'; font-weight:700; font-size:9.5px; fill:#9faec5; text-anchor:middle; }
+    .r-diagram .rd-who.rd-win { fill:#e0b45c; }
     /* 턴 흐름 */
     .r-flow{ display:flex; flex-direction:column; gap:7px; margin:8px 0; }
     .r-step{ display:flex; align-items:center; gap:10px; font-size:.82rem; color:#bbc0ca; }
@@ -5709,6 +5724,10 @@
       </button>
     </div>
     <p class="title-note">로그인하면 랭크·코인·전적이 저장돼요</p>
+    <!-- 약관 동의는 시작할 때 한 번. 로비에 늘 띄워 둘 것이 아니다 —
+         다만 스토어가 처리방침의 공개 주소를 요구하므로 링크는 살려 둔다. -->
+    <p class="title-terms">시작하면 <a href="/terms" target="_blank" rel="noopener">이용약관</a>과
+      <a href="/privacy" target="_blank" rel="noopener">개인정보 처리방침</a>에 동의하는 것으로 봅니다.</p>
   </div>
 </div>
 
@@ -5752,8 +5771,6 @@
       <button class="misc-link" onclick="inviteFriend()"><svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>친구 초대</button>
       <button class="misc-link" id="installBtn" style="display:none" onclick="installApp()"><span data-ico="📲"></span> 앱으로 추가</button>
       <a class="misc-link" href="https://open.kakao.com/o/pgXbpk8h" target="_blank" rel="noopener"><span data-ico="💬"></span> 버그 제보</a>
-      <a class="misc-link" href="/terms" target="_blank" rel="noopener"><span data-ico="📜"></span> 이용약관</a>
-      <a class="misc-link" href="/privacy" target="_blank" rel="noopener"><span data-ico="🔒"></span> 개인정보</a>
     </div>
   </div>
 
@@ -6466,6 +6483,11 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <div class="sp-row" onclick="toggleSfx()"><span class="sp-lbl">🔊 효과음</span><span class="sp-toggle" id="togSfx"><span class="sp-knob"></span></span></div>
     <div class="sp-row" onclick="toggleGuide()"><span class="sp-lbl"><span data-ico="💡"></span> 턴 안내</span><span class="sp-toggle" id="togGuide"><span class="sp-knob"></span></span></div>
     <div class="sp-row" id="spVibeRow" onclick="toggleVibe()"><span class="sp-lbl">📳 진동</span><span class="sp-toggle" id="togVibe"><span class="sp-knob"></span></span></div>
+    <div class="sp-row sp-docs">
+      <a class="sp-doc" href="/terms" target="_blank" rel="noopener">이용약관</a>
+      <a class="sp-doc" href="/privacy" target="_blank" rel="noopener">개인정보 처리방침</a>
+      <a class="sp-doc" href="/rates" target="_blank" rel="noopener">확률 안내</a>
+    </div>
     <div class="sp-row sp-lang"><span class="sp-lbl">🌐 언어</span>
       <span class="sp-seg">
         <button class="sp-segb" data-lang="ko" onclick="pickLang('ko')">한국어</button>
@@ -6678,20 +6700,18 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 <div id="rules4Modal" class="rules-modal" onclick="if(event.target===this)toggleRules4(false)">
   <div class="rules-wrap">
     <div class="rules-tabs" role="tablist">
-      <button class="rt" data-rt="2" onclick="rulesTab('2')">2인용</button>
-      <button class="rt" data-rt="3" onclick="rulesTab('3')">3인용</button>
-      <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
+      <button class="rt" data-rt="2" onclick="rulesTab('2')">클래식</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
-      <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
       <button class="rt" data-rt="twelve" onclick="rulesTab('twelve')">TWELVE</button>
+      <button class="rt" data-rt="quad" onclick="rulesTab('quad')">다인전</button>
       <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
     <div class="rules-note" id="rules4Note"></div>
   <div id="rulesBox4" class="rules-box" data-i18n-block="rules4">
     <span class="close-x" onclick="toggleRules4(false)">×</span>
     <h2>FLIP FLAP <span class="r4-tag">3·4인전</span></h2>
-    <p style="color:#7a7f89">기본은 2인전과 같다 — <b style="color:#dcebff">세트</b>를 먼저 완성하면 승리!<br>
-    사람이 늘어나면서 달라진 것만 모았다.</p>
+    <p style="color:#7a7f89">기본은 2인전과 같습니다 — <b style="color:#dcebff">세트</b>를 먼저 완성하면 승리!<br>
+    사람이 늘어나면서 달라진 것만 모았습니다.</p>
 
     <h3><span data-ico="🎯"></span> 이기는 법</h3>
     <p>같은 종류를 <b>그 숫자만큼</b> 모으면 그 자리에서 바로 승리.<br>
@@ -6700,7 +6720,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <span data-ico="🏁"></span> 덱이 다 떨어지면 <b>세트에 가장 근접한 사람</b>이 승리</span></p>
 
     <h3><span data-ico="🗂"></span> 카드 구성 <span style="color:#7a7f89;font-weight:400;font-size:.85rem">— 4인 38장 · 3인 30장</span></h3>
-    <p style="font-size:.78rem;margin-top:-2px">2인전(24장)보다 두툼하다. 3인은 <b>같은 한 벌에서 8장을 덜어내고</b> 시작한다 — 카드가 많으면 한 장의 무게가 가벼워진다.</p>
+    <p style="font-size:.78rem;margin-top:-2px">2인전(24장)보다 두툼합니다. 3인은 <b>같은 한 벌에서 8장을 덜어내고</b> 시작합니다 — 카드가 많으면 한 장의 무게가 가벼워집니다.</p>
     <div class="r-comp">
       <div class="r-comp-row">
         <div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
@@ -6727,40 +6747,40 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 
     <h3><span data-ico="🔄"></span> 한 번의 경매</h3>
     <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>덱에서 <b>공개 카드</b> 한 장을 뒤집는다</span></div>
-      <div class="r4-step"><b>2</b><span>진행자가 손패에서 <b>출품 카드</b> 한 장을 더한다 — 이 둘이 경매품</span></div>
-      <div class="r4-step"><b>3</b><span>진행자가 <b>오픈 / 클로즈</b>를 고른다</span></div>
-      <div class="r4-step"><b>4</b><span><b>전원</b>이 배팅 카드를 낸다 — 진행자도 같이 낸다</span></div>
-      <div class="r4-step"><b>5</b><span>가장 <b>강한</b> 배팅이 경매품 2장을 가져간다</span></div>
+      <div class="r4-step"><b>1</b><span>덱에서 <b>공개 카드</b> 한 장을 뒤집습니다</span></div>
+      <div class="r4-step"><b>2</b><span>진행자가 손패에서 <b>출품 카드</b> 한 장을 더합니다 — 이 둘이 경매품</span></div>
+      <div class="r4-step"><b>3</b><span>진행자가 <b>오픈 / 클로즈</b>를 고릅니다</span></div>
+      <div class="r4-step"><b>4</b><span><b>전원</b>이 배팅 카드를 냅니다 — 진행자도 같이 냅니다</span></div>
+      <div class="r4-step"><b>5</b><span>가장 <b>강한</b> 배팅이 경매품 2장을 가져갑니다</span></div>
     </div>
-    <p style="font-size:.78rem"><span data-ico="⚠"></span> 손패가 비면 그 사람은 입찰을 건너뛰고, 아무도 못 내면 <b>유찰</b>되어 진행자가 회수한다.</p>
+    <p style="font-size:.78rem"><span data-ico="⚠"></span> 손패가 비면 그 사람은 입찰을 건너뛰고, 아무도 못 내면 <b>유찰</b>되어 진행자가 회수합니다.</p>
 
-    <h3><span data-ico="👁"></span> 오픈과 클로즈 — 여기가 다르다</h3>
+    <h3><span data-ico="👁"></span> 오픈과 클로즈 — 여기가 다릅니다</h3>
     <div class="r4-two">
       <div class="r4-card">
         <div class="r4-ct">오픈 경매</div>
-        <p>경매품을 <b>보여 준다</b>.<br>
+        <p>경매품을 <b>보여 줍니다</b>.<br>
         배팅은 모두 덮어 낸 뒤 <b>한 번에 공개</b>.<br>
-        물건은 알지만 남을 못 읽는다.</p>
+        물건은 알지만 남을 못 읽습니다.</p>
       </div>
       <div class="r4-card">
         <div class="r4-ct">클로즈 경매</div>
-        <p>경매품을 <b>감춘다</b>.<br>
-        대신 진행자부터 <b>시계방향으로 한 명씩</b> 공개하며 낸다.<br>
-        뒤에 내는 사람은 앞사람 카드를 다 보고 정한다.</p>
+        <p>경매품을 <b>감춥니다</b>.<br>
+        대신 진행자부터 <b>시계방향으로 한 명씩</b> 공개하며 냅니다.<br>
+        뒤에 내는 사람은 앞사람 카드를 다 보고 정합니다.</p>
       </div>
     </div>
-    <p style="font-size:.78rem">클로즈는 순서제라 <b>먼저 내는 사람이 세게 질러 뒤를 물러나게</b> 만드는 허세가 생긴다.
-    2인전처럼 동시에 내면, 한 명을 읽어도 나머지에게 뺏기는 판이라 심리전이 안 생긴다.</p>
+    <p style="font-size:.78rem">클로즈는 순서제라 <b>먼저 내는 사람이 세게 질러 뒤를 물러나게</b> 만드는 허세가 생깁니다.
+    2인전처럼 동시에 내면, 한 명을 읽어도 나머지에게 뺏기는 판이라 심리전이 안 생깁니다.</p>
 
-    <h3><span data-ico="🎁"></span> 배팅 카드는 역순으로 돌아온다</h3>
-    <p>낸 카드는 버려지지 않고 서로 바꾸어 갖는다.
-    <b>약하게 부른 사람이 가장 강한 카드</b>를 가져간다.</p>
+    <h3><span data-ico="🎁"></span> 배팅 카드는 역순으로 돌아옵니다</h3>
+    <p>낸 카드는 버려지지 않고 서로 바꾸어 갖습니다.
+    <b>약하게 부른 사람이 가장 강한 카드</b>를 가져갑니다.</p>
     <div class="r4-flow">
       <div class="r4-fr"><span class="r4-fl">1위로 부름</span><span class="r-arrow">→</span><span>경매품 2장 획득 · 대신 <b>가장 약한</b> 배팅 카드를 받음</span></div>
       <div class="r4-fr"><span class="r4-fl">꼴등</span><span class="r-arrow">→</span><span>경매품은 못 받지만 <b>가장 강한</b> 배팅 카드를 받음</span></div>
     </div>
-    <p style="font-size:.78rem">그래서 <b>지는 것도 수가 된다</b> — 일부러 약하게 내서 강한 손패를 챙기는 수가 있다.</p>
+    <p style="font-size:.78rem">그래서 <b>지는 것도 수가 됩니다</b> — 일부러 약하게 내서 강한 손패를 챙기는 수가 있습니다.</p>
 
     <div class="r-special">
       <div class="r-st"><span data-ico="⚔"></span> 반전! 졸개의 배신</div>
@@ -6772,27 +6792,26 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
         <span class="r-win">6-18 승리!</span>
       </div>
       <p style="font-size:.76rem;margin-top:6px">가장 약한 <b style="color:var(--gold)">6-18</b>이 가장 강한 <b style="color:var(--gold)">2-1</b>만은 잡아요.
-      (2인전은 6-10 — 덱이 달라 최약 카드도 다르다)<br>
-      배신이 터지면 그 두 장은 <b>각자에게 되돌아간다</b> — 경매품까지 먹고 최강 카드까지 받으면 너무 크게 기울어서예요.</p>
+      (2인전은 6-10 — 덱이 달라 최약 카드도 다릅니다)<br>
+      배신이 터지면 그 두 장은 <b>각자에게 되돌아갑니다</b> — 경매품까지 먹고 최강 카드까지 받으면 너무 크게 기울어서예요.</p>
     </div>
 
     <h3><span data-ico="⏱"></span> 제한 시간</h3>
-    <p>한 사람당 <b>3분</b>. 내 차례일 때만 줄어든다.
-    다 쓰면 그 자리는 <b>AI 가 이어서 둔다</b>.</p>
+    <p>한 사람당 <b>3분</b>. 내 차례일 때만 줄어듭니다.
+    다 쓰면 그 자리는 <b>AI 가 이어서 둡니다</b>.</p>
   </div>
   </div>
 </div>
 
 <!-- 미니게임 전용 설명서 — 본 게임과 규칙이 완전히 달라서 따로 뗀다 -->
+<!-- 미니게임 설명서 — 미니게임을 뺀 동안 같이 뺀다. 되살릴 때 주석만 풀면 된다.
 <div id="rulesMiniModal" class="rules-modal" onclick="if(event.target===this)toggleRulesMini(false)">
   <div class="rules-wrap">
     <div class="rules-tabs" role="tablist">
-      <button class="rt" data-rt="2" onclick="rulesTab('2')">2인용</button>
-      <button class="rt" data-rt="3" onclick="rulesTab('3')">3인용</button>
-      <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
+      <button class="rt" data-rt="2" onclick="rulesTab('2')">클래식</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
-      <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
       <button class="rt" data-rt="twelve" onclick="rulesTab('twelve')">TWELVE</button>
+      <button class="rt" data-rt="quad" onclick="rulesTab('quad')">다인전</button>
       <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
   <div class="rules-box" data-i18n-block="rulesMini">
@@ -6870,80 +6889,79 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
   </div>
   </div>
 </div>
+-->
 
 <!-- 아이템전 설명서 -->
 <div id="rulesItemModal" class="rules-modal" onclick="if(event.target===this)toggleRulesItem(false)">
   <div class="rules-wrap">
     <div class="rules-tabs" role="tablist">
-      <button class="rt" data-rt="2" onclick="rulesTab('2')">2인용</button>
-      <button class="rt" data-rt="3" onclick="rulesTab('3')">3인용</button>
-      <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
+      <button class="rt" data-rt="2" onclick="rulesTab('2')">클래식</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
-      <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
       <button class="rt" data-rt="twelve" onclick="rulesTab('twelve')">TWELVE</button>
+      <button class="rt" data-rt="quad" onclick="rulesTab('quad')">다인전</button>
       <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
     <div class="rules-box" data-i18n-block="rulesItem">
       <span class="close-x" onclick="toggleRulesItem(false)">×</span>
       <h2>아이템전</h2>
-      <p style="color:#7a7f89">2인전 규칙 그대로에, <b style="color:#dcebff">아이템</b>이 얹힌다. 아이템은 덱에 섞인 <b style="color:#dcebff">아이템 카드</b>에서만 나온다.</p>
+      <p style="color:#7a7f89">2인전 규칙 그대로에, <b style="color:#dcebff">아이템</b>이 얹힙니다. 아이템은 덱에 섞인 <b style="color:#dcebff">아이템 카드</b>에서만 나옵니다.</p>
 
       <h3><span data-ico="🎁"></span> 아이템이 들어오는 법 — 아이템 카드 두 가지</h3>
       <div class="r4-tbl">
         <div class="r4-row r4-head"><span>카드</span><span>누가 받나</span><span>무엇이 나오나</span></div>
         <div class="r4-row"><span>🎁 보너스</span><span>뒤집은 진행자</span><span>일반 등급만</span></div>
         <div class="r4-row"><span>🏷 덤</span><span>그 경매에서 <b>진 쪽</b></span><span>등급 굴리기</span></div>
-        <div class="r4-row"><span>둘 다</span><span>—</span><span><b>앞면 공개</b> — 무슨 아이템인지 보인다</span></div>
+        <div class="r4-row"><span>둘 다</span><span>—</span><span><b>앞면 공개</b> — 무슨 아이템인지 보입니다</span></div>
         <div class="r4-row"><span>보통 카드</span><span>—</span><span>아이템 없음</span></div>
       </div>
-      <p><b>아이템 카드는 따로 있다.</b> 종류·등급이 없어 세트에는 안 쓰이고, 중앙 덱에 <b>보너스 2장 · 덤 2장</b>이
-         들어간다. 아이템 카드가 뽑히면 <b>그 자리에서 한 장을 더 뽑는다</b> — 그래서 그 판은
-         <b>경매품이 세 장</b>(🏷 덤 + 중앙 + 출품)이 된다. 아이템 카드가 안 나온 경매에서는 아이템도 안 나온다.</p>
-      <p>넉 장은 <b>보통 카드 두 장마다 하나씩</b> 들어가 있다. 판은 대개 6턴 안팎에 끝나 덱이 절반쯤 남는데,
-         통째로 섞으면 그 절반에 아이템이 몰려 <b>한 판에 한 장도 못 보는 일</b>이 생기기 때문이다.
-         지금은 <b>두 턴에 한 번꼴</b>로 반드시 나온다 — 다만 창 안 어디에 있는지는 무작위라 언제 나올지는 모른다.</p>
+      <p><b>아이템 카드는 따로 있습니다.</b> 종류·등급이 없어 세트에는 안 쓰이고, 중앙 덱에 <b>보너스 2장 · 덤 2장</b>이
+         들어갑니다. 아이템 카드가 뽑히면 <b>그 자리에서 한 장을 더 뽑습니다</b> — 그래서 그 판은
+         <b>경매품이 세 장</b>(🏷 덤 + 중앙 + 출품)이 됩니다. 아이템 카드가 안 나온 경매에서는 아이템도 안 나옵니다.</p>
+      <p>넉 장은 <b>보통 카드 두 장마다 하나씩</b> 들어가 있습니다. 판은 대개 6턴 안팎에 끝나 덱이 절반쯤 남는데,
+         통째로 섞으면 그 절반에 아이템이 몰려 <b>한 판에 한 장도 못 보는 일</b>이 생기기 때문입니다.
+         지금은 <b>두 턴에 한 번꼴</b>로 반드시 나옵니다 — 다만 창 안 어디에 있는지는 무작위라 언제 나올지는 모릅니다.</p>
       <div class="r4-steps">
-        <div class="r4-step"><b>1</b><span>🎁 보너스는 뒤집는 즉시 <b>진행자</b>가 갖는다. 공짜라 일반 등급만 나온다.</span></div>
-        <div class="r4-step"><b>2</b><span>🏷 덤은 경매품에 얹혀 <b>양쪽 다 보이고</b>, 그 경매에서 <b>진 쪽</b>이 가져간다.
-           그래서 "이 판은 져 주는 게 낫나" 를 저울질하게 된다.</span></div>
-        <div class="r4-step"><b>★</b><span>아이템 카드는 <b>앞면으로 공개</b>된다 — 그림과 이름, 등급 테두리까지 보인다.
-           무엇이 걸렸는지 알아야 "저것 때문에 져 준다" 가 성립하기 때문이다.
-           <b>보여 준 그 아이템이 그대로</b> 간다.</span></div>
-        <div class="r4-step"><b>3</b><span>최대 <b>3개</b>까지만 들고, 한 턴에 <b>1개</b>만 쓴다. 배팅 카드를 낸 뒤에는 못 쓴다.</span></div>
+        <div class="r4-step"><b>1</b><span>🎁 보너스는 뒤집는 즉시 <b>진행자</b>가 갖습니다. 공짜라 일반 등급만 나옵니다.</span></div>
+        <div class="r4-step"><b>2</b><span>🏷 덤은 경매품에 얹혀 <b>양쪽 다 보이고</b>, 그 경매에서 <b>진 쪽</b>이 가져갑니다.
+           그래서 "이 판은 져 주는 게 낫나" 를 저울질하게 됩니다.</span></div>
+        <div class="r4-step"><b>★</b><span>아이템 카드는 <b>앞면으로 공개</b>됩니다 — 그림과 이름, 등급 테두리까지 보입니다.
+           무엇이 걸렸는지 알아야 "저것 때문에 져 준다" 가 성립하기 때문입니다.
+           <b>보여 준 그 아이템이 그대로</b> 갑니다.</span></div>
+        <div class="r4-step"><b>3</b><span>최대 <b>3개</b>까지만 들고, 한 턴에 <b>1개</b>만 씁니다. 배팅 카드를 낸 뒤에는 못 씁니다.</span></div>
       </div>
-      <p>덤이 <b>지는 쪽</b>에 쌓이니 판이 저절로 붙는다 — 앞선 사람이 더 강해지는 눈덩이를 막는 것은
-         이 규칙 하나다. 무엇이 나올지는 등급을 안 가리므로, 전설을 노리고 <b>일부러 져 주는</b> 판단도 생긴다.</p>
+      <p>덤이 <b>지는 쪽</b>에 쌓이니 판이 저절로 붙습니다 — 앞선 사람이 더 강해지는 눈덩이를 막는 것은
+         이 규칙 하나입니다. 무엇이 나올지는 등급을 안 가리므로, 전설을 노리고 <b>일부러 져 주는</b> 판단도 생깁니다.</p>
 
       <h3><span data-ico="🎲"></span> 나올 확률</h3>
-      <p><b>등급은 안 따진다.</b> <b>13가지</b>를 <b>한 벌로 섞어</b> 놓고 위에서 한 장씩 뽑는다 —
-         일반이든 전설이든 같은 자격이다. 등급(테두리 색)은 그 아이템이 얼마나 센지를 알려 줄 뿐,
-         나올 확률과는 상관이 없다.</p>
+      <p><b>등급은 안 따집니다.</b> <b>13가지</b>를 <b>한 벌로 섞어</b> 놓고 위에서 한 장씩 뽑습니다 —
+         일반이든 전설이든 같은 자격입니다. 등급(테두리 색)은 그 아이템이 얼마나 센지를 알려 줄 뿐,
+         나올 확률과는 상관이 없습니다.</p>
       <p>확률로 굴리는 게 아니라 <b>뽑는</b> 것이라, 같은 것이 연달아 나오지 않고
-         한 벌(13장) 안에서는 열세 가지가 한 번씩 다 나온다. 한 벌을 다 쓰면 새로 섞는다.</p>
+         한 벌(13장) 안에서는 열세 가지가 한 번씩 다 나옵니다. 한 벌을 다 쓰면 새로 섞습니다.</p>
 
       <h3><span data-ico="🔍"></span> 일반</h3>
       <ul>
-        <li><b>돋보기</b> — 상대 손패 2장을 훔쳐본다</li>
-        <li><b>눈금자</b> — 이번 경매품이 <b>상대에게</b> 얼마나 쓸모 있는지 본다</li>
-        <li><b>손바꿈</b> — 내 손패 1장을 덱의 카드와 바꾼다</li>
+        <li><b>돋보기</b> — 상대 손패 2장을 훔쳐봅니다</li>
+        <li><b>눈금자</b> — 이번 경매품이 <b>상대에게</b> 얼마나 쓸모 있는지 봅니다</li>
+        <li><b>손바꿈</b> — 내 손패 1장을 덱의 카드와 바꿉니다</li>
       </ul>
 
       <h3><span data-ico="💣"></span> 희귀</h3>
       <ul>
-        <li><b>폭탄</b> — 경매품에 폭탄을 얹는다. <b>먹는 쪽이 손패 1장을 버린다</b> (내가 먹어도 버린다)</li>
-        <li><b>교환권</b> — 내가 딴 카드 1장과 상대가 딴 카드 1장을 맞바꾼다</li>
-        <li><b>뒤집개</b> — 이번 경매만 <b>약한 카드가 이긴다</b></li>
-        <li><b>부적</b> — 상대의 다음 아이템 1개를 <b>이번 턴 동안</b> 막는다</li>
+        <li><b>폭탄</b> — 경매품에 폭탄을 얹습니다. <b>먹는 쪽이 손패 1장을 버립니다</b> (내가 먹어도 버립니다)</li>
+        <li><b>교환권</b> — 내가 딴 카드 1장과 상대가 딴 카드 1장을 맞바꿉니다</li>
+        <li><b>뒤집개</b> — 이번 경매만 <b>약한 카드가 이깁니다</b></li>
+        <li><b>부적</b> — 상대의 다음 아이템 1개를 <b>이번 턴 동안</b> 막습니다</li>
       </ul>
 
       <h3><span data-ico="👑"></span> 전설 <span style="font-size:.78rem;color:#7a7f89">— 뒤진 쪽에만</span></h3>
       <ul>
-        <li><b>도둑고양이</b> — 상대가 낙찰받은 카드 1장을 덱으로 되돌린다 (세트 완성 직전인 종류는 건드리지 않는다)</li>
-        <li><b>복사기</b> — 내가 낙찰받은 카드 1장을 복제한다</li>
-        <li><b>폭군</b> — 이번 턴 진행자 권한을 뺏는다 (손패 2장 이상일 때)</li>
-        <li><b>고르기</b> — 덱 맨 위 <b>3장을 보고 하나를 골라</b> 이번 중앙 카드로 삼는다</li>
-        <li><b>연막탄</b> — 이번 경매품을 상대에게만 가린다</li>
-        <li><b>재경매</b> — 진 경매를 무효로 하고 다시 배팅한다. <b>방금 낸 카드는 둘 다 못 쓴다</b></li>
+        <li><b>도둑고양이</b> — 상대가 낙찰받은 카드 1장을 덱으로 되돌립니다 (세트 완성 직전인 종류는 건드리지 않습니다)</li>
+        <li><b>복사기</b> — 내가 낙찰받은 카드 1장을 복제합니다</li>
+        <li><b>폭군</b> — 이번 턴 진행자 권한을 뺏습니다 (손패 2장 이상일 때)</li>
+        <li><b>고르기</b> — 덱 맨 위 <b>3장을 보고 하나를 골라</b> 이번 중앙 카드로 삼습니다</li>
+        <li><b>연막탄</b> — 이번 경매품을 상대에게만 가립니다</li>
+        <li><b>재경매</b> — 진 경매를 무효로 하고 다시 배팅합니다. <b>방금 낸 카드는 둘 다 못 씁니다</b></li>
       </ul>
 
       <h3><span data-ico="💣"></span> 폭탄 — 이겨도 되는 판인가</h3>
@@ -6951,10 +6969,10 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
          "이 경매품이 그만한 값어치가 있나" 를 처음으로 저울질하게 됩니다. 버릴 카드는 본인이 고릅니다.</p>
 
       <h3><span data-ico="🧿"></span> 부적 — 읽는 싸움</h3>
-      <p>부적은 <b>미리 걸어 두는</b> 물건이다. 걸어 두면 상대가 다음에 쓰는 아이템 하나를 삼킨다 —
-         막힌 아이템은 그대로 사라진다. 다만 <b>그 턴에만 산다.</b> 그래서 상대가 값싼 아이템을 먼저 던져
-         부적을 태우는 수도 생긴다. 언제 걸지가 곧 읽기 싸움이다.</p>
-      <p style="color:#7a7f89;font-size:.78rem">막을 것이 없을 때(상대가 이번 턴에 이미 썼거나, 아이템이 하나도 없을 때)는 걸 수 없다.</p>
+      <p>부적은 <b>미리 걸어 두는</b> 물건입니다. 걸어 두면 상대가 다음에 쓰는 아이템 하나를 삼킵니다 —
+         막힌 아이템은 그대로 사라집니다. 다만 <b>그 턴에만 삽니다.</b> 그래서 상대가 값싼 아이템을 먼저 던져
+         부적을 태우는 수도 생깁니다. 언제 걸지가 곧 읽기 싸움입니다.</p>
+      <p style="color:#7a7f89;font-size:.78rem">막을 것이 없을 때(상대가 이번 턴에 이미 썼거나, 아이템이 하나도 없을 때)는 걸 수 없습니다.</p>
     </div>
   </div>
 </div>
@@ -6962,12 +6980,10 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 <div id="rulesTwelveModal" class="rules-modal" onclick="if(event.target===this)rulesClose()">
   <div class="rules-wrap">
     <div class="rules-tabs" role="tablist">
-      <button class="rt" data-rt="2" onclick="rulesTab('2')">2인용</button>
-      <button class="rt" data-rt="3" onclick="rulesTab('3')">3인용</button>
-      <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
+      <button class="rt" data-rt="2" onclick="rulesTab('2')">클래식</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
-      <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
       <button class="rt" data-rt="twelve" onclick="rulesTab('twelve')">TWELVE</button>
+      <button class="rt" data-rt="quad" onclick="rulesTab('quad')">다인전</button>
       <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
     <div class="rules-box" data-i18n-block="rulesTwelve">
@@ -6984,10 +7000,10 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 
       <h3><span data-ico="🔄"></span> 한 턴의 흐름</h3>
       <div class="r4-steps">
-        <div class="r4-step"><b>1</b><span>진행자가 중앙덱에서 <b>한 장을 뒤집는다</b></span></div>
-        <div class="r4-step"><b>2</b><span>진행자가 손패에서 <b>한 장을 더한다</b> — 이 둘이 경매품</span></div>
-        <div class="r4-step"><b>3</b><span>진행자가 <b>오픈 / 클로즈</b>를 고른다</span></div>
-        <div class="r4-step"><b>4</b><span>정산하고 <b>진행자를 넘긴다</b></span></div>
+        <div class="r4-step"><b>1</b><span>진행자가 중앙덱에서 <b>한 장을 뒤집습니다</b></span></div>
+        <div class="r4-step"><b>2</b><span>진행자가 손패에서 <b>한 장을 더합니다</b> — 이 둘이 경매품</span></div>
+        <div class="r4-step"><b>3</b><span>진행자가 <b>오픈 / 클로즈</b>를 고릅니다</span></div>
+        <div class="r4-step"><b>4</b><span>정산하고 <b>진행자를 넘깁니다</b></span></div>
       </div>
 
       <h3><span data-ico="👁"></span> 오픈 경매</h3>
@@ -7009,7 +7025,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
         <div class="etc-row"><span>진 쪽</span><span>부른 값의 <b>절반</b> (반내림)</span></div>
       </div>
       <p>경매품 <b>두 장은 모두 이긴 쪽</b>이 가져갑니다. 진 쪽은 카드를 못 받고 칩만 반 잃어요.
-         예: 7을 불러 이기면 7을 내고, 4를 불렀다 지면 2를 냅니다.</p>
+         예: 7을 불러 이기면 7을 내고, 4를 불렀습니다 지면 2를 냅니다.</p>
 
       <h3><span data-ico="🏁"></span> 이기는 법</h3>
       <ul>
@@ -7028,12 +7044,10 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 <div id="rulesEtcModal" class="rules-modal" onclick="if(event.target===this)rulesClose()">
   <div class="rules-wrap">
     <div class="rules-tabs" role="tablist">
-      <button class="rt" data-rt="2" onclick="rulesTab('2')">2인용</button>
-      <button class="rt" data-rt="3" onclick="rulesTab('3')">3인용</button>
-      <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
+      <button class="rt" data-rt="2" onclick="rulesTab('2')">클래식</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
-      <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
       <button class="rt" data-rt="twelve" onclick="rulesTab('twelve')">TWELVE</button>
+      <button class="rt" data-rt="quad" onclick="rulesTab('quad')">다인전</button>
       <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
     <div class="rules-box" data-i18n-block="rulesEtc">
@@ -7128,12 +7142,10 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 <div id="rulesModal" class="rules-modal" onclick="if(event.target===this)toggleRules(false)">
   <div class="rules-wrap">
     <div class="rules-tabs" role="tablist">
-      <button class="rt" data-rt="2" onclick="rulesTab('2')">2인용</button>
-      <button class="rt" data-rt="3" onclick="rulesTab('3')">3인용</button>
-      <button class="rt" data-rt="4" onclick="rulesTab('4')">4인용</button>
+      <button class="rt" data-rt="2" onclick="rulesTab('2')">클래식</button>
       <button class="rt" data-rt="item" onclick="rulesTab('item')">아이템전</button>
-      <button class="rt" data-rt="mini" onclick="rulesTab('mini')">미니게임</button>
       <button class="rt" data-rt="twelve" onclick="rulesTab('twelve')">TWELVE</button>
+      <button class="rt" data-rt="quad" onclick="rulesTab('quad')">다인전</button>
       <button class="rt" data-rt="etc" onclick="rulesTab('etc')">기타</button>
     </div>
   <div id="rulesBox" class="rules-box" data-i18n-block="rules2">
@@ -7187,6 +7199,49 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <p style="font-size:.76rem;color:#7a7f89">덱 12장 + 각자 손패 6장으로 시작. <b style="color:#dcebff">숫자가 큰 카드일수록 많지만</b>, 그만큼 세트도 어려워요.</p>
 
     <h3><span data-ico="🔄"></span> 한 턴의 흐름</h3>
+    <svg class="r-diagram" viewBox="0 0 320 176" role="img"
+         aria-label="중앙 카드와 출품 카드 두 장을 걸고, 서로 배팅 카드를 내서 높게 부른 쪽이 두 장을 가져가는 그림">
+      <defs>
+        <marker id="rdArrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0 0 L8 4 L0 8 z" fill="#8fa2c2"/>
+        </marker>
+        <linearGradient id="rdInk" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2e2118"/><stop offset="1" stop-color="#4a3728"/></linearGradient>
+        <linearGradient id="rdYel" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#8a6f1f"/><stop offset="1" stop-color="#c9962c"/></linearGradient>
+        <linearGradient id="rdRed" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#7a1a1e"/><stop offset="1" stop-color="#c1272d"/></linearGradient>
+        <linearGradient id="rdBlue" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0f2e42"/><stop offset="1" stop-color="#1a5276"/></linearGradient>
+      </defs>
+      <text x="60" y="14" class="rd-cap">걸린 카드 2장</text>
+      <rect x="24" y="22" width="34" height="48" rx="6" fill="url(#rdInk)" stroke="#7a6250" stroke-width="2"/>
+      <text x="41" y="53" class="rd-num">6</text>
+      <rect x="66" y="22" width="34" height="48" rx="6" fill="url(#rdYel)" stroke="#e5c060" stroke-width="2"/>
+      <text x="83" y="53" class="rd-num">4</text>
+
+      <text x="236" y="14" class="rd-cap">서로 낸 배팅 카드</text>
+      <rect x="196" y="22" width="34" height="48" rx="6" fill="url(#rdBlue)" stroke="#4a90c0" stroke-width="2"/>
+      <text x="213" y="53" class="rd-num">3</text>
+      <text x="213" y="84" class="rd-who">상대</text>
+      <rect x="252" y="22" width="34" height="48" rx="6" fill="url(#rdRed)" stroke="#e0b45c" stroke-width="3"/>
+      <text x="269" y="53" class="rd-num">2</text>
+      <text x="269" y="84" class="rd-who rd-win">나 · 승</text>
+
+      <path d="M112 46 L182 46" stroke="#8fa2c2" stroke-width="2" fill="none" marker-end="url(#rdArrow)"/>
+      <text x="147" y="38" class="rd-cap">누가 가질까</text>
+
+      <path d="M269 100 L269 118 L60 118 L60 132" stroke="#e0b45c" stroke-width="2"
+            fill="none" stroke-dasharray="4 3" marker-end="url(#rdArrow)"/>
+      <text x="163" y="113" class="rd-cap rd-gold">이긴 쪽이 2장 다 가져갑니다</text>
+
+      <rect x="24" y="136" width="34" height="34" rx="6" fill="url(#rdInk)" stroke="#7a6250" stroke-width="2"/>
+      <rect x="66" y="136" width="34" height="34" rx="6" fill="url(#rdYel)" stroke="#e5c060" stroke-width="2"/>
+      <text x="152" y="158" class="rd-cap">내 앞에 깔립니다</text>
+
+      <text x="213" y="150" class="rd-cap">낸 카드는</text>
+      <text x="213" y="164" class="rd-cap">서로 바뀝니다</text>
+    </svg>
     <div class="r-flow">
       <div class="r-step"><span class="r-ico">🂠</span>덱을 눌러 카드 1장 뽑기 (중앙 카드 공개)</div>
       <div class="r-step"><span class="r-ico" data-ico="📤"></span>진행자가 손패 1장을 추가 출품 → 경매품 2장</div>

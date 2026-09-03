@@ -16,3 +16,7 @@ keystore-password.txt
 # 디자인 캔버스 — 편집기까지 통째로 든 2.5MB 결과물이라 넣지 않는다.
 # 작업 파일(*.dc.html · canvas.json · theme-gen.mjs)만 남기고 여기서 다시 만든다.
 design/flip-flap-lobby.html
+
+# 디자인 캔버스 작업 파일 — 2.4MB 결과물은 넣지 않는다
+design-work/*.html
+!design-work/*.dc.html

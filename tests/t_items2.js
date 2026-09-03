@@ -113,7 +113,7 @@ console.log('\n⑥ 세던 것들을 낮췄다');
   const src = read('items.js');
   // 도둑고양이 하나로 승률이 +42.9%p 였다 — 뺏어 오지 않고 덱으로 돌려보낸다
   ok('도둑고양이는 훔치지 않는다', /g\.centerDeck\.push\(target\);/.test(src) && !/myAcq\.push\(target\)/.test(src));
-  ok('설명도 같이 고쳤다', /덱으로 되돌린다/.test(htm) && /덱으로 되돌린다/.test(cli));
+  ok('설명도 같이 고쳤다', /덱으로 되돌립니다/.test(htm) && /덱으로 되돌린다/.test(cli));
   ok('연막탄은 전설로', items.ITEMS.smoke.tier === 'legend');
   const t = { common: 0, rare: 0, legend: 0 };
   for (const it of Object.values(items.ITEMS)) t[it.tier]++;
