@@ -1476,11 +1476,16 @@
     const hits = [];
     for (let n = walker.nextNode(); n; n = walker.nextNode()) hits.push(n);
     for (const n of hits) {
+      // 기억해 둔 원문이 있으면 그게 정답이다 — 패턴으로 바뀐 것도 이걸로 돌아온다
+      const kept = ORIG.get(n);
+      if (kept !== undefined) { n.nodeValue = kept; ORIG.delete(n); continue; }
       const key = n.nodeValue.trim(); if (!key) continue;
       if (Object.prototype.hasOwnProperty.call(REV, key)) n.nodeValue = n.nodeValue.replace(key, REV[key]);
     }
     for (const el of document.querySelectorAll('[placeholder],[title],[aria-label]')) {
+      const keptA = ORIG_ATTR.get(el);
       for (const a of ATTRS) {
+        if (keptA && keptA[a] !== undefined) { el.setAttribute(a, keptA[a]); delete keptA[a]; continue; }
         const v = el.getAttribute(a); if (!v) continue;
         const key = v.trim();
         if (Object.prototype.hasOwnProperty.call(REV, key)) el.setAttribute(a, v.replace(key, REV[key]));
@@ -1972,6 +1977,9 @@
     }
   }
 
+  // 번역 전 원문. 마디에는 dataset 을 못 붙이므로 약한 지도에 담는다.
+  const ORIG = new WeakMap();       // 글자 마디 → 한국어 원문
+  const ORIG_ATTR = new WeakMap();  // 마디 → { 속성이름: 한국어 원문 }
   function apply(root) {
     if (getLang() === 'ko' || !root) return;
     applyBlocks(root);
@@ -1987,8 +1995,9 @@
     const hits = [];
     for (let n = walker.nextNode(); n; n = walker.nextNode()) hits.push(n);
     for (const n of hits) {
-      const out = t(n.nodeValue);
-      if (out !== n.nodeValue) n.nodeValue = out;
+      const before = n.nodeValue;
+      const out = t(before);
+      if (out !== before) { if (!ORIG.has(n)) ORIG.set(n, before); n.nodeValue = out; }
     }
     // 속성도 같이 (placeholder·title)
     const els = root.querySelectorAll ? root.querySelectorAll('[placeholder],[title],[aria-label]') : [];
@@ -1997,7 +2006,11 @@
         const v = el.getAttribute(a);
         if (!v || !/[가-힣]/.test(v)) continue;
         const out = t(v);
-        if (out !== v) el.setAttribute(a, out);
+        if (out !== v) {
+          let m = ORIG_ATTR.get(el); if (!m) { m = {}; ORIG_ATTR.set(el, m); }
+          if (m[a] === undefined) m[a] = v;
+          el.setAttribute(a, out);
+        }
       }
     }
   }
