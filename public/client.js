@@ -260,7 +260,10 @@ setTimeout(hideSplash, 8000);
 // 못 붙는다는 걸 아는 순간 걷고, 혼자 둘 수 있다고 말해 준다.
 function offlineBoot() {
   hideSplash();
-  setConn('📴 그물이 없어요 — 혼자 두기는 됩니다', 'warn');
+  // 정말 그물이 없을 때만 그렇게 말한다. 잠깐 실패한 것뿐이면 곧 붙으므로,
+  // 괜히 "그물이 없어요" 라고 하면 거짓말이 된다.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false)
+    setConn('📴 그물이 없어요 — 혼자 두기는 됩니다', 'warn');
 }
 if (typeof navigator !== 'undefined' && navigator.onLine === false) setTimeout(offlineBoot, 250);
 socket.on('connect_error', () => setTimeout(offlineBoot, 600));
@@ -380,7 +383,13 @@ document.addEventListener('visibilitychange', () => {
   if (!socket.connected && inLiveGame()) tryReconnect(true);
 });
 window.addEventListener('online', () => { if (!socket.connected) tryReconnect(true); });
-socket.on('connect_error', (e) => { setConn('서버 연결 실패', 'bad'); console.error('socket connect_error:', e && e.message); });
+socket.on('connect_error', (e) => {
+  // 그물이 없는 것과 서버가 안 받는 것은 다르다. 둘 다 같은 칸에 쓰므로
+  // 여기서 갈라 놓지 않으면 문구가 번갈아 뜬다 — 실제로 그랬다.
+  const 그물없음 = typeof navigator !== 'undefined' && navigator.onLine === false;
+  if (!그물없음) setConn('서버 연결 실패', 'bad');
+  console.error('socket connect_error:', e && e.message);
+});
 socket.on('rejoin_failed', ({ why } = {}) => {
   dcHide(); clearSession();
   const msg = why === 'notmine' ? '⚠️ 그 방의 자리가 아니에요'
