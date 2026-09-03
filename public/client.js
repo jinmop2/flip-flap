@@ -255,6 +255,15 @@ function hideSplash() {
   }, wait);   // 페이드 후 완전 제거 — 숨은 무한 스피너 정지
 }
 setTimeout(hideSplash, 8000);
+// 그물이 없으면 붙기를 기다릴 이유가 없다. 못 붙는 걸 알면서 8초 동안 로고만
+// 보여 주면 앱이 고장 난 것처럼 보인다 — 실제로 그렇게 보였다.
+// 못 붙는다는 걸 아는 순간 걷고, 혼자 둘 수 있다고 말해 준다.
+function offlineBoot() {
+  hideSplash();
+  setConn('📴 그물이 없어요 — 혼자 두기는 됩니다', 'warn');
+}
+if (typeof navigator !== 'undefined' && navigator.onLine === false) setTimeout(offlineBoot, 250);
+socket.on('connect_error', () => setTimeout(offlineBoot, 600));
 // 내부 이동용 새로고침 (스플래시 없이)
 function fastReload() {
   sessionStorage.setItem('ff_skipsplash', '1');

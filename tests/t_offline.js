@@ -168,6 +168,11 @@ console.log('\n④ 화면이 오프라인 엔진으로 갈라 보낸다');
   ok('그물이 있으면 서버로 간다', /if \(!socket\.connected && window\.OFFLINE && OFFLINE\.ready\) return offlineStart\(d\);/.test(cli));
   // 그물 없이 두는 판에는 돌아갈 서버가 없다. 재접속 덮개가 올라오면
   // 멀쩡히 돌아가는 판을 가린다 — 실제로 그랬다.
+  // 못 붙는 걸 알면서 8초 동안 로고만 보여 주면 앱이 고장 난 것처럼 보인다
+  ok('그물이 없으면 로고를 곧바로 걷는다',
+     /function offlineBoot\(\) \{\n\s*hideSplash\(\);/.test(cli)
+     && /navigator\.onLine === false\) setTimeout\(offlineBoot/.test(cli)
+     && /socket\.on\('connect_error', \(\) => setTimeout\(offlineBoot/.test(cli));
   ok('오프라인 판 위에 재접속 덮개를 안 씌운다',
      /function inLiveGame\(\) \{\n(?:.*\n)*?\s*if \(window\.OFFLINE && OFFLINE\.live\(\)\) return false;/.test(cli));
   ok('방 번호 없는 다인전은 안 적어 둔다',
