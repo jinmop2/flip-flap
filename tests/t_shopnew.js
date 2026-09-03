@@ -93,8 +93,10 @@ ok('잔액 안 깎임', a.byToken(t2).coins === 10);
   ok('친구 목록', /soc-nick">\$\{clan\}<span class="\$\{ncClass\(f\.nickColor\)/.test(cli));
   ok('클랜 멤버·신청자', /ncClass\(m\.nickColor\)/.test(cli));
   ok('인게임 채팅 친구 목록', /gc-frow[^`]*ncClass\(f\.nickColor\)/.test(cli));
+  // 클랜 채팅도 1:1 도 gcPaint 한 곳에서 그린다. 받은 메시지를 손으로 이어
+  // 붙이던 자리는 없앴다 — 그러면 날짜 구분선과 묶음이 어긋난다.
   ok('클랜 채팅 쓴 사람', /gc-who\$\{ncClass\(m\.nickColor\)\}/.test(cli)
-     && /gc-who\$\{ncClass\(msg\.nickColor\)\}/.test(cli));
+     && /nickColor: msg\.nickColor/.test(cli));
   ok('채팅 기록에 물감이 실린다', /nickColor: \(w && w\.nickColor\) \|\| null/.test(acc));
   ok('다인전 초대 목록', /q-invnm\$\{typeof ncClass === 'function' \? ncClass\(f\.nickColor\)/.test(c4));
 }

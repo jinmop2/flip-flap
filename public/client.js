@@ -2344,10 +2344,7 @@ window.friendTalkSend = async function () {
   const r = await apiPost('/api/dm-send', { token: authToken(), idl: ftalkWith, text });
   if (!r || r.error) { toast(esc((r && r.error) || '보내지 못했어요')); input.value = text; return; }
   // 보낸 건 바로 붙인다 — 서버를 한 번 더 다녀오면 느리게 느껴진다
-  const box = document.getElementById('ftalkMsgs');
-  const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
-  box.insertAdjacentHTML('beforeend', `<div class="gc-m mine">${esc(text)}</div>`);
-  box.scrollTop = box.scrollHeight;
+  gcAppendMine(document.getElementById('ftalkMsgs'), text);
 };
 
 function loadFriends() {
@@ -5088,15 +5085,66 @@ async function gcLoadClan() {
   gcPaint(box, r.messages, true);
 }
 
-// 메시지 그리기. 클랜은 누가 썼는지 이름이 필요하고, 1:1 은 필요 없다.
+// ── 메시지 그리기 ─────────────────────────────────────────────────────────
+// 말풍선을 한 줄에 하나씩 쌓기만 하면, 대화가 길어질수록 누가 언제 무슨 말을
+// 했는지가 안 읽힌다. 그래서 세 가지를 넣었다.
+//   · 날짜가 바뀌면 가운데 구분선
+//   · 같은 사람이 같은 분에 이어서 쓰면 하나로 묶는다 — 이름·꼬리는 처음에만,
+//     시각은 마지막에만. 세 줄 쓰면 시각이 세 번 찍히는 게 제일 지저분했다.
+//   · 시각은 말풍선 밖 아래쪽에 붙인다. 안에 넣으면 글이 밀린다.
+const gcTime = (t) => {
+  const d = new Date(t || Date.now());
+  const h = d.getHours();
+  return (h < 12 ? '오전 ' : '오후 ') + (h % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0');
+};
+const gcDay = (t) => {
+  const d = new Date(t || Date.now());
+  const W = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${W}요일`;
+};
+const gcSameDay = (a, b) => new Date(a || 0).toDateString() === new Date(b || 0).toDateString();
+// 같은 사람이 같은 분에 이어서 쓴 것인가
+const gcRun = (a, b) => !!a && !!b && a.mine === b.mine && (a.idl || '') === (b.idl || '')
+  && Math.abs((a.at || 0) - (b.at || 0)) < 60000
+  && new Date(a.at || 0).getMinutes() === new Date(b.at || 0).getMinutes();
+
 function gcPaint(box, msgs, showName) {
-  if (!msgs || !msgs.length) { box.innerHTML = '<div class="gc-empty">아직 대화가 없어요</div>'; return; }
-  box.innerHTML = msgs.map((m) =>
-    `<div class="gc-m${m.mine ? ' mine' : ''}">` +
-    (showName && !m.mine ? `<span class="gc-who${ncClass(m.nickColor)}">${nickHTML(m.nick, m.nickColor)}</span>` : '') +
-    `${esc(m.text)}</div>`).join('');
+  box._msgs = msgs || [];
+  box._showName = !!showName;
+  if (!box._msgs.length) { box.innerHTML = '<div class="gc-empty">아직 대화가 없어요</div>'; return; }
+  const L = box._msgs;
+  let html = '', lastAt = 0;
+  for (let i = 0; i < L.length; i++) {
+    const m = L[i], prev = L[i - 1], next = L[i + 1];
+    if (!gcSameDay(m.at, lastAt)) html += `<div class="gc-day"><span>${esc(gcDay(m.at))}</span></div>`;
+    lastAt = m.at;
+    const head = !gcRun(prev, m);        // 묶음의 첫 줄 — 이름과 꼬리는 여기만
+    const tail = !gcRun(m, next);        // 묶음의 마지막 줄 — 시각은 여기만
+    html += `<div class="gc-row${m.mine ? ' mine' : ''}${head ? ' head' : ''}">`;
+    if (showName && !m.mine) {
+      // 얼굴 대신 첫 글자. 이름을 두 번 적는 것보다 눈이 덜 피곤하다.
+      html += head ? `<span class="gc-av">${esc((m.nick || '?').slice(0, 1))}</span>`
+                   : '<span class="gc-av blank"></span>';
+    }
+    html += '<div class="gc-col">';
+    if (showName && !m.mine && head)
+      html += `<span class="gc-who${ncClass(m.nickColor)}">${nickHTML(m.nick, m.nickColor)}</span>`;
+    html += `<div class="gc-line"><div class="gc-m${head ? ' tip' : ''}">${esc(m.text)}</div>`
+          + (tail ? `<span class="gc-t">${esc(gcTime(m.at))}</span>` : '')
+          + '</div></div></div>';
+  }
+  box.innerHTML = html;
   box.scrollTop = box.scrollHeight;
 }
+// 방금 보낸 것을 그 자리에 붙인다 — 서버를 한 번 더 다녀오면 느리게 느껴진다.
+// 통째로 다시 그리는 건 묶음과 날짜 구분선을 손으로 이어 붙이면 반드시 어긋나기
+// 때문이다. 대화 한 자락은 짧아서 다시 그려도 티가 안 난다.
+function gcAppend(box, m) {
+  if (!Array.isArray(box._msgs)) box._msgs = [];
+  box._msgs.push(m);
+  gcPaint(box, box._msgs, box._showName);
+}
+const gcAppendMine = (box, text) => gcAppend(box, { mine: true, text, at: Date.now(), idl: '', nick: '' });
 
 window.gameChatSend = async function () {
   const clan = gcTab === 'clan';
@@ -5109,10 +5157,7 @@ window.gameChatSend = async function () {
     : await apiPost('/api/dm-send', { token: authToken(), idl: gcWith, text });
   if (!r || r.error) { toast(esc((r && r.error) || '보내지 못했어요')); input.value = text; return; }
   // 보낸 건 바로 붙인다 — 서버를 한 번 더 다녀오면 느리게 느껴진다
-  const box = document.getElementById(clan ? 'gcClanMsgs' : 'gcFriendMsgs');
-  const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
-  box.insertAdjacentHTML('beforeend', `<div class="gc-m mine">${esc(text)}</div>`);
-  box.scrollTop = box.scrollHeight;
+  gcAppendMine(document.getElementById(clan ? 'gcClanMsgs' : 'gcFriendMsgs'), text);
 };
 
 // 안 읽음 — 버튼의 점과 친구 목록 배지에 쓴다
@@ -5136,18 +5181,14 @@ socket.on('dm', ({ from, msg }) => {
   // 친구 탭에서 그 사람과 대화 중이면 거기에 바로 붙인다
   const ftalk = document.getElementById('fpane-talk');
   if (ftalkWith === from && ftalk && ftalk.style.display !== 'none') {
-    const box = document.getElementById('ftalkMsgs');
-    const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
-    box.insertAdjacentHTML('beforeend', `<div class="gc-m">${esc(msg.text)}</div>`);
-    box.scrollTop = box.scrollHeight;
+    gcAppend(document.getElementById('ftalkMsgs'),
+             { mine: false, text: msg.text, at: msg.at || Date.now(), idl: from, nick: msg.nick });
     apiPost('/api/dm', { token: authToken(), idl: from });   // 읽음 처리
     return;
   }
   if (gameChatOpen() && gcTab === 'friend' && gcWith === from) {
-    const box = document.getElementById('gcFriendMsgs');
-    const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
-    box.insertAdjacentHTML('beforeend', `<div class="gc-m">${esc(msg.text)}</div>`);
-    box.scrollTop = box.scrollHeight;
+    gcAppend(document.getElementById('gcFriendMsgs'),
+             { mine: false, text: msg.text, at: msg.at || Date.now(), idl: from, nick: msg.nick });
     apiPost('/api/dm', { token: authToken(), idl: from });   // 읽음 처리
     return;
   }
@@ -5163,11 +5204,9 @@ socket.on('clan_chat', ({ msg }) => {
     gcPaintDot();
     return;
   }
-  const box = document.getElementById('gcClanMsgs');
-  const empty = box.querySelector('.gc-empty'); if (empty) box.innerHTML = '';
-  box.insertAdjacentHTML('beforeend',
-    `<div class="gc-m"><span class="gc-who${ncClass(msg.nickColor)}">${nickHTML(msg.nick, msg.nickColor)}</span>${esc(msg.text)}</div>`);
-  box.scrollTop = box.scrollHeight;
+  gcAppend(document.getElementById('gcClanMsgs'),
+           { mine: false, text: msg.text, at: msg.at || Date.now(),
+             idl: msg.idl || msg.nick, nick: msg.nick, nickColor: msg.nickColor });
 });
 
 // ── 게임 설명서 ─────────────────────────────────────────────

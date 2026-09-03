@@ -317,7 +317,7 @@ console.log('\n⑨ 무지개 — 가로 그라디언트 + 왼→오 빛');
     ['친구 목록',   /nickHTML\(f\.nick, f\.nickColor\)/],
     ['클랜 멤버',   /nickHTML\(m\.nick, m\.nickColor\)/],
     ['클랜 채팅',   /chat-who\$\{ncClass\(m\.nickColor\)\}">\$\{nickHTML\(m\.nick \|\| '', m\.nickColor\)\}/],
-    ['인게임 채팅', /gc-who\$\{ncClass\(msg\.nickColor\)\}">\$\{nickHTML\(msg\.nick, msg\.nickColor\)\}/],
+    ['인게임 채팅', /gc-who\$\{ncClass\(m\.nickColor\)\}">\$\{nickHTML\(m\.nick, m\.nickColor\)\}/],
   ]) ok(`${name} 에 물감이 따라간다`, re.test(cli));
 }
 
