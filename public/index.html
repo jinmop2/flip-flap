@@ -1951,8 +1951,8 @@
     /* 넷이 판을 둘러앉는다 — 나는 아래, 나머지는 좌·상·우.
        예전엔 셋이 위에 한 줄로 서 있어 "마주 앉은" 것도 "둘러앉은" 것도
        아닌 모양이었다. 자리를 판 둘레에 흩어 놓는다. */
-    #q-opps, #q-oppbids { position:absolute; inset:0; pointer-events:none; z-index:3; }
-    #q-opps > *, #q-oppbids > * { pointer-events:auto; }
+    #q-opps, #q-oppbids, #q-oppacq { position:absolute; inset:0; pointer-events:none; z-index:3; }
+    #q-opps > *, #q-oppbids > *, #q-oppacq > * { pointer-events:auto; }
 
     /* 자리 — 로비 프로필 바와 같은 가죽·금테로. 평평한 반투명 네모일 때는
        사람이 앉은 자리가 아니라 글자 담는 상자로 보였다. */
@@ -1970,8 +1970,12 @@
     /* 클로즈 경매에서 지금 낼 차례 — 숨쉬듯 밝아진다 */
     .q-opp.turn { border-color:#7fd8ff;
       box-shadow:inset 0 1px 0 rgba(190,235,255,.35), 0 0 14px rgba(120,200,255,.5); }
-    .q-oname { font-size:.6rem; font-weight:800; color:#e1e7f2; white-space:nowrap;
+    .q-oname { font-size:.62rem; font-weight:800; color:#e1e7f2; white-space:nowrap;
       overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:3px; }
+    /* 명패는 이름을 감싸는 테다. 내 프로필과 같은 모양이라야 "저 사람 명패 좋네" 가
+       판에서도 읽힌다 — 이름 쪽만 감싸고, 뱃지는 밖에 둔다. */
+    .q-oname > span:not(.q-obadge):not(.q-human) { border-radius:6px; padding:1px 5px; }
+    .q-opp .q-ometa { border-top:1px solid rgba(159,180,216,.16); padding-top:4px; }
     .q-obadge { font-size:.5rem; background:var(--gold); color:#10161e; border-radius:4px;
       padding:0 3px; font-weight:900; flex-shrink:0; }
     .q-ometa { display:flex; gap:4px; align-items:center; margin-top:3px; font-size:.56rem; color:#b9c0cb; }
@@ -1983,7 +1987,9 @@
        한 줄에는 절대 안 들어간다 — 한 줄로 두면 뒤쪽 카드가 잘려 나갔다.
        두 줄로 접되 높이는 고정해서, 카드가 쌓여도 화면이 밀리지 않는다. */
     .q-oacq { display:flex; flex-wrap:wrap; align-content:flex-start; gap:2px 0;
-      margin-top:4px; height:64px; overflow:hidden; }
+      height:64px; overflow:hidden; }
+    /* 판 위에 얹힌 겹 안에서는 스스로 자리를 잡는다 */
+    #q-oppacq .q-oacq { position:absolute; margin-top:0; }
     /* 안쪽 묶음 — 넘치면 이걸 통째로 줄인다(fitAcq). 칸 크기는 그대로라 화면이 안 밀린다. */
     /* 트랜지션은 두지 않는다. 그릴 때마다 크기를 다시 재는데, 애니메이션이 걸려 있으면
        재는 순간과 보이는 순간이 어긋나 더미가 커졌다 작아졌다 펄떡인다. */
@@ -2242,7 +2248,10 @@
     .q-bslot.win .q-blabel, #q-mybid.win .q-blabel { color:#ffd94a; font-weight:900; }
 
     #q-status { font-size:.72rem; font-weight:800; color:#dcebff; text-align:center;
-      min-height:18px; padding:0 8px; }
+      min-height:18px; padding:0 8px;
+      /* 옆 사람 것이 이 높이를 안 쓰게 올려 두었지만, 문구가 판 밖까지 나가면
+         읽는 눈이 판을 벗어난다 — 판 너비 안에 가둔다. */
+      max-width:290px; margin:0 auto; line-height:1.35; }
     /* 방식 버튼이 나타났다 사라지면 #q-table 이 가운데 정렬이라 매트가 통째로
        위아래로 튄다(측정 25px). 보이든 안 보이든 자리를 늘 잡아 둔다. */
     /* 확정 버튼과 같은 자리에 겹쳐 둔다 — 방식을 고를 때와 카드를 확정할 때는
@@ -2329,10 +2338,21 @@
     .q-opp.at-l { left:4px;  top:42%; transform:translateY(-50%); }
     .q-opp.at-r { right:4px; top:42%; transform:translateY(-50%); }
     /* 낸 카드는 그 사람 자리에서 판 안쪽으로 한 칸 들어온다 */
+    /* 자리 → 딴 카드 → 낸 카드 순으로 판 안쪽을 향해 한 줄씩 내려온다.
+       사람은 판 가장자리에 걸터앉고, 그 사람 것은 전부 판 안에 놓인다.
+       옆자리는 56px 만큼 안쪽으로 들여야 판 가장자리를 넘지 않는다(판은 49~362). */
     .q-bslot { position:absolute; width:64px; }
-    .q-bslot.at-t { left:50%; transform:translateX(-50%); top:100px; }
-    .q-bslot.at-l { left:16px;  top:calc(42% + 42px); }
-    .q-bslot.at-r { right:16px; top:calc(42% + 42px); }
+    .q-bslot.at-t { left:50%; transform:translateX(-50%); top:152px; }
+    .q-bslot.at-l { left:56px;  top:var(--q-side-bid, 488px); }
+    .q-bslot.at-r { right:56px; top:var(--q-side-bid, 488px); }
+    /* 딴 카드 — 자리 상자에서 꺼내 판 위에 깔았다. 그 사람 자리 바로 안쪽이라
+       누구 것인지는 붙어 있는 자리로 읽힌다. */
+    .q-oacq.at-t { left:50%; transform:translateX(-50%); width:56%; max-width:220px;
+      top:70px; justify-content:center; }
+    /* 세로 자리는 quadLayTable 이 경매대를 재서 넣어 준다 — 숫자로 박아 두면
+       경매대가 조금만 움직여도 카드가 그 위로 파고든다. */
+    .q-oacq.at-l { left:56px;  top:var(--q-side-acq, 410px); width:96px; }
+    .q-oacq.at-r { right:56px; top:var(--q-side-acq, 410px); width:96px; }
     /* 경매대를 좁힌다 — 양옆에 사람이 앉으므로 가운데가 그만큼 줄어든다 */
     body.quad4 #q-mat { gap:9px; padding:11px 13px; }
     body.quad4 #q-mat .card, body.quad4 .q-scard, body.quad4 .q-hole { width:50px; height:70px; }
@@ -3969,10 +3989,10 @@
        가운데 정렬에 transform 을 쓰면 안 된다. 이 패널은 나타날 때 slideDown
        애니메이션이 transform 을 잡고 있어서, 애니메이션이 이겨 그대로 오른쪽으로
        삐져나갔다. 폭이 고정(210px)이니 left 로 직접 민다. */
-    body.lobby-settings #settingsPanel { left:calc(50% - 105px);
+    body.lobby-settings #settingsPanel { left:calc(50% - 124px);
       top:calc(68px + var(--safe-t)); }   /* 탭 바(높이 60) 아래로 */
     #settingsPanel {
-      position:fixed; top:calc(74px + var(--safe-t)); left:16px; z-index:46; width:210px;
+      position:fixed; top:calc(74px + var(--safe-t)); left:16px; z-index:46; width:248px;
       display:none; flex-direction:column; gap:2px; padding:8px;
       background:linear-gradient(180deg,#152037,#0c1220); border:1.5px solid #8396b4; border-radius:14px;
       box-shadow:inset 0 1px 0 rgba(200,222,255,.2), 0 12px 30px rgba(0,0,0,.6);
@@ -3990,9 +4010,12 @@
     /* 약관·처리방침·확률 — 로비에 늘 띄워 둘 것이 아니라 여기 모아 둔다 */
     #settingsPanel .sp-pushnote { cursor:default; }
     #settingsPanel .sp-pushnote:hover { background:none; }
-    #settingsPanel .sp-docs { cursor:default; justify-content:center; gap:14px; flex-wrap:wrap; padding-top:12px; }
+    #settingsPanel .sp-docs { cursor:default; justify-content:center; gap:6px 12px; flex-wrap:wrap; padding-top:12px; }
     #settingsPanel .sp-docs:hover { background:none; }
-    .sp-doc { font-size:.72rem; color:#8794a8; text-decoration:none; border-bottom:1px solid rgba(135,148,168,.3); padding-bottom:1px; }
+    /* nowrap 이 없으면 "개인정보 처리방침" 이 낱말 한가운데서 접힌다.
+       링크 하나는 통째로 한 줄에 두고, 줄바꿈은 링크와 링크 사이에서만 일어나게 한다. */
+    .sp-doc { font-size:.72rem; color:#8794a8; text-decoration:none; white-space:nowrap;
+      border-bottom:1px solid rgba(135,148,168,.3); padding-bottom:1px; }
     .sp-doc:hover { color:#dcebff; border-bottom-color:#dcebff; }
     #settingsPanel .sp-lang { cursor:default; }
     #settingsPanel .sp-lang:hover { background:none; }
@@ -4000,6 +4023,9 @@
        글자 쪽만 줄이고 고르는 단추는 안 줄인다. */
     #settingsPanel .sp-row { flex-wrap:nowrap; }
     #settingsPanel .sp-lbl { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+    /* 위 nowrap 이 뒤에 와서 문서 줄의 wrap 을 이겼다 — 링크 셋이 한 줄로
+       삐져나가 양옆이 잘렸다. 문서 줄만 다시 접히게 되돌린다. */
+    #settingsPanel .sp-docs { flex-wrap:wrap; }
     .sp-seg { flex-shrink:0; }
     .sp-seg { display:flex; gap:0; border:1px solid rgba(131,150,180,.45); border-radius:9px; overflow:hidden; }
     .sp-segb { border:0; cursor:pointer; font-family:inherit; font-size:.72rem; font-weight:700;
@@ -4015,7 +4041,7 @@
     .sp-grid .sp-segb.on { background:linear-gradient(180deg,#c3d8f8,#8da4c5); }
     .sp-langcol { display:flex; flex-direction:column; align-items:stretch; gap:6px; padding:7px 9px; }
     .sp-langcol .sp-lbl { font-size:.8rem; }
-    .nl-grid { width:210px; margin:0 auto; }
+    .nl-grid { width:248px; margin:0 auto; }
     .title-terms { font-size:.68rem; color:#6b7688; text-align:center; margin-top:8px; line-height:1.55; max-width:270px; }
     .title-terms a { color:#8fa2c2; text-underline-offset:2px; }
     .nick-lang { display:flex; flex-direction:column; align-items:center; gap:7px; margin:-2px 0 2px; }
@@ -7708,6 +7734,9 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 
   <!-- 상단: 상대 3명 + 각자 앞의 배팅 자리 -->
   <div id="q-opps"></div>
+  <!-- 딴 카드는 자리 상자 안이 아니라 판 위에 놓는다. 내 것이 판 위에 깔리는 것과
+       같은 자리라야 "저 사람이 뭘 모았나" 가 한눈에 읽힌다. -->
+  <div id="q-oppacq"></div>
   <div id="q-oppbids"></div>
 
   <!-- 중앙: 경매장 -->
@@ -7717,12 +7746,14 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
       <button id="q-leftBtn" onclick="q4ToggleLeft()"><span data-ico="🔍"></span> 남은 카드</button>
     </div>
     <div id="q-leftPanel"><div class="q-lhead">아직 안 나온 카드 &nbsp;<span class="q-lkey mine">내 손패</span> <span class="q-lkey gone">이미 나옴</span></div><div id="q-left"></div></div>
+    <!-- 안내 문구는 경매대 위. 아래에 두면 옆 사람이 딴 카드와 같은 높이라
+         긴 문구의 꼬리가 카드에 가렸다. -->
+    <div id="q-status"></div>
     <div id="q-mat">
       <div class="q-slot q-deckslot"><div id="q-deckstack"></div></div>
       <div class="q-slot"><div class="q-slabel">공개 카드</div><div class="q-scard" id="q-center"></div></div>
       <div class="q-slot"><div class="q-slabel">출품 카드</div><div class="q-scard" id="q-offer"></div></div>
     </div>
-    <div id="q-status"></div>
     <!-- 시작 전 대기 — 인게임 화면에서 자리가 차는 걸 보며 시작한다 -->
     <div id="q-startPanel">
       <button class="btn btn-gold" style="width:auto" id="q-startBtn" onclick="q4StartNow()">시작</button>

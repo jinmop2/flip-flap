@@ -163,7 +163,11 @@ console.log('\n⑤′ 로비 설정 버튼');
   ok('로비에 설정 버튼이 있다', /id="setBtn"/.test(html) && /navGo\('settings'\)/.test(html));
   ok('탭이 설정을 연다', /settings: \(\) => \{ document\.body\.classList\.add\('lobby-settings'\)/.test(cli));
   ok('다른 탭으로 가면 닫힌다', /toggleSettings\(false\); document\.body\.classList\.remove\('lobby-settings'\)/.test(cli));
-  ok('로비에서는 가운데로 내려온다', /body\.lobby-settings #settingsPanel \{ left:calc\(50% - 105px\)/.test(html));
+  ok('로비에서는 가운데로 내려온다', (() => {
+    const w = /#settingsPanel \{[^}]*width:(\d+)px/.exec(html);
+    const c = /body\.lobby-settings #settingsPanel \{ left:calc\(50% - (\d+)px\)/.exec(html);
+    return !!w && !!c && Number(c[1]) === Number(w[1]) / 2;
+  })());
   // transform 으로 가운데를 잡으면 slideDown 애니메이션이 이겨 오른쪽으로 삐져나간다
   ok('가운데 정렬에 transform 을 안 쓴다',
      !/body\.lobby-settings #settingsPanel \{[^}]*transform:/.test(html));

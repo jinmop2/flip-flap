@@ -405,6 +405,7 @@
 
     // 상단 3명
     const opps = $('q-opps'); opps.innerHTML = '';
+    const acqLayer = $('q-oppacq'); if (acqLayer) acqLayer.innerHTML = '';
     for (const i of oppSeats) {
       const p = s.seats[i];
       const d = document.createElement('div');
@@ -455,7 +456,10 @@
       // "완성까지 남은 장수" 를 -2 처럼 적었는데 무슨 뜻인지 안 읽혔다. 뺐다.
       const hd = document.createElement('span'); hd.textContent = `🂠${p.handLen}`;
       meta.appendChild(hd);
-      const acq = document.createElement('div'); acq.className = 'q-oacq';
+      // 딴 카드는 자리 상자 안이 아니라 판 위에 놓는다 — 내 것이 판 위에 깔리는
+      // 것과 같은 자리라야 "저 사람이 뭘 모았나" 가 한눈에 읽힌다.
+      const acq = document.createElement('div');
+      acq.className = 'q-oacq ' + seatAt(oppSeats.length, oppSeats.indexOf(i));
       // 카드가 많이 쌓이면 기본 크기로는 두 줄에도 안 들어간다 — 한 단계 줄인 뒤,
       // 그래도 넘치면 fitAcq 가 재서 더 줄인다.
       if (p.acq.length >= 7) acq.classList.add('tight');
@@ -463,8 +467,9 @@
       for (const g of acqPile(p.acq)) { markNewCards(g, i); oin.appendChild(g); }
       acq.appendChild(oin);
       fitBoxes.push(acq);
-      d.appendChild(nm); d.appendChild(meta); d.appendChild(acq);
+      d.appendChild(nm); d.appendChild(meta);
       opps.appendChild(d);
+      acqLayer.appendChild(acq);
     }
 
     // 경매 매트

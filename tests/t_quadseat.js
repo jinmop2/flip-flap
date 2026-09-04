@@ -12,12 +12,12 @@ const ok = (n, c, note) => { if (c) { pass++; console.log('  ✓ ' + n); }
 
 console.log('① 자리가 판 둘레에 흩어진다');
 ok('자리 칸이 판 위에 얹힌 겹이다',
-   /#q-opps, #q-oppbids \{ position:absolute; inset:0;/.test(html));
+   /#q-opps, #q-oppbids, #q-oppacq \{ position:absolute; inset:0;/.test(html));
 ok('좌·상·우 자리가 있다',
    /\.q-opp\.at-t \{ left:50%;/.test(html) && /\.q-opp\.at-l \{ left:4px;/.test(html)
    && /\.q-opp\.at-r \{ right:4px;/.test(html));
-ok('낸 카드도 그 사람 옆에 붙는다',
-   /\.q-bslot\.at-l \{ left:16px;/.test(html) && /\.q-bslot\.at-r \{ right:16px;/.test(html));
+ok('낸 카드도 그 사람 쪽에 붙는다',
+   /\.q-bslot\.at-l \{ left:56px;/.test(html) && /\.q-bslot\.at-r \{ right:56px;/.test(html));
 ok('셋이면 왼쪽과 맞은편에 앉는다',
    /SEAT_AT = \{ 2: \['at-l', 'at-t'\], 3: \['at-l', 'at-t', 'at-r'\] \}/.test(c4));
 // 한쪽에만 사람이 앉으면 판이 그쪽으로 기울어, 경매대가 한가운데에서 밀려 보인다
@@ -66,6 +66,30 @@ console.log('\n⑤ 좌·우 자리와 경매대가 가로로 안 겹친다');
   ok('셋이 한 줄에 들어간다', seat * 2 + pad * 2 + mat <= W, `자리 ${seat}×2 + 경매대 ${mat} = ${seat * 2 + pad * 2 + mat}`);
   ok('경매대를 같이 줄였다', /body\.quad4 #q-mat \{ gap:9px; padding:11px 13px; \}/.test(html)
      && /body\.quad4 #q-mat \.card[^{]*\{ width:50px; height:70px; \}/.test(html));
+}
+
+
+console.log('\n⑤ 딴 카드와 낸 카드는 판 위에 놓인다');
+{
+  // 예전엔 자리 상자 안에 딴 카드가 같이 들어 있어, 이름·등급·카드 셋이 뒤엉켜
+  // 셋 다 안 읽혔다. 내 것이 판 위에 깔리는 것과 같은 자리로 꺼냈다.
+  ok('딴 카드용 겹이 따로 있다', /<div id="q-oppacq"><\/div>/.test(html)
+     && /#q-opps, #q-oppbids, #q-oppacq \{ position:absolute; inset:0;/.test(html));
+  ok('자리 상자에는 이름과 등급만 남는다',
+     /d\.appendChild\(nm\); d\.appendChild\(meta\);\s*\n\s*opps\.appendChild\(d\);/.test(c4)
+     && /acqLayer\.appendChild\(acq\);/.test(c4));
+  ok('딴 카드에도 자리 표시가 붙는다', /acq\.className = 'q-oacq ' \+ seatAt\(/.test(c4));
+  // 자리를 숫자로 박아 두면 경매대가 조금만 움직여도 카드가 그 위로 파고든다
+  ok('세로 자리는 경매대를 재서 넣는다',
+     /--q-side-acq/.test(cli) && /--q-side-bid/.test(cli)
+     && /mat\.bottom - h\.top \+ gap/.test(cli));
+  ok('CSS 는 그 값을 받아 쓴다', /top:var\(--q-side-acq/.test(html) && /top:var\(--q-side-bid/.test(html));
+  // 안내 문구가 딴 카드와 같은 높이면 긴 문구의 꼬리가 카드에 가린다
+  ok('안내 문구는 경매대 위에 있다',
+     html.indexOf('<div id="q-status"></div>') < html.indexOf('<div id="q-mat">'));
+  // 명패는 이름을 감싸는 테 — 내 프로필과 같은 모양이라야 판에서도 읽힌다
+  ok('이름은 명패에 감싸인다', /\.q-oname > span:not\(\.q-obadge\):not\(\.q-human\)/.test(html));
+  ok('등급 줄은 이름과 나뉜다', /\.q-opp \.q-ometa \{ border-top:/.test(html));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

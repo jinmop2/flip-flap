@@ -635,6 +635,26 @@ function attach4(io, hooks = {}) {
       if (r && r.specs) r.specs = r.specs.filter((x) => x !== socket.id);
     });
 
+    // 이모트 — 다인전에는 중계가 아예 없었다. server.js 의 처리기는 2인전 방
+    // (socket.roomId) 만 보므로, 다인전에서는 보낸 사람만 자기 것을 보고
+    // 아무에게도 가지 않았다 ("이모트가 적용이 안 된다").
+    safe(socket, 'emote', (d = {}) => {
+      const r = rooms4[socket.g4room];
+      if (!r || r.dead) return;                       // 다인전 자리가 아니면 여기 일이 아니다
+      const e = String(d.emoji || '').slice(0, 8); if (!e) return;
+      const now = Date.now();
+      // 쿨타임은 2인전과 같은 값·같은 자리를 쓴다 — 사람 하나당 하나여야 한다
+      if (now - (socket.lastEmote || 0) < 3000) { try { socket.emit('emote_cooldown'); } catch (_) {} return; }
+      socket.lastEmote = now;
+      const me = socket.g4seat;
+      for (let i = 0; i < r.seats.length; i++) {
+        const sk = r.seats[i];
+        if (!sk || !sk.sid || i === me) continue;
+        io.to(sk.sid).emit('emote', { emoji: e, seat: me });
+      }
+      for (const sid of r.specs || []) io.to(sid).emit('emote', { emoji: e, seat: me });
+    });
+
     safe(socket, 'g4_leave', () => {
       leavePending(socket.id); socket.g4pending = null;
       const r = rooms4[socket.g4room];
