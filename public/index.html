@@ -1951,45 +1951,58 @@
     /* 넷이 판을 둘러앉는다 — 나는 아래, 나머지는 좌·상·우.
        예전엔 셋이 위에 한 줄로 서 있어 "마주 앉은" 것도 "둘러앉은" 것도
        아닌 모양이었다. 자리를 판 둘레에 흩어 놓는다. */
-    #q-opps, #q-oppbids, #q-oppacq { position:absolute; inset:0; pointer-events:none; z-index:3; }
-    #q-opps > *, #q-oppbids > *, #q-oppacq > * { pointer-events:auto; }
+    #q-opps { position:absolute; inset:0; pointer-events:none; z-index:3; }
+    #q-opps > * { pointer-events:auto; }
 
-    /* 자리 — 로비 프로필 바와 같은 가죽·금테로. 평평한 반투명 네모일 때는
-       사람이 앉은 자리가 아니라 글자 담는 상자로 보였다. */
-    .q-opp { min-width:0; border-radius:12px; padding:7px 6px 6px;
-      background:linear-gradient(178deg,#1c2740 0%,#0e1626 100%);
-      border:1.5px solid rgba(159,180,216,.34); transition:.18s;
-      box-shadow:inset 0 1px 0 rgba(200,222,255,.16), 0 3px 10px rgba(0,0,0,.4); }
-    /* 이번 판 진행자 — 금테에 위쪽 빛. 누가 돌리는 판인지가 한눈에 보여야 한다. */
-    .q-opp.auc { border-color:var(--gold);
-      box-shadow:inset 0 1px 0 rgba(255,235,180,.4), 0 0 14px rgba(224,180,92,.4); }
+    /* ── 상대 자리 ────────────────────────────────────────────────────────
+       한 사람의 것이 한 덩어리다. 판 가장자리에 시계와 명패가 앉고, 그 앞
+       (판 안쪽)에 딴 카드와 이번에 낸 카드가 놓인다.
+       예전엔 겹이 셋이라 저마다 자리를 재서 맞춰야 했고, 상자에 담긴 글자로
+       보였지 사람이 앉은 자리로 안 보였다. 상자를 걷고 내 명패와 같은 차림을
+       입힌다 — 나도 저들도 같은 판에 앉은 사람이다. */
+    .q-seat { position:absolute; display:flex; flex-direction:column;
+      align-items:center; gap:5px; }
+    .q-sbar { display:flex; align-items:center; gap:5px; }
+    .q-sfront { display:flex; align-items:flex-start; gap:6px; }
+    /* 명패 — 내 것(.game-pcard)과 같은 판이되 한 치수 작다.
+       .game-pcard 는 저 아래에서 position:absolute 로 잡혀 있다. 같은 굵기로
+       맞서면 뒤에 쓴 쪽이 이겨 명패가 흐름에서 빠지고, 자리 크기에 안 잡혀
+       화면 밖으로 삐져나간다 — 그래서 한 단계 위(.q-seat)에서 누른다. */
+    .q-seat .q-splate { position:static; padding:3px 8px; max-width:none; border-radius:9px; }
+    /* 시계는 두 줄이 되면 안 된다 — 좁으면 "3:0 / 0" 으로 접혀 숫자가 아니라
+       고장난 글자처럼 보였다 */
+    .q-seat .q-stime { position:static; margin:0; font-size:.68rem; padding:2px 7px;
+      white-space:nowrap; flex-shrink:0; }
+    .q-splate .pc-body { gap:4px; }
+    .q-splate .gp-nick { font-size:.7rem; max-width:84px; }
+    .q-splate .gp-rank { font-size:.9rem; }
+    .q-splate .gp-rank.gp-art svg { width:16px; height:16px; }
+    .q-splate .gp-lv { font-size:.54rem; padding:0 4px; }
+    .q-shand { font-size:.54rem; color:#9aa3b2; flex-shrink:0; }
+    .q-stitle { font-size:.5rem; flex-shrink:0; display:inline-flex; align-items:center; }
+    .q-stitle .title-tag { font-size:.5rem; }
+    /* 이번 판 진행자 — 명패에 금테. 누가 돌리는 판인지가 한눈에 보여야 한다. */
+    .q-seat.auc .q-splate { border-color:var(--gold);
+      box-shadow:inset 0 1px 0 rgba(255,235,180,.4), 0 0 12px rgba(224,180,92,.38); }
     /* 이미 낸 사람 — 초록 기운. 아직 안 낸 사람과 갈려 보여야 눈치를 볼 수 있다. */
-    .q-opp.bidded { background:linear-gradient(178deg,#16332a 0%,#0c1c18 100%);
-      border-color:rgba(125,216,125,.4); }
-    .q-opp.bidded .q-oname::after { content:'✓'; margin-left:auto; color:#8fe0a0; font-size:.66rem; }
+    .q-seat.bidded .q-splate { border-color:rgba(125,216,125,.5); }
+    .q-seat.bidded .q-splate .pc-body::after { content:'✓'; color:#8fe0a0; font-size:.62rem; }
     /* 클로즈 경매에서 지금 낼 차례 — 숨쉬듯 밝아진다 */
-    .q-opp.turn { border-color:#7fd8ff;
+    .q-seat.turn .q-splate { border-color:#7fd8ff;
       box-shadow:inset 0 1px 0 rgba(190,235,255,.35), 0 0 14px rgba(120,200,255,.5); }
-    .q-oname { font-size:.62rem; font-weight:800; color:#e1e7f2; white-space:nowrap;
-      overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:3px; }
-    /* 명패는 이름을 감싸는 테다. 내 프로필과 같은 모양이라야 "저 사람 명패 좋네" 가
-       판에서도 읽힌다 — 이름 쪽만 감싸고, 뱃지는 밖에 둔다. */
-    .q-oname > span:not(.q-obadge):not(.q-human) { border-radius:6px; padding:1px 5px; }
-    .q-opp .q-ometa { border-top:1px solid rgba(159,180,216,.16); padding-top:4px; }
+    .q-seat.empty .q-splate { opacity:.5; border-style:dashed; }
     .q-obadge { font-size:.5rem; background:var(--gold); color:#10161e; border-radius:4px;
       padding:0 3px; font-weight:900; flex-shrink:0; }
-    .q-ometa { display:flex; gap:4px; align-items:center; margin-top:3px; font-size:.56rem; color:#b9c0cb; }
     .q-need { border-radius:4px; padding:0 4px; font-weight:800; background:rgba(0,0,0,.35); }
     .q-need.r1 { background:#5a6f9c; color:#fff; animation:qpulse 1s infinite; }
     .q-need.r2 { background:#7b91b2; color:#fff; }
     @keyframes qpulse { 0%,100%{opacity:1} 50%{opacity:.55} }
-    /* 이길 때까지 들 수 있는 최대치는 11장(2세트1+3세트2+4세트3+6세트5)이라
-       한 줄에는 절대 안 들어간다 — 한 줄로 두면 뒤쪽 카드가 잘려 나갔다.
-       두 줄로 접되 높이는 고정해서, 카드가 쌓여도 화면이 밀리지 않는다. */
-    .q-oacq { display:flex; flex-wrap:wrap; align-content:flex-start; gap:2px 0;
-      height:64px; overflow:hidden; }
-    /* 판 위에 얹힌 겹 안에서는 스스로 자리를 잡는다 */
-    #q-oppacq .q-oacq { position:absolute; margin-top:0; }
+    /* 딴 카드 더미. 예전엔 두 줄로 접고 높이를 64px 로 박아 두었다 — 자리가
+       가로줄이던 시절의 값이다. 지금은 자리마다 가장자리를 따라 길게 놓을 수
+       있어 한 줄이면 되고, 높이를 박아 두면 그게 그대로 판 안쪽으로 파고드는
+       깊이가 된다(3인전에서 74px 이 남아 있어 18px 을 파고들었다). */
+    .q-oacq { display:flex; flex-wrap:nowrap; align-content:flex-start; gap:2px 0;
+      height:auto; overflow:hidden; }
     /* 안쪽 묶음 — 넘치면 이걸 통째로 줄인다(fitAcq). 칸 크기는 그대로라 화면이 안 밀린다. */
     /* 트랜지션은 두지 않는다. 그릴 때마다 크기를 다시 재는데, 애니메이션이 걸려 있으면
        재는 순간과 보이는 순간이 어긋나 더미가 커졌다 작아졌다 펄떡인다. */
@@ -2018,7 +2031,6 @@
     body.q-n3 #q-myhand .card .c-num { font-size:1.9rem; }
 
     /* 3인전은 상대가 둘뿐이라 패널이 넓다 — 카드를 조금 키운다 */
-    body.q-n3 .q-oacq { height:74px; }
     body.q-n3 .q-oacq .q-pg .card { width:26px; height:36px; }
     body.q-n3 .q-oacq .q-pg .card:not(:first-child) { margin-left:-13px; }
     body.q-n3 .q-oacq.tight .q-pg .card { width:22px; height:31px; }
@@ -2065,9 +2077,6 @@
     .q-invst.busy { color:#ffab5e !important; }   /* 게임 중 — 접속은 했지만 못 부른다 */
 
     /* 상대 등급·레벨 — 이름만으로는 누구인지 안 보였다 */
-    .q-owho { display:inline-flex; align-items:center; gap:2px; font-weight:800; }
-    .q-owho .rank-art { width:1em; height:1em; display:inline-flex; }
-    .q-owho .rank-art svg { width:100%; height:100%; display:block; }
 
     /* 좌측 상단에 가로 일렬 — 세로로 쌓으니 상대 자리를 눌렀다 */
     /* 3·4인전·미니게임의 메뉴 아이콘은 각 판이 쓰는 층 위에 서야 한다 */
@@ -2110,12 +2119,14 @@
       body.quad4 .q-confirm-slot { height:36px; }
       body.quad4 #q-me { padding-bottom:28px; }
       #q-controls .ctrl-btn { width:38px; height:30px; }
-      body.quad4 .q-oacq { height:32px; }
-      body.quad4 #q-mat { padding:9px 14px; gap:14px; }
-      body.quad4 #q-mat .card { width:52px; height:72px; padding:3px 3px 2px; }
-      body.quad4 #q-mat .card .c-num { font-size:1.8rem; }
-      body.quad4 #q-mat .card .c-rank { font-size:.82rem; min-width:18px; }
-      body.quad4 .q-scard, body.quad4 .q-hole { width:52px; height:72px; }
+      /* 세로가 짧다고 경매대를 옆으로 넓히면 안 된다 — 양옆 자리가 들어갈
+         가로 여유는 화면 높이와 상관없이 똑같이 빠듯하다. 예전 가로줄 시절의
+         값이 남아 있어, 짧은 기기에서 옆 사람이 경매품 위로 올라앉았다. */
+      body.quad4 #q-mat { padding:8px 12px; gap:8px; }
+      body.quad4 #q-mat .card { width:44px; height:62px; padding:3px 3px 2px; }
+      body.quad4 #q-mat .card .c-num { font-size:1.6rem; }
+      body.quad4 #q-mat .card .c-rank { font-size:.74rem; min-width:16px; }
+      body.quad4 .q-scard, body.quad4 .q-hole { width:44px; height:62px; }
       body.quad4 #q-deckstack { width:48px; height:64px; }
       body.quad4 #q-deckstack .card { width:42px; height:59px; }
       body.quad4 #q-myhand .card, body.quad4.q-n3 #q-myhand .card { width:52px; height:72px; }
@@ -2133,7 +2144,7 @@
 
     /* 중앙 경매장 */
     /* justify-content:center 는 내용이 칸보다 클 때 넘친 만큼을 "위로" 밀어낸다.
-       그러면 맨 위의 턴바가 바로 위 배팅 자리(#q-oppbids)를 침범한다.
+       그러면 맨 위의 턴바가 바로 위 자리(#q-opps)를 침범한다.
        safe 를 붙이면 넘칠 때만 위 맞춤으로 떨어져 위쪽 침범이 사라진다. */
     #q-table { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center;
       justify-content:safe center; gap:6px; position:relative;
@@ -2245,6 +2256,13 @@
       .q-bslot.win .card, #q-mybid.win .card { transition:none; }
     }
     .q-blabel { font-size:.48rem; color:#aab1bc; }
+    /* 상대 자리에서는 '낙찰' 을 카드에 얹는다. 아래에 쌓으면 낸 카드 칸이
+       50 → 68px 로 불어나는데, 옆자리는 그만큼의 깊이가 없어 경매품 위로
+       13px 올라앉았다. 내 칸(#q-mybid)은 아래에 자리가 있으니 그대로 둔다 —
+       거기까지 띄우면 글자가 칸 밖으로 나가 딴 카드 줄을 밟는다.
+       (칸은 .q-bslot { position:relative } 이라 기준이 이미 잡혀 있다.) */
+    .q-seat .q-blabel { position:absolute; left:50%; transform:translateX(-50%);
+      bottom:-11px; white-space:nowrap; }
     .q-bslot.win .q-blabel, #q-mybid.win .q-blabel { color:#ffd94a; font-weight:900; }
 
     #q-status { font-size:.72rem; font-weight:800; color:#dcebff; text-align:center;
@@ -2325,42 +2343,52 @@
     #q-startPanel { display:none; gap:8px; }
     #q-startPanel.show { display:flex; }
     /* ── 자리 배치 — 넷이 판을 둘러앉는다 ─────────────────────
-       나는 늘 아래. 나머지는 좌·상·우에 앉는다. 예전엔 셋이 위에 한 줄로
-       서 있어 "마주 앉은" 것도 "둘러앉은" 것도 아닌 모양이었다.
-       이 블록은 위의 .q-opp 규칙들보다 뒤에 와야 한다 — 앞에 두면
-       거기서 position:relative 로 되돌려 배치가 통째로 무너진다. */
-    /* 좌·우 자리는 경매대와 가로로 나란히 선다. 390px 안에 자리 둘과 경매대가
-       다 들어가야 해서, 자리를 좁히고 경매대도 같이 줄인다 — 안 그러면
-       왼쪽 사람이 경매품 위에 올라앉는다. */
-    .q-opp { position:absolute; width:22%; max-width:92px; }
-    .q-opp.at-t { width:31%; max-width:132px; }
-    .q-opp.at-t { left:50%; transform:translateX(-50%); top:calc(6px + var(--safe-t)); }
-    .q-opp.at-l { left:4px;  top:42%; transform:translateY(-50%); }
-    .q-opp.at-r { right:4px; top:42%; transform:translateY(-50%); }
-    /* 낸 카드는 그 사람 자리에서 판 안쪽으로 한 칸 들어온다 */
-    /* 자리 → 딴 카드 → 낸 카드 순으로 판 안쪽을 향해 한 줄씩 내려온다.
-       사람은 판 가장자리에 걸터앉고, 그 사람 것은 전부 판 안에 놓인다.
-       옆자리는 56px 만큼 안쪽으로 들여야 판 가장자리를 넘지 않는다(판은 49~362). */
-    .q-bslot { position:absolute; width:64px; }
-    .q-bslot.at-t { left:50%; transform:translateX(-50%); top:152px; }
-    .q-bslot.at-l { left:56px;  top:var(--q-side-bid, 488px); }
-    .q-bslot.at-r { right:56px; top:var(--q-side-bid, 488px); }
-    /* 딴 카드 — 자리 상자에서 꺼내 판 위에 깔았다. 그 사람 자리 바로 안쪽이라
-       누구 것인지는 붙어 있는 자리로 읽힌다. */
-    .q-oacq.at-t { left:50%; transform:translateX(-50%); width:56%; max-width:220px;
-      top:70px; justify-content:center; }
-    /* 세로 자리는 quadLayTable 이 경매대를 재서 넣어 준다 — 숫자로 박아 두면
-       경매대가 조금만 움직여도 카드가 그 위로 파고든다. */
-    .q-oacq.at-l { left:56px;  top:var(--q-side-acq, 410px); width:96px; }
-    .q-oacq.at-r { right:56px; top:var(--q-side-acq, 410px); width:96px; }
-    /* 경매대를 좁힌다 — 양옆에 사람이 앉으므로 가운데가 그만큼 줄어든다 */
+       나는 늘 아래. 나머지는 좌·상·우.
+       옆자리는 덩어리째 90도 돌린다. 가로로 눕혀 두면 저 사람이 그 변에
+       앉은 게 아니라 화면 구석에 붙어 있는 것으로 보였다.
+       도는 방향은 명패가 바깥(자기 쪽)을 보게 잡는다 — 판에 놓인 이름표가
+       그 사람 앞에 세워져 있는 그 모양이다. 그래서 낸 카드는 저절로
+       판 안쪽, 곧 그 사람 앞에 놓인다.
+
+       도는 축은 왼쪽 위 모서리다(transform-origin:0 0). 가운데를 축으로 잡으면
+       돌린 뒤 절반이 화면 밖으로 나간다 — 폭이 내용에 따라 변해서 되돌릴
+       거리도 그때그때 달라지기 때문이다. 모서리를 축으로 잡으면
+       "가장자리에 붙어 안쪽으로 깊이만큼 뻗는다" 가 폭과 무관하게 성립한다. */
+    .q-seat.at-t { left:50%; transform:translateX(-50%); top:calc(6px + var(--safe-t)); }
+    /* 옆자리는 폭(=화면 세로로 눕는 길이)을 고정한다. 축이 모서리라
+       세로 가운데를 맞추려면 폭의 절반을 알아야 한다. */
+    .q-seat.at-l, .q-seat.at-r { width:var(--q-seat-w, 206px); }
+    .q-seat.at-l { left:0;    top:calc(var(--q-side-y, 41%) + var(--q-seat-w, 206px) / 2);
+      transform-origin:0 0; transform:rotate(-90deg); }
+    .q-seat.at-r { left:100%; top:calc(var(--q-side-y, 41%) - var(--q-seat-w, 206px) / 2);
+      transform-origin:0 0; transform:rotate(90deg); }
+    /* 딴 카드는 한 줄로 눕는다 — 옆자리는 깊이가 86px 뿐이라 두 줄을 못 쓴다.
+       대신 가장자리를 따라 길게 늘어놓을 자리는 넉넉하다. */
+    .q-seat .q-oacq { height:auto; flex-wrap:nowrap; }
+    .q-seat .q-acqin { flex-wrap:nowrap; }
+    .q-bslot { display:flex; flex-direction:column; align-items:center; }
+
+    /* ── 치수 — 옆자리가 들어갈 만큼만 경매대를 좁힌다 ────────────────────
+       양옆에 사람이 앉으므로 가운데가 그만큼 줄어든다. 옆자리 한 사람이
+       가장자리에서 판 안쪽으로 뻗는 깊이는
+         명패 30 + 사이 4 + 낸 카드 48 = 82px.
+       경매대가 195px 이라 양옆에 90px 씩 남는다 — 8px 이 뜬다. 재서 잡은 값이다.
+       처음엔 깊이가 103 이라 13px 을 파고들었다: 낸 카드 아래에 '낙찰' 글자가
+       쌓여 칸이 50 → 68px 로 불어 있었다. 3인전은 딴 카드 더미 높이가 74px 로
+       박혀 있어 또 18px 을 파고들었다. 둘 다 재서 찾았다.
+       이 균형이 깨지면 옆 사람이 경매품 위로 올라앉는다 — 예전에 그랬다. */
     body.quad4 #q-mat { gap:9px; padding:11px 13px; }
-    body.quad4 #q-mat .card, body.quad4 .q-scard, body.quad4 .q-hole { width:50px; height:70px; }
+    body.quad4 #q-mat .card, body.quad4 .q-scard, body.quad4 .q-hole { width:46px; height:64px; }
     body.quad4 .q-deckslot { margin:12px 5px 0 0; }
     body.quad4 .q-bslot .card { width:46px; height:64px; }
-    /* 오른쪽이 비어도 경매대는 가운데 정렬이라, 넓힐 수 있는 건 왼쪽 여유만큼이다.
-       한 번 넓혀 봤더니 왼쪽 사람이 덱 위로 10px 올라앉았다 — 넷일 때 크기 그대로 둔다. */
-
+    /* 옆자리는 깊이가 빠듯하다 — 명패도 낸 카드도 한 치수 작게 */
+    .q-seat.at-l .q-splate, .q-seat.at-r .q-splate { padding:2px 6px; }
+    .q-seat.at-l .q-splate .gp-nick, .q-seat.at-r .q-splate .gp-nick { font-size:.66rem; max-width:74px; }
+    .q-seat.at-l .q-stime, .q-seat.at-r .q-stime { font-size:.62rem; padding:1px 6px; }
+    .q-seat.at-l, .q-seat.at-r { gap:4px; }
+    .q-seat.at-l .q-bslot .card, .q-seat.at-r .q-bslot .card { width:34px; height:48px; padding:2px 2px 1px; }
+    .q-seat.at-l .q-bslot .card .c-num, .q-seat.at-r .q-bslot .card .c-num { font-size:1.25rem; }
+    .q-seat.at-l .q-bslot .card .c-rank, .q-seat.at-r .q-bslot .card .c-rank { font-size:.54rem; min-width:12px; padding:0 3px; }
     /* 딜 — 상대에게 가는 카드. 상대는 손패를 안 보여 주므로 날아가는 카드만
        잠깐 그렸다 사라진다. 이게 없으면 내 앞에만 카드가 생겨서
        "나눠준다" 가 아니라 "내 손에 그냥 나타난다" 로 보인다. */
@@ -2373,8 +2401,6 @@
     }
     @media (prefers-reduced-motion:reduce) { .q-deal-ghost { display:none; } }
 
-    .q-opp.empty { opacity:.45; border-style:dashed; }
-    .q-opp.empty .q-oname { color:#90959c; }
     /* 사람 참가자 표시 */
     .q-human { font-size:.5rem; background:#4a8f3a; color:#eaffe0; border-radius:4px;
       padding:0 3px; font-weight:900; flex-shrink:0; }
@@ -7777,12 +7803,10 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     </div>
   </div>
 
-  <!-- 상단: 상대 3명 + 각자 앞의 배팅 자리 -->
+  <!-- 상대 자리 — 한 사람의 것이 한 덩어리다. 시계·명패가 판 가장자리에 앉고,
+       그 앞에 딴 카드와 이번에 낸 카드가 놓인다. 겹을 셋으로 나눠 두었더니
+       저마다 자리를 재서 맞춰야 했고, 경매대가 조금만 움직여도 어긋났다. -->
   <div id="q-opps"></div>
-  <!-- 딴 카드는 자리 상자 안이 아니라 판 위에 놓는다. 내 것이 판 위에 깔리는 것과
-       같은 자리라야 "저 사람이 뭘 모았나" 가 한눈에 읽힌다. -->
-  <div id="q-oppacq"></div>
-  <div id="q-oppbids"></div>
 
   <!-- 중앙: 경매장 -->
   <div id="q-table">

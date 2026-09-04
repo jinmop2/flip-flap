@@ -314,15 +314,20 @@
       const seat = (p.me + k) % 4;
       const who = p.seats[seat];
       const d = document.createElement('div');
-      d.className = 'q-opp ' + seatAt(3, k - 1) + (who ? '' : ' empty');
-      const nm = document.createElement('div');
-      nm.className = 'q-oname';
-      if (who) { const b = document.createElement('span'); b.className = 'q-human'; b.textContent = '사람'; nm.appendChild(b); }
-      nm.appendChild(document.createTextNode(who ? who.name : '빈 자리'));
-      const meta = document.createElement('div');
-      meta.className = 'q-ometa';
-      meta.textContent = who ? '준비 완료' : '기다리는 중…';
-      d.appendChild(nm); d.appendChild(meta);
+      d.className = 'q-seat ' + seatAt(3, k - 1) + (who ? '' : ' empty');
+      // 판이 열리기 전에도 자리 모양은 같다 — 명패가 놓이고 앞은 비어 있다.
+      const bar = document.createElement('div'); bar.className = 'q-sbar';
+      const plate = document.createElement('div'); plate.className = 'game-pcard q-splate';
+      const body = document.createElement('div'); body.className = 'pc-body';
+      const face = document.createElement('span'); face.className = 'gp-rank gp-art';
+      face.textContent = who ? '👤' : '🪑';
+      const nick = document.createElement('span'); nick.className = 'gp-nick';
+      nick.textContent = who ? who.name : '빈 자리';
+      const lv = document.createElement('span'); lv.className = 'gp-lv';
+      lv.textContent = who ? '준비 완료' : '기다리는 중…';
+      body.appendChild(face); body.appendChild(nick); body.appendChild(lv);
+      plate.appendChild(body); bar.appendChild(plate);
+      d.appendChild(bar);
       // 빈자리는 눌러서 친구를 부른다
       if (!who) {
         const plus = document.createElement('button');
@@ -334,7 +339,6 @@
       }
       opps.appendChild(d);
     }
-    $('q-oppbids').innerHTML = '';
     $('q-mybid').innerHTML = ''; $('q-mybid').className = '';
     $('q-myacq').innerHTML = '';
     $('q-myhand').innerHTML = '';
@@ -403,73 +407,101 @@
     $('q-turn').textContent = `${s.turn}턴`;
     $('q-deck').textContent = `덱 ${s.deckLeft}장`;
 
-    // 상단 3명
+    // ── 상대 자리 ────────────────────────────────────────────────────────
+    // 한 사람의 것이 한 덩어리다: 시계·명패가 판 가장자리에, 그 앞에 딴 카드와
+    // 낸 카드가 놓인다. 예전엔 겹이 셋(자리 상자·딴 카드·낸 카드) 이라 저마다
+    // top 을 재서 맞춰야 했고, 경매대가 조금만 움직여도 남의 자리로 넘어갔다.
+    // 옆자리는 이 덩어리째 90도 돌린다 — 그래야 정말 그 변에 앉아 보인다.
+    const winner = s.result ? s.result.winner : -1;
+    const bidView = (seat) => {
+      if (!a) return null;
+      if (a.bids && a.bids[seat]) return card4(a.bids[seat]);   // 열린 카드
+      if (s.seats[seat].bidded) return card4(null);             // 냈지만 아직 뒷면
+      return null;
+    };
     const opps = $('q-opps'); opps.innerHTML = '';
-    const acqLayer = $('q-oppacq'); if (acqLayer) acqLayer.innerHTML = '';
     for (const i of oppSeats) {
       const p = s.seats[i];
+      const where = seatAt(oppSeats.length, oppSeats.indexOf(i));
       const d = document.createElement('div');
-      d.className = 'q-opp ' + seatAt(oppSeats.length, oppSeats.indexOf(i)) + (s.auctioneer === i ? ' auc' : '') + (p.bidded ? ' bidded' : '');
-      const nm = document.createElement('div');
-      nm.className = 'q-oname';
-      if (s.auctioneer === i) { const b = document.createElement('span'); b.className = 'q-obadge'; b.textContent = '진행'; nm.appendChild(b); }
-      if (!p.isBot) { const b = document.createElement('span'); b.className = 'q-human'; b.textContent = '사람'; nm.appendChild(b); }
-      const nmText = document.createElement('span');
-      nmText.textContent = p.name;
-      // 산 명패·닉네임 색을 상대에게도 입힌다 — 로비·2인전과 같은 모습이어야
+      d.className = 'q-seat ' + where + (s.auctioneer === i ? ' auc' : '')
+        + (p.bidded ? ' bidded' : '') + (i === winner ? ' win' : '');
+
+      // ① 가장자리 — 시계와 명패. 내 자리(#q-mebar)와 같은 차림이라야
+      //    "저 사람도 나처럼 앉아 있다" 로 읽힌다.
+      const bar = document.createElement('div'); bar.className = 'q-sbar';
+      const tm = document.createElement('div');
+      tm.className = 'timer pc-timer q-stime';
+      if (s.clock) {
+        const left = Math.max(0, s.clock[i] || 0);
+        tm.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+        if (s.waitSeat === i) tm.classList.add('active');
+        if (left <= 30) tm.classList.add('warn');
+      } else tm.style.display = 'none';
+
+      const plate = document.createElement('div'); plate.className = 'game-pcard q-splate';
+      const body = document.createElement('div'); body.className = 'pc-body';
+      if (s.auctioneer === i) { const b = document.createElement('span'); b.className = 'q-obadge'; b.textContent = '진행'; body.appendChild(b); }
+      // 얼굴 — 사람은 등급 문장, AI 는 로봇. 내 명패와 같은 자리에 온다.
+      const face = document.createElement('span');
+      face.className = 'gp-rank gp-art';
+      if (p.isBot) face.innerHTML = (typeof AI_AVATAR !== 'undefined') ? AI_AVATAR : '🤖';
+      else if (p.profile && typeof rankIco === 'function') {
+        face.innerHTML = rankIco(p.profile.rankIcon); face.style.color = p.profile.rankColor;
+      } else face.textContent = '👤';
+      body.appendChild(face);
+      const nick = document.createElement('span');
+      nick.className = 'gp-nick';
+      // 산 명패·닉네임 색은 상대에게도 입힌다 — 로비·2인전과 같은 모습이라야
       // "저 사람 명패 좋네" 가 판에서도 보인다.
       if (p.profile) {
         const cls = (typeof ncClass === 'function' ? ncClass(p.profile.nickColor) : '') +
                     (typeof npClass === 'function' ? npClass(p.profile.plate) : '');
-        if (cls.trim()) nmText.className = cls.trim();
+        if (cls.trim()) nick.className += cls;
       }
+      nick.textContent = p.name;
       if (!p.isBot) {
-        // 사람이면 눌러서 정보·친구 신청. AI 는 볼 게 없다.
-        nmText.style.cursor = 'pointer';
-        nmText.title = '상대 정보';
-        nmText.onclick = (e) => {
+        nick.style.cursor = 'pointer'; nick.title = '상대 정보';
+        nick.onclick = (e) => {
           e.stopPropagation();
           if (typeof openOppInfo === 'function') openOppInfo(p.profile || { nick: p.name, guest: true });
         };
       }
-      nm.appendChild(nmText);
-      const meta = document.createElement('div');
-      meta.className = 'q-ometa';
-      // 상대가 누군지 — 등급·레벨. 사람인지 AI 인지, 얼마나 센지가 이름만으로는 안 보였다.
-      const who = document.createElement('span');
-      who.className = 'q-owho';
-      if (p.isBot) {
-        who.textContent = 'AI';
-      } else if (p.profile) {
-        const pr = p.profile;
-        who.innerHTML = (typeof rankIco === 'function' ? rankIco(pr.rankIcon) : '') +
-          `<span style="color:${pr.rankColor}">${pr.rank}</span> Lv.${pr.level}`;
-      } else {
-        who.textContent = '게스트';
-      }
-      meta.appendChild(who);
+      body.appendChild(nick);
+      // 누구인지 한 줄 더 — AI 인지, 몇 레벨인지. 이름만으로는 안 보였다.
+      const lv = document.createElement('span'); lv.className = 'gp-lv';
+      lv.textContent = p.isBot ? 'AI' : (p.profile ? 'Lv.' + p.profile.level : '게스트');
+      body.appendChild(lv);
+      // 칭호 — 산 꾸밈이 판에서 안 보이면 살 이유가 없다
       if (p.profile && p.profile.titleInfo && typeof titleTag === 'function') {
-        const t = document.createElement('span');
+        const t = document.createElement('span'); t.className = 'q-stitle';
         t.innerHTML = titleTag(p.profile.titleInfo);
-        meta.appendChild(t);
+        body.appendChild(t);
       }
-      // "완성까지 남은 장수" 를 -2 처럼 적었는데 무슨 뜻인지 안 읽혔다. 뺐다.
-      const hd = document.createElement('span'); hd.textContent = `🂠${p.handLen}`;
-      meta.appendChild(hd);
-      // 딴 카드는 자리 상자 안이 아니라 판 위에 놓는다 — 내 것이 판 위에 깔리는
-      // 것과 같은 자리라야 "저 사람이 뭘 모았나" 가 한눈에 읽힌다.
-      const acq = document.createElement('div');
-      acq.className = 'q-oacq ' + seatAt(oppSeats.length, oppSeats.indexOf(i));
-      // 카드가 많이 쌓이면 기본 크기로는 두 줄에도 안 들어간다 — 한 단계 줄인 뒤,
-      // 그래도 넘치면 fitAcq 가 재서 더 줄인다.
+      // 손에 몇 장 남았는지 — 판을 읽는 데 쓰는 수다
+      const hd = document.createElement('span'); hd.className = 'q-shand'; hd.textContent = `🂠${p.handLen}`;
+      body.appendChild(hd);
+      plate.appendChild(body);
+      bar.appendChild(tm); bar.appendChild(plate);
+
+      // ② 그 사람 앞 — 딴 카드와 이번에 낸 카드
+      const front = document.createElement('div'); front.className = 'q-sfront';
+      const acq = document.createElement('div'); acq.className = 'q-oacq';
       if (p.acq.length >= 7) acq.classList.add('tight');
       const oin = document.createElement('div'); oin.className = 'q-acqin';
       for (const g of acqPile(p.acq)) { markNewCards(g, i); oin.appendChild(g); }
       acq.appendChild(oin);
       fitBoxes.push(acq);
-      d.appendChild(nm); d.appendChild(meta);
+      const bid = document.createElement('div'); bid.className = 'q-bslot';
+      const card = bidView(i);
+      if (card) {
+        bid.appendChild(card);
+        if (i === winner) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; bid.appendChild(l); }
+      }
+      front.appendChild(acq); front.appendChild(bid);
+
+      d.appendChild(bar); d.appendChild(front);
       opps.appendChild(d);
-      acqLayer.appendChild(acq);
     }
 
     // 경매 매트
@@ -503,26 +535,7 @@
       $('q-typeTag').textContent = '';
     }
 
-    // 배팅 카드는 각자 자기 앞에 놓인다.
-    // 아직 안 열린 카드는 뒷면으로 두었다가 공개 시점에 한 번에 뒤집는다.
-    const winner = s.result ? s.result.winner : -1;
-    const bidView = (seat) => {
-      if (!a) return null;
-      if (a.bids && a.bids[seat]) return card4(a.bids[seat]);   // 열린 카드
-      if (s.seats[seat].bidded) return card4(null);             // 냈지만 아직 뒷면
-      return null;
-    };
-    const ob = $('q-oppbids'); ob.innerHTML = '';
-    for (const i of oppSeats) {
-      const slot = document.createElement('div');
-      slot.className = 'q-bslot ' + seatAt(oppSeats.length, oppSeats.indexOf(i)) + (i === winner ? ' win' : '');
-      const card = bidView(i);
-      if (card) {
-        slot.appendChild(card);
-        if (i === winner) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; slot.appendChild(l); }
-      }
-      ob.appendChild(slot);
-    }
+    // 내 배팅 카드는 내 자리 앞에. 상대 것은 각자 자리 안에 이미 들어 있다.
     const mb = $('q-mybid'); mb.innerHTML = '';
     mb.className = (winner === mySeat ? 'win' : '');
     const myCard = bidView(mySeat);
@@ -534,18 +547,20 @@
     const bidsOpen = !!(a && a.bids && Object.keys(a.bids).length);
     if (bidsOpen && !fx.revealed) {
       fx.revealed = true;
-      const cards = [...ob.querySelectorAll('.card'), ...mb.querySelectorAll('.card')];
+      const cards = [...opps.querySelectorAll('.q-bslot .card'), ...mb.querySelectorAll('.card')];
       cards.forEach((c, i) => { c.style.animationDelay = (i * 55) + 'ms'; play(c, 'anim-reveal'); });
       setTimeout(() => sfx('reveal'), 60);
     } else if (bidsOpen) {
       // 이미 공개된 뒤의 재렌더 — 다시 뒤집지 않는다
-      [...ob.querySelectorAll('.card'), ...mb.querySelectorAll('.card')].forEach((c) => { c.style.animationDelay = ''; });
+      [...opps.querySelectorAll('.q-bslot .card'), ...mb.querySelectorAll('.card')].forEach((c) => { c.style.animationDelay = ''; });
     }
     if (!bidsOpen) fx.revealed = false;
 
     if (winner >= 0 && fx.settledTurn !== s.turn) {
       fx.settledTurn = s.turn;
-      const box = winner === mySeat ? mb : ob.children[oppSeats.indexOf(winner)];
+      const box = winner === mySeat ? mb
+        : (opps.children[oppSeats.indexOf(winner)] || {}).querySelector
+          ? opps.children[oppSeats.indexOf(winner)].querySelector('.q-bslot') : null;
       if (box) {
         const st = document.createElement('div');
         st.className = 'q-winstamp'; st.textContent = 'WIN';
@@ -659,7 +674,7 @@
       fx.dealt = true;
       const STAGGER = 55;
       const deck = $('q-deckstack');
-      const seats = [...document.querySelectorAll('#q-opps .q-opp')];
+      const seats = [...document.querySelectorAll('#q-opps .q-seat')];
       const players = seats.length + 1;
       // 화투·포커처럼 한 바퀴씩 돈다 — 한 사람에게 여섯 장을 몰아주지 않는다.
       // 나는 맨 끝에 받는다(진행자가 자기 것을 마지막에 놓는 그 순서).

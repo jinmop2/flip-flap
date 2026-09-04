@@ -145,9 +145,9 @@ function quadLayTable() {
     return axis === 'x' ? b.left + b.width / 2 : b.top + b.height / 2;
   };
   const q = (sel) => document.querySelector(sel);
-  const left0 = mid(q('.q-opp.at-l'), 'x');
-  const right0 = mid(q('.q-opp.at-r'), 'x');
-  const top0 = mid(q('.q-opp.at-t'), 'y');
+  const left0 = mid(q('.q-seat.at-l'), 'x');
+  const right0 = mid(q('.q-seat.at-r'), 'x');
+  const top0 = mid(q('.q-seat.at-t'), 'y');
   const me0 = mid(document.getElementById('q-mebar'), 'y');
   const myhand = r('q-myhand');
 
@@ -164,7 +164,7 @@ function quadLayTable() {
   // (경매대를 내리면 판도 같이 내려가 제자리걸음이 된다.)
   // 그래서 옆에 앉은 사람에게서 뽑는다. 다른 변이 사람에게서 나오는 것과 같다.
   const sideTop = (() => {
-    const a = q('.q-opp.at-l'), b2 = q('.q-opp.at-r');
+    const a = q('.q-seat.at-l'), b2 = q('.q-seat.at-r');
     const t = [a, b2].map((e) => { const r = e && e.getBoundingClientRect(); return r && r.height ? r.top : null; })
                      .filter((x) => x != null);
     return t.length ? Math.min(...t) : null;
@@ -186,12 +186,9 @@ function quadLayTable() {
   table.style.height = Math.round(bottom - top) + 'px';
   table.classList.add('on');
 
-  // 옆 사람이 딴 카드와 낸 카드는 경매대 바로 아래에 놓인다. 자리를 숫자로 박아
-  // 두면 경매대가 조금만 움직여도(안내 문구 길이·방식 버튼) 카드가 경매대를
-  // 파고든다 — 실제로 그랬다. 경매대를 재서 그 아래로 붙인다.
-  const gap = 6;
-  host.style.setProperty('--q-side-acq', Math.round(mat.bottom - h.top + gap) + 'px');
-  host.style.setProperty('--q-side-bid', Math.round(mat.bottom - h.top + gap + 78) + 'px');
+  // 옆에 앉은 두 사람은 경매대와 눈높이를 맞춘다. 숫자로 박아 두면 경매대가
+  // 조금만 움직여도(안내 문구 길이·방식 버튼) 자리가 따로 논다 — 재서 맞춘다.
+  host.style.setProperty('--q-side-y', Math.round((mat.top + mat.bottom) / 2 - h.top) + 'px');
 }
 
 // 그 자리에서 바로 재면 안 된다. 판 높이는 --app-h 에 매여 있고 그 값은 다른

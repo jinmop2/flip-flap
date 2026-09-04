@@ -218,8 +218,11 @@ console.log('\n⑩ 나가기·설명·설정·프로필');
   ok('손패 아래 자리를 비워 둔다', /#q-me \{ padding-bottom:\d+px/.test(html));
   ok('시계가 그 줄 안에 있다', /id="q-mebar"[\s\S]{0,400}?id="q-timer"/.test(html));
   ok('메뉴가 판 위층에 선다', /#q-menuWrap \{ z-index:40; \}/.test(html));
-  ok('상대 등급·레벨을 보여준다', /q-owho/.test(c4) && /\.q-owho \{/.test(html));
-  ok('AI 는 AI 로 적는다', /who\.textContent = 'AI'/.test(c4));
+  // 명패는 내 프로필과 같은 차림이다 — 등급 문장·닉·레벨. 등급 '이름' 은
+  // 내 명패에도 없다(펼친 전적에만 있다). 판에서는 문장으로 읽는다.
+  ok('상대 등급 문장과 레벨을 보여준다', /face\.className = 'gp-rank gp-art'/.test(c4)
+     && /rankIco\(p\.profile\.rankIcon\)/.test(c4) && /'Lv\.' \+ p\.profile\.level/.test(c4));
+  ok('AI 는 AI 로 적는다', /p\.isBot \? 'AI'/.test(c4));
   // 개수를 박아 두면 버튼이 하나 늘 때마다 깨진다. 있어야 할 것이 다 있는지를 본다.
   {
     const bar = html.slice(html.indexOf('id="q-menuWrap"'), html.indexOf('id="q-menuWrap"') + 2200);
@@ -309,7 +312,9 @@ console.log('\n⑬ 나가기 확인 · 친구 초대 · 상대 명패');
   ok('방 자리에서 토큰을 찾는다', /room\.seats\[i\]\.token/.test(s4 + fs.readFileSync(src + '/view4.js', 'utf8')));
   ok('게임 자리에서 찾지 않는다', !/\(!s\.isBot && s\.token\)/.test(s4));
   ok('명패·닉색을 입힌다', /npClass\(p\.profile\.plate\)/.test(c4));
-  ok('칭호도 보여준다', /titleTag\(p\.profile\.titleInfo\)/.test(c4));
+  // 산 꾸밈이 판에서 안 보이면 살 이유가 없다
+  ok('칭호도 보여준다', /titleTag\(p\.profile\.titleInfo\)/.test(c4)
+     && /\.q-stitle \.title-tag/.test(html));
 }
 
 console.log('\n⑭ 내 정보 · 명패 고르기');
@@ -516,13 +521,16 @@ console.log('\n⑮ 다인전도 2인전과 같은 판 위에서 논다');
   // 판을 좁히고 양옆 사람은 그 바깥으로 내보낸다 — 판을 둘러싼 모양
   // 넷이 상·하·좌·우로 앉는다. 예전엔 셋이 위에 한 줄로 서 있어
   // "마주 앉은" 것도 "둘러앉은" 것도 아닌 모양이었다.
+  // 옆자리는 덩어리째 90도 돌아앉는다 — 가로로 눕히면 그 변에 앉은 게 아니라
+  // 화면 구석에 붙어 있는 것으로 보였다
   ok('자리를 판에 둘러 앉힌다',
-     /\.q-opp\.at-t \{ left:50%;/.test(htm2)
-     && /\.q-opp\.at-l \{ left:4px;/.test(htm2)
-     && /\.q-opp\.at-r \{ right:4px;/.test(htm2));
+     /\.q-seat\.at-t \{ left:50%;/.test(htm2)
+     && /\.q-seat\.at-l \{ left:0;/.test(htm2)
+     && /\.q-seat\.at-r \{ left:100%;/.test(htm2)
+     && /transform:rotate\(-90deg\)/.test(htm2) && /transform:rotate\(90deg\)/.test(htm2));
   // 사람이 레일에 걸터앉으므로 판의 네 변은 네 사람의 한가운데를 지난다
-  ok('판이 네 사람을 품는다', /mid\(q\('\.q-opp\.at-l'\), 'x'\)/.test(cli2)
-     && /mid\(q\('\.q-opp\.at-r'\), 'x'\)/.test(cli2));
+  ok('판이 네 사람을 품는다', /mid\(q\('\.q-seat\.at-l'\), 'x'\)/.test(cli2)
+     && /mid\(q\('\.q-seat\.at-r'\), 'x'\)/.test(cli2));
   // 판은 자리를 잡은 요소라 흐름에 있는 구역들 위에 얹힌다 — 확정 버튼이 깔렸었다.
   // 자리 칸은 이제 판 위에 얹힌 겹이라 여기서 뺐다.
   ok('구역이 판보다 위에 있다', /#q-table, #q-me \{ position:relative; z-index:1; \}/.test(htm2));
