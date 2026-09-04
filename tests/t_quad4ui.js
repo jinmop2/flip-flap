@@ -182,13 +182,13 @@ console.log('\n⑧-2 셋이 붙는 판에서 경매대가 꼭대기에 붙지 �
 {
   // 판의 윗변을 경매대에서 뽑으면 경매대가 늘 판 꼭대기에 붙는다 —
   // 윗변이 경매대를 따라다니기 때문이다(내리면 판도 같이 내려가 제자리걸음).
-  // 다른 변처럼 사람에게서 뽑아야 경매대가 판 안쪽에 뜬다.
-  ok('셋일 때 윗변을 옆자리에서 뽑는다', /const sideTop = \(\(\) => \{/.test(cli)
-     && /q\('\.q-opp\.at-l'\), b2 = q\('\.q-opp\.at-r'\)/.test(cli));
-  ok('옆자리가 없을 때만 경매대로 되돌아간다',
+  // 셋이어도 맞은편에 사람이 앉으므로 윗변은 그 사람에게서 나온다.
+  // 아무도 위에 없을 때를 대비한 옆자리 되돌림은 그대로 남겨 둔다.
+  ok('위에 아무도 없으면 옆자리에서 뽑는다', /const sideTop = \(\(\) => \{/.test(cli));
+  ok('옆자리도 없을 때만 경매대로 되돌아간다',
      /sideTop != null \? Math\.min\(sideTop - RAIL, mat\.top - 10\)\s*\n?\s*: mat\.top - RAIL - 8/.test(cli));
-  // 경매대는 판 아래쪽으로 내려온다 — 위만 붙어 있으면 아래 절반이 통째로 빈다
-  ok('셋이면 경매대를 아래로 맞춘다', /body\.q-n3 #q-table \{[^}]*justify-content:safe flex-end/.test(html));
+  // 덱과 경매품은 판 한가운데에 둔다 — 넷일 때와 같은 자리다
+  ok('셋이면 경매대를 가운데에 둔다', /body\.q-n3 #q-table \{ justify-content:safe center; \}/.test(html));
 }
 
 console.log('\n⑨ 빈 자리와 뒷면을 구분하는가');
@@ -526,7 +526,8 @@ console.log('\n⑮ 다인전도 2인전과 같은 판 위에서 논다');
   // 판은 자리를 잡은 요소라 흐름에 있는 구역들 위에 얹힌다 — 확정 버튼이 깔렸었다.
   // 자리 칸은 이제 판 위에 얹힌 겹이라 여기서 뺐다.
   ok('구역이 판보다 위에 있다', /#q-table, #q-me \{ position:relative; z-index:1; \}/.test(htm2));
-  ok('3인은 둘이 마주 본다', /body\.q-n3 \.q-opp\.at-l, body\.q-n3 \.q-opp\.at-r/.test(htm2));
+  ok('3인은 한 사람이 맞은편, 한 사람이 왼쪽',
+     /SEAT_AT = \{ 2: \['at-l', 'at-t'\]/.test(fs.readFileSync(src + '/public/client4.js', 'utf8')));
 
   ok('판 크기를 재는 함수가 있다', /function quadLayTable\(\)/.test(cli2)
      && /window\.quadLayTable = quadLayTable;/.test(cli2));

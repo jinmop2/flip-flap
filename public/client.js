@@ -151,8 +151,14 @@ function quadLayTable() {
   const me0 = mid(document.getElementById('q-mebar'), 'y');
   const myhand = r('q-myhand');
 
-  let left = left0 != null ? left0 : mat.left - RAIL;
-  let right = right0 != null ? right0 : mat.right + RAIL;
+  // 셋이 붙는 판은 왼쪽에만 사람이 앉는다. 빈 변을 경매대에서 뽑으면 판이
+  // 앉은 쪽으로 기울고, 경매대가 판 한가운데에서 밀려 보인다(재 보니 15px).
+  // 빈 변은 앉은 쪽을 경매대 기준으로 되비쳐 잡는다 — 판이 대칭이 된다.
+  const matMid = (mat.left + mat.right) / 2;
+  let left = left0 != null ? left0
+           : right0 != null ? 2 * matMid - right0 : mat.left - RAIL;
+  let right = right0 != null ? right0
+            : left0 != null ? 2 * matMid - left0 : mat.right + RAIL;
   // 셋이 붙는 판은 위에 아무도 안 앉는다. 그렇다고 윗변을 경매대에서 뽑으면
   // 경매대가 늘 판 꼭대기에 붙는다 — 윗변이 경매대를 따라다니기 때문이다.
   // (경매대를 내리면 판도 같이 내려가 제자리걸음이 된다.)

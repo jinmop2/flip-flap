@@ -2133,11 +2133,10 @@
       justify-content:safe center; gap:6px; position:relative;
       /* 위쪽 자리와 그 사람이 낸 카드가 앉을 자리를 비운다 */
       padding-top:172px; }
-    /* 셋이 붙는 판은 위에 아무도 안 앉는다. 그래서 위쪽 여백만 줄이면 경매대가
-       판 꼭대기에 붙어 버린다 — 판의 아래 절반(내 배팅이 놓이는 자리)이 통째로 비고,
-       덱이 '중앙' 이 아니라 '위' 에 있는 것으로 보였다.
-       아래 맞춤으로 두어 경매대가 판 한가운데 가까이 내려온다. */
-    body.q-n3 #q-table { padding-top:48px; padding-bottom:24px; justify-content:safe flex-end; }
+    /* 셋이 붙는 판도 맞은편에 한 사람이 앉는다. 위쪽 자리와 그 사람이 낸 카드가
+       앉을 자리를 넷일 때와 똑같이 비우고, 덱·경매품은 판 한가운데에 둔다.
+       오른쪽이 비어 있어 경매대는 넷일 때보다 넉넉하게 쓸 수 있다. */
+    body.q-n3 #q-table { justify-content:safe center; }
     /* 턴바 — 그냥 글자 줄이라 판 위에 떠 있는 메모처럼 보였다. 알약에 담는다. */
     #q-turnbar { display:flex; gap:9px; align-items:center; font-size:.62rem; font-weight:700;
       color:#c3cedf; padding:4px 12px; border-radius:999px;
@@ -2334,14 +2333,13 @@
     .q-bslot.at-t { left:50%; transform:translateX(-50%); top:100px; }
     .q-bslot.at-l { left:16px;  top:calc(42% + 42px); }
     .q-bslot.at-r { right:16px; top:calc(42% + 42px); }
-    /* 셋이 붙으면 위를 비우고 좌·우만 쓴다 */
-    body.q-n3 .q-opp.at-l, body.q-n3 .q-opp.at-r { top:38%; }
-    body.q-n3 .q-bslot.at-l, body.q-n3 .q-bslot.at-r { top:calc(38% + 42px); }
     /* 경매대를 좁힌다 — 양옆에 사람이 앉으므로 가운데가 그만큼 줄어든다 */
     body.quad4 #q-mat { gap:9px; padding:11px 13px; }
     body.quad4 #q-mat .card, body.quad4 .q-scard, body.quad4 .q-hole { width:50px; height:70px; }
     body.quad4 .q-deckslot { margin:12px 5px 0 0; }
     body.quad4 .q-bslot .card { width:46px; height:64px; }
+    /* 오른쪽이 비어도 경매대는 가운데 정렬이라, 넓힐 수 있는 건 왼쪽 여유만큼이다.
+       한 번 넓혀 봤더니 왼쪽 사람이 덱 위로 10px 올라앉았다 — 넷일 때 크기 그대로 둔다. */
 
     /* 딜 — 상대에게 가는 카드. 상대는 손패를 안 보여 주므로 날아가는 카드만
        잠깐 그렸다 사라진다. 이게 없으면 내 앞에만 카드가 생겨서

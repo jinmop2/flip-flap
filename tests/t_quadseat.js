@@ -18,8 +18,12 @@ ok('좌·상·우 자리가 있다',
    && /\.q-opp\.at-r \{ right:4px;/.test(html));
 ok('낸 카드도 그 사람 옆에 붙는다',
    /\.q-bslot\.at-l \{ left:16px;/.test(html) && /\.q-bslot\.at-r \{ right:16px;/.test(html));
-ok('셋이면 위를 비운다', /body\.q-n3 \.q-opp\.at-l, body\.q-n3 \.q-opp\.at-r/.test(html)
-   && /SEAT_AT = \{ 2: \['at-l', 'at-r'\], 3: \['at-l', 'at-t', 'at-r'\] \}/.test(c4));
+ok('셋이면 왼쪽과 맞은편에 앉는다',
+   /SEAT_AT = \{ 2: \['at-l', 'at-t'\], 3: \['at-l', 'at-t', 'at-r'\] \}/.test(c4));
+// 한쪽에만 사람이 앉으면 판이 그쪽으로 기울어, 경매대가 한가운데에서 밀려 보인다
+ok('빈 변은 앉은 쪽을 되비쳐 잡는다',
+   /right0 != null \? 2 \* matMid - right0/.test(cli)
+   && /left0 != null \? 2 \* matMid - left0/.test(cli));
 ok('자리 클래스를 붙여 준다', /d\.className = 'q-opp ' \+ seatAt\(/.test(c4)
    && /slot\.className = 'q-bslot ' \+ seatAt\(/.test(c4));
 
