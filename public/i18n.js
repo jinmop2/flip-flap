@@ -820,8 +820,6 @@
     '아이템전': 'Item Battle',
     '지면 아이템': 'Items when you lose',
     '다인전': 'Multiplayer',
-    '1인': '1 player',
-    '2~4인': '2-4 players',
     '3·4인': '3-4 players',
     '방장만 고를 수 있어요.': 'Only the host can choose.',
     '친구 초대': 'Invite a Friend',
