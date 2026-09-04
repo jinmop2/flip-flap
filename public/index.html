@@ -2776,6 +2776,49 @@
     .mode-card.solo  .mc-sub { color:#bfe0cc; }
     .mode-card.multi .mc-sub { color:#c2d6f0; }
 
+    /* ── 솔로·멀티 — 버튼이 곧 패 ────────────────────────────────────────
+       예전에는 색만 다른 같은 상자 둘이라 멀리서 보면 한 덩어리로 읽혔다.
+       판에서 쓰는 종류색을 그대로 입혀 버튼 자체를 카드 한 장으로 만든다 —
+       새 모양을 지어내지 않고 이 게임이 이미 가진 물건을 쓴다.
+       인원수도 여기서 처음 적힌다. 예전엔 어디에도 없었다. */
+    .mode-card.solo, .mode-card.multi {
+      padding:0; border-radius:16px; overflow:hidden; background:none;
+      box-shadow:0 7px 20px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.14);
+    }
+    .mode-card.solo  { border-color:#e05055; }
+    .mode-card.multi { border-color:#4a90c0; }
+    /* 2 는 붉은색, 3 은 푸른색 — 판에서 쓰는 그 색이다 */
+    .mode-card.solo  .mc-felt { border-radius:0; box-shadow:none;
+      background:linear-gradient(158deg,#8d1f24 0%,#c1272d 52%,#6d1519 100%); }
+    .mode-card.multi .mc-felt { border-radius:0; box-shadow:none;
+      background:linear-gradient(158deg,#12374f 0%,#1a5276 52%,#0c2436 100%); }
+    /* 안쪽 금테. 위의 점선에는 "골드 스티치" 라고 적어 두었지만 실제 색은
+       rgba(191,213,246,.5) — 푸른 백금이었다. 여기서는 진짜 금색을 쓴다. */
+    .mode-card.solo::after, .mode-card.multi::after {
+      inset:6px; border-radius:9px; border:1px solid rgba(224,180,92,.45);
+    }
+    .mode-card.solo .mc-felt::before, .mode-card.multi .mc-felt::before {
+      border-radius:0;
+      background:radial-gradient(ellipse 70% 48% at 50% 28%, rgba(255,255,255,.16), transparent 72%);
+    }
+    /* 등급 칩 자리 — 실제 카드의 왼쪽 위다. 장식이 아니라 인원수를 적는다. */
+    .mc-pip {
+      position:absolute; top:8px; left:8px; z-index:2;
+      font-size:.6rem; font-weight:800; letter-spacing:.4px; color:#241109;
+      background:linear-gradient(180deg,#f0d290,#d9ad5c); border-radius:6px; padding:2px 7px;
+      box-shadow:0 1px 3px rgba(0,0,0,.5);
+    }
+    .mode-card.solo .mc-title, .mode-card.multi .mc-title {
+      color:#fff6ee; text-shadow:0 1px 4px rgba(0,0,0,.75); }
+    .mode-card.solo  .mc-sub { color:#f2c6c2; }
+    .mode-card.multi .mc-sub { color:#bcd8ef; }
+    .mode-card.solo:hover,  .mode-card.solo.active  {
+      box-shadow:inset 0 2px 12px rgba(0,0,0,.45), 0 9px 24px rgba(193,39,45,.5); }
+    .mode-card.multi:hover, .mode-card.multi.active {
+      box-shadow:inset 0 2px 12px rgba(0,0,0,.45), 0 9px 24px rgba(26,82,118,.55); }
+    /* 열려 있는 칸은 금테로 — 카드 얼굴은 그대로 두고 테만 바뀐다 */
+    .mode-card.solo.active, .mode-card.multi.active { background:none; border-color:#e0b45c; }
+
     /* 곁들이 모드 — 솔로·멀티와 같은 격자에 두되 크기와 테두리 두께로 위계를 준다 */
     .mode-card.mini {
       aspect-ratio:auto; height:58px; gap:3px; border-width:1px; border-radius:14px;
@@ -5874,16 +5917,16 @@
     <!-- 무엇을 할까 — 크기가 곧 우선순위 -->
     <div class="mode-grid">
       <button class="mode-card solo" id="modeSolo" onclick="openMode('solo')"><span class="mc-felt">
-        <span class="mc-ico"><svg class="mc-emblem" viewBox="0 0 48 48">
-          <rect x="14" y="8" width="20" height="30" rx="4" fill="#f7d98a" stroke="#7a4e10" stroke-width="2"/>
+        <span class="mc-pip">1인</span><span class="mc-ico"><svg class="mc-emblem" viewBox="0 0 48 48">
+          <rect x="14" y="8" width="20" height="30" rx="4" fill="#f7d98a" stroke="#5e3a0c" stroke-width="2"/>
           <path d="M24 13.5 C24 13.5 17.5 20 17.5 24.2 C17.5 26.7 20 28.2 22.6 27.1 L21.5 32.5 L26.5 32.5 L25.4 27.1 C28 28.2 30.5 26.7 30.5 24.2 C30.5 20 24 13.5 24 13.5 Z" fill="#2a0a10"/>
         </svg></span><span class="mc-title">솔로플레이</span><span class="mc-sub">AI와 대전</span></span>
       </button>
       <button class="mode-card multi" id="modeMulti" onclick="openMode('multi')"><span class="mc-felt">
-        <span class="mc-ico"><svg class="mc-emblem" viewBox="0 0 48 48">
-          <g transform="rotate(-15 24 25)"><rect x="8" y="10" width="18" height="27" rx="3.5" fill="#8fa4c4" stroke="#7a4e10" stroke-width="2"/></g>
-          <g transform="rotate(15 24 25)"><rect x="22" y="10" width="18" height="27" rx="3.5" fill="#f7d98a" stroke="#7a4e10" stroke-width="2"/>
-            <path d="M31 16 C31 16 25.5 21.5 25.5 25 C25.5 27 27.5 28.2 29.5 27.3 L28.5 31.5 L33.5 31.5 L32.5 27.3 C34.5 28.2 36.5 27 36.5 25 C36.5 21.5 31 16 31 16 Z" fill="#2a0a10"/></g>
+        <span class="mc-pip">2~4인</span><span class="mc-ico"><svg class="mc-emblem" viewBox="0 0 48 48">
+          <g transform="rotate(-16 24 25)"><rect x="7" y="10" width="18" height="27" rx="3.5" fill="#cfe0f4" stroke="#2b4c6d" stroke-width="2"/></g>
+          <g transform="rotate(16 24 25)"><rect x="23" y="10" width="18" height="27" rx="3.5" fill="#f7d98a" stroke="#5e3a0c" stroke-width="2"/>
+            <path d="M32 16 C32 16 26.5 21.5 26.5 25 C26.5 27 28.5 28.2 30.5 27.3 L29.5 31.5 L34.5 31.5 L33.5 27.3 C35.5 28.2 37.5 27 37.5 25 C37.5 21.5 32 16 32 16 Z" fill="#2a0a10"/></g>
         </svg></span><span class="mc-title">멀티플레이</span><span class="mc-sub">온라인 대전</span></span>
       </button>
     </div>
