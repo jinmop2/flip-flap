@@ -512,7 +512,7 @@ function qAct(data) {
 function say(ev, data) { try { window.FFDELIVER && window.FFDELIVER(ev, data); } catch (e) { console.error(e); } }
 function me() { try { return (typeof getNick === 'function' && getNick()) || '나'; } catch (_) { return '나'; } }
 function offNote() {
-  try { typeof toast === 'function' && toast('📴 그물 없이 두는 판이에요. 코인·전적은 안 쌓여요.', 3400); } catch (_) {}
+  try { typeof toast === 'function' && toast('📴 인터넷 없이 두는 판이에요. 코인·전적은 안 쌓여요.', 3400); } catch (_) {}
 }
 function stopAll() {
   clearTimeout(timer); g = null;

@@ -263,7 +263,7 @@ function offlineBoot() {
   // 정말 그물이 없을 때만 그렇게 말한다. 잠깐 실패한 것뿐이면 곧 붙으므로,
   // 괜히 "그물이 없어요" 라고 하면 거짓말이 된다.
   if (typeof navigator !== 'undefined' && navigator.onLine === false)
-    setConn('📴 그물이 없어요 — 혼자 두기는 됩니다', 'warn');
+    setConn('📴 인터넷이 끊겼어요 — 혼자 두기는 됩니다', 'warn');
 }
 if (typeof navigator !== 'undefined' && navigator.onLine === false) setTimeout(offlineBoot, 250);
 socket.on('connect_error', () => setTimeout(offlineBoot, 600));
@@ -5482,7 +5482,7 @@ function offlineStart(d, itemMode) {
   clearSession();
   onGameStart({ vsBot: true, difficulty: d, roomId: null, itemMode: !!itemMode,
                 nicks: [getNick(), 'AI'], profiles: null });
-  toast('📴 그물 없이 두는 판이에요. 코인·전적은 안 쌓여요.', 3400);
+  toast('📴 인터넷 없이 두는 판이에요. 코인·전적은 안 쌓여요.', 3400);
   OFFLINE.start(d, { onState: onStateUpdate, onOver: onGameOver }, !!itemMode);
 }
 
@@ -5728,9 +5728,30 @@ const TUT_TV = [
     pos: 'top', target: '#tv-actions',
     text: '값을 부를 차례예요. 앞사람보다 많이 부르거나 <b>물러섭니다</b>.',
     act: '아래에서 <b>부르기</b> 또는 <b>물러서기</b>' },
+  // 클로즈에서 값을 부른 뒤가 이 모드에서 제일 헷갈리는 대목이다. 값만 부르고
+  // 끝나는 게 아니라, 가려져 있던 출품 카드를 그때 보고 살지 말지 고른다.
+  { id: 't_close', when: v => v.phase === 'close', big: true,
+    text: `<div class="tut-h">가려진 걸 보고 정합니다 🙈</div>
+      클로즈에서는 값을 먼저 부르고, <b>그다음에</b> 출품 카드가 열려요.
+      열린 걸 보고 <b>살지 말지</b> 지금 고릅니다.`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>내고 사기</b><br>부른 값을 <b>전부</b> 냅니다<small>경매품 두 장을 다 가져와요</small></div>
+        <div class="tt-p"><b>안 사기</b><br>부른 값의 <b>절반</b>만<small>카드는 못 받아요</small></div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">값을 크게 부르면 안 사기도 비쌉니다</div>` },
+  { id: 't_settle', when: v => v.phase === 'settled' && v.turn === 1, big: true,
+    text: `<div class="tut-h">칩은 은행으로 갑니다 🏦</div>
+      방금 낸 칩은 상대에게 가는 게 아니라 <b>판에서 사라져요</b>.
+      그래서 둘 다 크게 부르면 둘 다 가난해집니다 — 이 판의 긴장이 거기 있어요.` },
   { id: 't_chips', when: v => v.chips && v.chips.me < 20,
     pos: 'top', target: '#tv-rail',
     text: '💧 칩이 줄었죠? <b>이긴 쪽도 진 쪽도</b> 냅니다.<br>칩이 <b>0</b>이 되면 그 자리에서 져요 — 아껴 쓰세요.' },
+  // 값 부르기는 t_bid 에서 이미 배웠다. 두 번째 차례에 물러서기를 짚는다 —
+  // 이길 수 없는 판에서 빠지는 게 이 모드의 절반이다.
+  { id: 't_fold', when: v => v.phase === 'bid' && v.lot && v.lot.turnToAct === v.me && v.lot.canFold,
+    pos: 'top', target: '#tv-actions',
+    text: '이 경매, 꼭 이겨야 할까요? <b>물러서면</b> 부른 값의 절반만 잃고 빠집니다.<br>못 이길 판에서 빠지는 것도 수예요.',
+    act: '값이 아깝다 싶으면 <b>물러서기</b>' },
 ];
 
 // 👥 다인전 — 사람이 늘면서 달라지는 것만. 역순 회수가 이 판의 심장이다.
@@ -5749,6 +5770,15 @@ const TUT_Q4 = [
         <div class="tt-p"><b>꼴등</b><br>경매품은 못 받음<small>대신 가장 강한 배팅 카드를 받아요</small></div>
       </div>
       <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">그래서 <b>지는 것도 수가 됩니다</b></div>` },
+  // 덱이 커지니 "모아야 하는 장수도 늘겠지" 하고 넘겨짚기 쉽다. 안 는다.
+  { id: 'q_deck', when: s => s.turn === 1 && s.phase === 'draw', big: true,
+    text: s => `<div class="tut-h">덱은 커지고, 목표는 그대로 🗂</div>
+      ${s && s.n === 3 ? '셋이면 30장' : '넷이면 38장'} — 사람이 늘어난 만큼 카드도 늘어요.
+      하지만 <b>모아야 하는 장수는 2인전과 같습니다</b>.`,
+    cards: `<div class="tut-cards" style="margin-top:12px">
+        <span class="tcard k2"><i>1</i>2</span><span class="tcard k3"><i>1</i>3</span><span class="tcard k4"><i>1</i>4</span><span class="tcard k6"><i>1</i>6</span></div>
+      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2장</span><span style="margin-left:18px">3장</span><span style="margin-left:18px">4장</span><span style="margin-left:18px">6장</span></div>
+      <div class="tut-note">숫자가 곧 모아야 할 장수예요 — 사람이 몇이든 똑같습니다.</div>` },
   { id: 'q_bid', when: s => s.phase === 'bidding' && !s.seats[s.me].bidded && s.bidders.includes(s.me),
     pos: 'top', target: '#q-myhand',
     text: '배팅할 차례예요. 이길지, 일부러 져서 <b>강한 카드를 챙길지</b> 고르세요.',
@@ -5759,6 +5789,10 @@ const TUT_Q4 = [
   { id: 'q_got', when: s => (s.seats[s.me].acq || []).length > 0,
     pos: 'top', target: '#q-myacq',
     text: '🎯 딴 카드는 <b>내 앞에</b> 깔립니다. <b>이렇게 깔린 카드로만</b> 세트를 만들어요.' },
+  // 진행자가 돌아간다는 걸 모르면 "왜 나만 계속 뽑지" 로 읽힌다
+  { id: 'q_turn', when: s => s.turn >= 2 && s.phase === 'draw',
+    pos: 'bot',
+    text: '🔄 진행자는 <b>턴마다 한 자리씩</b> 옮겨 가요. 곧 다시 내 차례가 옵니다.' },
 ];
 
 // 🎴 미니게임 — 경매가 아니라 배팅. 족보와 읽기 싸움만 짚는다.
@@ -5954,7 +5988,20 @@ const TUT_EN = {
       </div>` },
   t_bid: { text: 'Your call. Raise above the last bid, or <b>fold</b>.',
     act: '<b>Raise</b> or <b>fold</b> below' },
+  t_close: { text: `<div class="tut-h">You decide after the reveal 🙈</div>
+      In a closed auction you call first, and the offered card opens <b>after</b>.
+      Then you choose whether to <b>buy it or not</b>.`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>Buy</b><br>pay your call <b>in full</b><small>take both cards in the lot</small></div>
+        <div class="tt-p"><b>Pass</b><br>pay <b>half</b> of it<small>take no cards</small></div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">Call high and passing gets expensive too</div>` },
+  t_settle: { text: `<div class="tut-h">Chips go to the bank 🏦</div>
+      The chips you just paid do not go to your opponent — they <b>leave the game</b>.
+      Bid big on both sides and you both end up poor. That is where the tension lives.` },
   t_chips: { text: '💧 See your chips drop? <b>Winner and loser both pay.</b><br>Hit <b>0</b> and you lose on the spot — spend carefully.' },
+  t_fold: { text: 'Do you really need this one? <b>Fold</b> and you lose only half your call.<br>Stepping out of a lost auction is a move too.',
+    act: 'If the price hurts, <b>fold</b>' },
 
   // ── 다인전 ──
   q_intro: { text: `<div class="tut-h">Welcome to the multiplayer match! ${ico('👥', 'tut-ico')}</div>
@@ -5968,10 +6015,18 @@ const TUT_EN = {
         <div class="tt-p"><b>Lowest bid</b><br>takes no lot<small>but receives the strongest bid card</small></div>
       </div>
       <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">Which makes <b>losing a move of its own</b></div>` },
+  q_deck: { text: (s) => `<div class="tut-h">A bigger deck, the same goal 🗂</div>
+      ${s && s.n === 3 ? '30 cards for three players' : '38 cards for four'} — more players, more cards.
+      But <b>you still collect the same number</b> as in the 1v1 game.`,
+    cards: `<div class="tut-cards" style="margin-top:12px">
+        <span class="tcard k2"><i>1</i>2</span><span class="tcard k3"><i>1</i>3</span><span class="tcard k4"><i>1</i>4</span><span class="tcard k6"><i>1</i>6</span></div>
+      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2</span><span style="margin-left:18px">3</span><span style="margin-left:18px">4</span><span style="margin-left:18px">6</span></div>
+      <div class="tut-note">The number on the card is how many you need — whatever the player count.</div>` },
   q_bid: { text: 'Your bid. Win it — or lose on purpose and <b>collect the strong card</b>.',
     act: 'Tap a card, then <b>Confirm bid</b>' },
   q_seq: { text: '🙈 In a closed auction players reveal and commit <b>one at a time, in order</b>.<br>Whoever goes last has seen every card before theirs.' },
   q_got: { text: '🎯 Cards you win are laid <b>in front of you</b>. <b>Only those</b> can make a set.' },
+  q_turn: { text: '🔄 The auctioneer moves <b>one seat every turn</b>. Your turn comes back around soon.' },
 
   // ── 미니게임 ──
   m_intro: { text: `<div class="tut-h">Welcome to the two-card showdown! ${ico('🎴', 'tut-ico')}</div>
@@ -6080,6 +6135,13 @@ function tutShow(st, view) {
   document.getElementById('tutText').innerHTML = text
     + T2(typeof cards === 'function' ? cards(_v) : (cards || ''))
     + (act ? `<div class="tut-do">👉 ${T2(act)}</div>` : '');
+  // 어디쯤 왔는지. 단계는 판이 그 상황에 닿아야 뜨므로 "3/18" 은 거짓말이
+  // 된다(안 뜨고 넘어가는 단계가 있다) — 숫자 대신 막대만 채운다.
+  const fill = document.getElementById('tutBarFill');
+  if (fill) {
+    const i = tutSteps.findIndex((x) => x.id === st.id);
+    fill.style.width = (i < 0 ? 0 : Math.round(((i + 1) / tutSteps.length) * 100)) + '%';
+  }
   box.classList.remove('pos-top', 'pos-bot', 'pop', 'big');
   if (st.big) box.classList.add('big');
   else box.classList.add('pos-' + (st.pos || 'top'));
@@ -6682,9 +6744,9 @@ function onGameOver({ winner, setKind, timeout, byProgress, forfeit, myIndex: mi
     if (setKind && !byProgress && !forfeit) { celebrateSet('myAcq', setKind); playSound('setwin'); delay = 1400; }
     else animateWinCards();
   } else {
-    title.textContent = '패배...'; title.style.color = '#9a8a90'; title.style.textShadow = 'none';
+    title.textContent = '패배…'; title.style.color = '#9a8a90'; title.style.textShadow = 'none';
     desc.textContent = forfeit ? '접속이 끊겨 몰수패 처리됐어요.'
-      : timeout ? '시간 초과...'
+      : timeout ? '시간 초과…'
       : byProgress ? '상대가 세트에 더 가까웠어요.'
       : `상대가 ${setKind}짜리 세트를 완성했어요.`;
     playSound('defeat'); vibe('lose');
@@ -7090,17 +7152,17 @@ function render(changed = false) {
 
   const think = t => `<span class="thinking-dots">${t}<span>.</span><span>.</span><span>.</span></span>`;
   const biddingMsg = () => {
-    if (a?.myBid) return (isVsBot && !a.oppBidSubmitted) ? think('AI 배팅 중') : '배팅 완료 — 대기 중...';
-    if (myTurnToBid) return (a && a.auctionType === 'closed' ? '🙈 클로즈(배팅 공개)' : '👁 오픈(배팅 비밀)') + ' — 손패에서 배팅 카드 선택!';
+    if (a?.myBid) return (isVsBot && !a.oppBidSubmitted) ? think('AI 배팅 중') : '배팅 완료 — 상대를 기다립니다…';
+    if (myTurnToBid) return (a && a.auctionType === 'closed' ? '🙈 클로즈(배팅 공개)' : '👁 오픈(배팅 비밀)') + ' — 손패에서 배팅할 카드를 고르세요!';
     return isVsBot ? think('진행자(AI) 먼저 배팅 중') : '진행자가 먼저 배팅합니다 — 대기 중';
   };
   const firstNick = () => (gameNicks && gameNicks[s.auctioneer - 1]) || (s.auctioneer === s.myIndex ? '나' : '상대');
   const msgs = {
-    pick:        s.pick && s.pick.myChoice != null ? (isVsBot ? '' : '상대가 고르는 중...') : '🃏 카드를 골라 선공을 정하세요!',
+    pick:        s.pick && s.pick.myChoice != null ? (isVsBot ? '' : '상대가 고르는 중…') : '🃏 카드를 골라 선공을 정하세요!',
     pick_reveal: `⚡ ${firstNick()} 선공!`,
-    draw:        mine ? '🂠 중앙덱을 클릭해 카드를 뽑으세요' : (isVsBot ? think('AI가 뽑는 중') : '상대가 카드를 뽑는 중...'),
-    offer:       mine ? '중앙 카드 공개 — 출품할 카드를 선택하세요' : (isVsBot ? think('AI 생각 중') : '상대가 출품 중...'),
-    choose_type: mine ? '경매 방식 선택 — 출품카드는 다른 손패 클릭 시 교체돼요' : (isVsBot ? think('AI 생각 중') : '상대가 방식 선택 중...'),
+    draw:        mine ? '🂠 중앙덱을 탭해 카드를 뽑으세요' : (isVsBot ? think('AI가 뽑는 중') : '상대가 카드를 뽑는 중…'),
+    offer:       mine ? '중앙 카드 공개 — 내놓을 카드를 고르세요' : (isVsBot ? think('AI 생각 중') : '상대가 내놓는 중…'),
+    choose_type: mine ? '경매 방식을 고르세요 — 출품 카드는 다른 손패를 탭하면 바뀝니다' : (isVsBot ? think('AI 생각 중') : '상대가 방식을 고르는 중…'),
     bidding:     biddingMsg(),
     showdown: '⚔️ 배팅 완료 — 곧 공개!', reveal: '결과 공개!', settled: '카드 정산 중…', game_over: '게임 종료',
   };
@@ -7109,7 +7171,7 @@ function render(changed = false) {
   if (isSpec) {   // 관전 문구 (중립 시점)
     const an = (gameNicks && gameNicks[s.auctioneer - 1]) || '진행자';
     msg = ({ pick: '👁 선공 뽑는 중…', pick_reveal: `⚡ ${an} 선공!`, draw: `👁 ${an} 카드 뽑는 중`,
-      offer: `👁 ${an} 출품 중`, choose_type: `👁 ${an} 경매 방식 선택 중`, bidding: '👁 배팅 중…',
+      offer: `👁 ${an} 출품 중`, choose_type: `👁 ${an} 경매 방식 고르는 중`, bidding: '👁 배팅 중…',
       showdown: '⚔️ 배팅 완료 — 곧 공개!', reveal: '결과 공개!', game_over: '게임 종료' })[s.phase] || '👁 관전 중';
   }
   if (lastSig.status !== msg) {   // 같은 문구면 건드리지 않음 (깜빡임·리플로우 방지)
@@ -7728,8 +7790,8 @@ socket.on('tv_over', ({ win, endBy, view }) => {
 function tvShowOver(win, endBy) {
   const title = document.getElementById('goTitle'), desc = document.getElementById('goDesc');
   const why = endBy === 'set' ? null
-    : endBy === 'chips' ? (win ? '상대의 칩이 떨어졌어요!' : '칩이 다 떨어졌어요...')
-    : endBy === 'time' ? (win ? '상대 시간 초과!' : '시간 초과...')
+    : endBy === 'chips' ? (win ? '상대의 칩이 떨어졌어요!' : '칩이 다 떨어졌어요…')
+    : endBy === 'time' ? (win ? '상대 시간 초과!' : '시간 초과…')
     : (win ? '덱 소진 — 세트에 더 가까웠어요!' : '덱 소진 — 상대가 세트에 더 가까웠어요.');
   let delay = 500;
   if (win) {
@@ -7742,7 +7804,7 @@ function tvShowOver(win, endBy) {
     screenFx('win');
   } else {
     vibe('lose');
-    title.textContent = '패배...'; title.style.color = '#9a8a90'; title.style.textShadow = 'none';
+    title.textContent = '패배…'; title.style.color = '#9a8a90'; title.style.textShadow = 'none';
     desc.textContent = why || (tvSetKind(false) ? `상대가 ${tvSetKind(false)}짜리 세트를 완성했어요.`
                                                  : '상대가 세트를 완성했어요.');
     playSound('defeat');

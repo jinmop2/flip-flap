@@ -545,7 +545,7 @@ console.log('\n⑳ 2인전과 같은 결인가 — 겉모습·시계·소리');
   ok('은행으로 쓸릴 때도 울린다', /tvSfx\('chips'\)/.test(cli));
   ok('두 소리 다 대체음이 있다', /playSample\('chips', \.5, 1\.35\)\) \{ tone/.test(cli)
      && /playSample\('chips', \.85, 0\.95\)\) \{ tone/.test(cli));
-  ok('시간패도 이유를 말해 준다', /endBy === 'time' \? \(win \? '상대 시간 초과!' : '시간 초과\.\.\.'\)/.test(cli));
+  ok('시간패도 이유를 말해 준다', /endBy === 'time' \? \(win \? '상대 시간 초과!' : '시간 초과…'\)/.test(cli));
   // 결과창은 2인전 것을 그대로 쓴다 — 따로 만든 상자는 같은 승리도 다른 판처럼 보였다
   ok('따로 만든 결과 상자는 없앴다', !/tv-over/.test(cli) && !/tv-obox/.test(htm));
   ok('2인전 결과창을 쓴다', /function tvShowOver\(win, endBy\)/.test(cli)

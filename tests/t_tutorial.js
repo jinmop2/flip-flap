@@ -143,5 +143,29 @@ console.log('\n⑤ 솔로 패널에서 미니게임 족보·설명서 버튼을 
      && /mnMenu\(false\);toggleRulesMini\(true\)/.test(htm));
 }
 
+console.log('\n⑥ 어디쯤 왔는지 · 빠져 있던 규칙');
+{
+  // 얼마나 남았는지가 안 보이면 "이게 언제 끝나지" 로 읽힌다. 다만 단계는
+  // 판이 그 상황에 닿아야 뜨므로 "3/18" 은 거짓말이 된다 — 막대만 채운다.
+  ok('막대 자리가 있다', /<div class="tut-bar"><i id="tutBarFill"><\/i><\/div>/.test(htm));
+  ok('막대에 색이 있다', /\.tut-bar i \{[^}]*linear-gradient/.test(htm));
+  ok('단계마다 채운다', /tutSteps\.findIndex\(\(x\) => x\.id === st\.id\)/.test(cli)
+     && /fill\.style\.width = /.test(cli));
+
+  // TWELVE — 값을 부른 뒤 살지 말지 고르는 대목이 이 모드에서 제일 헷갈린다
+  for (const id of ['t_close', 't_settle', 't_fold'])
+    ok(`TWELVE 에 ${id} 가 있다`, new RegExp(`id: '${id}'`).test(cli));
+  ok('클로즈는 값을 먼저 부른다고 알려 준다', /가려진 걸 보고 정합니다/.test(cli));
+  ok('칩이 은행으로 간다고 알려 준다', /칩은 은행으로 갑니다/.test(cli));
+  ok('물러서기도 수라고 알려 준다', /못 이길 판에서 빠지는 것도 수예요/.test(cli));
+
+  // 다인전 — 덱이 커지니 목표도 커진다고 넘겨짚기 쉽다
+  for (const id of ['q_deck', 'q_turn'])
+    ok(`다인전에 ${id} 가 있다`, new RegExp(`id: '${id}'`).test(cli));
+  ok('목표 장수는 그대로라고 못 박는다', /모아야 하는 장수는 2인전과 같습니다/.test(cli));
+  ok('인원에 따라 덱 크기를 말해 준다', /셋이면 30장/.test(cli) && /넷이면 38장/.test(cli));
+  ok('진행자가 돌아간다고 알려 준다', /턴마다 한 자리씩/.test(cli));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
