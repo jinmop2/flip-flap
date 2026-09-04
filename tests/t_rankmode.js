@@ -73,16 +73,20 @@ ok('토너먼트는 솔로 안에 있다', /onclick="soloPick\('tour'\)"/.test(h
 // 대회도 다른 모드와 같은 칸이다. 따로 빼 두면 "지금 되는 건가" 를 눌러 봐야 안다.
 ok('사람 대회는 모드 칸이 됐다', /class="mm-tile t-tour" onclick="tourOpen\(\)"/.test(htm)
    && !/mm-hero tour/.test(htm));
-// 다른 모드와 같은 통로로 — 빠른 입장·방 모드 고르기에 나란히 선다
-ok('빠른 입장에 있다', /quickJoin\('mini'\)/.test(htm)
-   && /\['classic', 'item', 'quad', 'twelve', 'mini'\]\.includes\(mode\)/.test(srv));
-// 대회까지 들어와 여섯 칸이다. 좁은 폰에서는 두 줄로 접는다 —
-// 여섯이 한 줄에 들어가면 글씨가 읽을 수 없게 작아진다.
-ok('빠른 입장이 여섯 칸이 됐다', /<div class="mm-tiles c6">/.test(htm)
-   && /\.mm-tiles\.c6 \{ grid-template-columns:repeat\(6, 1fr\); gap:4px; \}/.test(htm));
-ok('좁은 폰에서는 두 줄로', /@media \(max-width:380px\) \{ \.mm-tiles\.c6 \{ grid-template-columns:repeat\(3, 1fr\); \} \}/.test(htm));
-ok('방 모드 고르기에 있다', /data-m="mini" onclick="roomMode\('mini'\)"/.test(htm)
+// 섯다식 배팅이라 국내에서 사행성 모사로 분류될 수 있어 입구를 다 막았다.
+// 서버·판정·화면 코드는 그대로 두었으니 주석만 걷으면 돌아온다.
+// 한동안 빠른 입장에만 남아 있어 그리로는 들어가졌다 — 그것도 막았다.
+const live = htm.replace(/<!--[\s\S]*?-->/g, '');   // 주석은 화면에 안 나온다
+ok('빠른 입장에 없다', !/<button class="mm-tile t-mini" onclick="quickJoin/.test(live));
+ok('솔로 패널에도 없다', !/<div class="sm-item t-mini"/.test(live));
+ok('방 모드 고르기에도 없다', !/<button class="wc-mode" data-m="mini"/.test(live));
+ok('설명서·튜토리얼에도 없다', !/tutStart\('mini'\)/.test(live) && !/soloPick\('mini'\)/.test(live));
+ok('되살릴 자리는 남겨 두었다', /quickJoin\('mini'\)/.test(htm)
+   && /\['classic', 'item', 'quad', 'twelve', 'mini'\]\.includes\(mode\)/.test(srv)
    && /mini: '미니게임'/.test(cli));
+// 하나 빠져 다섯 칸이다 — 여섯일 때보다 글씨를 키울 수 있다
+ok('빠른 입장이 다섯 칸이다', /<div class="mm-tiles c5">/.test(htm)
+   && /\.mm-tiles\.c5 \{ grid-template-columns:repeat\(5, 1fr\); gap:6px; \}/.test(htm));
 ok('다섯 번째 칸이 한 줄을 다 쓴다', /\.wc-modes \.wc-mode:last-child:nth-child\(odd\) \{ grid-column:1 \/ -1; \}/.test(htm));
 
 console.log('\n⑥ 인원을 미리 안 나눈다 — 자리 넷, 앉은 대로');

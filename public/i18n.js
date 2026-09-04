@@ -1139,6 +1139,8 @@
 
     '가입신청': 'Apply',
     '「친구찾기」에서 닉네임으로 추가해보세요!': 'Add someone by nickname from "Find Friends"!',
+    '가진 이모트 팩은 판에서 바로 씁니다': 'Emote packs you own are ready in game',
+    '이모트 팩은 따로 장착하지 않아요. 산 팩은 판에서 이모트 버튼을 누르면 함께 나옵니다.': 'Emote packs are not equipped one at a time \u2014 every pack you own shows up together under the emote button in game.',
     '아직 아이템이 없어요 — 상점 구경 가기': 'No items yet — take a look at the shop',
     '중복은 파편이 됩니다 ·': 'Duplicates become shards ·',
     '교환소': 'Exchange',

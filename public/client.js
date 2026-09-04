@@ -990,11 +990,20 @@ async function renderMyInv() {
 
   const tile = (it) => {
     const slot = EQUIP_SLOT[it.type];          // 장착 가능 아이템(카드백/명패/테이블/카드앞면)
-    const on = slot && myAccount[slot] === it.id;
+    // 이모트 팩은 골라 장착하는 게 아니라 사면 다 열린다. 그래서 장착 자리가
+    // 없는데, 그냥 두니 눌러도 아무 일이 없는 죽은 칸으로 보였다 — 지금 쓰고
+    // 있다는 표시를 달고, 눌렀을 때 왜 그런지 말해 준다.
+    const isEmote = it.type === 'emotes';
+    const on = isEmote ? true : !!(slot && myAccount[slot] === it.id);
     const cnt = it.type === 'ticket' ? `<span class="cnt">x${items[it.id]}</span>` : '';
-    return `<div class="mi-item${on ? ' equipped' : ''}" ${slot ? `onclick="invEquip('${it.id}', ${on}, '${it.type}')"` : ''} title="${it.name}">
+    const click = isEmote ? `onclick="invEmoteInfo()"`
+                : slot ? `onclick="invEquip('${it.id}', ${on}, '${it.type}')"` : '';
+    const title = isEmote ? '가진 이모트 팩은 판에서 바로 씁니다' : it.name;
+    return `<div class="mi-item${on ? ' equipped' : ''}" ${click} title="${title}">
       ${cnt}<span class="ico">${ico(it.icon, 'inv-ico')}</span><span class="nm">${it.name.replace(' 카드백','')}</span></div>`;
   };
+  // 이모트 팩을 눌렀을 때 — 장착이 없는 이유를 말해 준다
+  window.invEmoteInfo = () => toast('이모트 팩은 따로 장착하지 않아요. 산 팩은 판에서 이모트 버튼을 누르면 함께 나옵니다.', 3200);
   const head = (name, n) => `<div class="mi-cat">${name}<span class="n">${n}</span></div>`;
 
   // 상점과 같은 묶음·같은 순서로 놓는다(SHOP_GROUPS). 가진 게 늘수록 카드백과

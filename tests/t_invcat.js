@@ -18,7 +18,7 @@ console.log('① 분류표는 한 벌');
   ok('SHOP_GROUPS 가 한 번만 정의된다', (cli.match(/const SHOP_GROUPS\s*=/g) || []).length === 1);
   ok('상점이 쓴다', /for \(const g of SHOP_GROUPS\)/.test(cli));
   ok('인벤토리도 같은 걸 쓴다',
-     /renderMyInv[\s\S]{0,1400}?for \(const g of SHOP_GROUPS\)/.test(cli));
+     /renderMyInv[\s\S]{0,2200}?for \(const g of SHOP_GROUPS\)/.test(cli));
 }
 
 console.log('\n② 상점의 모든 종류가 분류된다');
