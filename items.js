@@ -391,6 +391,11 @@ function use(g, me, itemId, arg) {
 // 이미 정해진 아이템을 그 사람에게 준다.
 // 아이템 카드는 뽑히는 순간 앞면으로 공개되므로 "무엇이 걸렸는지" 는 그때 정해지고,
 // 실제로 주는 것은 정산 때다 — 그 사이에 다시 뽑으면 보여 준 것과 달라진다.
+// 가방이 찼는가. 못 줬을 때 "왜" 를 부르는 쪽이 알아야 한다 —
+// 예전엔 그냥 null 이라, 방금 경매로 다툰 덤이 아무 말 없이 사라졌다.
+function bagFull(g, who) {
+  return !!(g.items && g.items[who] && g.items[who].length >= MAX_HOLD);
+}
 function give(g, who, id) {
   if (!Object.prototype.hasOwnProperty.call(ITEMS, id)) return null;
   g.items[who] ||= [];
@@ -431,7 +436,7 @@ function isBehind(g, who) {
 const CATALOG = Object.fromEntries(Object.entries(ITEMS).map(([id, it]) =>
   [id, { name: it.name, icon: it.icon, tier: it.tier, desc: it.desc, phases: it.phases, needsCard: !!it.needsCard, loserOnly: !!it.loserOnly }]));
 
-__ff_m.exports = { ITEMS, CATALOG, MAX_HOLD, use, canUse, grant, give, pick, freshFx, rollItem, newItemDeck, isBehind };
+__ff_m.exports = { bagFull, MAX_HOLD, ITEMS, CATALOG, MAX_HOLD, use, canUse, grant, give, pick, freshFx, rollItem, newItemDeck, isBehind };
 
 if (typeof window !== 'undefined') window.ITEMS_M = __ff_m.exports;
 })();

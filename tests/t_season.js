@@ -10,6 +10,13 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ffseason-'));
 process.env.FF_DATA_FILE = path.join(tmp, 'accounts.json');
 const A = require('../accounts.js');
 
+function addMonths(key, n) {
+  const [y, m] = key.split('-').map(Number);
+  const t = (y * 12 + (m - 1)) + n;
+  return Math.floor(t / 12) + '-' + String((t % 12) + 1).padStart(2, '0');
+}
+const nextMonth = (key) => addMonths(key, 1);
+
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra !== undefined ? '  ' + extra : ''))); };
 
@@ -21,8 +28,11 @@ console.log('① 시즌은 달로 센다 (한국 시간)');
   ok('KST 로 달이 넘어가면 다음 시즌', A.seasonKey(utcEndOfMonth) === '2026-08', A.seasonKey(utcEndOfMonth));
   const utcBefore = new Date(Date.UTC(2026, 6, 31, 14, 30));       // KST 2026-07-31 23:30
   ok('넘어가기 전에는 그대로', A.seasonKey(utcBefore) === '2026-07', A.seasonKey(utcBefore));
-  ok('시즌 번호가 1 부터 센다', A.seasonNo('2025-08') === 1, String(A.seasonNo('2025-08')));
-  ok('한 달에 하나씩 늘어난다', A.seasonNo('2025-10') === 3, String(A.seasonNo('2025-10')));
+  // 기준 달은 코드에 박힌 상수가 아니라 '시즌을 처음 연 달' 이다. 아직 아무
+  // 시즌도 안 열렸으면 지금이 1 이어야 한다 — 상수를 박아 두었더니 출시도
+  // 전에 "시즌 14" 가 떴다.
+  ok('아직 안 열렸으면 지금이 1', A.seasonState().no === 1, String(A.seasonState().no));
+  ok('과거 달도 1 밑으로 안 내려간다', A.seasonNo('2025-08') === 1, String(A.seasonNo('2025-08')));
 }
 
 console.log('\n② 처음 볼 때는 리셋하지 않는다');
@@ -31,6 +41,33 @@ console.log('\n② 처음 볼 때는 리셋하지 않는다');
   ok('첫 기록이라고 알린다', first && first.first === true);
   ok('아무도 안 내려갔다', first && first.moved === 0);
   ok('두 번째부터는 조용하다', A.checkSeason() === null);
+  // 연 달이 기록으로 남아야 다음 달에 2 가 된다
+  const st = A.seasonState();
+  ok('연 달을 기준으로 적어 둔다', A.snapshot().season.epoch === st.key, String(A.snapshot().season.epoch));
+  ok('이번 달은 시즌 1', st.no === 1, String(st.no));
+  ok('한 달 뒤는 시즌 2', A.seasonNo(nextMonth(st.key)) === 2, String(A.seasonNo(nextMonth(st.key))));
+  ok('열두 달 뒤는 시즌 13', A.seasonNo(addMonths(st.key, 12)) === 13, String(A.seasonNo(addMonths(st.key, 12))));
+}
+
+console.log('\n②-2 기준 없이 세던 옛 기록은 정정한다');
+{
+  // epoch 이 없던 시절의 기록: 번호가 실제로 돈 시즌 수와 무관하게 부풀어 있다.
+  // 실제 서버가 그 파일을 안고 다시 뜨는 상황이라, 새 프로세스로 확인한다.
+  const cur = A.seasonKey();
+  const old = path.join(tmp, 'old.json');
+  fs.writeFileSync(old, JSON.stringify({ users: {}, nickTaken: {}, clans: {}, reports: [],
+    coupons: {}, season: { key: cur, no: 14, startedAt: Date.now(), lastMoved: 0 } }));
+  const run = require('child_process').spawnSync(process.execPath, ['-e',
+    `const A=require(${JSON.stringify(path.join(__dirname,'..','accounts.js'))});` +
+    'A.checkSeason();console.log(JSON.stringify(A.seasonState()),JSON.stringify(A.snapshot().season));' +
+    'process.exit(0);'],                       // accounts 가 타이머를 걸어 두어 안 끝난다
+    { env: { ...process.env, FF_DATA_FILE: old }, encoding: 'utf8', timeout: 20000 });
+  const line = (run.stdout || '').trim().split('\n').pop() || '';
+  const [state, saved] = line.split(' ').map((x) => { try { return JSON.parse(x); } catch { return {}; } });
+  ok('옛 파일을 물고 떠도 죽지 않는다', run.status === 0, (run.stderr || '').slice(0, 200));
+  ok('기준을 지금 달로 세운다', saved && saved.epoch === cur, JSON.stringify(saved));
+  ok('저장된 번호가 1 로 돌아온다', saved && saved.no === 1, String(saved && saved.no));
+  ok('화면에도 1 로 나간다', state && state.no === 1, String(state && state.no));
 }
 
 console.log('\n③ 백업');

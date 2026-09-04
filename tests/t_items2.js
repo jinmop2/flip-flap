@@ -194,7 +194,11 @@ console.log('\n⑧ 아이템 카드는 따로 있다 — 뽑히면 경매품이 
   ok('보통 카드가 나오면 거기서 멈춘다', /if \(!card\.item\) \{[\s\S]{0,140}return bonus;/.test(srv));
 
   // 🎁 보너스 — 뒤집은 진행자가 그 자리에서. 진행자는 번갈아 맡으니 공짜라도 안 기운다.
-  ok('보너스는 진행자에게', /card\.item === 'bonus'[\s\S]{0,220}items\.pick\(game\)[\s\S]{0,160}items\.give\(game, game\.auctioneer, it\.id\)/.test(srv));
+  ok('보너스는 진행자에게', /card\.item === 'bonus'[\s\S]{0,220}items\.pick\(game\)[\s\S]{0,420}items\.give\(game, game\.auctioneer, it\.id\)/.test(srv));
+  // 가방이 셋이면 못 받는다. 그때 조용히 사라지면 카드만 뒤집히고 아무 일도
+  // 안 일어난 것처럼 보인다 — 못 받았다는 사실을 위로 올려야 한다.
+  ok('가방이 차면 안 준다', /const full = items\.bagFull\(game, game\.auctioneer\)/.test(srv));
+  ok('못 받은 것을 위로 알린다', /else if \(full\) bonus\.push\(\{ seat: game\.auctioneer, lost: true/.test(srv));
 
   // 🏷 덤 — 경매품에 얹혀 세 장이 되고, 진 쪽이 가져간다.
   // 이긴 쪽에 주면 아이템의 86% 가 앞선 쪽으로 갔다(재 봤다).

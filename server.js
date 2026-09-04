@@ -793,6 +793,13 @@ function startTurn(game) {
 function announceBonus(room, bonus) {
   if (!room || !bonus || !bonus.length) return;
   for (const b of bonus) {
+    // 가방이 꽉 차 못 받은 것 — 카드는 뒤집혔는데 손에 안 들어온 이유를 말한다
+    if (b.lost) {
+      room.players.forEach((s2) => {
+        if (s2) io.to(s2).emit('bonus_lost', { seat: b.seat, name: (b.item && b.item.name) || '아이템' });
+      });
+      continue;
+    }
     // 양쪽에 같은 것을 보낸다. 보너스는 "덱에서 뽑아 그 사람 손으로 간다" 가
     // 눈에 보여야 하는데, 받는 쪽과 보는 쪽이 다른 신호를 받으면 같은 장면을
     // 못 그린다. 아이템 이름·설명은 어차피 설명서에 다 있는 공개 정보다.
@@ -2653,6 +2660,14 @@ function settle(roomId) {
   if (g.itemMode && tipCard) {
     const loser = p1Wins ? 2 : 1;
     // 카드에 앞면으로 보여 준 바로 그 아이템을 준다 — 다시 뽑으면 거짓말이 된다
+    // 가방이 이미 셋이면 못 받는다. 예전엔 여기서 조용히 사라졌다 —
+    // 일부러 져서 가져온 덤인데 아무 일도 안 일어난 것처럼 보였다.
+    if (items.bagFull(g, loser)) {
+      // 이름은 덤 카드에 이미 앞면으로 적혀 있다 (drawCenter 가 넣어 둔다)
+      room.players.forEach((s2) => {
+        if (s2) io.to(s2).emit('tip_lost', { seat: loser, name: tipCard.name || '아이템' });
+      });
+    }
     const got = items.give(g, loser, tipCard.itemId);
     if (got) {
       // 덤이 어디로 갔는지 둘 다 봐야 한다. 예전엔 받는 쪽에만 알려서

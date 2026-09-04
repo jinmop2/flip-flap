@@ -215,8 +215,8 @@ function recvValue(c, myTarget, myAcq) {
 }
 
 // ── 내가 카드를 넘길 때의 비용 (교환 인식) ───────────────────
-function bidCost(c, myTarget, myAcq, oppAcq) {
-  let cost = power(c) * 0.5;                                       // 강카드 상실+상대 무장
+function bidCost(c, myTarget, myAcq, oppAcq, costPow = 0.5) {
+  let cost = power(c) * costPow;                                   // 강카드 상실+상대 무장
   if (c.kind === myTarget) {
     const need = c.kind - cnt(myAcq, c.kind);
     cost += need > 0 ? 0.3 / need : 0;                             // 내 목표 종류 유출
@@ -261,7 +261,12 @@ function endScore(myAcq, oppAcq) {   // 1 승 / 0.4 무 / 0 패
   return 0.4;
 }
 // 현재 경매를 (myBid vs oppBid)로 정산한 뒤 남은 게임을 그리디로 완주
+// world.closedRate — 롤아웃 안의 앞으로의 경매를 얼마나 클로즈로 볼 것인가.
+// 예전엔 늘 클로즈였다(수비가 진행자 배팅을 보고 최소 승리). 그런데 typeV3 는
+// 열에 아홉을 오픈으로 고른다 — 두지도 않을 판을 상상하며 값을 매기고 있었다.
+// 기본값은 예전 그대로 두고, 밖에서 돌릴 수 있게만 연다.
 function rolloutAfter(myBid, oppBid, view, world) {
+  const closedRate = world.closedRate ?? 1;
   // world: { deck(추정), oppHand(샘플, oppBid 포함) }
   let myHand = view.hand.filter(c => c.id !== myBid.id);
   let oppHand = world.oppHand.filter(c => c.id !== oppBid.id);
@@ -289,7 +294,9 @@ function rolloutAfter(myBid, oppBid, view, world) {
     if (!aucHand.length || !defHand.length) return endScore(myAcq, oppAcq);
     const bidA = greedyBid(aucHand, prize, aucAcq, defAcq, null, deck.length);
     aucHand.splice(aucHand.indexOf(bidA), 1);
-    const bidD = greedyBid(defHand, prize, defAcq, aucAcq, bidA, deck.length);  // 클로즈 가정(후공 정보우위)
+    // 오픈이면 수비도 진행자 배팅을 못 본다
+    const seen = Math.random() < closedRate ? bidA : null;
+    const bidD = greedyBid(defHand, prize, defAcq, aucAcq, seen, deck.length);
     defHand.splice(defHand.indexOf(bidD), 1);
     if (aBeatsB(bidA, bidD)) aucAcq.push(...prize); else defAcq.push(...prize);
     defHand.push(bidA); aucHand.push(bidD);
@@ -323,6 +330,10 @@ function bidV3(view, mem) {
   // 이 구간은 수가 적어 끝까지 읽는 게 표본 추정보다 정확하다.
   // 손잡이는 밖에서 돌릴 수 있게 열어 둔다 (v4 실험용). 안 주면 예전 값 그대로다.
   const EG_DEPTH = view.endgameDepth ?? 5;
+  // 강카드를 넘기는 손해의 무게. v3 값은 0.5 다 — 여기 그대로 두고, 밖에서
+  // 돌려 볼 수 있게만 열어 둔다 (v4 가 재서 0.8 로 넘긴다).
+  const COST_POW = view.costPow ?? 0.5;
+  const CLOSED_RATE = view.closedRate ?? 1;
   const endgame = view.deckLeft <= EG_DEPTH;
   const SAMPLES = view.samples ?? (endgame ? 60 : 96);
 
@@ -342,7 +353,7 @@ function bidV3(view, mem) {
     // 최소 승리 후보 vs 덤핑: 비용 대비 이득 비교
     const w = winners[0];
     const gain = myVal + 0.15;                       // 경매품 + 템포
-    return gain > bidCost(w, myTarget, view.myAcq, view.oppAcq) * 0.9 ? w : weakest;
+    return gain > bidCost(w, myTarget, view.myAcq, view.oppAcq, COST_POW) * 0.9 ? w : weakest;
   }
 
   // 후보 (중복 제거 없이 손패 그대로 — 24장 전부 유니크)
@@ -369,13 +380,13 @@ function bidV3(view, mem) {
       if (!oppBid) continue;
       let sc;
       if (endgame) {
-        sc = rolloutAfter(c, oppBid, view, { deck: deckSlice, oppHand, offered });
+        sc = rolloutAfter(c, oppBid, view, { deck: deckSlice, oppHand, offered, closedRate: CLOSED_RATE });
       } else {
         const win = aBeatsB(c, oppBid);
         const prizeVal = myVal + denyValue(prizeKnown, view.oppAcq) * 0.3 + 0.15; // 획득+저지+템포
         // 지면 상대 카드를 받는다 — 0 이 아니다
         sc = (win ? prizeVal : recvValue(oppBid, myTarget, view.myAcq))
-             - bidCost(c, myTarget, view.myAcq, view.oppAcq);
+             - bidCost(c, myTarget, view.myAcq, view.oppAcq, COST_POW);
       }
       scores.set(c.id, scores.get(c.id) + sc);
     }
@@ -402,7 +413,10 @@ function pickNear(scored, tol) {
   const sum = w.reduce((a, b) => a + b, 0);
   let r = Math.random() * sum;
   for (let i = 0; i < near.length; i++) { r -= w[i]; if (r <= 0) return near[i].c; }
-  return near[0].c;
+  // near 가 비는 것은 점수가 NaN 일 때뿐이다 (윗단 계산이 틀린 것이다). 여기서
+  // 터지면 서버 프로세스가 죽어 그 위의 모든 판이 같이 끊긴다 — 카드를 잘못
+  // 고르는 것보다 그쪽이 훨씬 나쁘다. 첫 후보로 물러선다.
+  return (near[0] || scored[0]).c;
 }
 
 // ── 출품 결정 (v3): 목표 보존 + 상대 저지 + 매집 + 최약 방출 ──
@@ -471,4 +485,8 @@ module.exports = {
   tipValue, adjustForTip, TIP_WORTH,
   // 내부 재사용 (sim/서버에서 oppValEst 계산용)
   feasibleTarget, wantValue, denyValue, power,
+  // v5 가 몸통을 갈아 끼우고 실험할 수 있게 부품을 열어 둔다.
+  // 여기 있는 것들은 v3 의 내부다 — 밖에서 고쳐 쓰지 말고 읽어만 간다.
+  unknownPool, sampleOppHand, modelOppBid, bluffEst, recvValue, bidCost,
+  greedyBid, greedyOffer, endScore, rolloutAfter, pickNear, checkSet, aBeatsB, strength, ALL,
 };

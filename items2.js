@@ -57,8 +57,12 @@ function drawCenter(game) {
     // 진행자는 턴마다 번갈아 맡으므로 공짜라도 한쪽으로 기울지 않는다.
     if (card.item === 'bonus') {
       const it = items.pick(game);
-      const got = items.give(game, game.auctioneer, it.id);
+      // 가방이 셋이면 못 받는다 — 그 사실도 알려야 한다. 안 그러면 카드를
+      // 뒤집어 놓고 아무 일도 안 일어난 것처럼 보인다.
+      const full = items.bagFull(game, game.auctioneer);
+      const got = full ? null : items.give(game, game.auctioneer, it.id);
       if (got) bonus.push({ seat: game.auctioneer, item: got });
+      else if (full) bonus.push({ seat: game.auctioneer, lost: true, item: it });
       // 무엇이었는지 카드 앞면으로 남겨 둔다 — 뒷면만 보이면 뭘 줬는지 알 수 없다
       game.auction.bonusCard = { kind: 'bonus', itemId: it.id, name: it.name, tier: it.tier, of: game.auctioneer };
       continue;                             // 한 장 더 뽑아 경매를 연다

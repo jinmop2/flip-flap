@@ -504,12 +504,20 @@ function seasonKey(now = new Date()) {
   const kst = new Date(now.getTime() + 9 * 3600 * 1000);   // UTC+9
   return kst.getUTCFullYear() + '-' + String(kst.getUTCMonth() + 1).padStart(2, '0');
 }
-// 첫 시즌을 1로 놓고 몇 번째인지 센다 (화면에 "시즌 3" 처럼 쓴다)
-const SEASON_EPOCH = '2025-08';
+// 몇 번째 시즌인가. 기준 달을 코드에 박아 두었더니, 그 뒤로 흐른 달수를
+// 세느라 아직 한 시즌도 안 돈 채로 "시즌 14" 가 떴다. 기준은 코드가 아니라
+// 이 게임이 실제로 시즌을 처음 연 달이어야 한다 — 그 달을 db 에 적어 두고
+// 거기서부터 센다.
+function seasonEpoch() {
+  return (db.season && db.season.epoch) || (db.season && db.season.key) || seasonKey();
+}
+function monthsBetween(a, b) {
+  const [y1, m1] = a.split('-').map(Number);
+  const [y2, m2] = b.split('-').map(Number);
+  return (y2 - y1) * 12 + (m2 - m1);
+}
 function seasonNo(key = seasonKey()) {
-  const [y1, m1] = SEASON_EPOCH.split('-').map(Number);
-  const [y2, m2] = key.split('-').map(Number);
-  return Math.max(1, (y2 - y1) * 12 + (m2 - m1) + 1);
+  return Math.max(1, monthsBetween(seasonEpoch(), key) + 1);
 }
 function seasonState() {
   const key = seasonKey();
@@ -519,10 +527,21 @@ function seasonState() {
 // 정확히 자정에 도는 것보다, 언제 재시작해도 한 번은 도는 편이 안전하다.
 function checkSeason() {
   const key = seasonKey();
+  // 기준 달을 코드에 박아 두던 시절의 기록에는 epoch 이 없다. 그때 세어 둔
+  // 번호는 실제로 돈 시즌 수가 아니므로, 지금 달을 첫 시즌으로 다시 세운다.
+  if (db.season && !db.season.epoch) {
+    db.season.epoch = db.season.key || key;
+    db.season.no = Math.max(1, monthsBetween(db.season.epoch, db.season.key || key) + 1);
+    persistMeta('season', db.season);
+    console.log(`[시즌] 기준 달을 ${db.season.epoch} 로 정정 (시즌 ${db.season.no})`);
+  }
   if (db.season && db.season.key === key) return null;
   const first = !db.season;                    // 처음이면 리셋 없이 표시만 남긴다
   const out = first ? { moved: 0 } : seasonReset();
-  db.season = { key, no: seasonNo(key), startedAt: Date.now(), lastMoved: out.moved };
+  // 첫 시즌이면 이 달이 기준이 된다. 이미 돌던 판이면 적어 둔 기준을 그대로 쓴다.
+  const epoch = first ? key : seasonEpoch();
+  db.season = { key, epoch, no: Math.max(1, monthsBetween(epoch, key) + 1),
+                startedAt: Date.now(), lastMoved: out.moved };
   persistMeta('season', db.season);
   console.log(`[시즌] ${key} 시작 (시즌 ${db.season.no}) — ${first ? '첫 기록' : out.moved + '명 하향'}`);
   return { key, no: db.season.no, moved: out.moved, first };

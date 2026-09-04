@@ -1964,6 +1964,20 @@ socket.on('tip_card', ({ seat, item }) => {
   if (mine) setTimeout(() => showItemGet(item), ms);
   else setTimeout(() => toast(`${ico('🏷')} 상대가 덤으로 <b>${esc(item.name)}</b> 를 얻었어요`, 2600), ms);
 });
+// 가방이 셋이면 못 받는다. 이 두 신호가 없던 시절엔 덤·보너스가 소리 없이
+// 사라져서, 일부러 져서 가져온 판이 아무 일도 아닌 것처럼 보였다.
+socket.on('tip_lost', ({ seat, name }) => {
+  const mine = !!(state && seat === state.myIndex);
+  toast(mine
+    ? `${ico('🎒')} 가방이 꽉 차 <b>${esc(name)}</b> 를 못 받았어요 (최대 3개)`
+    : `${ico('🎒')} 상대는 가방이 꽉 차 <b>${esc(name)}</b> 를 못 받았어요`, 3000);
+});
+socket.on('bonus_lost', ({ seat, name }) => {
+  const mine = !!(state && seat === state.myIndex);
+  toast(mine
+    ? `${ico('🎒')} 가방이 꽉 차 <b>${esc(name)}</b> 를 못 받았어요 (최대 3개)`
+    : `${ico('🎒')} 상대는 가방이 꽉 차 <b>${esc(name)}</b> 를 못 받았어요`, 3000);
+});
 let _tipEl = null;    // 판에 놓인 덤 카드
 function flyTipCard(item, mine) {
   // 출발점은 판에 놓인 덤 카드. 정산 신호가 올 때쯤이면 판이 다시 그려져

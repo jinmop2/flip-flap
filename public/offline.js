@@ -71,7 +71,11 @@ function drawCenter() {
   if (I2) {
     const bonus = I2.drawCenter(g);
     // 보너스로 무엇을 얻었는지는 둘 다 본다 — 공개라야 셈에 넣을 수 있다
-    for (const b of (bonus || [])) say('bonus_card', { seat: b.seat, item: b.item });
+    for (const b of (bonus || [])) {
+      // 가방이 셋이면 못 받는다 — 그물 없이 두는 판도 온라인과 같은 말을 해야 한다
+      if (b.lost) say('bonus_lost', { seat: b.seat, name: (b.item && b.item.name) || '아이템' });
+      else say('bonus_card', { seat: b.seat, item: b.item });
+    }
     return;
   }
   const card = g.centerDeck.shift();
@@ -234,8 +238,10 @@ function settle() {
     // 앞선 쪽에 주면 눈덩이가 된다.
     if (tipCard) {
       const loser = d.p1Wins ? 2 : 1;
-      const got = IT.give(g, loser, tipCard.itemId);   // 앞면으로 보여 준 바로 그 아이템
+      const full = IT.bagFull(g, loser);
+      const got = full ? null : IT.give(g, loser, tipCard.itemId);   // 앞면으로 보여 준 바로 그 아이템
       if (got) say('tip_card', { seat: loser, item: got });
+      else if (full) say('tip_lost', { seat: loser, name: tipCard.name || '아이템' });
     }
   }
 
