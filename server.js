@@ -86,10 +86,18 @@ for (const f of ['rules2.js', 'ai2.js', 'twelve.js', 'game4.js', 'ai4.js', 'item
     res.sendFile(path.join(__dirname, f));
   });
 }
+// 브라우저는 <link rel="icon"> 이 있어도 /favicon.ico 를 한 번 찔러 본다.
+// 404 면 즐겨찾기·주소창 같은 몇몇 자리가 빈 네모로 남는다 — 아이콘으로 보낸다.
+app.get('/favicon.ico', (req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=604800');
+  res.type('png').sendFile(path.join(__dirname, 'public', 'icon-192.png'));
+});
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders(res, fp) {
     if (fp.endsWith('sw.js')) res.setHeader('Cache-Control', 'no-cache');                       // SW 갱신 즉시 감지
-    else if (/\.(png|jpg|svg|ico|mp3|m4a|woff2?)$/.test(fp)) res.setHeader('Cache-Control', 'public, max-age=604800');  // 아이콘·음악·폰트 7일 캐시
+    // 아이콘·음악·폰트 7일 캐시. 이름이 그대로면 그 이레 동안 옛 그림이 계속
+    // 나간다 — 아이콘을 바꿀 때는 주소 뒤의 ?v= 를 같이 올려야 한다.
+    else if (/\.(png|jpg|svg|ico|mp3|m4a|woff2?)$/.test(fp)) res.setHeader('Cache-Control', 'public, max-age=604800');
     else res.setHeader('Cache-Control', 'no-cache');                                            // html/js: etag 재검증(304) — 배포 즉시 반영
   },
 }));
