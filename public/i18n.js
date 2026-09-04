@@ -142,6 +142,8 @@
     '해태가 새겨진 카드 뒷면': 'A back carved with the haetae',
     '이용약관': 'Terms',
     '개인정보': 'Privacy',
+    '확률 안내': 'Odds',
+    '끌어서 옮기기': 'Drag to move',
     '전체 확률표': 'Full odds',
     '가진 파편': 'Your shards',
     '코인·파편으로': 'Coins or shards',
@@ -1373,16 +1375,35 @@
     [/^완성까지 (\d+)장$/, '$1 more to complete'],
   ];
 
+  // ── 언어 꾸러미 ─────────────────────────────────────────────────────────
+  // 영어는 이 파일 안에 있고, 나머지는 lang-<코드>.js 가 register 로 얹는다.
+  // 꾸러미를 따로 두면 쓰지 않는 언어를 안 받아도 되고, 파일 하나가 만 줄로
+  // 불어나지도 않는다.
+  // blocks 는 아래에서 만들어지므로 그때 채운다 — 여기서 집으면 아직 없다
+  const PACKS = { en: { dict: EN, blocks: {}, patterns: PATTERNS, name: 'English' } };
+  function register(code, pack) {
+    if (!code || !pack) return;
+    PACKS[code] = { dict: pack.dict || {}, blocks: pack.blocks || {},
+                    patterns: pack.patterns || [], name: pack.name || code };
+    // 이미 그 언어로 보고 있는 중에 꾸러미가 늦게 도착할 수 있다 — 그때 입힌다
+    if (lang === code && typeof document !== 'undefined' && document.body) apply(document.body);
+  }
+  const langs = () => ['ko'].concat(Object.keys(PACKS));
+  const packOf = (code) => (Object.prototype.hasOwnProperty.call(PACKS, code) ? PACKS[code] : PACKS.en);
+
   // ── 언어 고르기 ─────────────────────────────────────────────────────────
   const KEY = 'ff_lang';
-  const SUPPORTED = ['ko', 'en'];
-  // 저장해 둔 게 없으면 기기 언어를 따른다. 한국어권이면 한국어, 아니면 영어.
+  // 저장해 둔 게 없으면 기기 언어를 따른다. 아는 언어가 없으면 영어.
   function detect() {
     const list = (navigator.languages && navigator.languages.length)
       ? navigator.languages : [navigator.language || 'en'];
     for (const l of list) {
       const s = String(l || '').toLowerCase();
       if (s.startsWith('ko')) return 'ko';
+      if (s.startsWith('ja')) return 'ja';
+      // 중국어는 간체 하나만 둔다. 번체권에서도 못 읽지는 않는다.
+      if (s.startsWith('zh')) return 'zh';
+      if (s.startsWith('en')) return 'en';
     }
     return 'en';
   }
@@ -1391,33 +1412,39 @@
     if (lang) return lang;
     let saved = null;
     try { saved = localStorage.getItem(KEY); } catch (_) {}
-    lang = SUPPORTED.includes(saved) ? saved : detect();
+    lang = langs().includes(saved) ? saved : detect();
     return lang;
   }
   // 아직 사람이 고른 적이 없는가 (가입할 때 물어볼지 판단용)
   function langChosen() {
-    try { return SUPPORTED.includes(localStorage.getItem(KEY)); } catch (_) { return false; }
+    try { return langs().includes(localStorage.getItem(KEY)); } catch (_) { return false; }
   }
   function setLang(next) {
-    if (!SUPPORTED.includes(next)) return;
+    if (!langs().includes(next)) return;
     const prev = getLang();
+    if (next === prev) return;
+    // 글자를 덮어써 놓았으므로, 다른 언어로 갈 때도 한국어를 한 번 거친다.
+    // 영어 위에 일본어를 덮으면 이미 바뀐 글자는 열쇠에 안 걸려 영어로 남는다.
+    if (prev !== 'ko') restoreKo(prev);
     lang = next;
     try { localStorage.setItem(KEY, next); } catch (_) {}
     document.documentElement.lang = next;
-    if (next === 'ko' && prev !== 'ko') restoreKo();
-    else apply(document.body);
+    if (next !== 'ko') apply(document.body);
   }
 
   // 영어 → 한국어로 되돌리기. 글자를 덮어썼기 때문에 원문을 되살려야 하는데,
   // 통째로 갈아 끼운 덩어리만 원문을 들고 있다. 나머지는 영어 → 한국어 역방향
   // 표로 되돌린다. 새로고침을 시키면 진행 중인 판이 끊긴다.
-  let REV = null;
-  function restoreKo() {
+  const REVS = {};
+  function restoreKo(from) {
+    const code = from || getLang();
+    const pack = packOf(code);
+    let REV = REVS[code];
     for (const el of document.querySelectorAll('[data-i18n-block]')) {
       if (el.dataset.i18nKo) { el.innerHTML = el.dataset.i18nKo; el.dataset.i18nDone = ''; 
         if (typeof paintIcons === 'function') { try { paintIcons(el); } catch (_) {} } }
     }
-    if (!REV) { REV = {}; for (const k of Object.keys(EN)) if (!REV[EN[k]]) REV[EN[k]] = k; }
+    if (!REV) { REV = REVS[code] = {}; for (const k of Object.keys(pack.dict)) if (!REV[pack.dict[k]]) REV[pack.dict[k]] = k; }
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
       acceptNode(n) {
         const p = n.parentNode;
@@ -1451,9 +1478,10 @@
     const raw = String(s == null ? '' : s);
     const key = raw.trim();
     if (!key) return raw;
-    const hit = Object.prototype.hasOwnProperty.call(EN, key) ? EN[key] : null;
+    const D = packOf(getLang()).dict;
+    const hit = Object.prototype.hasOwnProperty.call(D, key) ? D[key] : null;
     if (hit != null) return raw.replace(key, hit);        // 앞뒤 공백은 살린다
-    for (const [re, out] of PATTERNS) {
+    for (const [re, out] of packOf(getLang()).patterns) {
       if (!re.test(key)) continue;
       // 끼워 넣는 값도 사전을 한 번 거친다. 안 그러면 "큰손 미스박 is bidding..."
       // 처럼 문장은 영어인데 이름만 한국어로 남는다.
@@ -1461,7 +1489,7 @@
         const groups = args.slice(1, -2).map((g) => {
           if (g == null) return g;
           const k = String(g).trim();
-          return Object.prototype.hasOwnProperty.call(EN, k) ? EN[k] : g;
+          return Object.prototype.hasOwnProperty.call(D, k) ? D[k] : g;
         });
         return out.replace(/\$(\d)/g, (_, i) => (groups[i - 1] == null ? '' : groups[i - 1]));
       });
@@ -1916,14 +1944,17 @@
     <p><b>3 minutes</b> each. It only ticks on your turn.
     Run out and <b>the AI plays that seat</b> for you.</p>`,
   };
+  PACKS.en.blocks = BLOCKS;   // 위에서 비워 두었던 자리를 이제 채운다
+
   function applyBlocks(root) {
     const list = root.querySelectorAll ? root.querySelectorAll('[data-i18n-block]') : [];
     for (const el of list) {
       const name = el.getAttribute('data-i18n-block');
-      if (!Object.prototype.hasOwnProperty.call(BLOCKS, name)) continue;
+      const B = packOf(getLang()).blocks;
+      if (!Object.prototype.hasOwnProperty.call(B, name)) continue;
       if (el.dataset.i18nDone === '1') continue;
       if (!el.dataset.i18nKo) el.dataset.i18nKo = el.innerHTML;   // 되돌릴 수 있게 원문 보관
-      el.innerHTML = BLOCKS[name];
+      el.innerHTML = B[name];
       el.dataset.i18nDone = '1';
       if (typeof paintIcons === 'function') { try { paintIcons(el); } catch (_) {} }
     }
@@ -2016,6 +2047,9 @@
   root.FF.setLang = setLang;
   root.FF.langChosen = langChosen;
   root.FF.applyI18n = apply;
+  root.FF.register = register;
+  root.FF.langs = langs;
+  root.FF.langName = (c) => (c === 'ko' ? '한국어' : packOf(c).name);
   root.FF.DICT = EN;
 
   root.FF.BLOCKS = BLOCKS;

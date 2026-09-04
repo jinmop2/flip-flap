@@ -5826,6 +5826,454 @@ const TUT_MN = [
       지금 쥔 <b>4-6 + 6-8</b> 은 덱에서 가장 약한 두 장인데,<br>이 조합만은 <b>땡을 전부 잡습니다</b>. 190가지 중 딱 하나예요.` },
 ];
 
+// ── 튜토리얼 일본어판 ────────────────────────────────────────────
+// TUT_EN 과 같은 열쇠를 쓴다. when 판정은 한 벌만 유지되고(판정이 갈라지면
+// 언어에 따라 안내가 다른 순간에 뜬다), 글만 갈아 끼운다.
+const TUT_JA = {
+  // ── 클래식 ──
+  intro: { text: `<div class="tut-h">FLIP FLAP へようこそ！ ${ico('🎩', 'tut-ico')}</div>
+      <b>競り</b>で札を集め、先に<b>セット</b>を揃えたほうが勝ちです。`,
+    cards: `<div class="tut-cards" style="margin-top:14px"><span class="tcard k3"><i>1</i>3</span><span class="tcard k3"><i>2</i>3</span><span class="tcard k3"><i>4</i>3</span><span class="tvs">=</span><span class="twin">3 を3枚そろえれば勝ち！ ${ico('🏆', 'tut-ico')}</span></div>` },
+  cards1: { text: `<div class="tut-h">札の読みかた 🃏</div>`,
+    cards: `<div class="tut-arrows">
+      <span class="ta-card">
+        <span class="tcard k6 big"><i>1</i>6</span>
+        <span class="ta-note ta-grade"><span class="ta-txt"><b>小さい数字＝等級</b><small>1等級がいちばん強い</small></span></span>
+        <span class="ta-note ta-kind"><span class="ta-txt"><b>大きい数字＝種類</b><small>この枚数そろえれば勝ち！</small></span></span>
+      </span></div>` },
+  cards2: { text: `<div class="tut-h">札は4種類、全部で24枚 🗂</div>
+      数字が<b>小さいほど強く、そして少ない</b>。2 は2枚そろえれば勝ちですが、世に2枚しかありません。`,
+    cards: `<div class="tut-cards" style="margin-top:12px">
+        <span class="tcard k2"><i>1</i>2</span><span class="tcard k3"><i>1</i>3</span><span class="tcard k4"><i>1</i>4</span><span class="tcard k6"><i>1</i>6</span></div>
+      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2枚</span><span style="margin-left:18px">5</span><span style="margin-left:18px">7</span><span style="margin-left:18px">10</span></div>
+      <div class="tut-cards" style="margin-top:8px"><span class="tcard k2"><i>1</i>2</span><span class="tvs">&gt;</span><span class="tcard k6"><i>1</i>6</span><span class="twin">入札では 2 が 6 に勝ちます</span></div>` },
+  flow: { text: `<div class="tut-h">一手の流れ 🔄</div>
+      <div class="tut-steps">
+        <div>1️⃣ <b>親</b>が山札から1枚めくる</div>
+        <div>2️⃣ 親が手札から1枚を足す → <b>競り札2枚</b></div>
+        <div>3️⃣ ふたりとも手札から1枚<b>入札</b></div>
+        <div>4️⃣ <b>強い札</b>を出したほうが競り札を全部取る！</div>
+        <div>5️⃣ 入札した2枚は<b>そのまま交換</b>され、相手の手札へ渡る</div>
+        <div>6️⃣ セットになるのは<b>落札した札だけ</b>（手札は数えません）</div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">打てばすぐ分かります。はじめましょう！</div>` },
+  pick: { text: 'まずは<b>先手決め</b>！',
+    act: '光っている2枚から<b>1枚をタップ</b> — 強い札を引いたほうが先手です！' },
+  pickr: { text: '公開！ 強い札を引いたほうが最初の<b>親</b>になります。（親はターンごとに交代）' },
+  draw_me: { text: 'このターンの親は<b>自分</b>です。まずは競り札を開きましょう。',
+    act: '左の<b>山札をタップ</b>！' },
+  offer_me: { text: '場札が開きました！ ここに<b>手札から1枚</b>を足します — この2枚が競り札になります。',
+    act: '下の手札から<b>出す札をタップ</b>してください' },
+  type_big: { text: `<div class="tut-h">競りの方式を選びます 🎭</div>
+      <div class="tut-two">
+        <div class="tt-p"><b>👁 オープン</b><br>競り札は<b>公開</b><br>入札は<b>秘密</b><br><small>相手がいくら出すか分からない読み合い</small></div>
+        <div class="tt-p"><b>🙈 クローズ</b><br>出し札は<b>秘密</b><br>入札は<b>公開</b><br><small>中身が分からないまま賭ける</small></div>
+      </div>` },
+  type_me: { act: '好きな方式を<b>タップ</b>してください', text: '' },
+  bid_me: { text: '<b>入札！</b> 強い札を出したほうが競り札2枚をすべて取ります。⚠️ 入札した札は<b>お互いに交換</b>されます。',
+    act: '手札をタップ →<b>入札を確定</b>' },
+  reveal: { text: 'ドコドコ…結果発表！ 勝ったほうが競り札を<b>自分の前</b>に並べます。' },
+  swap_rule: { text: (s) => {
+      const a = (s && s.auction) || {};
+      if (!a.myBid || !a.oppBid) return `<div class="tut-h">出した札はどこへ行く？ 🔁</div>入札した札は捨てられません。ふたりが出した札は<b>そのまま交換</b>され、それぞれ相手の手札へ渡ります。`;
+      const c = (x) => `<span class="tcard k${x.kind}"><i>${x.grade}</i>${x.kind}</span>`;
+      return `<div class="tut-h">出した札はどこへ行く？ 🔁</div>
+        いまふたりが出した入札の札は<b>捨てられません</b>。
+        <div class="tut-swap">
+          <div class="ts-row"><span class="ts-lbl">自分が出した</span>${c(a.myBid)}
+            <span class="ts-arw">→</span><span class="ts-dst">相手の手札へ</span></div>
+          <div class="ts-row"><span class="ts-lbl">相手が出した</span>${c(a.oppBid)}
+            <span class="ts-arw">→</span><span class="ts-dst mine">自分の手札へ</span></div>
+        </div>
+        <div class="tut-note">お互いに<b>交換します。</b>だから強い札を出せば勝ちやすい代わりに、<b>その札を相手に握らせる</b>ことになります。</div>`;
+    } },
+  where_rule: { text: `<div class="tut-h">札が置かれる場所はふたつ 🗺</div>
+      <div class="tut-two">
+        <div class="tt-p"><b>🖐 手札</b><br>入札に使う札<br>
+          <small>交換で行き来する<br><b>セットには数えません</b></small></div>
+        <div class="tt-p"><b>🏅 自分の前</b><br>落札した競り札<br>
+          <small>ここに積まれたものだけが<br><b>セットになります</b></small></div>
+      </div>
+      <div class="tut-note">手札に 3 を3枚持っていても勝てません。<b>競りで取る</b>必要があります。</div>` },
+  acquired: { text: '🎯 いま取った札が<b>自分の前</b>に並びましたね。セットになるのは<b>そこに並んだ札だけ</b>です — 手札は数えません！' },
+  draw_opp: { text: 'このターンの親は<b>相手</b>です。まもなく入札の番が来ます ☕' },
+  betray_rule: { text: `<div class="tut-h">最後にひとつ秘密を ⚔️</div>
+      いちばん弱い<b>6-10</b>が、ただひとつ、いちばん強い<b>2-1</b>にだけ勝ちます。<br>名づけて<b>下っ端の裏切り</b>！`,
+    cards: `<div class="tut-cards" style="margin-top:12px"><span class="tcard k6"><i>10</i>6</span><span class="tvs">⚔</span><span class="tcard k2"><i>1</i>2</span><span class="tvs">→</span><span class="twin">6-10 の勝ち！</span></div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">相手がエースを出しそうな瞬間を狙ってみてください 😏</div>` },
+  betray: { text: (s) => (s.myHand || []).some(c => c.kind === 6 && c.grade === 10)
+      ? '👀 いま手札に<b>6-10</b>があります — 相手が 2-1 を出しそうなら<b>裏切り</b>を狙いましょう！'
+      : '👀 いま手札に<b>2-1</b>があります — 最強ですが<b>6-10</b>にだけ負けます。ご注意を！' },
+
+  // ── 아이템전 ──
+  i_intro: { text: `<div class="tut-h">アイテム戦へようこそ！ ${ico('🎪', 'tut-ico')}</div>
+      ルールは<b>クラシックとまったく同じ</b>です — 競りで札を取り、先にセットを揃える。<br>
+      違うのは<b>アイテム</b>が絡むことだけ。` },
+  i_kinds: { text: `<div class="tut-h">アイテムは13種、三つの系統 🧰</div>
+      <div class="tut-kinds">
+        <div class="tk-row"><span class="tk-h">👀 のぞく</span>
+          <span class="tk-i">🔍 虫めがね</span><span class="tk-i">📏 ものさし</span>
+          <span class="tk-d">決める前に相手の手札や入札を見る</span></div>
+        <div class="tk-row"><span class="tk-h">🌀 かき乱す</span>
+          <span class="tk-i">🔄 反転</span><span class="tk-i">💨 煙幕</span>
+          <span class="tk-i">💣 爆弾</span><span class="tk-i">🧿 お守り</span>
+          <span class="tk-d">この競りだけルールを変える</span></div>
+        <div class="tk-row"><span class="tk-h">💥 奪う</span>
+          <span class="tk-i">🐈 ドロボウネコ</span><span class="tk-i">👑 暴君</span>
+          <span class="tk-i">🖨️ コピー機</span><span class="tk-i">🎴 選び取り</span>
+          <span class="tk-d">すでに落札された札にまで手を伸ばす</span></div>
+      </div>
+      <div class="tut-note">覚える必要はありません。手に入ったら<b>タップして効果を読めます。</b></div>` },
+  i_cards: { text: `<div class="tut-h">アイテムは山札から札として出ます 🃏</div>
+      山札には<b>アイテム札が4枚</b>混ぜてあります。<br>
+      出てきたらすぐ次の札をめくり、競りはそのまま続きます。
+      <div class="tut-two" style="margin-top:10px">
+        <div class="tt-p"><b>🎁 ボーナス</b><br>めくった<b>親</b>が<br>その場でもらう
+          <small>山札から手元へ飛んできます</small></div>
+        <div class="tt-p"><b>🏷 おまけ</b><br>その競りに<b>負けた</b><br>ほうがもらう
+          <small>競り札の上に表向きで載ります</small></div>
+      </div>
+      <div class="tut-note">どちらもこのあと出てきます — 実際に見てみましょう。</div>` },
+  i_draw: { text: '最初のターンの親は自分です。山札をめくってみましょうか。',
+    act: '左の<b>山札をタップ</b>！' },
+  i_bonus: { text: `<div class="tut-h">🎁 ボーナスが出ました！</div>
+      めくった<b>親</b>がその場で受け取ります。<br>
+      親はターンごとに交代するので、ただでもらえても片方に偏りません。` },
+  i_got: { text: (s) => {
+      const first = (s.myItems || [])[0];
+      const known = { magnify: ['🔍 虫めがね', '相手の手札を2枚のぞき見る'],
+                      scan: ['📏 ものさし', '相手の入札の強さを測る'] };
+      const k = first && known[typeof first === 'string' ? first : first.id];
+      return k
+        ? `🎉 <b>${k[0]}</b>が手に入りました — <i>${k[1]}</i>。<br>
+           アイテムは下の枠に溜まります。持てるのは<b>3つ</b>、1ターンに使えるのは<b>1つ</b>です。`
+        : `🎉 <b>アイテム！</b> 下の枠に溜まります。<br>持てるのは<b>3つ</b>、1ターンに使えるのは<b>1つ</b>です。`;
+    },
+    act: '<b>アイテムをタップ</b>すると、効果と使える場面が読めます' },
+  i_offer: { text: 'クラシックと同じ — <b>手札から1枚</b>足して競り札2枚にします。',
+    act: '出す札を<b>タップ</b>' },
+  i_use: { text: 'ここが<b>アイテムを使う場面</b>です。入札する前だけ — 結果を見てから取り消すことはできません。',
+    act: 'アイテムをタップして使うか、そのまま入札してください' },
+  i_bid: { text: '<b>入札！</b> ここでも入札した札は、クラシックとまったく同じように交換されます。',
+    act: '手札をタップ →<b>入札を確定</b>' },
+  i_tip: { text: `<div class="tut-h">🏷 今回はおまけが懸かっています！</div>
+      ボーナスとは逆で、この競りに<b>負けた</b>ほうがそのアイテムを取ります。<br>
+      中身は<b>はっきり見えている</b>ので、「これはわざと譲る価値があるか？」と考え始めることになります。
+      <div class="tut-note">ここがアイテム戦とクラシックの分かれ道です。
+      <b>負けたほうが得な場面もあります。</b></div>` },
+  i_wrap: { text: `<div class="tut-h">ひととおり出ました！ 🎪</div>
+      アイテムは<b>強さより間合い</b>です — どれを使うかより、いつ使うかが効きます。<br>
+      あとは自分で打ってみてください。アイテムはいつでもタップして読めます。` },
+
+  // ── TWELVE ──
+  t_intro: { text: `<div class="tut-h">TWELVE へようこそ！ ${ico('🔵', 'tut-ico')}</div>
+      札はクラシックと同じ。違うのは<b>何で買うか</b>です —<br>手札ではなく<b>チップ20枚</b>で値をつけます。` },
+  t_burn: { text: `<div class="tut-h">負けてもチップは溶けます 💧</div>
+      ここが肝です。クラシックでは出した札が相手に渡りますが、<br>TWELVE ではチップが<b>バンクへ消えます</b>。`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>勝ったほう</b><br>つけた値を<b>全額</b><small>代わりに競り札2枚をすべて取ります</small></div>
+        <div class="tt-p"><b>負けたほう</b><br>つけた値の<b>半分</b><small>札はもらえず、チップだけ半分減ります</small></div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">だから<b>いつ降りるか</b>がそのまま腕前です</div>` },
+  t_draw: { text: '自分が親です。山札から1枚めくってみましょう。',
+    act: '<b>山札をタップ</b>！' },
+  t_offer: { text: '手札から<b>もう1枚</b>足します — この2枚が競り札です。',
+    act: '出す札を<b>タップ</b>' },
+  t_type: { text: `<div class="tut-h">オープンとクローズ 🎭</div>`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>👁 オープン</b><br>値を<b>見せ合って</b>交互に上げます<small>どちらかが降りるまで</small></div>
+        <div class="tt-p"><b>🙈 クローズ</b><br><b>偶数</b>で一度だけ値をつけます<small>値は見えますが出し札は隠れています</small></div>
+      </div>` },
+  t_bid: { text: '値をつける番です。前の値より高くつけるか、<b>降ります</b>。',
+    act: '下から<b>値をつける</b>か<b>降りる</b>' },
+  t_close: { text: `<div class="tut-h">開けてから決めます 🙈</div>
+      クローズでは先に値をつけ、出し札は<b>そのあと</b>で開きます。
+      開いたものを見てから<b>買うか買わないか</b>を選びます。`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>買う</b><br>つけた値を<b>全額</b>払います<small>競り札2枚をすべて取ります</small></div>
+        <div class="tt-p"><b>買わない</b><br>つけた値の<b>半分</b>だけ<small>札はもらえません</small></div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">大きくつけると、買わないのも高くつきます</div>` },
+  t_settle: { text: `<div class="tut-h">チップはバンクへ行きます 🏦</div>
+      いま払ったチップは相手に渡るのではなく、<b>盤面から消えます</b>。
+      だから両方が大きくつければ両方が貧しくなる — この対局の緊張はそこにあります。` },
+  t_chips: { text: '💧 チップが減りましたね。<b>勝ったほうも負けたほうも</b>払います。<br>チップが<b>0</b>になるとその場で負けです — 大事に使ってください。' },
+  t_fold: { text: 'この競り、本当に取る必要がありますか？ <b>降りれば</b>つけた値の半分だけで済みます。<br>勝てない競りから抜けるのも一手です。',
+    act: '値が惜しければ<b>降りる</b>' },
+
+  // ── 다인전 ──
+  q_intro: { text: `<div class="tut-h">多人数戦へようこそ！ ${ico('👥', 'tut-ico')}</div>
+      基本は1対1と同じ — <b>先にセットを揃えれば</b>勝ちです。<br>人が増えて変わるところだけ見ていきましょう。` },
+  q_all: { text: `<div class="tut-h">親も一緒に入札します</div>
+      1対1との最初の違い。親は札を出して引っ込むのではなく、<br><b>自分も入札の札を出します</b>。` },
+  q_rev: { text: `<div class="tut-h">入札した札は逆順で戻ります ♻️</div>
+      ここがこの対局の心臓です。出した札は捨てられず、<b>お互いに取り合います</b>。`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>いちばん強く入札</b><br>競り札2枚を獲得<small>代わりにいちばん弱い入札札を受け取ります</small></div>
+        <div class="tt-p"><b>いちばん弱く入札</b><br>競り札はもらえない<small>代わりにいちばん強い入札札を受け取ります</small></div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">だから<b>負けることも手になります</b></div>` },
+  q_deck: { text: (s) => `<div class="tut-h">山札は大きく、目標はそのまま 🗂</div>
+      ${s && s.n === 3 ? '3人なら30枚' : '4人なら38枚'} — 人が増えた分だけ札も増えます。
+      でも<b>そろえる枚数は1対1と同じ</b>です。`,
+    cards: `<div class="tut-cards" style="margin-top:12px">
+        <span class="tcard k2"><i>1</i>2</span><span class="tcard k3"><i>1</i>3</span><span class="tcard k4"><i>1</i>4</span><span class="tcard k6"><i>1</i>6</span></div>
+      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2</span><span style="margin-left:18px">3</span><span style="margin-left:18px">4</span><span style="margin-left:18px">6</span></div>
+      <div class="tut-note">札の数字がそのまま必要な枚数です — 何人でも変わりません。</div>` },
+  q_bid: { text: '入札の番です。勝ちにいくか、わざと負けて<b>強い札をもらう</b>か選んでください。',
+    act: '手札をタップ →<b>入札を確定</b>' },
+  q_seq: { text: '🙈 クローズでは<b>順番にひとりずつ</b>公開しながら出します。<br>あとに出す人は前の人の札をすべて見てから決められます。' },
+  q_got: { text: '🎯 取った札は<b>自分の前</b>に並びます。<b>そこに並んだ札だけ</b>がセットになります。' },
+  q_turn: { text: '🔄 親は<b>ターンごとに一席ずつ</b>移ります。すぐにまた自分の番が来ます。' },
+
+  // ── 미니게임 ──
+  m_intro: { text: `<div class="tut-h">2枚勝負へようこそ！ ${ico('🎴', 'tut-ico')}</div>
+      本編とはまったく別のルールです。競りではなく<b>ソッタ風のベット</b>。<br>
+      札を2枚、<b>だれにも見せずに</b>握って賭けます。` },
+  m_flow: { text: `<div class="tut-h">一局の流れ 🔄</div>
+      <div class="tut-steps">
+        <div>1️⃣ 全員が<b>40</b>を出して札を<b>1枚</b>ずつ</div>
+        <div>2️⃣ ひとりを残して全員がコールか降りたら、その回は閉じます</div>
+        <div>3️⃣ ふたり以上残れば<b>もう1枚</b>受け取り、2回目のベット</div>
+        <div>4️⃣ 手を開いて<b>役</b>で決めます</div>
+      </div>` },
+  m_act: { text: '自分の番です。見えている札は1枚もありませんね。読めるのは<b>だれがいくらを、いつ賭けたか</b>だけです。',
+    act: '下から<b>ベット・コール・降りる</b>を選んでください' },
+  m_two: { text: `<div class="tut-h">役は三つの系統 🎴</div>
+      <div class="tut-steps">
+        <div>🔥 <b>ゾロ目</b> — 同じ種類が2枚 · 2 &gt; 3 &gt; 4 &gt; 6</div>
+        <div>🎯 <b>同格</b> — 等級が同じ2枚 · 等級が低いほど強い</div>
+        <div>🃏 <b>点</b> — それ以外 · 種類の合計が<b>小さいほど</b>強い</div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">ゾロ目はどの同格にも、同格はどの点にも勝ちます</div>` },
+  m_jol: { text: `<div class="tut-h">下っ端の裏切り！ ⚔️</div>
+      いま握っている<b>4-6 ＋ 6-8</b>は山でもっとも弱い2枚ですが、<br>
+      この組み合わせだけは<b>ゾロ目をすべて破ります</b>。190通りのうちたったひとつです。` },
+};
+
+// ── 튜토리얼 중국어판 ────────────────────────────────────────────
+const TUT_ZH = {
+  // ── 클래식 ──
+  intro: { text: `<div class="tut-h">欢迎来到 FLIP FLAP！ ${ico('🎩', 'tut-ico')}</div>
+      靠<b>竞拍</b>收集牌，先凑齐一<b>套</b>的人获胜。`,
+    cards: `<div class="tut-cards" style="margin-top:14px"><span class="tcard k3"><i>1</i>3</span><span class="tcard k3"><i>2</i>3</span><span class="tcard k3"><i>4</i>3</span><span class="tvs">=</span><span class="twin">凑齐三张 3 就赢！ ${ico('🏆', 'tut-ico')}</span></div>` },
+  cards1: { text: `<div class="tut-h">怎么看一张牌 🃏</div>`,
+    cards: `<div class="tut-arrows">
+      <span class="ta-card">
+        <span class="tcard k6 big"><i>1</i>6</span>
+        <span class="ta-note ta-grade"><span class="ta-txt"><b>小数字＝等级</b><small>1 级最强</small></span></span>
+        <span class="ta-note ta-kind"><span class="ta-txt"><b>大数字＝种类</b><small>凑够这么多就赢！</small></span></span>
+      </span></div>` },
+  cards2: { text: `<div class="tut-h">四个种类，一共 24 张 🗂</div>
+      数字<b>越小越强，也越少</b>。2 只要两张就赢，可全世界只有两张！`,
+    cards: `<div class="tut-cards" style="margin-top:12px">
+        <span class="tcard k2"><i>1</i>2</span><span class="tcard k3"><i>1</i>3</span><span class="tcard k4"><i>1</i>4</span><span class="tcard k6"><i>1</i>6</span></div>
+      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2 张</span><span style="margin-left:18px">5</span><span style="margin-left:18px">7</span><span style="margin-left:18px">10</span></div>
+      <div class="tut-cards" style="margin-top:8px"><span class="tcard k2"><i>1</i>2</span><span class="tvs">&gt;</span><span class="tcard k6"><i>1</i>6</span><span class="twin">出价时 2 胜过 6</span></div>` },
+  flow: { text: `<div class="tut-h">一个回合是这样走的 🔄</div>
+      <div class="tut-steps">
+        <div>1️⃣ <b>庄家</b>从牌堆翻开一张</div>
+        <div>2️⃣ 庄家再从手牌加一张 → <b>两张拍品</b></div>
+        <div>3️⃣ 双方各从手牌出一张<b>出价</b></div>
+        <div>4️⃣ 出<b>更强的牌</b>的人拿走全部拍品！</div>
+        <div>5️⃣ 出价的两张牌<b>互相交换</b>，进对方手里</div>
+        <div>6️⃣ 只有<b>拍到的牌</b>能凑成套（手牌不算！）</div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">打一局就懂了。开始吧！</div>` },
+  pick: { text: '先来<b>决定先手</b>！',
+    act: '在发光的两张里<b>点一张</b> — 抽到更强的一方先手！' },
+  pickr: { text: '揭晓！ 抽到更强的一方成为第一位<b>庄家</b>。（庄家每回合轮换）' },
+  draw_me: { text: '这一回合的庄家是<b>你</b>。先把拍品翻开吧。',
+    act: '点左边的<b>牌堆</b>！' },
+  offer_me: { text: '场牌翻开了！ 再从<b>手牌里加一张</b> — 这两张就是拍品。',
+    act: '在下面的手牌里<b>点一张要出的牌</b>' },
+  type_big: { text: `<div class="tut-h">选择竞拍方式 🎭</div>
+      <div class="tut-two">
+        <div class="tt-p"><b>👁 明拍</b><br>拍品<b>公开</b><br>出价<b>保密</b><br><small>谁也不知道对方会出多大</small></div>
+        <div class="tt-p"><b>🙈 暗拍</b><br>出品牌<b>保密</b><br>出价<b>公开</b><br><small>不知道里面是什么就得赌</small></div>
+      </div>` },
+  type_me: { act: '<b>点</b>你想用的方式', text: '' },
+  bid_me: { text: '<b>出价！</b> 出更强牌的人拿走两张拍品。⚠️ 出价的牌之后会<b>互相交换</b>。',
+    act: '点手牌 →<b>确定出价</b>' },
+  reveal: { text: '咚咚咚…揭晓！ 赢的一方把拍品摆在<b>自己面前</b>。' },
+  swap_rule: { text: (s) => {
+      const a = (s && s.auction) || {};
+      if (!a.myBid || !a.oppBid) return `<div class="tut-h">出价的牌去哪了？ 🔁</div>出价的牌不会被丢掉。两个人出的牌<b>互相交换</b>，各自进对方手里。`;
+      const c = (x) => `<span class="tcard k${x.kind}"><i>${x.grade}</i>${x.kind}</span>`;
+      return `<div class="tut-h">出价的牌去哪了？ 🔁</div>
+        刚才两个人出的牌<b>不会被丢掉</b>。
+        <div class="tut-swap">
+          <div class="ts-row"><span class="ts-lbl">你出的</span>${c(a.myBid)}
+            <span class="ts-arw">→</span><span class="ts-dst">进对手手里</span></div>
+          <div class="ts-row"><span class="ts-lbl">对手出的</span>${c(a.oppBid)}
+            <span class="ts-arw">→</span><span class="ts-dst mine">进你手里</span></div>
+        </div>
+        <div class="tut-note">两张<b>互相交换。</b>所以出强牌容易赢，却也等于<b>把那张强牌塞进对手手里</b>。</div>`;
+    } },
+  where_rule: { text: `<div class="tut-h">牌会待在两个地方 🗺</div>
+      <div class="tut-two">
+        <div class="tt-p"><b>🖐 手牌</b><br>用来出价的牌<br>
+          <small>会来回交换<br><b>不算进套里</b></small></div>
+        <div class="tt-p"><b>🏅 自己面前</b><br>拍到的拍品<br>
+          <small>只有摆在这里的<br><b>才算一套</b></small></div>
+      </div>
+      <div class="tut-note">手上握着三张 3 也赢不了。必须<b>靠竞拍拿到手</b>。</div>` },
+  acquired: { text: '🎯 刚拍到的牌摆在<b>你面前</b>了吧？ 只有<b>摆出来的这些</b>才能凑成套 — 手上的牌不算！' },
+  draw_opp: { text: '这一回合的庄家是<b>对手</b>。马上就轮到你出价 ☕' },
+  betray_rule: { text: `<div class="tut-h">最后再说一个秘密 ⚔️</div>
+      最弱的<b>6-10</b>，偏偏只赢一样东西 — 最强的<b>2-1</b>。<br>这就叫<b>小卒的背叛</b>！`,
+    cards: `<div class="tut-cards" style="margin-top:12px"><span class="tcard k6"><i>10</i>6</span><span class="tvs">⚔</span><span class="tcard k2"><i>1</i>2</span><span class="tvs">→</span><span class="twin">6-10 获胜！</span></div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">盯准对手要掏王牌的那一刻 😏</div>` },
+  betray: { text: (s) => (s.myHand || []).some(c => c.kind === 6 && c.grade === 10)
+      ? '👀 你手上有<b>6-10</b> — 如果觉得对手会出 2-1，就等着<b>背叛</b>他！'
+      : '👀 你手上有<b>2-1</b> — 它最强，但唯独输给<b>6-10</b>。当心！' },
+
+  // ── 아이템전 ──
+  i_intro: { text: `<div class="tut-h">欢迎来到道具战！ ${ico('🎪', 'tut-ico')}</div>
+      规则<b>和经典完全一样</b> — 靠竞拍拿牌，先凑齐一套。<br>
+      唯一的不同是多了<b>道具</b>。` },
+  i_kinds: { text: `<div class="tut-h">13 种道具，分成三类 🧰</div>
+      <div class="tut-kinds">
+        <div class="tk-row"><span class="tk-h">👀 窥视</span>
+          <span class="tk-i">🔍 放大镜</span><span class="tk-i">📏 标尺</span>
+          <span class="tk-d">决定之前先看对手的手牌或出价</span></div>
+        <div class="tk-row"><span class="tk-h">🌀 搅局</span>
+          <span class="tk-i">🔄 反转器</span><span class="tk-i">💨 烟幕弹</span>
+          <span class="tk-i">💣 炸弹</span><span class="tk-i">🧿 护符</span>
+          <span class="tk-d">只改这一次竞拍的规则</span></div>
+        <div class="tk-row"><span class="tk-h">💥 抢夺</span>
+          <span class="tk-i">🐈 野猫</span><span class="tk-i">👑 暴君</span>
+          <span class="tk-i">🖨️ 复制机</span><span class="tk-i">🎴 挑选</span>
+          <span class="tk-d">把手伸到已经拍走的牌上</span></div>
+      </div>
+      <div class="tut-note">不用记。拿到手之后<b>点一下就能看它的效果。</b></div>` },
+  i_cards: { text: `<div class="tut-h">道具是从牌堆里翻出来的 🃏</div>
+      牌堆里混了<b>四张道具牌</b>。<br>
+      翻到时会立刻再翻一张，竞拍照常继续。
+      <div class="tut-two" style="margin-top:10px">
+        <div class="tt-p"><b>🎁 奖励</b><br>翻到它的<b>庄家</b><br>当场拿走
+          <small>从牌堆飞进手里</small></div>
+        <div class="tt-p"><b>🏷 附赠</b><br>这次竞拍<b>输</b>的<br>一方拿走
+          <small>正面朝上摆在拍品上</small></div>
+      </div>
+      <div class="tut-note">两种待会儿都会出现 — 你自己看一遍就懂。</div>` },
+  i_draw: { text: '第一回合你是庄家。翻一张牌堆试试？',
+    act: '点左边的<b>牌堆</b>！' },
+  i_bonus: { text: `<div class="tut-h">🎁 翻出奖励了！</div>
+      翻到它的<b>庄家</b>当场收下。<br>
+      庄家每回合轮换，所以白拿也不会偏向某一边。` },
+  i_got: { text: (s) => {
+      const first = (s.myItems || [])[0];
+      const known = { magnify: ['🔍 放大镜', '偷看对手两张手牌'],
+                      scan: ['📏 标尺', '量一量对手出价的强度'] };
+      const k = first && known[typeof first === 'string' ? first : first.id];
+      return k
+        ? `🎉 <b>${k[0]}</b>到手了 — <i>${k[1]}</i>。<br>
+           道具会叠在下面的格子里。最多带<b>3 个</b>，每回合只能用<b>1 个</b>。`
+        : `🎉 <b>拿到道具了！</b> 它会叠在下面的格子里。<br>最多带<b>3 个</b>，每回合只能用<b>1 个</b>。`;
+    },
+    act: '<b>点道具</b>就能看它的效果和可以用的时机' },
+  i_offer: { text: '和经典一样 — 从<b>手牌加一张</b>，凑成两张拍品。',
+    act: '<b>点</b>你想出的牌' },
+  i_use: { text: '现在正是<b>用道具的时机</b>。只能在出价之前用 — 看到结果再反悔是不行的。',
+    act: '点一个道具试试，或者直接出价' },
+  i_bid: { text: '<b>出价！</b> 这里出价的牌也一样会互相交换，和经典完全相同。',
+    act: '点手牌 →<b>确定出价</b>' },
+  i_tip: { text: `<div class="tut-h">🏷 这次押上了一个附赠！</div>
+      和奖励相反 — 这次竞拍<b>输</b>的一方拿走那个道具。<br>
+      而且你能<b>清清楚楚看到是什么</b>，于是开始盘算：「这一局值不值得让？」
+      <div class="tut-note">道具战和经典就是在这里分道扬镳。
+      <b>有时候输才是更好的一步。</b></div>` },
+  i_wrap: { text: `<div class="tut-h">该出的都出过了！ 🎪</div>
+      道具讲的是<b>时机而不是威力</b> — 什么时候用，比用哪一个更要紧。<br>
+      剩下的自己打吧。任何时候点道具都能看说明。` },
+
+  // ── TWELVE ──
+  t_intro: { text: `<div class="tut-h">欢迎来到 TWELVE！ ${ico('🔵', 'tut-ico')}</div>
+      牌和经典一样。不一样的是<b>拿什么买</b> —<br>不是手牌，而是<b>20 枚筹码</b>。` },
+  t_burn: { text: `<div class="tut-h">输了筹码也会化掉 💧</div>
+      这是核心。经典里出的牌会转到对手手上；<br>TWELVE 里筹码是<b>消失进庄池</b>的。`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>赢的一方</b><br>报价<b>全额</b>付<small>但拿走两张拍品</small></div>
+        <div class="tt-p"><b>输的一方</b><br>付报价的<b>一半</b><small>拿不到牌，筹码还少一半</small></div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">所以<b>什么时候弃牌</b>就是全部的功夫</div>` },
+  t_draw: { text: '你是庄家。从牌堆翻一张吧。',
+    act: '点<b>牌堆</b>！' },
+  t_offer: { text: '从手牌<b>再加一张</b> — 这两张就是拍品。',
+    act: '<b>点</b>你想出的牌' },
+  t_type: { text: `<div class="tut-h">明拍和暗拍 🎭</div>`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>👁 明拍</b><br><b>互相看着</b>轮流加价<small>直到有一方弃牌</small></div>
+        <div class="tt-p"><b>🙈 暗拍</b><br>报一次<b>偶数</b><small>价看得见，出品牌看不见</small></div>
+      </div>` },
+  t_bid: { text: '轮到你报价了。比上一家高，或者<b>弃牌</b>。',
+    act: '在下面<b>加价</b>或<b>弃牌</b>' },
+  t_close: { text: `<div class="tut-h">开出来之后再决定 🙈</div>
+      暗拍是先报价，出品牌<b>之后</b>才开。
+      看到开出来的东西，再选<b>买还是不买</b>。`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>买</b><br>报价<b>全额</b>付<small>两张拍品都拿走</small></div>
+        <div class="tt-p"><b>不买</b><br>只付报价的<b>一半</b><small>拿不到牌</small></div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">报得高，不买也会很贵</div>` },
+  t_settle: { text: `<div class="tut-h">筹码进的是庄池 🏦</div>
+      刚才付出去的筹码不会到对手手上 — 它<b>离开了牌局</b>。
+      两边都报大价，两边就都变穷 — 这局的紧张感就在这儿。` },
+  t_chips: { text: '💧 筹码少了吧？ <b>赢的输的都要付。</b><br>筹码到<b>0</b>就当场输 — 省着点花。' },
+  t_fold: { text: '这一局非拿不可吗？ <b>弃牌</b>只会损失报价的一半。<br>从赢不了的局里抽身，也是一步棋。',
+    act: '觉得价太疼就<b>弃牌</b>' },
+
+  // ── 다인전 ──
+  q_intro: { text: `<div class="tut-h">欢迎来到多人对局！ ${ico('👥', 'tut-ico')}</div>
+      基本和一对一一样 — <b>先凑齐一套</b>就赢。<br>这里只讲人多了以后有什么不同。` },
+  q_all: { text: `<div class="tut-h">庄家也一起出价</div>
+      和一对一的第一个不同。庄家不是出完牌就退开 —<br><b>他自己也要出一张出价牌</b>。` },
+  q_rev: { text: `<div class="tut-h">出价的牌会倒着回来 ♻️</div>
+      这是这局的心脏。出价的牌不会被丢掉 — <b>大家互相拿走</b>。`,
+    cards: `<div class="tut-two">
+        <div class="tt-p"><b>出价最高</b><br>拿走两张拍品<small>但收到最弱的那张出价牌</small></div>
+        <div class="tt-p"><b>出价最低</b><br>拿不到拍品<small>但收到最强的那张出价牌</small></div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">所以<b>输也是一步棋</b></div>` },
+  q_deck: { text: (s) => `<div class="tut-h">牌堆变大，目标不变 🗂</div>
+      ${s && s.n === 3 ? '三个人是 30 张' : '四个人是 38 张'} — 人多了，牌也多了。
+      但<b>要凑的张数和一对一时一样</b>。`,
+    cards: `<div class="tut-cards" style="margin-top:12px">
+        <span class="tcard k2"><i>1</i>2</span><span class="tcard k3"><i>1</i>3</span><span class="tcard k4"><i>1</i>4</span><span class="tcard k6"><i>1</i>6</span></div>
+      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2</span><span style="margin-left:18px">3</span><span style="margin-left:18px">4</span><span style="margin-left:18px">6</span></div>
+      <div class="tut-note">牌上的数字就是要凑的张数 — 几个人玩都一样。</div>` },
+  q_bid: { text: '轮到你出价了。是拿下它，还是故意输掉去<b>换那张强牌</b>？',
+    act: '点手牌 →<b>确定出价</b>' },
+  q_seq: { text: '🙈 暗拍时大家<b>按顺序一个一个</b>公开着出。<br>最后出的人，前面所有人的牌都看过了。' },
+  q_got: { text: '🎯 拍到的牌摆在<b>你面前</b>。只有<b>摆在这里的</b>才能凑成套。' },
+  q_turn: { text: '🔄 庄家<b>每回合往下挪一个座位</b>。很快又轮到你。' },
+
+  // ── 미니게임 ──
+  m_intro: { text: `<div class="tut-h">欢迎来到两张定胜负！ ${ico('🎴', 'tut-ico')}</div>
+      这是完全不同的一套规则。不是竞拍，而是<b>韩式 Sutda 的下注</b>。<br>
+      两张牌<b>谁也不给看</b>，扣在手里下注。` },
+  m_flow: { text: `<div class="tut-h">一局怎么走 🔄</div>
+      <div class="tut-steps">
+        <div>1️⃣ 每人先押<b>40</b>，各拿<b>一张</b>牌</div>
+        <div>2️⃣ 除一人外都跟注或弃牌，这一轮就结束</div>
+        <div>3️⃣ 还剩两人以上，就<b>再拿一张</b>，进行第二轮下注</div>
+        <div>4️⃣ 亮牌，按<b>牌型</b>定胜负</div>
+      </div>` },
+  m_act: { text: '轮到你了。一张牌也看不见吧？ 你能读的只有<b>谁在什么时候押了多少</b>。',
+    act: '在下面选<b>下注、跟注或弃牌</b>' },
+  m_two: { text: `<div class="tut-h">牌型分三类 🎴</div>
+      <div class="tut-steps">
+        <div>🔥 <b>对子</b> — 同种两张 · 2 &gt; 3 &gt; 4 &gt; 6</div>
+        <div>🎯 <b>同级</b> — 等级相同的两张 · 等级越低越强</div>
+        <div>🃏 <b>点数</b> — 其余 · 种类之和<b>越小</b>越强</div>
+      </div>
+      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">对子吃遍同级，同级吃遍点数</div>` },
+  m_jol: { text: `<div class="tut-h">小卒的背叛！ ⚔️</div>
+      你手上的<b>4-6 ＋ 6-8</b>是牌堆里最弱的两张，<br>
+      可偏偏这一组<b>能吃掉所有对子</b>。190 种里就这一手。` },
+};
+
 // ── 튜토리얼 영문판 ──────────────────────────────────────────────
 // 안내판은 한 문장 안에 <b> 와 카드 그림이 섞여 있어, 조각으로 나눠 번역하면
 // 어순이 깨진다. 사전에 문장을 통째로 넣는 방법도 여러 줄 문자열과 안 맞았다.
@@ -6123,7 +6571,13 @@ function tutShow(st, view) {
   // 안내판은 한 문장 안에 <b> 와 카드 그림이 섞여 있어, 조각마다 번역하면
   // 어순이 깨진다. 영어일 때는 같은 id 의 영문 단계를 통째로 갈아 끼운다.
   // 없는 항목은 한국어 쪽을 그대로 쓴다 — 표에 빠진 게 있어도 안내가 사라지진 않는다.
-  const en = (window.FF && FF.lang() !== 'ko' && TUT_EN[st.id]) || null;
+  // 언어별 안내판. 없는 언어는 영어로 떨어지고, 영어에도 없으면 한국어를 쓴다 —
+  // 표에 빠진 게 있어도 안내가 사라지진 않는다.
+  const L = (window.FF && FF.lang()) || 'ko';
+  const TUT_L = { ja: (typeof TUT_JA !== 'undefined' ? TUT_JA : null),
+                  zh: (typeof TUT_ZH !== 'undefined' ? TUT_ZH : null) };
+  const table = L === 'ko' ? null : (TUT_L[L] || TUT_EN);
+  const en = (table && table[st.id]) || (L !== 'ko' && TUT_EN[st.id]) || null;
   const pick = (k) => (en && en[k] !== undefined ? en[k] : st[k]);
   const T = (x) => (window.FF ? FF.t(x) : x);
   const raw = pick('text');

@@ -122,8 +122,10 @@ console.log('\n④ 영어로도 배울 수 있다');
   // 사전에 문장을 통째로 넣는 방법은 여러 줄로 쓴 안내판과 안 맞았다(들여쓰기와
   // 줄바꿈까지 열쇠에 들어가야 해서 실제로는 한 번도 안 걸렸다).
   // 이제 같은 id 의 영문 단계를 갈아 끼운다 — 위 ③-3 이 짝을 지킨다.
-  ok('영문 단계를 갈아 끼운다',
-     /const en = \(window\.FF && FF\.lang\(\) !== 'ko' && TUT_EN\[st\.id\]\) \|\| null;/.test(cli));
+  ok('언어별 단계를 갈아 끼운다',
+     /const table = L === 'ko' \? null : \(TUT_L\[L\] \|\| TUT_EN\);/.test(cli)
+     && /const en = \(table && table\[st\.id\]\) \|\| \(L !== 'ko' && TUT_EN\[st\.id\]\) \|\| null;/.test(cli));
+  ok('일본어·중국어 안내판이 있다', /const TUT_JA = \{/.test(cli) && /const TUT_ZH = \{/.test(cli));
   ok('넘겨 보던 영문 한 벌은 걷어냈다', !FF.TUT);
   ok('고르는 창은 번역된다',
      ['직접 한 판 두면서 배웁니다. 처음이면 클래식부터가 좋아요.', '처음이라면 여기부터', '추천',

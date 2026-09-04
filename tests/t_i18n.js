@@ -47,7 +47,8 @@ console.log('\n② 화면에 붙어 있는가');
 {
   ok('i18n.js 를 먼저 읽는다',
      html.indexOf('src="i18n.js"') > 0 && html.indexOf('src="i18n.js"') < html.indexOf('src="client.js"'));
-  ok('설정에 언어 칸이 있다', /class="sp-row sp-lang"/.test(html));
+  ok('설정에 언어 칸이 있다', /class="sp-lang sp-langcol"/.test(html));
+  ok('언어가 넷이다', ['ko','en','ja','zh'].every((c) => html.includes(`pickLang('${c}')`)));
   ok('가입할 때도 고를 수 있다', /class="nick-lang"/.test(html));
   ok('두 곳 다 같은 함수를 쓴다', (html.match(/onclick="pickLang\('(ko|en)'\)"/g) || []).length === 4);
   ok('바꾸는 함수가 있다', /function pickLang/.test(cli));
