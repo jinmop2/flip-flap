@@ -72,5 +72,32 @@ console.log('\n③ 모양');
   ok('로비 친구창에도 gap 이 없다', !/\.ftalk-msgs \{[^}]*gap:/.test(htm));
 }
 
+console.log('\n④ 채팅 머리 — 안 쓸 때는 작은 동그라미');
+{
+  // 판을 두면서 메뉴를 열고 그 안에서 채팅을 또 찾는 건 번거롭다.
+  // 메신저처럼, 안 쓸 때는 가장자리에 동그라미로 떠 있다가 누르면 열린다.
+  ok('동그라미가 있다', /<button id="chatHead"/.test(htm)
+     && /#chatHead \{[\s\S]{0,220}border-radius:50%/.test(htm));
+  ok('판 안에서만 뜬다', /body\.ingame #chatHead, body\.quad4 #chatHead, body\.twelve #chatHead \{ display:flex; \}/.test(htm));
+  // 둘이 같이 뜨면 판을 두 번 가린다
+  ok('창이 열리면 숨는다', /body\.gc-open #chatHead \{ display:none !important; \}/.test(htm)
+     && /classList\.toggle\('gc-open', show\)/.test(cli));
+  // 끊김 덮개(44)가 떴을 때 그 위에 동그라미가 떠 있으면 안 된다
+  ok('덮개보다는 아래층', /#chatHead \{[\s\S]{0,120}z-index:43;/.test(htm));
+  // 손가락은 누를 때도 1~2px 흔들린다 — 그 안쪽은 '눌렀다' 로 본다
+  ok('누르면 열리고 끌면 안 열린다', /if \(!moved\) \{ toggleGameChat\(true\); return; \}/.test(cli)
+     && /Math\.abs\(e\.clientX - sx\) \+ Math\.abs\(e\.clientY - sy\) < 5/.test(cli));
+  // 한가운데 떠 있으면 판을 가린다
+  ok('놓으면 가까운 변에 붙는다', /chPos\.side = \(r\.left \+ r\.width \/ 2\) < window\.innerWidth \/ 2 \? 'l' : 'r'/.test(cli));
+  // 픽셀로 적어 두면 화면이 작아졌을 때 밖으로 나간다
+  ok('자리는 변·세로비율로 적어 둔다', /chPos = \{ side: 'r', ry: 0\.62 \}/.test(cli)
+     && /localStorage\.setItem\(CH_KEY/.test(cli));
+  ok('화면이 바뀌면 다시 앉힌다', /window\.addEventListener\('resize', chApply\)/.test(cli));
+  // gcPaintDot 는 인라인 style 을 '' 로 되돌려 켠다 — CSS 기본이 none 이면 영영 안 켜진다
+  ok('안 읽은 것이 있으면 점이 붙는다', /'chatHeadDot'\]/.test(cli)
+     && /\.ch-dot \{[\s\S]{0,140}display:block; \}/.test(htm)
+     && /id="chatHeadDot" style="display:none"/.test(htm));
+}
+
 console.log('\n' + (bad ? 'FAIL ' + bad + '/' + n : 'OK ' + n + '개'));
 process.exit(bad ? 1 : 0);

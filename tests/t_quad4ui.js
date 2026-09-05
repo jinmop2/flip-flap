@@ -138,8 +138,23 @@ console.log('\n⑥ 2인전과 결이 맞는가');
      && /q-dcount/.test(html));
   // 판 위에 또 판을 깔면 상자 안의 상자가 된다
   ok('가운데에 박스를 깔지 않는다', /#q-mat \{ display:flex; align-items:center; gap:20px; padding:14px 22px; \}/.test(html));
-  // 낸 카드는 그 사람이 보는 쪽으로. 옆자리는 자리째 돌고, 맞은편은 칸만 돈다.
-  ok('맞은편도 자기 쪽으로 낸다', /\.q-seat\.at-t \.q-bslot \{ transform:rotate\(180deg\); \}/.test(html));
+  // 낸 카드는 그 사람이 보는 쪽을 향한다. 판을 내려다보는 사람에게 '위' 는
+  // 자기에게서 먼 쪽(판 한가운데)이다 — 어느 자리든 칸을 180도 돌리면 맞는다.
+  // 옆자리는 자리가 이미 ∓90 도라, 거기에 180 을 더한 값이 그 사람의 '위' 다.
+  // (옆자리를 안 돌렸을 때 "카드를 180도 돌려서 낸다" 는 말을 들었다.)
+  ok('낸 카드는 각자 보는 쪽을 향한다', /\.q-seat \.q-bslot \{ transform:rotate\(180deg\); \}/.test(html));
+  // 판은 네 자리를 재서 그린다. 카드가 없을 때와 있을 때 자리 깊이가 달라지면
+  // 배팅할 때마다 판이 통째로 커졌다 작아졌다 한다(재 보니 28px).
+  ok('자리 깊이를 못 박아 판이 안 흔들린다',
+     /\.q-seat\.at-t \.q-sfront \{ height:72px; \}/.test(html)
+     && /\.q-seat\.at-l \.q-sfront, \.q-seat\.at-r \.q-sfront \{ height:54px; \}/.test(html));
+  // 두 줄짜리 문구가 오면 경매대가 밀려 내려가고, 옆자리 눈높이까지 따라 움직인다
+  ok('안내 문구가 경매대를 안 민다', /#q-status \{[\s\S]{0,140}min-height:34px;/.test(html));
+  // 아직 등을 보이는 카드에 이미 도장·금테가 찍혀 있으면 뒤집기가 헛돌아 보인다
+  ok('결과는 뒤집기가 끝난 뒤에 붙는다',
+     /fx\.shown = false;/.test(c4) && /fx\.shown = true; render\(\);/.test(c4)
+     && /i === winner && fx\.shown/.test(c4)
+     && /winner >= 0 && fx\.shown && fx\.settledTurn !== s\.turn/.test(c4));
   // 자리가 카드 크기로 좁아지면서 도장이 카드 밖으로 절반쯤 튀어나갔다
   ok('WIN 도장은 카드 한복판', /\.q-winstamp \{[\s\S]{0,80}left:50%; top:50%;/.test(html)
      && /@keyframes qWinStamp \{ to \{ transform:translate\(-50%,-50%\)/.test(html));
@@ -155,7 +170,8 @@ console.log('\n⑥ 2인전과 결이 맞는가');
   // 덱과 카드가 붙어 있던 문제
   ok('매트 간격이 넉넉하다', /#q-mat \{[^}]*gap:20px/.test(html));
   ok('덱 층이 삐져나오는 만큼 자리를 잡는다', /#q-deckstack \{[^}]*width:54px/.test(html));
-  ok('덱 장수가 매트 밖으로 안 나간다', /#q-deckstack \.q-dcount \{[^}]*bottom:2px/.test(html));
+  // 칸 안(bottom:2px)에 두었더니 장수가 카드 밑동을 5px 파고들어 무늬에 묻혔다
+  ok('덱 장수는 카드 아래에 앉는다', /#q-deckstack \.q-dcount \{[^}]*bottom:-7px/.test(html));
 
   // 아래 차례: 낸 카드 → 획득 → 내 자리 → 손패 → 확정.
   // 확정을 손패 위에 두던 시절엔 고를 카드와 누를 버튼이 붙어 손가락이 엉켰다.

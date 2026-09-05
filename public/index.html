@@ -2178,7 +2178,9 @@
     #q-deckstack .card { position:absolute; top:0; left:0; width:46px; height:64px;
       box-shadow:0 2px 6px rgba(0,0,0,.55); }
     /* 매트 밖으로 나가지 않게 카드 위에 겹쳐 올린다 */
-    #q-deckstack .q-dcount { position:absolute; bottom:2px; left:50%; transform:translateX(-50%);
+    /* 카드 아래로 내려 앉힌다. 칸 안(bottom:2px)에 두었더니 카드 밑동을 5px
+       파고들어 장수가 카드 무늬에 묻혔다. */
+    #q-deckstack .q-dcount { position:absolute; bottom:-7px; left:50%; transform:translateX(-50%);
       font-size:.46rem; color:rgba(255,255,255,.7); font-weight:800; white-space:nowrap;
       background:rgba(0,0,0,.55); padding:1px 5px; border-radius:6px; z-index:9; }
     #q-deckstack.drawable { cursor:pointer; }
@@ -2275,8 +2277,12 @@
       bottom:2px; white-space:nowrap; }
     .q-bslot.win .q-blabel, #q-mybid.win .q-blabel { color:#ffd94a; font-weight:900; }
 
+    /* 두 줄짜리 문구가 오면 이 칸이 18 → 36px 로 자라 경매대를 통째로 밀어
+       내렸다. 경매대가 움직이면 옆자리 눈높이(--q-side-y)도 따라 움직여
+       판까지 흔들린다. 두 줄 자리를 늘 잡아 둔다. */
     #q-status { font-size:.72rem; font-weight:800; color:#dcebff; text-align:center;
-      min-height:18px; padding:0 8px;
+      min-height:34px; display:flex; align-items:center; justify-content:center;
+      padding:0 8px;
       /* 옆 사람 것이 이 높이를 안 쓰게 올려 두었지만, 문구가 판 밖까지 나가면
          읽는 눈이 판을 벗어난다 — 판 너비 안에 가둔다. */
       max-width:290px; margin:0 auto; line-height:1.35; }
@@ -2375,16 +2381,29 @@
       transform-origin:0 0; transform:rotate(-90deg); }
     .q-seat.at-r { left:100%; top:calc(var(--q-side-y, 41%) - var(--q-seat-w, 206px) / 2);
       transform-origin:0 0; transform:rotate(90deg); }
+    /* 앞자리(딴 카드·낸 카드)의 깊이를 못 박는다.
+       판은 네 자리를 재서 그린다. 그런데 카드가 없을 때와 있을 때 자리 깊이가
+       30 → 82px 로 달라져서, 배팅 카드를 낼 때마다 판이 통째로 28px 씩
+       커졌다 작아졌다 했다("배팅카드를 내면 판사이즈가 막 바뀐다").
+       자리를 늘 같은 크기로 잡아 두면 판이 가만히 있는다. */
+    .q-seat .q-sfront { align-items:flex-start; }
+    .q-seat.at-t .q-sfront { height:72px; }
+    .q-seat.at-l .q-sfront, .q-seat.at-r .q-sfront { height:54px; }
     /* 딴 카드는 한 줄로 눕는다 — 옆자리는 깊이가 86px 뿐이라 두 줄을 못 쓴다.
        대신 가장자리를 따라 길게 늘어놓을 자리는 넉넉하다. */
     .q-seat .q-oacq { height:auto; flex-wrap:nowrap; }
     .q-seat .q-acqin { flex-wrap:nowrap; }
     .q-bslot { display:flex; flex-direction:column; align-items:center; }
-    /* 낸 카드는 그 사람이 보는 쪽으로 놓인다. 옆자리는 자리째 도니 저절로 그렇고,
-       맞은편은 자리를 안 돌리므로(이름이 뒤집히면 못 읽는다) 낸 카드만 돌린다.
+    /* 낸 카드는 그 사람이 보는 쪽을 향한다. 판을 내려다보는 사람에게 '위' 는
+       자기에게서 먼 쪽, 곧 판 한가운데 쪽이다.
+         맞은편 사람 → 위가 아래쪽      → 180도
+         왼쪽 사람   → 위가 오른쪽      → 자리가 -90 이니 여기서 180 을 더한다
+         오른쪽 사람 → 위가 왼쪽        → 자리가 +90 이니 마찬가지
+       명패는 안 돌린다 — 이름이 뒤집히면 못 읽는다. 그래서 자리가 아니라
+       낸 카드 칸만 돌린다.
        카드 자체가 아니라 칸을 돌린다 — 카드에는 뒤집기(flipReveal)가 걸려 있어
        transform 을 덮어쓰면 공개 연출이 죽는다. */
-    .q-seat.at-t .q-bslot { transform:rotate(180deg); }
+    .q-seat .q-bslot { transform:rotate(180deg); }
 
     /* ── 치수 — 옆자리가 들어갈 만큼만 경매대를 좁힌다 ────────────────────
        양옆에 사람이 앉으므로 가운데가 그만큼 줄어든다. 옆자리 한 사람이
@@ -3955,6 +3974,33 @@
     .tr-rank { text-align:center; font-size:1.4rem; font-weight:800; color:var(--gold);
       font-family:'Bangers',cursive; letter-spacing:1px; margin:6px 0 2px; }
     .tr-prize { text-align:center; font-size:.9rem; color:#dcebff; font-weight:700; margin-bottom:10px; }
+
+    /* ── 채팅 머리 ──────────────────────────────────────────────────────
+       안 쓸 때는 작은 동그라미. 판(z 30)보다 위이되 끊김 덮개(44)·채팅창(46)
+       보다는 아래에 둔다 — 덮개가 떴을 때 그 위에 동그라미가 떠 있으면 안 된다. */
+    #chatHead {
+      display:none; position:fixed; z-index:43; width:46px; height:46px; padding:0;
+      border-radius:50%; align-items:center; justify-content:center; cursor:grab;
+      background:linear-gradient(180deg,#22304c,#111a2b);
+      border:1.5px solid rgba(160,185,220,.55); color:#cfe0f7;
+      box-shadow:inset 0 1px 0 rgba(200,222,255,.22), 0 6px 16px rgba(0,0,0,.55);
+      touch-action:none; -webkit-tap-highlight-color:transparent;
+      transition:left .2s cubic-bezier(.34,1.4,.64,1), top .2s cubic-bezier(.34,1.4,.64,1),
+                 transform .15s, opacity .15s;
+    }
+    /* 판 안에서만 뜬다 — 로비에는 아래 탭에 이미 채팅 자리가 있다 */
+    body.ingame #chatHead, body.quad4 #chatHead, body.twelve #chatHead { display:flex; }
+    /* 창이 열려 있으면 머리는 숨는다 — 둘이 같이 뜨면 판을 두 번 가린다 */
+    body.gc-open #chatHead { display:none !important; }
+    #chatHead .svgi { width:22px; height:22px; }
+    #chatHead:active { transform:scale(.94); }
+    /* 끌 때는 손을 그대로 따라와야 한다 — 붙는 연출이 걸려 있으면 뒤처진다 */
+    #chatHead.dragging { cursor:grabbing; transition:none; opacity:.9; }
+    /* 켜고 끄는 것은 인라인 style 로 한다(gcPaintDot 가 '' 로 되돌린다).
+       그래서 여기 기본값을 none 으로 두면 영영 안 켜진다 — 다른 점들과 같은 방식이다. */
+    .ch-dot { position:absolute; top:-1px; right:-1px; width:12px; height:12px;
+      border-radius:50%; background:#ff5b5b; border:2px solid #0e1420; display:block; }
+    @media (prefers-reduced-motion:reduce) { #chatHead { transition:none; } }
 
     /* ── 인게임 채팅 ── */
     /* 판 위에 떠야 하므로 판(z 30)보다 위, 설정(46)과 같은 층에 둔다. */
@@ -6929,6 +6975,14 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     </div>
   </div>
 </div>
+
+<!-- 채팅 머리 — 안 쓸 때는 작은 동그라미로 판 가장자리에 붙어 있는다.
+     여태 채팅은 메뉴를 열고 그 안에서 한 번 더 찾아야 했다. 두 걸음이
+     한 번 누르는 걸로 준다. 끌어서 옮길 수 있고, 놓으면 가까운 쪽 변에 붙는다. -->
+<button id="chatHead" aria-label="채팅 열기" title="채팅">
+  <svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
+  <i class="ch-dot" id="chatHeadDot" style="display:none"></i>
+</button>
 
 <div id="rules4Modal" class="rules-modal" onclick="if(event.target===this)toggleRules4(false)">
   <div class="rules-wrap">

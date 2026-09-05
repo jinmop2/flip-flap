@@ -359,7 +359,9 @@
   // 골라 연출하려면 직전 상태를 따로 기억해야 한다. 안 그러면 같은 카드가 매번
   // 다시 뒤집히고, 딜이 계속 반복된다.
   const fx = { dealt: false, centerId: null, offerId: null, revealed: false,
-               settledTurn: null, acqSeen: new Set(), handSig: null, deckSig: null };
+               settledTurn: null, acqSeen: new Set(), handSig: null, deckSig: null,
+               // 뒤집기가 끝났는가. 안 끝났으면 결과(금테·낙찰·도장)를 아직 안 붙인다.
+               shown: true, showTimer: null };
   // 고른 카드 (아직 안 낸 것). 서버 상태가 와도 유지된다.
   let sel4 = null;
   function resetFx() {
@@ -426,7 +428,7 @@
       const where = seatAt(oppSeats.length, oppSeats.indexOf(i));
       const d = document.createElement('div');
       d.className = 'q-seat ' + where + (s.auctioneer === i ? ' auc' : '')
-        + (p.bidded ? ' bidded' : '') + (i === winner ? ' win' : '');
+        + (p.bidded ? ' bidded' : '') + (i === winner && fx.shown ? ' win' : '');
 
       // ① 가장자리 — 시계와 명패. 내 자리(#q-mebar)와 같은 차림이라야
       //    "저 사람도 나처럼 앉아 있다" 로 읽힌다.
@@ -497,7 +499,9 @@
       const card = bidView(i);
       if (card) {
         bid.appendChild(card);
-        if (i === winner) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; bid.appendChild(l); }
+        // 결과는 카드가 다 돌아간 뒤에 붙인다 — 아직 뒤집히는 중인 카드에
+        // '낙찰' 이 먼저 찍혀 있으면 뒤집기가 헛돌아 보인다.
+        if (i === winner && fx.shown) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; bid.appendChild(l); }
       }
       front.appendChild(acq); front.appendChild(bid);
 
@@ -538,11 +542,11 @@
 
     // 내 배팅 카드는 내 자리 앞에. 상대 것은 각자 자리 안에 이미 들어 있다.
     const mb = $('q-mybid'); mb.innerHTML = '';
-    mb.className = (winner === mySeat ? 'win' : '');
+    mb.className = (winner === mySeat && fx.shown ? 'win' : '');
     const myCard = bidView(mySeat);
     if (myCard) {
       mb.appendChild(myCard);
-      if (winner === mySeat) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; mb.appendChild(l); }
+      if (winner === mySeat && fx.shown) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; mb.appendChild(l); }
     }
     // 배팅 카드가 한꺼번에 공개되는 순간 — 전부 뒤집고, 낙찰자에게 도장을 찍는다
     const bidsOpen = !!(a && a.bids && Object.keys(a.bids).length);
@@ -551,13 +555,26 @@
       const cards = [...opps.querySelectorAll('.q-bslot .card'), ...mb.querySelectorAll('.card')];
       cards.forEach((c, i) => { c.style.animationDelay = (i * 55) + 'ms'; play(c, 'anim-reveal'); });
       setTimeout(() => sfx('reveal'), 60);
+      // 카드가 다 돌아갈 때까지 결과를 미룬다. 여태 도장·금테·'낙찰' 이
+      // 뒤집기와 같은 순간에 붙어서, 아직 등을 보이는 카드에 이미 결과가
+      // 찍혀 있었다 — 그게 "뒤집는 타이밍이 안 맞는다" 로 보였다.
+      const FLIP = 850;                                   // .card.anim-reveal 의 길이
+      const until = (cards.length - 1) * 55 + FLIP;
+      fx.shown = false;
+      if (fx.showTimer) clearTimeout(fx.showTimer);
+      fx.showTimer = setTimeout(() => { fx.showTimer = null; fx.shown = true; render(); }, until);
     } else if (bidsOpen) {
       // 이미 공개된 뒤의 재렌더 — 다시 뒤집지 않는다
       [...opps.querySelectorAll('.q-bslot .card'), ...mb.querySelectorAll('.card')].forEach((c) => { c.style.animationDelay = ''; });
     }
-    if (!bidsOpen) fx.revealed = false;
+    if (!bidsOpen) {
+      fx.revealed = false;
+      // 다음 경매로 넘어갔다 — 미뤄 둔 것이 있으면 풀어 준다
+      if (fx.showTimer) { clearTimeout(fx.showTimer); fx.showTimer = null; }
+      fx.shown = true;
+    }
 
-    if (winner >= 0 && fx.settledTurn !== s.turn) {
+    if (winner >= 0 && fx.shown && fx.settledTurn !== s.turn) {
       fx.settledTurn = s.turn;
       const box = winner === mySeat ? mb
         : (opps.children[oppSeats.indexOf(winner)] || {}).querySelector

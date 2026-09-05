@@ -5150,10 +5150,81 @@ function gcRestorePos() {
   // 화면이 바뀌면 기억한 자리가 밖일 수 있다 — 다시 가둔다
   window.addEventListener('resize', () => { if (gameChatOpen()) gcRestorePos(); });
 })();
+// ── 채팅 머리 ────────────────────────────────────────────────────────────
+// 안 쓸 때는 작은 동그라미로 판 가장자리에 붙어 있다가, 누르면 창이 열린다.
+// 여태 채팅은 메뉴를 열고 그 안에서 한 번 더 찾아야 했다 — 판을 두면서
+// 그러기는 번거롭다. 끌어서 옮길 수 있고, 놓으면 가까운 쪽 변에 붙는다.
+const CH_KEY = 'ff_chathead';
+const CH_SIZE = 46, CH_PAD = 12;
+// 자리는 '어느 변에, 세로로 몇 %' 로 적어 둔다. 화면 크기가 달라져도(회전·
+// 주소창) 같은 자리로 온다 — 픽셀로 적어 두면 작은 화면에서 밖으로 나간다.
+let chPos = { side: 'r', ry: 0.62 };
+function chSave() { try { localStorage.setItem(CH_KEY, JSON.stringify(chPos)); } catch (_) {} }
+function chLoad() {
+  try {
+    const p = JSON.parse(localStorage.getItem(CH_KEY) || 'null');
+    if (p && (p.side === 'l' || p.side === 'r') && typeof p.ry === 'number') chPos = p;
+  } catch (_) {}
+}
+function chBounds() {
+  const top = CH_PAD + (parseInt(getComputedStyle(document.documentElement)
+    .getPropertyValue('--safe-t')) || 0);
+  const bot = window.innerHeight - CH_SIZE - CH_PAD
+    - (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-b')) || 0);
+  return { top, bot: Math.max(top, bot) };
+}
+function chApply() {
+  const el = document.getElementById('chatHead'); if (!el) return;
+  const b = chBounds();
+  el.style.top = Math.round(b.top + (b.bot - b.top) * chPos.ry) + 'px';
+  el.style.left = (chPos.side === 'l' ? CH_PAD : window.innerWidth - CH_SIZE - CH_PAD) + 'px';
+}
+(function chInit() {
+  const el = document.getElementById('chatHead'); if (!el) return;
+  chLoad(); chApply();
+  window.addEventListener('resize', chApply);
+
+  // 누른 것인지 끈 것인지는 움직인 거리로 가른다. 손가락은 누를 때도
+  // 1~2px 은 흔들리므로, 그 안쪽은 '눌렀다' 로 본다.
+  let id = null, sx = 0, sy = 0, ox = 0, oy = 0, moved = false;
+  el.addEventListener('pointerdown', (e) => {
+    id = e.pointerId; moved = false;
+    const r = el.getBoundingClientRect();
+    sx = e.clientX; sy = e.clientY; ox = e.clientX - r.left; oy = e.clientY - r.top;
+    // 손가락이 이미 놓인 뒤면 붙잡기가 터진다 — 붙잡기는 거들 뿐이라, 터져도 끌기는 된다
+    try { el.setPointerCapture(id); } catch (_) {}
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (id === null || e.pointerId !== id) return;
+    if (!moved && Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) < 5) return;
+    if (!moved) { moved = true; el.classList.add('dragging'); }
+    const b = chBounds();
+    el.style.left = Math.max(0, Math.min(window.innerWidth - CH_SIZE, e.clientX - ox)) + 'px';
+    el.style.top = Math.max(b.top, Math.min(b.bot, e.clientY - oy)) + 'px';
+  });
+  const end = (e) => {
+    if (id === null || (e && e.pointerId !== id)) return;
+    try { el.releasePointerCapture(id); } catch (_) {}
+    id = null;
+    if (!moved) { toggleGameChat(true); return; }
+    el.classList.remove('dragging');
+    // 놓으면 가까운 쪽 변에 붙는다 — 한가운데 떠 있으면 판을 가린다
+    const r = el.getBoundingClientRect();
+    const b = chBounds();
+    chPos.side = (r.left + r.width / 2) < window.innerWidth / 2 ? 'l' : 'r';
+    chPos.ry = b.bot > b.top ? Math.max(0, Math.min(1, (r.top - b.top) / (b.bot - b.top))) : 0;
+    chSave(); chApply();
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+})();
+
 window.toggleGameChat = function (force) {
   const p = document.getElementById('gameChat'); if (!p) return;
   const show = force === undefined ? !p.classList.contains('show') : force;
   p.classList.toggle('show', show);
+  // 창이 열려 있는 동안은 채팅 머리를 숨긴다 — 둘이 같이 뜨면 판을 두 번 가린다
+  document.body.classList.toggle('gc-open', show);
   if (!show) return;
   gcRestorePos();   // 지난번에 옮겨 둔 자리로
   p.classList.add('intro');                       // 열 때 한 번만 미끄러져 들어온다
@@ -5297,7 +5368,8 @@ async function gcRefreshUnread() {
 let gcClanUnread = 0;
 function gcPaintDot() {
   const on = Object.keys(gcUnread).length > 0 || gcClanUnread > 0;
-  for (const id of ['chatDot', 'chatDotG', 'chatDot4', 'chatDot4M', 'chatDotTv', 'chatDotTvM']) {
+  for (const id of ['chatDot', 'chatDotG', 'chatDot4', 'chatDot4M', 'chatDotTv', 'chatDotTvM',
+                    'chatHeadDot']) {
     const d = document.getElementById(id); if (d) d.style.display = on ? '' : 'none';
   }
   // 로비에 있을 때도 보여야 한다 — 판 안의 채팅 버튼은 로비에서 안 보인다
