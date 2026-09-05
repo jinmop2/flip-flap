@@ -286,6 +286,8 @@ function fastReload() {
 socket.on('connect', () => {
   hideSplash();
   setConn('서버 연결됨', 'ok');
+  // 끊김 덮개가 떠 있었다면 이제 세던 시간은 뜻이 없다 — 판을 다시 여는 중이다.
+  dcJoining();
   setTimeout(() => { const el = document.getElementById('connStatus'); if (el) el.classList.add('hide'); }, 1400);
   const tk = localStorage.getItem('ff_auth');
   if (tk) socket.emit('auth', { token: tk });   // 로그인 세션 연결
@@ -305,7 +307,10 @@ socket.on('connect', () => {
     socket.emit('join_room', { roomId: urlRoom, pid: PID, nick: getNick() });
   }
   else if (sess) socket.emit('rejoin', { roomId: sess, pid: PID });
-  else           socket.emit('enter_lobby');
+  // 다인전은 열쇠가 따로다(ff_q4). 그걸 안 보고 로비를 청하면, 판으로 돌아가는
+  // 길과 로비로 가는 길이 같은 순간에 갈려 어느 쪽도 제대로 안 열린다.
+  // 다인전 자리를 적어 두었으면 그쪽(client4 의 connect)에 맡긴다.
+  else if (!hasQuadSeat()) socket.emit('enter_lobby');
 });
 socket.on('auth_ok', ({ profile }) => {
   myAccount = profile; renderAccount();
@@ -319,17 +324,18 @@ socket.on('dup_login', () => {   // 다른 기기에서 같은 계정 로그인 
   alert('다른 기기(또는 창)에서 같은 계정으로 접속했어요.\n이 창의 연결을 종료합니다.');
   location.href = location.origin + location.pathname;
 });
-let dcLeft = 60, dcTimer = null, dcTries = 0;
+let dcLeft = 60, dcTimer = null, dcTries = 0, dcJoinTimer = null;
+function dcSay(msg) { const s = document.getElementById('dcSub'); if (s) s.textContent = msg; }
 function dcShow(left) {
   const ov = document.getElementById('dcOverlay'); if (!ov) return;
   dcLeft = Math.max(0, left);
   ov.classList.add('show');
+  ov.classList.remove('joining');
+  if (dcJoinTimer) { clearTimeout(dcJoinTimer); dcJoinTimer = null; }
   const paint = () => {
     const n = document.getElementById('dcCount'); if (n) n.textContent = dcLeft;
-    const s = document.getElementById('dcSub');
-    if (s) s.textContent = dcLeft > 0
-      ? '이 안에 돌아오면 판을 이어서 합니다'
-      : '시간이 지났어요. 로비로 나가 주세요.';
+    dcSay(dcLeft > 0 ? '이 안에 돌아오면 판을 이어서 합니다'
+                     : '시간이 지났어요. 로비로 나가 주세요.');
   };
   paint();
   if (dcTimer) clearInterval(dcTimer);
@@ -339,30 +345,96 @@ function dcShow(left) {
     else if (!socket.connected && dcLeft % 5 === 0) tryReconnect(true);   // 5초마다 조용히 재시도
   }, 1000);
 }
-function dcHide() {
-  const ov = document.getElementById('dcOverlay'); if (ov) ov.classList.remove('show');
+// 소켓은 붙었는데 판이 아직 안 왔다. 여기서 멈춰 있으면 "눌러도 아무 효과가
+// 없다" 로 보인다 — 무슨 일이 벌어지는지 적고, 안 오면 안 온다고 말한다.
+function dcJoining() {
+  const ov = document.getElementById('dcOverlay');
+  if (!ov || !ov.classList.contains('show')) return;
   if (dcTimer) { clearInterval(dcTimer); dcTimer = null; }
+  ov.classList.add('joining');
+  dcSay('돌아왔어요 — 판을 다시 여는 중…');
+  const b = document.getElementById('dcBtn'); if (b) { b.disabled = true; b.textContent = '여는 중…'; }
+  if (dcJoinTimer) clearTimeout(dcJoinTimer);
+  dcJoinTimer = setTimeout(() => {
+    dcJoinTimer = null;
+    if (!document.getElementById('dcOverlay').classList.contains('show')) return;
+    dcSay('판을 못 찾았어요. 로비로 나가 주세요.');
+    if (b) { b.disabled = false; b.textContent = '한 번 더'; }
+  }, 7000);
+}
+function dcHide() {
+  const ov = document.getElementById('dcOverlay');
+  if (ov) { ov.classList.remove('show'); ov.classList.remove('joining'); }
+  if (dcTimer) { clearInterval(dcTimer); dcTimer = null; }
+  if (dcJoinTimer) { clearTimeout(dcJoinTimer); dcJoinTimer = null; }
   dcTries = 0;
   const b = document.getElementById('dcBtn'); if (b) { b.disabled = false; b.textContent = '다시 연결'; }
 }
+// 판이 돌아왔다 — 어느 모드에서 부르든 여기 하나로 걷는다.
+// 예전엔 2인전 판이 열릴 때만 걷어서, 다인전·트웰브는 멀쩡히 이어졌는데도
+// 덮개가 그대로 남아 있었다. 그게 "눌러도 아무 효과가 없다" 의 큰 몫이다.
+window.dcArrived = dcHide;
+
+// 돌아갈 판을 서버에 다시 청한다. 청할 것이 있었으면 true.
+function dcAskResume() {
+  let asked = false;
+  const s = localStorage.getItem('ff_sess');
+  if (s) { socket.emit('rejoin', { roomId: s, pid: PID }); asked = true; }
+  // 다인전은 방·자리를 따로 적어 둔다 — 2인전과 열쇠가 다르다
+  let q4 = null;
+  try { q4 = JSON.parse(localStorage.getItem('ff_q4') || 'null'); } catch (_) {}
+  if (q4 && q4.room) { socket.emit('g4_resume', { roomId: q4.room, seat: q4.seat || 0 }); asked = true; }
+  return asked;
+}
+
 // 손으로 누르는 재접속. 소켓이 스스로 포기했을 때 사람이 돌아올 유일한 길이다.
+//
+// 여태 이 단추는 눌러도 아무 말이 없었다. 붙었는지 못 붙었는지, 판을 찾는
+// 중인지 못 찾은 것인지 — 어느 쪽도 화면에 안 적혔다. 세 가지를 고친다.
+//   ① 오프라인으로 켠 판은 가짜 소켓이라 connect() 가 빈 함수다. 아무리
+//      눌러도 될 리가 없었다 — 진짜 소켓은 페이지를 다시 읽어야 생긴다.
+//   ② 소켓 매니저가 재시도를 포기한 뒤면 connect() 만으로는 안 깨어난다.
+//   ③ 눌렀는데 안 붙으면 안 붙는다고 적는다. 잠자코 있으면 고장으로 읽힌다.
 window.tryReconnect = function (quiet) {
   const b = document.getElementById('dcBtn');
-  if (!quiet && b) { b.disabled = true; b.textContent = '연결 중…'; }
+  const say = (m) => { if (!quiet) dcSay(m); };
   dcTries++;
+
+  // ① 가짜 소켓 — 페이지를 다시 읽는 것 말고는 길이 없다
+  if (typeof io !== 'function') {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      say('아직 인터넷이 없어요. 연결되면 저절로 잇습니다.');
+      return;
+    }
+    say('연결 준비 중…');
+    if (!quiet) setTimeout(() => location.reload(), 300);
+    return;
+  }
+
+  if (!quiet && b) { b.disabled = true; b.textContent = '연결 중…'; }
   try {
-    if (!socket.connected) socket.connect();
-    // 이미 붙어 있는데 방에 못 들어간 경우 — 곧장 다시 청한다
-    else {
-      const s = localStorage.getItem('ff_sess');
-      if (s) socket.emit('rejoin', { roomId: s, pid: PID });
-      // 다인전은 방·자리를 따로 적어 둔다 — 2인전과 열쇠가 다르다
-      let q4 = null;
-      try { q4 = JSON.parse(localStorage.getItem('ff_q4') || 'null'); } catch (_) {}
-      if (q4 && q4.room) socket.emit('g4_resume', { roomId: q4.room, seat: q4.seat || 0 });
+    if (!socket.connected) {
+      // ② 포기한 매니저를 다시 켠다
+      try { if (socket.io && typeof socket.io.reconnection === 'function') socket.io.reconnection(true); } catch (_) {}
+      socket.connect();
+    } else if (dcAskResume()) {
+      // 이미 붙어 있는데 판만 안 열린 경우다. 여기서 잠자코 있으면 눌러도
+      // 아무 일이 없는 것으로 보인다 — 찾는 중이라고 적고, 안 오면 안 온다고 한다.
+      dcJoining();
+    } else {
+      say('돌아갈 판이 없어요. 로비로 나가 주세요.');
     }
   } catch (_) {}
-  if (!quiet) setTimeout(() => { if (b) { b.disabled = false; b.textContent = '다시 연결'; } }, 2500);
+
+  // ③ 눌렀으면 결과를 말한다
+  if (!quiet) setTimeout(() => {
+    if (b) { b.disabled = false; b.textContent = dcTries > 1 ? '한 번 더' : '다시 연결'; }
+    if (!socket.connected) {
+      say(typeof navigator !== 'undefined' && navigator.onLine === false
+        ? '인터넷이 끊겨 있어요. 연결되면 저절로 잇습니다.'
+        : '서버에 못 닿았어요. 잠시 뒤 다시 눌러 주세요.');
+    }
+  }, 3000);
 };
 window.dcGiveUp = function () {
   dcHide(); clearSession();
@@ -372,6 +444,10 @@ window.dcGiveUp = function () {
 // 판이 돌아가던 중인가 — 2인전·다인전·트웰브를 다 본다.
 // 예전엔 ff_sess(2인전만 쓰는 열쇠)로 판단해서, 다인전에서 끊기면 아무것도
 // 안 뜨고 화면만 멈춰 있었다. 눌러 볼 것조차 없는 게 "재접속이 안 된다" 였다.
+function hasQuadSeat() {
+  try { const q = JSON.parse(localStorage.getItem('ff_q4') || 'null'); return !!(q && q.room); }
+  catch (_) { return false; }
+}
 function inLiveGame() {
   // 그물 없이 두는 판에는 돌아갈 서버가 없다. 여기서 true 를 주면 판 위에
   // "다시 잇는 중…" 덮개가 올라와, 멀쩡히 돌아가는 판을 가린다.
@@ -8227,6 +8303,7 @@ document.addEventListener('pointerdown', (e) => {
 const tvAct = (act, extra) => socket.emit('tv_act', Object.assign({ act }, extra || {}));
 
 socket.on('tv_begin', (d) => {
+  dcArrived();
   tvMe = d.me; tvBot = !!d.vsBot; tvPrev = null;
   // 재대결로 새 판이 열릴 때 결과창이 남아 있으면 판을 통째로 덮는다 — 화면은
   // 멀쩡한데 아무것도 안 눌린다. 새 판이 시작되면 무조건 걷는다.
@@ -8260,6 +8337,7 @@ socket.on('tv_clock', ({ time, active, me }) => {
 socket.on('tv_warn', ({ player }) => { if (player === tvMe) { tvSfx('hourglass'); vibe('warn'); } });
 
 socket.on('tv_state', (v) => {
+  dcArrived();                       // 판이 돌아왔다 — 끊김 덮개를 걷는다
   // 방금 뒤집은 카드인지는 "직전 상태" 를 봐야 안다. tvPrev 를 갈아 끼운 뒤에
   // 보면 이미 새 상태라 늘 아니라고 나온다 — 여기서 미리 적어 둔다.
   tvJustDrew = !!(tvPrev && !tvPrev.lot && v.lot);

@@ -926,6 +926,7 @@
     if (typeof socket === 'undefined' || !socket) return setTimeout(bind, 200);
 
     socket.on('g4_begin', (d) => {
+      if (typeof dcArrived === 'function') dcArrived();
       // 판이 시작됐는데 화면이 안 켜져 있으면 g4_state 를 전부 버려서
       // 카드도 못 고르고 배팅도 못 한다. 어떤 경로로 들어왔든 여기서 켠다.
       if (!q4Live) {
@@ -961,7 +962,13 @@
       q4Pend = d; q4Room = null; lastRecv = Date.now(); renderPending();
     });
     socket.on('g4_cancelled', () => {});
-    socket.on('g4_state', (s) => { if (!q4Live) return; q4 = s; lastRecv = Date.now(); noteState(); render(); });
+    socket.on('g4_state', (s) => {
+      if (!q4Live) return;
+      // 판이 돌아왔다 — 끊김 덮개를 걷는다. 예전엔 2인전 판이 열릴 때만 걷어서,
+      // 다인전은 멀쩡히 이어졌는데도 덮개가 그대로 남아 있었다.
+      if (typeof dcArrived === 'function') dcArrived();
+      q4 = s; lastRecv = Date.now(); noteState(); render();
+    });
     socket.on('g4_over', (s) => {
       if (!q4Live) return;
       q4 = s; lastRecv = Date.now(); render(); setTimeout(() => showOver(s), 600);

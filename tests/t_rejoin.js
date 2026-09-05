@@ -108,6 +108,48 @@ function player(i, pid) {
     ok('그 단추가 다인전 자리도 되찾는다', /g4_resume', \{ roomId: q4\.room/.test(cli));
   }
 
+  console.log('\n⑥-2 눌렀으면 무슨 일이 났는지 화면에 적힌다');
+  {
+    // 제보: "재접속 버튼을 눌러도 아무 효과가 없어."
+    // 눌러도 아무 말이 없으면, 붙는 중인지 못 붙은 것인지 사람은 알 길이 없다.
+    // 아래 셋이 각각 '아무 효과 없음' 으로 보이던 진짜 까닭이다.
+    const fs2 = require('fs'), path2 = require('path');
+    const cli = fs2.readFileSync(path2.join(__dirname, '..', 'public/client.js'), 'utf8');
+    const c4 = fs2.readFileSync(path2.join(__dirname, '..', 'public/client4.js'), 'utf8');
+
+    // ① 오프라인으로 켠 판은 가짜 소켓이라 connect() 가 빈 함수다.
+    //    아무리 눌러도 될 리가 없었다 — 진짜 소켓은 다시 읽어야 생긴다.
+    ok('가짜 소켓이면 다시 읽는다', /typeof io !== 'function'\)[\s\S]{0,400}location\.reload\(\)/.test(cli));
+    ok('그물이 없으면 그렇다고 적는다', /아직 인터넷이 없어요/.test(cli));
+
+    // ② 매니저가 재시도를 포기한 뒤면 connect() 만으로는 안 깨어난다
+    ok('포기한 매니저를 다시 켠다', /socket\.io\.reconnection === 'function'\) socket\.io\.reconnection\(true\)/.test(cli));
+
+    // ③ 눌렀는데 안 붙으면 안 붙는다고 적는다
+    ok('못 붙으면 말해 준다', /서버에 못 닿았어요/.test(cli)
+       && /if \(!socket\.connected\)/.test(cli));
+    ok('돌아갈 판이 없으면 말해 준다', /돌아갈 판이 없어요/.test(cli));
+    // 이미 붙어 있는데 판만 안 열린 경우 — 여기서도 잠자코 있으면 안 된다
+    ok('붙어 있을 때 눌러도 말해 준다', /else if \(dcAskResume\(\)\) \{[\s\S]{0,220}dcJoining\(\);/.test(cli));
+
+    // 붙은 뒤 — 세던 시간은 뜻이 없다. 판을 여는 중이라고 바꾼다.
+    ok('붙으면 여는 중으로 바뀐다', /socket\.on\('connect'[\s\S]{0,300}dcJoining\(\)/.test(cli)
+       && /function dcJoining\(\)/.test(cli));
+    // 그런데도 안 오면, 안 온다고 말해야 한다 — 잠자코 있으면 고장으로 읽힌다
+    ok('판이 안 오면 안 온다고 한다', /판을 못 찾았어요/.test(cli));
+
+    // 판이 돌아왔는데 덮개가 남아 있으면, 이어진 판이 가려져 '효과 없음' 으로 보인다.
+    // 예전엔 2인전 판이 열릴 때만 걷었다.
+    ok('어느 모드든 판이 오면 걷는다', /window\.dcArrived = dcHide;/.test(cli)
+       && /socket\.on\('tv_state'[\s\S]{0,120}dcArrived\(\)/.test(cli)
+       && /socket\.on\('g4_state'[\s\S]{0,300}dcArrived\(\)/.test(c4));
+
+    // 판으로 돌아가는 길과 로비로 가는 길이 같은 순간에 갈리면 어느 쪽도 안 열린다
+    ok('다인전 자리가 있으면 로비를 안 청한다',
+       /else if \(!hasQuadSeat\(\)\) socket\.emit\('enter_lobby'\)/.test(cli)
+       && /function hasQuadSeat\(\)/.test(cli));
+  }
+
   console.log('\n⑦ 대회에서도 돌아올 수 있다');
   {
     const fs = require('fs'), path = require('path');
