@@ -104,19 +104,24 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   // FLIP 이 위로 넘어간 뒤 FLAP 이 아래로 넘어간다 — 겹치면 둘이 동시에 돌아
   // 무슨 글자인지 안 읽힌다
   ok('FLIP 다음에 FLAP 이 넘어간다',
-     /@keyframes fvFlipUp \{[\s\S]{0,140}44%\s*\{ transform:rotateX\(-360deg\)/.test(htm)
-     && /@keyframes fvFlapDown \{\s*0%, 8%  \{ transform:rotate\(180deg\) rotateX\(0deg\)/.test(htm));
+     /@keyframes fvFlipUp \{[\s\S]{0,140}14%\s*\{ transform:rotateX\(-360deg\)/.test(htm)
+     && /@keyframes fvFlapDown \{\s*0%, 17% \{ transform:rotate\(180deg\) rotateX\(0deg\)/.test(htm));
   // 반 바퀴를 기다리게 두었더니, 짧게 스치는 화면 전환(0.32초)에서는 FLIP 만
   // 돌다 끝나 FLAP 이 한 번도 안 넘어갔다 — 한 박자만 늦게 따라 붙는다
-  ok('FLAP 도 곧바로 따라 넘어간다', /0%, 8%  \{ transform:rotate\(180deg\)/.test(htm)
-     && /52%\s*\{ transform:rotate\(180deg\) rotateX\(360deg\)/.test(htm));
+  ok('FLAP 은 FLIP 바로 뒤에 따라 넘어간다', /0%, 17% \{ transform:rotate\(180deg\)/.test(htm)
+     && /31%\s*\{ transform:rotate\(180deg\) rotateX\(360deg\)/.test(htm));
   // 늘 돌려 두면 안 보이는 채로 판이 도는 내내 폰을 깨워 둔다
   ok('막이 켜졌을 때만 넘어간다', /#fadeVeil\.on \.fv-logo b \{ animation:fvFlipUp/.test(htm)
      && !/^\s*\.fv-logo b, \.fv-logo i \{[^}]*animation:/m.test(htm));
   // transform 은 통째로 덮이는 값이라, FLAP 의 180도를 키프레임에도 적어야 한다
   ok('FLAP 은 뒤집힌 채로 넘어간다', (htm.match(/rotate\(180deg\) rotateX\(/g) || []).length >= 2);
   // 빨리 홱 도니 급해 보였다 — 한 바퀴를 늘리고 도는 구간도 넓혔다
-  ok('여유롭게 넘어간다', /animation:fvFlipUp 2\.6s/.test(htm) && /animation:fvFlapDown 2\.6s/.test(htm));
+  // 화면 전환 막은 0.32초만 떠 있다. 한 바퀴가 그보다 느리면 FLIP 이 반쯤
+  // 돌다 막이 걷혀 매번 도는 중간만 보인다 — 한 바퀴를 0.25초(1.8s 의 14%)에
+  // 맞춰 막 안에서 확실히 마치게 한다. 넘어간 뒤에는 다음 판까지 쉰다.
+  ok('막 안에서 한 바퀴를 마친다', /animation:fvFlipUp 1\.8s/.test(htm)
+     && /animation:fvFlapDown 1\.8s/.test(htm)
+     && /const VEIL_MIN = 320;/.test(cli));
   // 글자를 오려 내는 칠이라, 칠할 바탕은 요소 상자만큼이다. line-height 가
   // 글자보다 작아 상자를 벗어난 부분은 칠이 안 들어가 잘려 보였다(FLAP 의 P).
   ok('로고 글자가 안 잘린다',

@@ -1169,22 +1169,23 @@
     .fv-logo i { transform:rotate(180deg); opacity:.92; }
     /* 한 바퀴(1.7초) 안에서 앞뒤로 나눠 넘어간다 — 겹치면 둘이 동시에 돌아
        무슨 글자인지 안 읽힌다. 넘어간 뒤에는 제자리에서 기다린다(-360 ≡ 0). */
-    /* 넘어가는 결은 여유롭게. 빨리 홱 도니 급해 보였다 — 한 바퀴를 2.6초로
-       늘리고, 도는 구간도 넓혀 천천히 붙었다 천천히 떨어지게 한다. */
-    #fadeVeil.on .fv-logo b { animation:fvFlipUp 2.6s cubic-bezier(.45,.02,.3,1) infinite; }
-    #fadeVeil.on .fv-logo i { animation:fvFlapDown 2.6s cubic-bezier(.45,.02,.3,1) infinite; }
+    /* 한 판이 도는 데 1.8초. 그 안에서 넘어가는 데 쓰는 시간은 앞쪽 잠깐뿐이고
+       나머지는 쉰다 — 넘어갈 때는 시원하게, 사이는 여유롭게.
+       한 바퀴를 0.25초에 맞춘 까닭: 화면 전환 막이 0.32초만 떠 있다.
+       그보다 느리면 FLIP 이 반쯤 돌다 막이 걷혀, 매번 도는 중간만 보인다.
+       0.29초로 뒀더니 막이 걷히는 그 순간에 겨우 마쳐서, 여유를 더 뒀다. */
+    #fadeVeil.on .fv-logo b { animation:fvFlipUp 1.8s cubic-bezier(.5,.03,.25,1) infinite; }
+    #fadeVeil.on .fv-logo i { animation:fvFlapDown 1.8s cubic-bezier(.5,.03,.25,1) infinite; }
     @keyframes fvFlipUp {
       0%   { transform:rotateX(0deg); }
-      44%  { transform:rotateX(-360deg); }
+      14%  { transform:rotateX(-360deg); }
       100% { transform:rotateX(-360deg); }
     }
-    /* FLAP 은 한 박자만 늦게 따라 붙는다(8% ≈ 0.2초). 반 바퀴를 기다리게
-       두었더니, 짧게 스치는 화면 전환(0.32초)에서는 FLIP 만 돌다 끝나
-       FLAP 이 한 번도 안 넘어갔다. 이제 열자마자 둘 다 움직인다 —
+    /* FLAP 은 FLIP 이 다 넘어간 바로 뒤에 따라 붙는다 —
        역참 안내판이 위줄부터 차르륵 넘어가는 그 결이다. */
     @keyframes fvFlapDown {
-      0%, 8%  { transform:rotate(180deg) rotateX(0deg); }
-      52%     { transform:rotate(180deg) rotateX(360deg); }
+      0%, 17% { transform:rotate(180deg) rotateX(0deg); }
+      31%     { transform:rotate(180deg) rotateX(360deg); }
       100%    { transform:rotate(180deg) rotateX(360deg); }
     }
     @media (prefers-reduced-motion:reduce) {
