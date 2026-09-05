@@ -1167,9 +1167,13 @@
       44%  { transform:rotateX(-360deg); }
       100% { transform:rotateX(-360deg); }
     }
+    /* FLAP 은 한 박자만 늦게 따라 붙는다(8% ≈ 0.2초). 반 바퀴를 기다리게
+       두었더니, 짧게 스치는 화면 전환(0.32초)에서는 FLIP 만 돌다 끝나
+       FLAP 이 한 번도 안 넘어갔다. 이제 열자마자 둘 다 움직인다 —
+       역참 안내판이 위줄부터 차르륵 넘어가는 그 결이다. */
     @keyframes fvFlapDown {
-      0%, 50% { transform:rotate(180deg) rotateX(0deg); }
-      94%     { transform:rotate(180deg) rotateX(360deg); }
+      0%, 8%  { transform:rotate(180deg) rotateX(0deg); }
+      52%     { transform:rotate(180deg) rotateX(360deg); }
       100%    { transform:rotate(180deg) rotateX(360deg); }
     }
     @media (prefers-reduced-motion:reduce) {

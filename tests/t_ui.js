@@ -105,7 +105,11 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   // 무슨 글자인지 안 읽힌다
   ok('FLIP 다음에 FLAP 이 넘어간다',
      /@keyframes fvFlipUp \{[\s\S]{0,140}44%\s*\{ transform:rotateX\(-360deg\)/.test(htm)
-     && /@keyframes fvFlapDown \{\s*0%, 50% \{ transform:rotate\(180deg\) rotateX\(0deg\)/.test(htm));
+     && /@keyframes fvFlapDown \{\s*0%, 8%  \{ transform:rotate\(180deg\) rotateX\(0deg\)/.test(htm));
+  // 반 바퀴를 기다리게 두었더니, 짧게 스치는 화면 전환(0.32초)에서는 FLIP 만
+  // 돌다 끝나 FLAP 이 한 번도 안 넘어갔다 — 한 박자만 늦게 따라 붙는다
+  ok('FLAP 도 곧바로 따라 넘어간다', /0%, 8%  \{ transform:rotate\(180deg\)/.test(htm)
+     && /52%\s*\{ transform:rotate\(180deg\) rotateX\(360deg\)/.test(htm));
   // 늘 돌려 두면 안 보이는 채로 판이 도는 내내 폰을 깨워 둔다
   ok('막이 켜졌을 때만 넘어간다', /#fadeVeil\.on \.fv-logo b \{ animation:fvFlipUp/.test(htm)
      && !/^\s*\.fv-logo b, \.fv-logo i \{[^}]*animation:/m.test(htm));
