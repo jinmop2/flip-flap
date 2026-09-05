@@ -143,7 +143,9 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   // 어긋나게 뒀더니 등이 하나 나가는 게 아니라 두 개가 따로 노는 것으로 보였다
   ok('두 줄이 같은 순간에 깜빡인다', !/#lobby \.logo \.flap::before \{ animation-delay:/.test(htm));
   // FLAP 만 살짝 죽여 뒀더니 FLIP 이 더 밝아 보여 한 덩어리로 안 읽혔다
-  ok('두 줄은 같은 밝기', /\.logo \.flap \{ transform:rotate\(180deg\); margin-top:-11px; display:inline-block; \}/.test(htm));
+  ok('두 줄은 같은 밝기', /\.logo \.flap \{ transform:rotate\(180deg\); margin-top:-17px; display:inline-block; \}/.test(htm));
+  // 잘림을 고치니 글자 본래의 여백이 드러나 두 줄 사이가 5px 벌어졌다 — 그만큼 더 당긴다
+  ok('두 줄이 붙어 있다', /margin-top:-17px/.test(htm));
 }
 
 console.log('\n⑪ 랭킹은 올라온다');
