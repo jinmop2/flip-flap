@@ -53,7 +53,10 @@ console.log('\n② 매 프레임 다시 그리는 애니메이션');
 {
   // opacity·transform 은 합성만 하지만, box-shadow·filter·width 는 다시 그린다.
   // 무한히 도는 것 중에 그런 게 있으면 폰이 계속 일한다.
-  const infinite = [...html.matchAll(/animation:\s*([\w-]+)[^;]*infinite/g)].map((m) => m[1]);
+  // 이름만이 아니라 그 선언 전체를 들고 있는다 — 시간 곡선(steps 여부)을 봐야 한다
+  const decls = [...html.matchAll(/animation:\s*([\w-]+)([^;]*)infinite/g)]
+    .map((m) => ({ name: m[1], rest: m[2] }));
+  const infinite = decls.map((d) => d.name);
   ok('무한 애니메이션을 찾았다', infinite.length > 0, `${infinite.length}개`);
 
   // 키프레임 본문은 중괄호가 겹쳐 있어 정규식으로 자르면 옆 규칙까지 삼킨다.
@@ -68,13 +71,25 @@ console.log('\n② 매 프레임 다시 그리는 애니메이션');
     }
     return '';
   };
+  // steps 로 끊은 것은 값이 프레임마다 변하지 않는다 — 키프레임 경계에서만
+  // 몇 번 바뀐다. 무거운 값이라도 20초에 예닐곱 번이면 다시 그리는 값이 없다.
+  // 그러니 '무겁다' 는 판단에서 빼되, 끊긴 것만 빼야 한다. 쓰이는 자리가
+  // 하나라도 이어지는(steps 아닌) 곳이 있으면 그건 여전히 매 프레임이다.
+  const stepped = (name) => decls.filter((d) => d.name === name).every((d) => /steps\(/.test(d.rest));
   const heavy = [];
   for (const name of new Set(infinite)) {
     // 값 안에 섞인 단어가 아니라 실제 선언만 본다
-    if (/(^|[{;\s])(box-shadow|filter|width|height|background)\s*:/.test(bodyOf(name))) heavy.push(name);
+    if (!/(^|[{;\s])(box-shadow|filter|width|height|background)\s*:/.test(bodyOf(name))) continue;
+    if (stepped(name)) continue;
+    heavy.push(name);
   }
   // 봐주는 목록을 두면 거기에 자꾸 쌓인다. 지금 하나도 없으니 그냥 0을 지킨다.
   ok('무한히 도는 무거운 애니가 없다', heavy.length === 0, heavy.join(','));
+  // 끊어 돌리는 것도 '끊겨 있다' 는 사실 자체는 지켜야 한다
+  ok('무거운 값은 끊어서만 돌린다',
+     [...new Set(infinite)].filter((n) =>
+       /(^|[{;\s])(box-shadow|filter|width|height|background)\s*:/.test(bodyOf(n)))
+       .every(stepped));
 
   // 뽑기 카드 열 장이 동시에 도는 자리 — 여기만은 반드시 가벼워야 한다
   ok('뽑기 카드 힌트는 opacity 만', /@keyframes gcTapHint \{ 0%,100% \{ opacity:0; \} 50% \{ opacity:1; \} \}/.test(html));

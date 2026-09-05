@@ -129,17 +129,17 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
      && /\.fv-logo b, \.fv-logo i \{\n\s*display:block; padding:6px 5px; margin:-6px -5px;/.test(htm));
   // 깜빡이는 것은 로고를 감싼 불빛이지 글자가 아니다 — 글자를 깜빡이게
   // 했더니 이름이 안 읽히는 순간이 생겼다. 주기는 길게(16초).
-  ok('로고를 감싼 불빛이 이따금 깜빡인다',
-     /#lobby \.logo h1::before, #lobby \.logo \.flap::before \{[\s\S]{0,900}animation:logoGlow 20s/.test(htm)
-     && /@keyframes logoGlow \{[\s\S]{0,220}92\.5%\s*\{ opacity:\.1; \}/.test(htm)
-     && !/logoFlicker/.test(htm));
-  // 타원 한 덩어리로 깔면 로고 뒤에 동그란 얼룩이 앉은 꼴이다 — 빛은 글자꼴을 따라간다
-  ok('불빛이 글자꼴을 따라간다', /#lobby \.logo h1::before   \{ content:'FLIP'; \}/.test(htm)
-     && /#lobby \.logo \.flap::before \{ content:'FLAP'; \}/.test(htm)
-     && /text-shadow:0 0 15px rgba\(170,205,255,\.42\)/.test(htm)
-     && !/border-radius:50%; pointer-events:none; z-index:-1;/.test(htm));
-  // left 만 주면 가운데 맞춤을 못 물려받아 로고 옆에 유령 글자가 하나 더 선다
-  ok('빛이 글자와 정확히 겹친다', /left:6px; right:6px; top:9px; text-align:center;/.test(htm));
+  // 빛을 따로 한 층 깔았다가 데였다. 글자에는 이미 drop-shadow 가 넷
+  // 걸려 있어, 그 안쪽에 빛을 넣으면 넷이 그 빛을 각각 한 번씩 더 번지게
+  // 한다 — 겹겹이 부풀어 로고 둘레가 허옇게 떴다(실기기에서 확인).
+  // 층을 새로 깔지 않고 원래 걸려 있던 그 빛의 세기만 바꾼다.
+  ok('빛 층을 따로 깔지 않는다', !/logo h1::before/.test(htm) && !/logo \.flap::before/.test(htm));
+  ok('원래 걸린 빛의 세기만 바꾼다',
+     /#lobby \.logo h1, #lobby \.logo \.flap \{ animation:logoGlow 20s steps\(1, end\) infinite; \}/.test(htm)
+     && /@keyframes logoGlow \{[\s\S]{0,300}drop-shadow\(0 0 16px rgba\(170,205,255,\.34\)\)/.test(htm)
+     && /drop-shadow\(0 0 5px rgba\(170,205,255,\.05\)\)/.test(htm));
+  // 앞의 셋(입체 그림자)은 손대지 않는다 — 건드리면 로고가 납작해진다
+  ok('입체 그림자는 그대로', (htm.match(/drop-shadow\(0 1px 0 #2a3450\) drop-shadow\(0 2px 0 #1a2438\)/g) || []).length >= 8);
   // 어긋나게 뒀더니 등이 하나 나가는 게 아니라 두 개가 따로 노는 것으로 보였다
   ok('두 줄이 같은 순간에 깜빡인다', !/#lobby \.logo \.flap::before \{ animation-delay:/.test(htm));
   // FLAP 만 살짝 죽여 뒀더니 FLIP 이 더 밝아 보여 한 덩어리로 안 읽혔다
