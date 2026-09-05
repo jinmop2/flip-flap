@@ -134,29 +134,40 @@
     .logo .flap { transform:rotate(180deg); margin-top:-11px; display:inline-block; opacity:.92; }
     /* 로고를 감싼 불빛. 깜빡이는 것은 이 불빛이지 글자가 아니다 —
        글자를 깜빡이게 했더니 이름이 안 읽히는 순간이 생겼다.
-       간판 뒤에 달린 등이 이따금 한 번 튀는 모양이라, 주기는 길게(16초) 둔다.
+       불빛은 글자꼴을 따라간다. 타원 한 덩어리로 깔았더니 로고 뒤에
+       동그란 얼룩이 앉은 꼴이었다 — 글자를 한 벌 더 깔고 그 그림자만
+       남겨 두면(글자색은 투명) 예전처럼 획을 따라 번진다.
+       간판 뒤에 달린 등이 이따금 한 번 튀는 모양이라 주기는 길게(20초) 둔다.
        움직이는 값은 opacity 뿐이다 (filter·box-shadow 를 무한히
        애니메이션하면 매 프레임 다시 그려야 해서 로비가 무거워진다). */
-    #lobby .logo::before {
-      content:''; position:absolute; left:50%; top:44%;
-      width:300px; height:170px; margin:-85px 0 0 -150px;
-      border-radius:50%; pointer-events:none; z-index:-1;
-      background:radial-gradient(ellipse at 50% 50%,
-        rgba(158,198,255,.30) 0%, rgba(120,168,255,.13) 42%, rgba(90,140,220,0) 72%);
-      animation:logoGlow 16s steps(1, end) infinite;
+    #lobby .logo h1, #lobby .logo .flap { position:relative; }
+    #lobby .logo h1::before   { content:'FLIP'; }
+    #lobby .logo .flap::before { content:'FLAP'; }
+    #lobby .logo h1::before, #lobby .logo .flap::before {
+      /* 글자와 정확히 겹쳐야 한다. left 만 주면 가운데 맞춤을 못 물려받아
+         빛이 왼쪽으로 밀리고, 로고 옆에 유령 글자가 하나 더 선다.
+         좌우를 안쪽 여백만큼 물려 폭을 글자 칸과 똑같이 맞춘다. */
+      position:absolute; left:6px; right:6px; top:9px; text-align:center;
+      z-index:-1; pointer-events:none;
+      background:none; color:transparent; -webkit-text-fill-color:transparent;
+      /* 세기는 예전 그대로. 원래 글자에 걸린 drop-shadow(0 0 16px, 투명도 .34)
+         가 만들던 그 은은함이다 — 세게 주면 로고가 젖은 것처럼 번진다. */
+      text-shadow:0 0 15px rgba(170,205,255,.42), 0 0 34px rgba(130,180,255,.2);
+      animation:logoGlow 20s steps(1, end) infinite;
     }
+    #lobby .logo .flap::before { animation-delay:.12s; }   /* 두 줄이 아주 조금 어긋나게 */
     @keyframes logoGlow {
-      0%, 90%  { opacity:1; }
-      90.6%    { opacity:.12; }
-      91.2%    { opacity:.95; }
-      92.2%    { opacity:.22; }
-      93%      { opacity:1; }
-      94.4%    { opacity:.35; }
-      95%      { opacity:1; }
+      0%, 92%  { opacity:1; }
+      92.5%    { opacity:.1; }
+      93%      { opacity:.95; }
+      93.8%    { opacity:.2; }
+      94.4%    { opacity:1; }
+      95.4%    { opacity:.35; }
+      95.9%    { opacity:1; }
       100%     { opacity:1; }
     }
     @media (prefers-reduced-motion:reduce) {
-      #lobby .logo::before { animation:none; }
+      #lobby .logo h1::before, #lobby .logo .flap::before { animation:none; }
     }
     /* 로고 아래 마감 줄 — 가운데 마름모가 로고와 아래 내용을 갈라 준다.
        예전엔 로고가 그냥 허공에 떠 있어 어디까지가 제목인지가 안 보였다. */

@@ -125,9 +125,16 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   // 깜빡이는 것은 로고를 감싼 불빛이지 글자가 아니다 — 글자를 깜빡이게
   // 했더니 이름이 안 읽히는 순간이 생겼다. 주기는 길게(16초).
   ok('로고를 감싼 불빛이 이따금 깜빡인다',
-     /#lobby \.logo::before \{[\s\S]{0,400}animation:logoGlow 16s/.test(htm)
-     && /@keyframes logoGlow \{[\s\S]{0,220}90\.6%\s*\{ opacity:\.12; \}/.test(htm)
+     /#lobby \.logo h1::before, #lobby \.logo \.flap::before \{[\s\S]{0,900}animation:logoGlow 20s/.test(htm)
+     && /@keyframes logoGlow \{[\s\S]{0,220}92\.5%\s*\{ opacity:\.1; \}/.test(htm)
      && !/logoFlicker/.test(htm));
+  // 타원 한 덩어리로 깔면 로고 뒤에 동그란 얼룩이 앉은 꼴이다 — 빛은 글자꼴을 따라간다
+  ok('불빛이 글자꼴을 따라간다', /#lobby \.logo h1::before   \{ content:'FLIP'; \}/.test(htm)
+     && /#lobby \.logo \.flap::before \{ content:'FLAP'; \}/.test(htm)
+     && /text-shadow:0 0 15px rgba\(170,205,255,\.42\)/.test(htm)
+     && !/border-radius:50%; pointer-events:none; z-index:-1;/.test(htm));
+  // left 만 주면 가운데 맞춤을 못 물려받아 로고 옆에 유령 글자가 하나 더 선다
+  ok('빛이 글자와 정확히 겹친다', /left:6px; right:6px; top:9px; text-align:center;/.test(htm));
 }
 
 console.log('\n⑪ 랭킹은 올라온다');
