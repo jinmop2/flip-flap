@@ -874,8 +874,6 @@
     '배팅 카드는': 'Bid cards go',
     '약하게 부른 사람부터': 'to the weakest bidder first',
     '강한 경매품을 가져갑니다': '— they take the strongest card',
-    '경매품 공개 · 배팅 비밀': 'Lot shown, bids hidden',
-    '경매품 비밀 · 배팅 공개': 'Lot hidden, bids shown',
     '접속 중인 친구만 부를 수 있어요.': 'Only friends who are online can be invited.',
     '상대 정보': 'Player Info',
     '명패 고르기': 'Choose a Name Plate',

@@ -130,8 +130,25 @@ console.log('\n⑥ 2인전과 결이 맞는가');
   ok('render 에는 미리보기가 없다', (c4.match(/q-pick-prev/g) || []).length <= 3);
 
   // 경매 방식은 매트 가운데가 아니라 턴바에
-  ok('방식 표시가 턴바에 있다', /<span id="q-turnbar">[\s\S]{0,200}id="q-typeTag"/.test(html)
-     || /id="q-turn"><\/span><span id="q-deck"><\/span><span id="q-typeTag">/.test(html));
+  ok('방식 표시가 턴바에 있다', /id="q-wait"><\/span><span id="q-typeTag">/.test(html));
+  // 턴은 덱 위 이름표 자리에. 덱 장수는 덱 아래에 이미 적혀 있어, 턴바에 또
+  // 적으면 같은 수를 두 군데서 읽게 된다.
+  ok('턴은 덱 위에 있다', /<div class="q-slabel" id="q-turn"><\/div><div id="q-deckstack">/.test(html));
+  ok('덱 장수를 두 번 적지 않는다', !/id="q-deck"/.test(html)
+     && /q-dcount/.test(html));
+  // 판 위에 또 판을 깔면 상자 안의 상자가 된다
+  ok('가운데에 박스를 깔지 않는다', /#q-mat \{ display:flex; align-items:center; gap:20px; padding:14px 22px; \}/.test(html));
+  // 낸 카드는 그 사람이 보는 쪽으로. 옆자리는 자리째 돌고, 맞은편은 칸만 돈다.
+  ok('맞은편도 자기 쪽으로 낸다', /\.q-seat\.at-t \.q-bslot \{ transform:rotate\(180deg\); \}/.test(html));
+  // 자리가 카드 크기로 좁아지면서 도장이 카드 밖으로 절반쯤 튀어나갔다
+  ok('WIN 도장은 카드 한복판', /\.q-winstamp \{[\s\S]{0,80}left:50%; top:50%;/.test(html)
+     && /@keyframes qWinStamp \{ to \{ transform:translate\(-50%,-50%\)/.test(html));
+  // '낙찰' 을 흐름에 두면 카드를 가운데에서 밀어내, 칸 한가운데에 찍히는
+  // 도장만 카드를 벗어난다
+  ok('낙찰 글자가 카드를 밀어내지 않는다', /#q-mybid \.q-blabel \{ position:absolute/.test(html));
+  // 고를 때마다 읽을 것이 아니라 한 번 배우면 되는 규칙이라 버튼만 빽빽했다
+  ok('방식 버튼은 이름만 남는다', /<button class="q-tbtn" onclick="q4Type\('open'\)"><span data-ico="👁"><\/span> 오픈 경매<\/button>/.test(html)
+     && !/경매품 공개 · 배팅 비밀/.test(html));
   ok('매트 가운데에서 빠졌다', !/<div class="q-vs" id="q-typeTag">/.test(html));
   ok('비어 있으면 자리도 안 차지', /#q-typeTag:empty \{ display:none/.test(html));
 

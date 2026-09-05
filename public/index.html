@@ -2158,10 +2158,9 @@
     #q-turnbar { display:flex; gap:9px; align-items:center; font-size:.62rem; font-weight:700;
       color:#c3cedf; padding:4px 12px; border-radius:999px;
       background:rgba(0,0,0,.34); box-shadow:inset 0 0 0 1px rgba(159,180,216,.18); }
-    /* 경매대 — 카드가 허공에 뜬 느낌이 안 나도록 펠트 판을 깔아준다 */
-    #q-mat { display:flex; align-items:center; gap:20px; padding:14px 22px; border-radius:60px;
-      background:radial-gradient(ellipse at 50% 45%, rgba(232,242,255,.10), rgba(0,0,0,.22) 72%);
-      box-shadow:inset 0 0 0 1.5px rgba(224,237,255,.16), 0 6px 20px rgba(0,0,0,.35); }
+    /* 경매대 — 판 위에 또 판을 깔면 상자 안의 상자가 된다. 자리를 잡는 일만
+       하고 스스로는 안 보인다. 카드가 주인공이다. */
+    #q-mat { display:flex; align-items:center; gap:20px; padding:14px 22px; }
     .q-slot { display:flex; flex-direction:column; align-items:center; gap:3px; }
     /* 경매대 이름표 — 회색이라 안 읽혔다. 대문자 간격을 주고 금색 기운을 얹는다. */
     .q-slabel { font-size:.54rem; color:#c8a86a; font-weight:800; letter-spacing:.6px; }
@@ -2189,9 +2188,12 @@
       box-shadow:0 0 16px 3px rgba(144,167,200,.6);
       animation:deckPulse 1.4s ease-in-out infinite; will-change:opacity; }
     #q-deckstack.drawable .q-dcount { color:#dcebff; }
-    /* 다른 칸은 위에 라벨이 있고 덱은 없다 — 그만큼 내려 카드 아랫줄을 맞춘다.
+    /* 이제 덱에도 위에 이름표(턴)가 붙어 다른 칸과 높이가 같다.
        오른쪽 여백은 겹쳐 쌓은 층이 삐져나오는 8px 을 감안한 것. */
-    .q-deckslot { margin:14px 10px 0 0; }
+    /* 겹쳐 쌓은 층이 위로 8px 삐져나와 이름표를 갉아먹는다 — 그만큼 벌린다 */
+    .q-deckslot { margin:0 10px 0 0; gap:9px; }
+    /* 턴은 '공개 카드'·'출품 카드' 와 같은 이름표 자리에 앉되, 세는 수라 흰색이다 */
+    #q-turn { color:#dcebff; letter-spacing:0; }
 
     /* ── 배팅 확정 버튼 ──
        예전엔 카드를 누르는 순간 바로 나갔다. 잘못 눌러도 되돌릴 수 없고,
@@ -2237,22 +2239,25 @@
        서버가 그때 결과를 보내주므로(T.reveal), 여기서 더 기다릴 필요가 없다.
        예전엔 0.72초를 더 기다려서 뒤집기와 도장 사이에 빈 시간이 생겼다. */
     .q-bslot, #q-mybid { position:relative; }
+    /* 도장은 카드 한복판에 찍는다. 예전엔 오른쪽 위 모서리에 걸쳐 뒀는데,
+       자리가 카드 크기로 좁아지면서 글자가 카드 밖으로 절반쯤 튀어나갔다. */
     .q-winstamp {
-      position:absolute; top:6px; right:-2px;
-      transform:rotate(-13deg) scale(0); transform-origin:center;
+      position:absolute; left:50%; top:50%;
+      transform:translate(-50%,-50%) rotate(-13deg) scale(0); transform-origin:center;
       font-family:'Bangers',cursive; font-size:1.15rem; letter-spacing:1.5px; color:#cbe3ff;
       -webkit-text-stroke:1.2px #3c4f6c; text-shadow:0 2px 5px rgba(0,0,0,.7);
       pointer-events:none; z-index:6; white-space:nowrap;
       animation:qWinStamp .34s cubic-bezier(.2,1.6,.5,1) .1s both;
     }
-    #q-mybid .q-winstamp { font-size:1.4rem; top:2px; right:-6px; }
-    @keyframes qWinStamp { to { transform:rotate(-13deg) scale(1); } }
+    #q-mybid .q-winstamp { font-size:1.4rem; }
+    .q-seat .q-winstamp { font-size:.95rem; letter-spacing:1px; }
+    @keyframes qWinStamp { to { transform:translate(-50%,-50%) rotate(-13deg) scale(1); } }
     /* 금빛 테두리는 애니메이션이 아니라 전환으로 준다.
        animation 으로 주면 같은 카드에 걸린 뒤집기(anim-reveal)를 덮어써서
        낙찰자 카드만 안 뒤집히는 일이 생긴다. */
     .q-bslot.win .card, #q-mybid.win .card { transition:box-shadow .3s ease-out .1s; }
     @media (prefers-reduced-motion:reduce) {
-      .q-winstamp { animation:none; transform:rotate(-13deg) scale(1); }
+      .q-winstamp { animation:none; transform:translate(-50%,-50%) rotate(-13deg) scale(1); }
       .q-bslot.win .card, #q-mybid.win .card { transition:none; }
     }
     .q-blabel { font-size:.48rem; color:#aab1bc; }
@@ -2263,6 +2268,11 @@
        (칸은 .q-bslot { position:relative } 이라 기준이 이미 잡혀 있다.) */
     .q-seat .q-blabel { position:absolute; left:50%; transform:translateX(-50%);
       bottom:-11px; white-space:nowrap; }
+    /* 내 칸도 같다. 흐름에 두면 '낙찰' 이 카드 옆에 나란히 서서 카드를 가운데
+       에서 밀어내는데, 도장은 칸 한가운데에 찍히니 도장만 카드를 벗어났다.
+       칸 안쪽 아래에 띄운다 — 칸 밖으로 내보내면 딴 카드 줄을 밟는다. */
+    #q-mybid .q-blabel { position:absolute; left:50%; transform:translateX(-50%);
+      bottom:2px; white-space:nowrap; }
     .q-bslot.win .q-blabel, #q-mybid.win .q-blabel { color:#ffd94a; font-weight:900; }
 
     #q-status { font-size:.72rem; font-weight:800; color:#dcebff; text-align:center;
@@ -2277,10 +2287,13 @@
     #q-typeBtns { display:none; gap:8px; align-items:center; flex-shrink:0; }
     #q-typeBtns.show { display:flex; }
     #q-actions:has(#q-typeBtns.show) .q-confirm-slot { display:none; }
-    .q-tbtn { display:flex; flex-direction:column; align-items:center; gap:1px; cursor:pointer;
+    /* 방식 버튼 — 이름만 남긴다. 밑에 붙여 둔 설명 두 줄은 고를 때마다 읽을
+       것이 아니라 한 번 배우면 되는 규칙이라(규칙·튜토리얼에 있다), 매번
+       버튼을 빽빽하게 만들기만 했다. */
+    .q-tbtn { display:inline-flex; align-items:center; gap:5px; cursor:pointer;
       background:linear-gradient(160deg,#2a2f37,#151a21); border:1.5px solid var(--gold);
-      color:#deecff; border-radius:10px; padding:7px 12px; font-family:inherit; }
-    .q-tbtn b { font-size:.76rem; } .q-tbtn span { font-size:.55rem; opacity:.75; }
+      color:#deecff; border-radius:10px; padding:9px 16px; font-family:inherit;
+      font-size:.78rem; font-weight:800; }
     .q-tbtn:hover { filter:brightness(1.15); }
 
     /* 하단 나 */
@@ -2367,6 +2380,11 @@
     .q-seat .q-oacq { height:auto; flex-wrap:nowrap; }
     .q-seat .q-acqin { flex-wrap:nowrap; }
     .q-bslot { display:flex; flex-direction:column; align-items:center; }
+    /* 낸 카드는 그 사람이 보는 쪽으로 놓인다. 옆자리는 자리째 도니 저절로 그렇고,
+       맞은편은 자리를 안 돌리므로(이름이 뒤집히면 못 읽는다) 낸 카드만 돌린다.
+       카드 자체가 아니라 칸을 돌린다 — 카드에는 뒤집기(flipReveal)가 걸려 있어
+       transform 을 덮어쓰면 공개 연출이 죽는다. */
+    .q-seat.at-t .q-bslot { transform:rotate(180deg); }
 
     /* ── 치수 — 옆자리가 들어갈 만큼만 경매대를 좁힌다 ────────────────────
        양옆에 사람이 앉으므로 가운데가 그만큼 줄어든다. 옆자리 한 사람이
@@ -2379,7 +2397,7 @@
        이 균형이 깨지면 옆 사람이 경매품 위로 올라앉는다 — 예전에 그랬다. */
     body.quad4 #q-mat { gap:9px; padding:11px 13px; }
     body.quad4 #q-mat .card, body.quad4 .q-scard, body.quad4 .q-hole { width:46px; height:64px; }
-    body.quad4 .q-deckslot { margin:12px 5px 0 0; }
+    body.quad4 .q-deckslot { margin:0 5px 0 0; }
     body.quad4 .q-bslot .card { width:46px; height:64px; }
     /* 옆자리는 깊이가 빠듯하다 — 명패도 낸 카드도 한 치수 작게 */
     .q-seat.at-l .q-splate, .q-seat.at-r .q-splate { padding:2px 6px; }
@@ -7811,7 +7829,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
   <!-- 중앙: 경매장 -->
   <div id="q-table">
     <div id="q-turnbar">
-      <span id="q-turn"></span><span id="q-deck"></span><span id="q-typeTag"></span>
+      <span id="q-wait"></span><span id="q-typeTag"></span>
       <button id="q-leftBtn" onclick="q4ToggleLeft()"><span data-ico="🔍"></span> 남은 카드</button>
     </div>
     <div id="q-leftPanel"><div class="q-lhead">아직 안 나온 카드 &nbsp;<span class="q-lkey mine">내 손패</span> <span class="q-lkey gone">이미 나옴</span></div><div id="q-left"></div></div>
@@ -7819,7 +7837,9 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
          긴 문구의 꼬리가 카드에 가렸다. -->
     <div id="q-status"></div>
     <div id="q-mat">
-      <div class="q-slot q-deckslot"><div id="q-deckstack"></div></div>
+      <!-- 턴은 덱 위에. 덱 장수는 덱 아래에 이미 적혀 있어 턴바에 또 적을
+           까닭이 없었다 — 같은 수를 두 군데서 읽게 하면 눈만 갈린다. -->
+      <div class="q-slot q-deckslot"><div class="q-slabel" id="q-turn"></div><div id="q-deckstack"></div></div>
       <div class="q-slot"><div class="q-slabel">공개 카드</div><div class="q-scard" id="q-center"></div></div>
       <div class="q-slot"><div class="q-slabel">출품 카드</div><div class="q-scard" id="q-offer"></div></div>
     </div>
@@ -7848,8 +7868,8 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <div id="q-actions">
       <div class="q-confirm-slot"><button id="q-confirm" onclick="q4Confirm()"></button></div>
       <div id="q-typeBtns">
-        <button class="q-tbtn" onclick="q4Type('open')"><b><span data-ico="👁"></span> 오픈 경매</b><span>경매품 공개 · 배팅 비밀</span></button>
-        <button class="q-tbtn" onclick="q4Type('close')"><b><span data-ico="🙈"></span> 클로즈 경매</b><span>경매품 비밀 · 배팅 공개</span></button>
+        <button class="q-tbtn" onclick="q4Type('open')"><span data-ico="👁"></span> 오픈 경매</button>
+        <button class="q-tbtn" onclick="q4Type('close')"><span data-ico="🙈"></span> 클로즈 경매</button>
       </div>
     </div>
   </div>

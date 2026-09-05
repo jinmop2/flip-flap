@@ -305,8 +305,8 @@
   function renderPending() {
     const p = q4Pend; if (!p) return;
     document.body.classList.toggle('q-n3', p.willBe === 3);
-    $('q-turn').textContent = '대기 중';
-    $('q-deck').textContent = `${p.count}명 입장`;
+    // 판이 열리기 전에는 경매대가 숨어 있어(그 안에 턴이 있다) 턴바에 적는다
+    $('q-wait').textContent = `대기 중 · ${p.count}명 입장`;
 
     // 상대 자리 — 나를 뺀 3칸. 아직 안 온 자리는 "빈 자리"
     const opps = $('q-opps'); opps.innerHTML = '';
@@ -404,8 +404,9 @@
         renderGameProfile('q-meProfile', myAccount || { guest: true, nick: (typeof getNick === 'function' ? getNick() : '나') });
     } catch (_) {}
     paintClock(s.clock, s.waitSeat);
+    // 턴은 덱 위 이름표 자리에. 덱 장수는 덱 아래에 이미 적혀 있다.
     $('q-turn').textContent = `${s.turn}턴`;
-    $('q-deck').textContent = `덱 ${s.deckLeft}장`;
+    $('q-wait').textContent = '';
 
     // ── 상대 자리 ────────────────────────────────────────────────────────
     // 한 사람의 것이 한 덩어리다: 시계·명패가 판 가장자리에, 그 앞에 딴 카드와
@@ -812,7 +813,7 @@
     lastRecv = Date.now(); prevPhase = null; prevTurn = 0;
     document.body.classList.add('quad4', 'q-waiting');
     applySkins4();
-    $('q-turn').textContent = '대기 중'; $('q-deck').textContent = '';
+    $('q-wait').textContent = '대기 중';
     $('q-status').textContent = '자리에 앉는 중…';
     sfx('deal');
     try { if (typeof startBGM === 'function') startBGM('game'); } catch (_) {}
