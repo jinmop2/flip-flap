@@ -7,9 +7,12 @@
 // 상대는 여럿이어야 한다. 한 상대만 놓고 고르면 그 상대만 잡는 수가 뽑힌다 —
 // 실제로 한 번 당했다. v4 만 보고 고른 값이 v4 에게는 +4%p 였는데 약한 AI
 // 상대로는 5%p 씩 밀렸다. 사람은 v4 가 아니라 그 약한 쪽에 가깝다.
-// OPP 로 상대를 쉼표로 나열한다 (기본: expertx4,expertx3,hard).
+// OPP 로 상대를 쉼표로 나열한다 (기본: expertx3,expertx2,hard).
 //
-// 실행: node tools/sweep.js <판수> <FF_W_TEMPO=0.1,0.2 ...>
+// 돌릴 수 있는 손잡이는 expert4.js 가 열어 둔 것뿐이다:
+//   FF_SAMPLES  (표본 수, 기본 160)   FF_EGDEPTH (종반 완전탐색 깊이, 기본 7)
+//
+// 실행: node tools/sweep.js <판수> <FF_SAMPLES=96,160,240>
 const { execFile } = require('child_process');
 const os = require('os');
 
@@ -18,10 +21,10 @@ const specs = process.argv.slice(3).map(s => {
   const [k, vs] = s.split('=');
   return { key: k, vals: vs.split(',').map(Number) };
 });
-const BASE = { FF_MIDDEPTH: '0' };
-// expertold = 손잡이를 안 읽는 옛 전문가. 여기 있는 상대는 모두 FF_* 를
-// 안 읽어야 한다 — 도전자와 같이 움직이면 차이가 사라진다.
-const OPPS = (process.env.OPP || 'expertold,expertx3,hard').split(',');
+// 상대는 FF_* 손잡이를 안 읽는 쪽이어야 한다 — 도전자와 같이 움직이면
+// 차이가 사라진다. expertx3·expertx2·hard 가 그렇다(expertx4 만 읽는다).
+const BASE = {};
+const OPPS = (process.env.OPP || 'expertx3,expertx2,hard').split(',');
 
 const jobs = [];
 for (const sp of specs)

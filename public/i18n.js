@@ -281,7 +281,6 @@
     '클래식·아이템·TWELVE 중 하나': 'One of Classic, Item or TWELVE',
     '랜덤': 'Random',
     '경매로 세트를 먼저 완성하면 승리': 'Complete a set first and you win',
-    '모드 다시 고르기': 'Pick another mode',
     '두 장으로 겨루는 섯다식 판': 'A Sutda-style round decided by two cards',
     '은행': 'Bank',
     '눌러서 뒤집기': 'Tap to flip',
@@ -333,8 +332,6 @@
     '경매에서 지면 아이템이 들어와요': 'Lose an auction and an item arrives',
     '기록 안 됨': 'Not recorded',
     '방': 'Rooms',
-    'AI 2명 · 손패 6장': '2 AI · 6 cards',
-    'AI 3명 · 손패 6장': '3 AI · 6 cards',
 
     '기타': 'More',
     '급수·RP·레벨·보상이 어떻게 움직이는지 한자리에 모았습니다.':

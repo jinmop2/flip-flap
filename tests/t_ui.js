@@ -173,7 +173,26 @@ console.log('\n⑪ 랭킹은 올라온다');
      && /function veilHold\(\)/.test(cli));
 }
 
-console.log('\n⑩ 이모트 목록');
+console.log('\n⑩ 솔로플레이 모드 고르기');
+{
+  // 길게 한 줄씩 늘어놓으면 아래 것은 스크롤해야 보였다 — 한 줄에 둘씩
+  ok('모드는 두 개씩 한 줄', /\.sm-list \{ display:grid; grid-template-columns:1fr 1fr;/.test(htm));
+  // 설명이 한 줄인 것과 두 줄인 것이 섞여 있다 — 높이를 못 박아야 격자가 안 어그러진다
+  ok('칸 높이를 못 박는다', /\.sm-item \{ position:relative; min-height:97px;/.test(htm));
+  // 토너먼트는 한 판이 아니라 한 대회다
+  ok('토너먼트는 한 줄을 다 쓴다', /\.sm-item\.wide \{ grid-column:1 \/ -1; min-height:58px; \}/.test(htm));
+  // 난이도를 아래 따로 두면 어느 모드의 것인지 눈이 한 번 더 오간다
+  ok('난이도는 그 칸 안에서 드러난다',
+     /\.sm-item\.on \.sm-head \{ opacity:0;/.test(htm)
+     && /\.sm-item\.on \.sm-body \{ opacity:1;/.test(htm)
+     && !/sm-diff/.test(htm));
+  // 반 칸 너비에 셋을 가로로 늘어놓으면 글자가 안 읽힌다
+  ok('반 칸에서는 세로로 쌓는다', /\.sm-body \{\s*display:flex; flex-direction:column;/.test(htm)
+     && /\.sm-item\.wide \.sm-body \{ flex-direction:row;/.test(htm));
+  ok('한 칸만 열린다', /document\.querySelectorAll\('#soloModal \.sm-item'\)[\s\S]{0,120}el\.dataset\.m === m/.test(htm));
+}
+
+console.log('\n⑪ 이모트 목록');
 {
   // 팩을 사면 이모트가 차단 단추 뒤에 붙는다(refreshEmotes 가 append 한다).
   // 적어 놓은 차례와 상관없이 늘 맨 아래여야 한다.

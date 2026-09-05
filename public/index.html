@@ -294,51 +294,61 @@
     /* 솔로플레이 — 모드 껍질이 걷히면서 그 자리에 난이도가 드러난다.
        아래로 밀어내면 눌렀던 자리가 움직여 다른 모드가 따라 내려간다.
        칸은 그대로 두고 안에 든 것만 갈아 끼운다 — 두 겹을 겹쳐 두고 서로 넘긴다. */
-    .sm-list { display:flex; flex-direction:column; gap:8px; width:100%; }
-    .sm-item { position:relative; width:100%; height:62px; border-radius:14px; }
+    /* 모드는 한 줄에 둘씩. 다섯이 한눈에 들어온다 — 길게 한 줄씩 늘어놓으면
+       아래 것은 스크롤해야 보였다.
+       칸은 그대로 두고 안에 든 것만 갈아 끼운다 — 두 겹을 겹쳐 두고 서로
+       넘긴다. 난이도를 아래 따로 두면 어느 모드의 것인지 눈이 한 번 더 오간다. */
+    .sm-list { display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; }
+    /* 설명이 한 줄인 것과 두 줄인 것이 섞여 있다 — 높이를 못 박아 두지 않으면
+       윗줄과 아랫줄의 단추 크기가 달라 격자가 어그러진다. */
+    .sm-item { position:relative; min-height:97px; border-radius:14px; }
+    /* 토너먼트는 한 판이 아니라 한 대회다 — 자리도 한 줄을 통째로 쓴다 */
+    .sm-item.wide { grid-column:1 / -1; min-height:58px; }
     /* 두 겹 다 칸을 꽉 채운다 — 그래야 높이가 안 변한다 */
     .sm-head, .sm-body {
       position:absolute; inset:0; border-radius:14px;
       transition:opacity .2s ease, transform .24s cubic-bezier(.34,1.3,.64,1);
     }
     .sm-head {
-      display:flex; align-items:center; gap:11px; text-align:left; cursor:pointer;
-      padding:0 14px; font-family:'Fredoka';
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:3px; text-align:center; cursor:pointer; padding:11px 9px; font-family:'Fredoka';
       background:linear-gradient(180deg,#152037,#0d1424); border:1.5px solid #8396b4;
       box-shadow:inset 0 1px 0 rgba(200,222,255,.16);
     }
     .sm-head:hover { filter:brightness(1.12); }
+    .sm-item.wide .sm-head { flex-direction:row; gap:11px; text-align:left; padding:11px 14px; }
+    .sm-item.wide .sm-txt { flex:1; min-width:0; }
     .sm-ico { font-size:1.5rem; line-height:1; flex-shrink:0; }
-    .sm-txt { flex:1; min-width:0; }
-    .sm-txt b { display:block; font-size:.98rem; color:#dee8f6; }
-    .sm-txt small { display:block; font-size:.68rem; color:#949ba5; margin-top:1px; line-height:1.35; }
-    .sm-arrow { flex-shrink:0; color:#9faec5; font-size:.9rem; }
+    .sm-txt { min-width:0; }
+    .sm-txt b { display:block; font-size:.9rem; color:#dee8f6; }
+    .sm-txt small { display:block; font-size:.62rem; color:#949ba5; margin-top:2px; line-height:1.3; }
     /* 껍질이 걷힌다 — 위로 살짝 들리며 사라진다 */
     .sm-item.on .sm-head { opacity:0; transform:translateY(-7px) scale(.97); pointer-events:none; }
-    /* 난이도는 그 자리에서 올라온다 */
+    /* 난이도는 그 자리에서 올라온다. 반 칸 너비라 가로로 셋을 늘어놓으면
+       글자가 안 읽힌다 — 세로로 쌓는다. 한 줄을 다 쓰는 토너먼트만 가로다. */
     .sm-body {
-      display:flex; align-items:center; gap:6px; padding:5px;
+      display:flex; flex-direction:column; gap:4px; padding:6px;
       opacity:0; transform:translateY(7px) scale(.97); pointer-events:none;
       background:rgba(0,0,0,.32); border:1.5px solid var(--gold);
       box-shadow:inset 0 1px 0 rgba(200,222,255,.12);
     }
     .sm-item.on .sm-body { opacity:1; transform:none; pointer-events:auto; }
-    .sm-body .mm-tiles { flex:1; height:100%; gap:6px; align-items:stretch; }
-    /* 칸 높이(62px)를 넘으면 안 된다 — 안쪽을 납작하게 눌러 한 줄에 맞춘다 */
-    /* 칸(62px) 안에 세 줄이 들어가야 한다. 예전엔 위아래 여백이 남아 있어
-       내용이 2~3px 씩 삐져나왔다 — 여백을 걷고 줄 간격을 조인다. */
-    .sm-body .mm-tile { padding:2px 4px; border-radius:10px; gap:0; justify-content:center;
-                        height:100%; min-height:0; overflow:hidden; }
-    .sm-body .mm-tile .mt-ico { font-size:.86rem; line-height:1.15; }
-    .sm-body .mm-tile .mt-name { font-size:.76rem; line-height:1.25; }
-    .sm-body .mm-tile .mt-sub { font-size:.55rem; line-height:1.2; }
-    /* 되돌아가기 — 껍질을 다시 덮는다 */
-    .sm-back {
-      flex-shrink:0; width:26px; align-self:stretch; border-radius:9px; cursor:pointer;
-      background:rgba(0,0,0,.35); border:1px solid rgba(144,167,200,.3); color:#9faec5;
-      font-family:'Fredoka'; font-size:.9rem; line-height:1; padding:0;
+    .sm-item.wide .sm-body { flex-direction:row; gap:6px; }
+    /* 난이도 한 줄 — 별·이름·값을 한 줄에 나란히 */
+    .sm-d {
+      flex:1; min-height:0; display:flex; align-items:center; justify-content:center; gap:6px;
+      border-radius:9px; cursor:pointer; padding:0 6px; font-family:'Fredoka';
+      background:linear-gradient(180deg,#1b2740,#10182a); border:1px solid rgba(144,167,200,.35);
+      color:#dbe6f5; white-space:nowrap; overflow:hidden;
     }
-    .sm-back:hover { color:#dcebff; border-color:var(--gold); }
+    .sm-d:hover { border-color:var(--gold); filter:brightness(1.12); }
+    .sm-d b { font-size:.78rem; font-weight:700; }
+    .sm-d .sd-s { font-size:.66rem; color:#ffd94a; letter-spacing:-.5px; flex-shrink:0; }
+    .sm-d .sd-s i { opacity:.28; font-style:normal; }
+    .sm-d .sd-c { font-size:.6rem; color:#9aa3b2; flex-shrink:0; }
+    .sm-d.d-expert { border-color:rgba(224,180,92,.55); }
+    .sm-item.wide .sm-d { flex-direction:column; gap:1px; justify-content:center; }
+
     .sm-item.t-item .sm-head { background:linear-gradient(180deg,#3a2358,#241040); border-color:#8b6ad8; }
     .sm-item.t-item .sm-txt b { color:#e2d4ff; }
     .sm-item.t-item .sm-body { border-color:#8b6ad8; }
@@ -351,8 +361,6 @@
     .sm-item.t-mini .sm-head { background:linear-gradient(180deg,#4a1030,#2c0820); border-color:#d06a9a; }
     .sm-item.t-mini .sm-txt b { color:#ffd6e8; }
     .sm-item.t-mini .sm-body { border-color:#d06a9a; }
-    /* 토너먼트는 다섯 모드 아래 따로 선다 — 모드가 아니라 모드를 담는 그릇이다 */
-    .sm-item.t-tour { margin-top:4px; }
     .sm-item.t-tour .sm-head { background:linear-gradient(180deg,#4a3508,#2a1d04); border-color:#e0b45c; }
     .sm-item.t-tour .sm-txt b { color:#ffeec0; }
     .sm-item.t-tour .sm-body { border-color:#e0b45c; }
@@ -6355,9 +6363,10 @@
     <div class="lb-title"><span data-ico="♠️"></span> 솔로플레이
       <span class="close-x" onclick="closeModePanels()">×</span></div>
 
-    <!-- 모드를 먼저 고르고, 그 안에서 난이도를 고른다. 예전엔 다섯 모드의
-         난이도 칸이 한 번에 다 펼쳐져 있어 열다섯 개가 쏟아졌다 —
-         무엇부터 봐야 할지가 안 보였다. -->
+    <!-- 모드는 단추 격자로. 한 줄에 둘씩 놓으면 다섯이 한눈에 들어온다 —
+         길게 한 줄씩 늘어놓으면 아래 것은 스크롤해야 보였다.
+         누르면 그 칸 안에서 겉면이 걷히고 난이도가 드러난다. 난이도를 아래
+         따로 두면 어느 모드의 것인지 눈이 한 번 더 오가야 한다. -->
     <div class="sm-list">
       <div class="sm-item" data-m="classic">
         <button class="sm-head" onclick="soloPick('classic')">
@@ -6365,21 +6374,9 @@
           <span class="sm-txt"><b>클래식</b><small>경매로 세트를 먼저 완성하면 승리</small></span>
         </button>
         <div class="sm-body">
-          <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
-          <div class="mm-tiles c3">
-            <button class="mm-tile" onclick="soloPlay('easy')">
-              <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
-              <span class="mt-name">쉬움</span><span class="mt-sub">🪙 5</span>
-            </button>
-            <button class="mm-tile" onclick="soloPlay('hard')">
-              <span class="mt-ico">★★<span style="opacity:.28">★</span></span>
-              <span class="mt-name">보통</span><span class="mt-sub">🪙 15</span>
-            </button>
-            <button class="mm-tile d-expert" onclick="soloPlay('expert')">
-              <span class="mt-ico">👑</span>
-              <span class="mt-name">전문가</span><span class="mt-sub">🪙 40</span>
-            </button>
-          </div>
+          <button class="sm-d" onclick="soloPlay('easy')"><span class="sd-s">★<i>★★</i></span><b>쉬움</b><span class="sd-c">🪙 5</span></button>
+          <button class="sm-d" onclick="soloPlay('hard')"><span class="sd-s">★★<i>★</i></span><b>보통</b><span class="sd-c">🪙 15</span></button>
+          <button class="sm-d d-expert" onclick="soloPlay('expert')"><span class="sd-s">👑</span><b>전문가</b><span class="sd-c">🪙 40</span></button>
         </div>
       </div>
 
@@ -6389,21 +6386,9 @@
           <span class="sm-txt"><b>아이템전</b><small>경매에서 지면 아이템이 들어와요</small></span>
         </button>
         <div class="sm-body">
-          <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
-          <div class="mm-tiles c3">
-            <button class="mm-tile t-item" onclick="startItemGame('easy')">
-              <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
-              <span class="mt-name">쉬움</span><span class="mt-sub">🪙 5</span>
-            </button>
-            <button class="mm-tile t-item" onclick="startItemGame('hard')">
-              <span class="mt-ico">★★<span style="opacity:.28">★</span></span>
-              <span class="mt-name">보통</span><span class="mt-sub">🪙 15</span>
-            </button>
-            <button class="mm-tile t-item d-expert" onclick="startItemGame('expert')">
-              <span class="mt-ico">👑</span>
-              <span class="mt-name">전문가</span><span class="mt-sub">🪙 40</span>
-            </button>
-          </div>
+          <button class="sm-d" onclick="startItemGame('easy')"><span class="sd-s">★<i>★★</i></span><b>쉬움</b><span class="sd-c">🪙 5</span></button>
+          <button class="sm-d" onclick="startItemGame('hard')"><span class="sd-s">★★<i>★</i></span><b>보통</b><span class="sd-c">🪙 15</span></button>
+          <button class="sm-d d-expert" onclick="startItemGame('expert')"><span class="sd-s">👑</span><b>전문가</b><span class="sd-c">🪙 40</span></button>
         </div>
       </div>
 
@@ -6413,21 +6398,9 @@
           <span class="sm-txt"><b>TWELVE</b><small>카드가 아니라 칩으로 값을 부르는 경매</small></span>
         </button>
         <div class="sm-body">
-          <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
-          <div class="mm-tiles c3">
-            <button class="mm-tile t-twelve" onclick="tvSolo('easy')">
-              <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
-              <span class="mt-name">쉬움</span><span class="mt-sub">🪙 5</span>
-            </button>
-            <button class="mm-tile t-twelve" onclick="tvSolo('hard')">
-              <span class="mt-ico">★★<span style="opacity:.28">★</span></span>
-              <span class="mt-name">보통</span><span class="mt-sub">🪙 15</span>
-            </button>
-            <button class="mm-tile t-twelve d-expert" onclick="tvSolo('expert')">
-              <span class="mt-ico">👑</span>
-              <span class="mt-name">전문가</span><span class="mt-sub">🪙 40</span>
-            </button>
-          </div>
+          <button class="sm-d" onclick="tvSolo('easy')"><span class="sd-s">★<i>★★</i></span><b>쉬움</b><span class="sd-c">🪙 5</span></button>
+          <button class="sm-d" onclick="tvSolo('hard')"><span class="sd-s">★★<i>★</i></span><b>보통</b><span class="sd-c">🪙 15</span></button>
+          <button class="sm-d d-expert" onclick="tvSolo('expert')"><span class="sd-s">👑</span><b>전문가</b><span class="sd-c">🪙 40</span></button>
         </div>
       </div>
 
@@ -6437,17 +6410,21 @@
           <span class="sm-txt"><b>다인전</b><small>셋·넷이서 · 지는 것도 수가 되는 판</small></span>
         </button>
         <div class="sm-body">
-          <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
-          <div class="mm-tiles c2">
-            <button class="mm-tile t-quad" onclick="q4Start(3)">
-              <span class="mt-ico">👥</span>
-              <span class="mt-name">3인전</span><span class="mt-sub">AI 2명 · 손패 6장</span>
-            </button>
-            <button class="mm-tile t-quad" onclick="q4Start(4)">
-              <span class="mt-ico">👪</span>
-              <span class="mt-name">4인전</span><span class="mt-sub">AI 3명 · 손패 6장</span>
-            </button>
-          </div>
+          <button class="sm-d" onclick="q4Start(3)"><span class="sd-s">👥</span><b>3인전</b><span class="sd-c">AI 2명</span></button>
+          <button class="sm-d" onclick="q4Start(4)"><span class="sd-s">👪</span><b>4인전</b><span class="sd-c">AI 3명</span></button>
+        </div>
+      </div>
+
+      <!-- 토너먼트는 한 판이 아니라 한 대회다 — 자리도 한 줄을 통째로 쓴다 -->
+      <div class="sm-item t-tour wide" data-m="tour">
+        <button class="sm-head" onclick="soloPick('tour')">
+          <span class="sm-ico">🏆</span>
+          <span class="sm-txt"><b>토너먼트</b><small>8강 · 세 판을 이기면 우승 · 매 경기 모드가 바뀐다</small></span>
+        </button>
+        <div class="sm-body">
+          <button class="sm-d" onclick="stourStart('easy')"><span class="sd-s">★<i>★★</i></span><b>쉬움</b><span class="sd-c">🪙 60</span></button>
+          <button class="sm-d" onclick="stourStart('hard')"><span class="sd-s">★★<i>★</i></span><b>보통</b><span class="sd-c">🪙 200</span></button>
+          <button class="sm-d d-expert" onclick="stourStart('expert')"><span class="sd-s">👑</span><b>전문가</b><span class="sd-c">🪙 500</span></button>
         </div>
       </div>
 
@@ -6462,48 +6439,12 @@
           <span class="sm-txt"><b>미니게임</b><small>두 장으로 겨루는 섯다식 판</small></span>
         </button>
         <div class="sm-body">
-          <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
-          <div class="mm-tiles c3">
-            <button class="mm-tile t-mini" onclick="miniGo(2, false)">
-              <span class="mt-ico">🃏</span>
-              <span class="mt-name">2인</span><span class="mt-sub">AI 1명</span>
-            </button>
-            <button class="mm-tile t-mini" onclick="miniGo(3, false)">
-              <span class="mt-ico">🃏</span>
-              <span class="mt-name">3인</span><span class="mt-sub">AI 2명</span>
-            </button>
-            <button class="mm-tile t-mini" onclick="miniGo(4, false)">
-              <span class="mt-ico">🃏</span>
-              <span class="mt-name">4인</span><span class="mt-sub">AI 3명</span>
-            </button>
-          </div>
+          <button class="sm-d" onclick="miniGo(2, false)"><span class="sd-s">🃏</span><b>2인</b><span class="sd-c">AI 1명</span></button>
+          <button class="sm-d" onclick="miniGo(3, false)"><span class="sd-s">🃏</span><b>3인</b><span class="sd-c">AI 2명</span></button>
+          <button class="sm-d" onclick="miniGo(4, false)"><span class="sd-s">🃏</span><b>4인</b><span class="sd-c">AI 3명</span></button>
         </div>
+      </div>
       -->
-      </div>
-
-      <div class="sm-item t-tour" data-m="tour">
-        <button class="sm-head" onclick="soloPick('tour')">
-          <span class="sm-ico">🏆</span>
-          <span class="sm-txt"><b>토너먼트</b><small>8강 · 세 판을 이기면 우승 · 매 경기 모드가 바뀐다</small></span>
-        </button>
-        <div class="sm-body">
-          <button class="sm-back" onclick="soloPick(null)" title="모드 다시 고르기">‹</button>
-          <div class="mm-tiles c3">
-            <button class="mm-tile t-tour" onclick="stourStart('easy')">
-              <span class="mt-ico">★<span style="opacity:.28">★★</span></span>
-              <span class="mt-name">쉬움</span><span class="mt-sub">🪙 60</span>
-            </button>
-            <button class="mm-tile t-tour" onclick="stourStart('hard')">
-              <span class="mt-ico">★★<span style="opacity:.28">★</span></span>
-              <span class="mt-name">보통</span><span class="mt-sub">🪙 200</span>
-            </button>
-            <button class="mm-tile t-tour d-expert" onclick="stourStart('expert')">
-              <span class="mt-ico">👑</span>
-              <span class="mt-name">전문가</span><span class="mt-sub">🪙 500</span>
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
 
   </div>
@@ -6516,7 +6457,7 @@ function soloPick(m) {
   document.querySelectorAll('#soloModal .sm-item').forEach(el => {
     el.classList.toggle('on', !!m && el.dataset.m === m);
   });
-  if (m) playSound('click');
+  if (m) playSound('select');
 }
 // 팝업을 닫을 때 접어 둔다 — 다시 열었을 때 지난번 고른 게 펼쳐져 있으면
 // 무엇을 누른 적이 있는지 기억을 되짚게 된다.
