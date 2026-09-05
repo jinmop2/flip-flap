@@ -118,9 +118,12 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   ok('로고 글자가 안 잘린다',
      /\.logo h1, \.logo \.flap \{\n\s*padding:9px 6px; margin:-9px -6px;/.test(htm)
      && /\.fv-logo b, \.fv-logo i \{\n\s*display:block; padding:6px 5px; margin:-6px -5px;/.test(htm));
-  // 네온 간판처럼 이따금 한 번. opacity 만 움직여 그리는 값이 싸다.
-  ok('로비 로고가 이따금 깜빡인다', /#lobby \.logo h1 \{ animation:logoFlicker 7s/.test(htm)
-     && /@keyframes logoFlicker \{[\s\S]{0,200}87%\s*\{ opacity:\.22; \}/.test(htm));
+  // 깜빡이는 것은 로고를 감싼 불빛이지 글자가 아니다 — 글자를 깜빡이게
+  // 했더니 이름이 안 읽히는 순간이 생겼다. 주기는 길게(16초).
+  ok('로고를 감싼 불빛이 이따금 깜빡인다',
+     /#lobby \.logo::before \{[\s\S]{0,400}animation:logoGlow 16s/.test(htm)
+     && /@keyframes logoGlow \{[\s\S]{0,220}90\.6%\s*\{ opacity:\.12; \}/.test(htm)
+     && !/logoFlicker/.test(htm));
 }
 
 console.log('\n⑪ 랭킹은 올라온다');

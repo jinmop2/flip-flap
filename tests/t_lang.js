@@ -112,13 +112,25 @@ console.log('\n⑥ 화면·서비스워커가 안다');
   const htm = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
   const sw = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
   const cli = fs.readFileSync(path.join(root, 'public/client.js'), 'utf8');
+  const i18n = fs.readFileSync(path.join(root, 'public/i18n.js'), 'utf8');
   for (const f of ['lang-ja.js', 'lang-zh.js']) {
-    ok(`화면이 ${f} 를 읽는다`, htm.includes(`<script src="${f}">`));
+    // 첫 화면에서는 안 받는다 — 둘이 gzip 67KB 인데 대부분은 한 언어만 쓴다
+    ok(`첫 화면에서 ${f} 를 안 받는다`, !htm.includes(`<script src="${f}">`));
     ok(`미리 담는다 — ${f}`, sw.includes(`'/${f}'`));
   }
-  // i18n.js 보다 뒤에 와야 register 가 있다
-  ok('꾸러미는 i18n 다음에 온다',
-     htm.indexOf('<script src="i18n.js">') < htm.indexOf('<script src="lang-ja.js">'));
+  // 고르는 순간에 그 파일만 받아 온다
+  ok('고를 때 받아 온다', /const LAZY = \{ ja: '日本語', zh: '简体中文' \};/.test(i18n)
+     && /el\.src = 'lang-' \+ code \+ '\.js';/.test(i18n)
+     && /el\.async = false;/.test(i18n));
+  ok('아직 안 받은 언어도 목록에 있다',
+     /Object\.keys\(LAZY\)\.filter\(\(c\) => !PACKS\[c\]\)/.test(i18n));
+  // 없는 채로 입히면 packOf 가 영어로 물러나 영어가 덮이고, 나중에 꾸러미가
+  // 와도 이미 바뀐 글자는 열쇠(한국어)에 안 걸려 영어로 남는다.
+  // 화면이 바뀔 때마다 다시 입히는 watch() 로도 새어 들어오므로 뿌리에서 막는다.
+  ok('꾸러미가 오기 전에는 안 입힌다',
+     /const ready = \(code\) => code === 'ko' \|\| !!PACKS\[code\];/.test(i18n)
+     && /function apply\(root\) \{[\s\S]{0,400}if \(!ready\(getLang\(\)\)\) return;/.test(i18n)
+     && /function t\(s\) \{[\s\S]{0,160}if \(!ready\(getLang\(\)\)\) return s;/.test(i18n));
   ok('언어를 네 개 고를 수 있다',
      ['ko', 'en', 'ja', 'zh'].every((c) => htm.includes(`onclick="pickLang('${c}')"`)));
   // 네 개를 한 줄로 늘어놓으면 설정 줄이 넘쳐 흐른다

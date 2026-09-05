@@ -115,5 +115,29 @@ ok('주소로 받는 화면은 리퍼러·캐시를 막는다', (() => {
 })());
 ok('임시 계정 코드는 해시로만 보관', /scrypt/.test(acc) && !/plainCode|rawCode/.test(acc));
 
+console.log('\n── 출시 전 점검에서 잡은 것들 ──');
+{
+  // express 4 가 기본으로 쓰는 qs 에는 손볼 수 없는 취약점이 남아 있다
+  // (고치려면 express 5 로 올려야 한다). 우리는 ?key=… 처럼 납작한 값만
+  // 쓰므로 그 파서를 아예 안 쓴다.
+  ok('쿼리는 기본 파서로 읽는다', /app\.set\('query parser', 'simple'\)/.test(srv));
+  // limit 을 잘못 적으면 body-parser 가 조용히 무시해 본문 크기 제한이 사라진다
+  ok('본문 크기 제한이 올바른 형식', /express\.json\(\{ limit: '\d+kb' \}\)/.test(srv));
+  // 남의 사이트가 판을 액자에 넣고 그 위를 덮어 엉뚱한 것을 누르게 하는 수
+  ok('액자에 넣는 것을 막는다', /frame-ancestors 'self'/.test(srv));
+  // 죽으면 판이 통째로 사라진다 — 로그만 남기고 살아 있어야 한다
+  ok('처리 못 한 예외로 안 죽는다', /uncaughtException/.test(srv) && /unhandledRejection/.test(srv));
+  // 오래 사는 목록은 전부 상한이 있어야 한다. 없으면 조용히 메모리를 먹는다.
+  const acc2 = fs.readFileSync(R + '/accounts.js', 'utf8');
+  ok('오래 사는 목록에 상한이 있다',
+     /CHAT_KEEP/.test(acc2) && /DM_KEEP/.test(acc2)
+     && /REPORT_KEEP/.test(acc2) && /ADMIN_LOG_KEEP/.test(acc2));
+  // 속도 제한 표가 안 비워지면 그 자체가 메모리 누수다
+  ok('속도 제한 표를 비운다', /rlMap\.delete\(k\)/.test(srv));
+  // 상점 이름은 우리가 적는 값이지만, 감싸는 데 드는 값이 없다
+  ok('화면에 넣는 값은 감싼다', /<span class="nm">\$\{esc\(it\.name\)\}<\/span>/.test(
+     fs.readFileSync(R + '/public/client.js', 'utf8')));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);

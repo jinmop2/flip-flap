@@ -3253,7 +3253,7 @@ function renderShop() {
     else if (it.shard > 0) pr = `<span class="pr shard">🔷 ${it.shard} 파편</span>`;
     else pr = `<span class="pr">🪙 ${it.price}</span>${it.type === 'ticket' && owned ? `<span class="pr own">x${owned}</span>` : ''}`;
     tile.dataset.id = it.id;
-    tile.innerHTML = `<span class="ico">${shopIcon(it)}</span><span class="nm">${it.name}</span>${pr}`;
+    tile.innerHTML = `<span class="ico">${shopIcon(it)}</span><span class="nm">${esc(it.name)}</span>${pr}`;
     tile.onclick = () => shopSelect(it.id);
     list.appendChild(tile);
   });

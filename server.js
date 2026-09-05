@@ -13,13 +13,24 @@ const stats = require('./stats');       // 방문·활동 통계 (자체 수집)
 const { attach4 } = require('./server4'); // 4인전 (AI 3명) — 2인 엔진과 완전 분리
 
 app.set('trust proxy', 1);
+// 쿼리는 Node 기본 파서로 읽는다. express 4 가 기본으로 쓰는 qs 에는 손볼 수
+// 없는 취약점이 남아 있고(고치려면 express 5 로 올려야 한다), 우리는 쿼리를
+// ?key=… ?code=… 처럼 납작한 값으로만 쓴다 — 중첩 문법이 필요 없으니
+// 그 파서를 아예 안 쓰는 게 맞다.
+app.set('query parser', 'simple');
 app.use(require('compression')());   // gzip — html/js/json 전송량 ~75% 절감
+// limit 은 반드시 올바른 형식이어야 한다. 잘못 적으면 body-parser 가 조용히
+// 무시해서 본문 크기 제한이 통째로 사라진다.
 app.use(express.json({ limit: '4kb' }));
-// 보안 헤더 (프레임 정책은 프리뷰 호환 위해 생략)
+// 보안 헤더
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  // 남의 사이트가 이 판을 액자에 넣어 띄우고, 그 위에 투명한 것을 덮어
+  // 엉뚱한 것을 누르게 만드는 수(클릭재킹)를 막는다. 우리 쪽에서 액자에
+  // 넣는 것은 그대로 되므로 미리보기는 안 깨진다.
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'self'");
   // 방문 통계 (메인 페이지 로드만 집계)
   if (req.method === 'GET' && (req.path === '/' || req.path === '/index.html')) {
     const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'x').split(',')[0].trim();

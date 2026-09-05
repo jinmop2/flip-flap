@@ -1384,6 +1384,27 @@
   // 불어나지도 않는다.
   // blocks 는 아래에서 만들어지므로 그때 채운다 — 여기서 집으면 아직 없다
   const PACKS = { en: { dict: EN, blocks: {}, patterns: PATTERNS, name: 'English' } };
+  // 받아 오는 꾸러미. 파일이 큰데(둘이 gzip 67KB) 대부분은 한 언어만 쓴다 —
+  // 있는 줄만 알아 두고, 고를 때 그 파일만 받는다. 첫 화면이 그만큼 가볍다.
+  // 서비스워커가 미리 담아 두므로 두 번째부터는(오프라인에서도) 바로 붙는다.
+  const LAZY = { ja: '日本語', zh: '简体中文' };
+  const asked = {};
+  // 꾸러미가 손에 있는가. 없는 채로 입히면 영어(기본 꾸러미)가 덮여 버리고,
+  // 나중에 꾸러미가 와도 이미 바뀐 글자는 열쇠(한국어 원문)에 안 걸려
+  // 영어로 남는다 — restoreKo 가 있는 것도 같은 까닭이다.
+  const ready = (code) => code === 'ko' || !!PACKS[code];
+  function ensure(code) {
+    if (!Object.prototype.hasOwnProperty.call(LAZY, code)) return;
+    if (PACKS[code] || asked[code] || typeof document === 'undefined') return;
+    asked[code] = true;
+    const el = document.createElement('script');
+    el.src = 'lang-' + code + '.js';
+    el.async = false;                       // 순서를 지킨다 — register 는 i18n 다음이라야 한다
+    // 못 받으면 다시 받아 볼 수 있게 표를 지운다. 그동안은 한국어가 나온다
+    // (열쇠가 한국어 원문이라 깨진 글자가 보이는 일은 없다).
+    el.onerror = () => { asked[code] = false; };
+    document.head.appendChild(el);
+  }
   function register(code, pack) {
     if (!code || !pack) return;
     PACKS[code] = { dict: pack.dict || {}, blocks: pack.blocks || {},
@@ -1391,7 +1412,9 @@
     // 이미 그 언어로 보고 있는 중에 꾸러미가 늦게 도착할 수 있다 — 그때 입힌다
     if (lang === code && typeof document !== 'undefined' && document.body) apply(document.body);
   }
-  const langs = () => ['ko'].concat(Object.keys(PACKS));
+  // 아직 안 받은 꾸러미도 고를 수 있어야 한다 — 목록에는 미리 넣어 둔다
+  const langs = () => ['ko'].concat(Object.keys(PACKS),
+                                    Object.keys(LAZY).filter((c) => !PACKS[c]));
   const packOf = (code) => (Object.prototype.hasOwnProperty.call(PACKS, code) ? PACKS[code] : PACKS.en);
 
   // ── 언어 고르기 ─────────────────────────────────────────────────────────
@@ -1416,6 +1439,7 @@
     let saved = null;
     try { saved = localStorage.getItem(KEY); } catch (_) {}
     lang = langs().includes(saved) ? saved : detect();
+    ensure(lang);                            // 지난번에 고른 언어가 받아 오는 것이면 지금 받는다
     return lang;
   }
   // 아직 사람이 고른 적이 없는가 (가입할 때 물어볼지 판단용)
@@ -1424,6 +1448,7 @@
   }
   function setLang(next) {
     if (!langs().includes(next)) return;
+    ensure(next);                            // 아직 안 받았으면 지금 받는다
     const prev = getLang();
     if (next === prev) return;
     // 글자를 덮어써 놓았으므로, 다른 언어로 갈 때도 한국어를 한 번 거친다.
@@ -1432,7 +1457,8 @@
     lang = next;
     try { localStorage.setItem(KEY, next); } catch (_) {}
     document.documentElement.lang = next;
-    if (next !== 'ko') apply(document.body);
+    // 아직 안 온 꾸러미면 여기서 입히지 않는다. 도착하면 register 가 입힌다.
+    if (next !== 'ko' && ready(next)) apply(document.body);
   }
 
   // 영어 → 한국어로 되돌리기. 글자를 덮어썼기 때문에 원문을 되살려야 하는데,
@@ -1478,6 +1504,7 @@
   // ── 한 조각 바꾸기 ──────────────────────────────────────────────────────
   function t(s) {
     if (getLang() === 'ko') return s;
+    if (!ready(getLang())) return s;         // 꾸러미가 아직 없다 — 한국어 원문 그대로
     const raw = String(s == null ? '' : s);
     const key = raw.trim();
     if (!key) return raw;
@@ -1968,6 +1995,11 @@
   const ORIG_ATTR = new WeakMap();  // 마디 → { 속성이름: 한국어 원문 }
   function apply(root) {
     if (getLang() === 'ko' || !root) return;
+    // 꾸러미가 아직 안 왔으면 손대지 않는다. 없는 채로 입히면 packOf 가
+    // 영어로 물러나 영어가 덮이고, 나중에 꾸러미가 와도 이미 바뀐 글자는
+    // 열쇠(한국어 원문)에 안 걸려 영어로 남는다. 화면이 바뀔 때마다 다시
+    // 입히는 watch() 가 있어서, 여기서 막지 않으면 그 길로 새어 들어온다.
+    if (!ready(getLang())) return;
     applyBlocks(root);
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(n) {
@@ -2038,7 +2070,7 @@
 
   function init() {
     document.documentElement.lang = getLang();
-    apply(document.body);
+    if (ready(getLang())) apply(document.body);
     watch();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
@@ -2052,7 +2084,11 @@
   root.FF.applyI18n = apply;
   root.FF.register = register;
   root.FF.langs = langs;
-  root.FF.langName = (c) => (c === 'ko' ? '한국어' : packOf(c).name);
+  // 아직 안 받은 꾸러미의 이름은 LAZY 에 적어 둔 것을 쓴다 — 목록에 코드가
+  // 그대로 뜨면 무슨 언어인지 알 수 없다
+  root.FF.langName = (c) => (c === 'ko' ? '한국어'
+    : PACKS[c] ? PACKS[c].name
+    : (Object.prototype.hasOwnProperty.call(LAZY, c) ? LAZY[c] : packOf(c).name));
   root.FF.DICT = EN;
 
   root.FF.BLOCKS = BLOCKS;

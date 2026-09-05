@@ -132,25 +132,31 @@
     /* FLAP 을 끌어올려 붙여 놨더니 FLIP 의 아랫부분과 겹쳤다.
        글자 크기와 뒤집힌 모양은 그대로 두고 간격만 벌린다. */
     .logo .flap { transform:rotate(180deg); margin-top:-11px; display:inline-block; opacity:.92; }
-    /* 이따금 불이 한 번 나갔다 들어온다 — 네온 간판처럼. 7초에 한 번만이라
-       눈에 거슬리지 않고, opacity 만 움직여서 그리는 값이 싸다
-       (filter·box-shadow 를 무한히 애니메이션하면 매 프레임 다시 그린다). */
-    #lobby .logo h1 { animation:logoFlicker 7s steps(1, end) infinite; }
-    #lobby .logo .flap { animation:logoFlicker 7s steps(1, end) infinite .16s; }
-    @keyframes logoFlicker {
-      0%, 86%   { opacity:1; }
-      87%       { opacity:.22; }
-      88.5%     { opacity:1; }
-      90%       { opacity:.38; }
-      91%       { opacity:1; }
-      93%       { opacity:.15; }
-      94.5%     { opacity:1; }
-      100%      { opacity:1; }
+    /* 로고를 감싼 불빛. 깜빡이는 것은 이 불빛이지 글자가 아니다 —
+       글자를 깜빡이게 했더니 이름이 안 읽히는 순간이 생겼다.
+       간판 뒤에 달린 등이 이따금 한 번 튀는 모양이라, 주기는 길게(16초) 둔다.
+       움직이는 값은 opacity 뿐이다 (filter·box-shadow 를 무한히
+       애니메이션하면 매 프레임 다시 그려야 해서 로비가 무거워진다). */
+    #lobby .logo::before {
+      content:''; position:absolute; left:50%; top:44%;
+      width:300px; height:170px; margin:-85px 0 0 -150px;
+      border-radius:50%; pointer-events:none; z-index:-1;
+      background:radial-gradient(ellipse at 50% 50%,
+        rgba(158,198,255,.30) 0%, rgba(120,168,255,.13) 42%, rgba(90,140,220,0) 72%);
+      animation:logoGlow 16s steps(1, end) infinite;
     }
-    /* FLAP 은 원래 조금 흐리다 — 깜빡임이 그 값을 덮어쓰지 않게 따로 잡는다 */
-    #lobby .logo .flap { opacity:.92; }
+    @keyframes logoGlow {
+      0%, 90%  { opacity:1; }
+      90.6%    { opacity:.12; }
+      91.2%    { opacity:.95; }
+      92.2%    { opacity:.22; }
+      93%      { opacity:1; }
+      94.4%    { opacity:.35; }
+      95%      { opacity:1; }
+      100%     { opacity:1; }
+    }
     @media (prefers-reduced-motion:reduce) {
-      #lobby .logo h1, #lobby .logo .flap { animation:none; }
+      #lobby .logo::before { animation:none; }
     }
     /* 로고 아래 마감 줄 — 가운데 마름모가 로고와 아래 내용을 갈라 준다.
        예전엔 로고가 그냥 허공에 떠 있어 어디까지가 제목인지가 안 보였다. */
@@ -8147,8 +8153,9 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 <script src="/items2.js"></script>   <!-- 아이템전 덱·중앙 뒤집기·AI 의 아이템 선택 -->
 <script src="offline.js"></script>   <!-- 그물이 없을 때 화면이 혼자 굴리는 판 -->
 <script src="i18n.js"></script>
-<script src="lang-ja.js"></script>   <!-- 日本語 — i18n 다음이라야 register 가 있다 -->
-<script src="lang-zh.js"></script>   <!-- 简体中文 -->
+<!-- 일본어·중국어 꾸러미는 여기서 안 받는다. 둘이 gzip 67KB 인데 대부분은
+     한 언어만 쓴다 — i18n.js 가 그 언어를 고르는 순간에 받아 온다.
+     (서비스워커가 미리 담아 두므로 두 번째부터는 오프라인에서도 바로 붙는다.) -->
 <script src="art.js"></script>
 <script src="client.js"></script>
 <script src="client4.js"></script>
