@@ -96,11 +96,21 @@ ok('가로 모드에서는 밀어 둔 자리를 푼다',
 console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
 {
   // 여태 막이 새까맣기만 해서 잠깐 화면이 꺼진 것처럼 보였다
-  ok('막에 고리와 로고가 있다', /<div id="fadeVeil">[\s\S]{0,240}fv-ring[\s\S]{0,160}fv-logo/.test(htm)
-     && /<b>FLIP<\/b><i>FLAP<\/i>/.test(htm));
+  // 기다리는 표시는 로고가 한다 — 이름이 곧 그 동작이다.
+  // (돌아가는 고리를 따로 두었더니 로고와 따로 놀아 둘 다 눈에 안 들어왔다.)
+  ok('막에 로고가 있다', /<div id="fadeVeil">[\s\S]{0,200}fv-logo/.test(htm)
+     && /<b>FLIP<\/b><i>FLAP<\/i>/.test(htm)
+     && !/fv-ring/.test(htm));
+  // FLIP 이 위로 넘어간 뒤 FLAP 이 아래로 넘어간다 — 겹치면 둘이 동시에 돌아
+  // 무슨 글자인지 안 읽힌다
+  ok('FLIP 다음에 FLAP 이 넘어간다',
+     /@keyframes fvFlipUp \{[\s\S]{0,140}38%\s*\{ transform:rotateX\(-360deg\)/.test(htm)
+     && /@keyframes fvFlapDown \{\s*0%, 50% \{ transform:rotate\(180deg\) rotateX\(0deg\)/.test(htm));
   // 늘 돌려 두면 안 보이는 채로 판이 도는 내내 폰을 깨워 둔다
-  ok('막이 켜졌을 때만 돈다', /#fadeVeil\.on \.fv-ring \{ animation:fvSpin/.test(htm)
-     && !/^\s*\.fv-ring \{[^}]*animation:/m.test(htm));
+  ok('막이 켜졌을 때만 넘어간다', /#fadeVeil\.on \.fv-logo b \{ animation:fvFlipUp/.test(htm)
+     && !/^\s*\.fv-logo b, \.fv-logo i \{[^}]*animation:/m.test(htm));
+  // transform 은 통째로 덮이는 값이라, FLAP 의 180도를 키프레임에도 적어야 한다
+  ok('FLAP 은 뒤집힌 채로 넘어간다', (htm.match(/rotate\(180deg\) rotateX\(/g) || []).length >= 2);
   // 눈에 안 잡힐 만큼 짧으면 화면이 한 번 깜빡인 것으로만 보인다
   ok('고리가 보일 만큼은 머문다', /const VEIL_MIN = 320;/.test(cli)
      && /Math\.max\(0, VEIL_MIN - \(Date\.now\(\) - t0\)\)/.test(cli));

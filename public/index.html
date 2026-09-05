@@ -1107,25 +1107,39 @@
     .fv-box { display:flex; flex-direction:column; align-items:center; gap:12px;
       opacity:0; transition:opacity .16s linear; }
     #fadeVeil.on .fv-box { opacity:1; transition:none; }
-    .fv-ring {
-      width:38px; height:38px; border-radius:50%;
-      border:3px solid rgba(160,185,225,.22);
-      border-top-color:#cfe0f7;
-    }
-    #fadeVeil.on .fv-ring { animation:fvSpin .8s linear infinite; }
-    @keyframes fvSpin { to { transform:rotate(360deg); } }
-    /* 로비 로고와 같은 백금색·같은 글꼴. 작게 줄여 얹는다. */
-    .fv-logo { text-align:center; line-height:.9; }
+    /* 기다리는 표시는 로고가 한다 — 이름이 곧 그 동작이다.
+       FLIP 이 위로 한 바퀴 넘어가고, 뒤이어 FLAP 이 아래로 한 바퀴 넘어간다.
+       (돌아가는 고리를 두었더니 로고와 따로 놀아 둘 다 눈에 안 들어왔다.)
+       로비 로고와 같은 백금색·같은 글꼴을 작게 줄여 쓴다. */
+    .fv-logo { text-align:center; line-height:.92; perspective:420px; }
     .fv-logo b, .fv-logo i {
       display:block; font-family:'Bangers',cursive; font-style:normal;
-      font-size:1.5rem; letter-spacing:2px;
+      font-size:2rem; letter-spacing:3px;
       background:linear-gradient(180deg,#ffffff 0%,#d8e4f8 38%,#93a8cc 62%,#4e5e7e 100%);
       -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
       filter:drop-shadow(0 1px 0 #2a3450) drop-shadow(0 0 10px rgba(170,205,255,.3));
+      will-change:transform;
     }
+    /* FLAP 은 로비 로고처럼 뒤집혀 있다 — 그 180도를 키프레임 안에도 그대로
+       적어 둔다. transform 은 통째로 덮이는 값이라, 빼먹으면 뒤집기가
+       도는 순간 글자가 바로 서 버린다. */
     .fv-logo i { transform:rotate(180deg); opacity:.92; }
+    /* 한 바퀴(1.7초) 안에서 앞뒤로 나눠 넘어간다 — 겹치면 둘이 동시에 돌아
+       무슨 글자인지 안 읽힌다. 넘어간 뒤에는 제자리에서 기다린다(-360 ≡ 0). */
+    #fadeVeil.on .fv-logo b { animation:fvFlipUp 1.7s cubic-bezier(.5,.05,.4,1) infinite; }
+    #fadeVeil.on .fv-logo i { animation:fvFlapDown 1.7s cubic-bezier(.5,.05,.4,1) infinite; }
+    @keyframes fvFlipUp {
+      0%   { transform:rotateX(0deg); }
+      38%  { transform:rotateX(-360deg); }
+      100% { transform:rotateX(-360deg); }
+    }
+    @keyframes fvFlapDown {
+      0%, 50% { transform:rotate(180deg) rotateX(0deg); }
+      88%     { transform:rotate(180deg) rotateX(360deg); }
+      100%    { transform:rotate(180deg) rotateX(360deg); }
+    }
     @media (prefers-reduced-motion:reduce) {
-      #fadeVeil.on .fv-ring { animation:none; }
+      #fadeVeil.on .fv-logo b, #fadeVeil.on .fv-logo i { animation:none; }
     }
 
     /* 스크롤 막대 — 기본값은 어두운 판 위에 하얀 네모 하나가 그려진 것처럼
@@ -6703,7 +6717,6 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
      보였다 — 돌아가는 고리와 작은 로고를 얹어 '넘어가는 중' 으로 읽히게 한다. -->
 <div id="fadeVeil">
   <div class="fv-box">
-    <div class="fv-ring"></div>
     <div class="fv-logo"><b>FLIP</b><i>FLAP</i></div>
   </div>
 </div>
