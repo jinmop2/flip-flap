@@ -140,6 +140,10 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
      && !/border-radius:50%; pointer-events:none; z-index:-1;/.test(htm));
   // left 만 주면 가운데 맞춤을 못 물려받아 로고 옆에 유령 글자가 하나 더 선다
   ok('빛이 글자와 정확히 겹친다', /left:6px; right:6px; top:9px; text-align:center;/.test(htm));
+  // 어긋나게 뒀더니 등이 하나 나가는 게 아니라 두 개가 따로 노는 것으로 보였다
+  ok('두 줄이 같은 순간에 깜빡인다', !/#lobby \.logo \.flap::before \{ animation-delay:/.test(htm));
+  // FLAP 만 살짝 죽여 뒀더니 FLIP 이 더 밝아 보여 한 덩어리로 안 읽혔다
+  ok('두 줄은 같은 밝기', /\.logo \.flap \{ transform:rotate\(180deg\); margin-top:-11px; display:inline-block; \}/.test(htm));
 }
 
 console.log('\n⑪ 랭킹은 올라온다');

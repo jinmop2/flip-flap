@@ -131,7 +131,9 @@
     }
     /* FLAP 을 끌어올려 붙여 놨더니 FLIP 의 아랫부분과 겹쳤다.
        글자 크기와 뒤집힌 모양은 그대로 두고 간격만 벌린다. */
-    .logo .flap { transform:rotate(180deg); margin-top:-11px; display:inline-block; opacity:.92; }
+    /* 두 줄은 같은 밝기다. FLAP 만 살짝 죽여 뒀더니 FLIP 이 더 밝아 보여
+       한 덩어리로 안 읽혔다 — 이름은 두 낱말이 아니라 하나다. */
+    .logo .flap { transform:rotate(180deg); margin-top:-11px; display:inline-block; }
     /* 로고를 감싼 불빛. 깜빡이는 것은 이 불빛이지 글자가 아니다 —
        글자를 깜빡이게 했더니 이름이 안 읽히는 순간이 생겼다.
        불빛은 글자꼴을 따라간다. 타원 한 덩어리로 깔았더니 로고 뒤에
@@ -143,6 +145,8 @@
     #lobby .logo h1, #lobby .logo .flap { position:relative; }
     #lobby .logo h1::before   { content:'FLIP'; }
     #lobby .logo .flap::before { content:'FLAP'; }
+    /* 두 줄은 같은 순간에 깜빡인다. 어긋나게 뒀더니 등이 하나 나가는 게
+       아니라 두 개가 따로 노는 것으로 보였다. */
     #lobby .logo h1::before, #lobby .logo .flap::before {
       /* 글자와 정확히 겹쳐야 한다. left 만 주면 가운데 맞춤을 못 물려받아
          빛이 왼쪽으로 밀리고, 로고 옆에 유령 글자가 하나 더 선다.
@@ -155,7 +159,6 @@
       text-shadow:0 0 15px rgba(170,205,255,.42), 0 0 34px rgba(130,180,255,.2);
       animation:logoGlow 20s steps(1, end) infinite;
     }
-    #lobby .logo .flap::before { animation-delay:.12s; }   /* 두 줄이 아주 조금 어긋나게 */
     @keyframes logoGlow {
       0%, 92%  { opacity:1; }
       92.5%    { opacity:.1; }
