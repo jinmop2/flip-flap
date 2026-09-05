@@ -105,6 +105,22 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   ok('고리가 보일 만큼은 머문다', /const VEIL_MIN = 320;/.test(cli)
      && /Math\.max\(0, VEIL_MIN - \(Date\.now\(\) - t0\)\)/.test(cli));
   ok('로고는 로비 로고와 같은 백금색', /\.fv-logo b, \.fv-logo i \{[\s\S]{0,400}-webkit-text-fill-color:transparent/.test(htm));
+  // 서서히 짙어지게 두면 그 사이 옛 화면이 비치고, 화면을 갈아 끼우는 순간(85ms)이
+  // 아직 반투명한 막 너머로 드러난다 — "탭을 넘기면 로비가 잠깐씩 보인다".
+  ok('막은 즉시 덮고 걷을 때만 서서히',
+     /#fadeVeil\.on \{ opacity:1; pointer-events:auto; transition:none; \}/.test(htm)
+     && /#fadeVeil \{[\s\S]{0,160}transition:opacity \.16s linear;/.test(htm));
+  // 나가는 길에도 덮는다 — 안 덮으면 흰 화면이 한 번 지나간다
+  ok('나갈 때도 덮는다', /function fastReload\(\) \{[\s\S]{0,200}veilHold\(\);/.test(cli)
+     && /function veilHold\(\)/.test(cli));
+}
+
+console.log('\n⑩ 이모트 목록');
+{
+  // 팩을 사면 이모트가 차단 단추 뒤에 붙는다(refreshEmotes 가 append 한다).
+  // 적어 놓은 차례와 상관없이 늘 맨 아래여야 한다.
+  ok('차단 단추는 늘 맨 아래', /#emotePicker \.emote-mute \{\n\s*order:99;/.test(htm));
+  ok('팩 이모트는 뒤에 붙는다', /picker\.appendChild\(b\);/.test(cli));
 }
 
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);

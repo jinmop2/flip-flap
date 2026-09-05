@@ -1094,15 +1094,19 @@
        한 번 덮었다 걷는 것만으로 같은 전환이 이어진 동작으로 읽힌다. */
     #fadeVeil {
       position:fixed; inset:0; z-index:80; background:#02040b;
-      opacity:0; pointer-events:none; transition:opacity .12s linear;
+      opacity:0; pointer-events:none; transition:opacity .16s linear;
       display:flex; align-items:center; justify-content:center;
     }
-    #fadeVeil.on { opacity:1; pointer-events:auto; }
+    /* 켤 때는 즉시 덮는다. 서서히 짙어지게 두었더니 그 0.12초 동안 옛 화면이
+       비쳐 보였고, 화면을 갈아 끼우는 순간(85ms)이 아직 반투명한 막 너머로
+       그대로 드러났다 — "탭을 넘기면 로비가 잠깐씩 보인다" 가 이것이다.
+       걷을 때만 서서히 — 그쪽은 새 화면이 드러나는 길이라 부드러워야 한다. */
+    #fadeVeil.on { opacity:1; pointer-events:auto; transition:none; }
     /* 고리와 로고는 막이 켜진 동안에만 돈다 — 늘 돌려 두면 안 보이는 채로
        판이 도는 내내 폰을 깨워 둔다. */
     .fv-box { display:flex; flex-direction:column; align-items:center; gap:12px;
-      opacity:0; transition:opacity .12s linear; }
-    #fadeVeil.on .fv-box { opacity:1; }
+      opacity:0; transition:opacity .16s linear; }
+    #fadeVeil.on .fv-box { opacity:1; transition:none; }
     .fv-ring {
       width:38px; height:38px; border-radius:50%;
       border:3px solid rgba(160,185,225,.22);
@@ -4059,19 +4063,21 @@
     /* ✕ 위에 얹혀 있는 동안은 삼켜지는 중이라는 걸 보여 준다 */
     #chatHead.over-x { transform:scale(.82); opacity:.75; }
     /* 버리는 자리 — 끌기 시작할 때만 아래에서 올라온다 */
+    /* 버리는 자리는 위쪽이다. 아래에 두었더니 손패·확정 단추와 같은 자리라,
+       치우려고 끌다가 판을 건드리게 된다. */
     #chatHeadX {
-      display:none; position:fixed; z-index:42; left:50%; bottom:calc(38px + var(--safe-b));
+      display:none; position:fixed; z-index:42; left:50%; top:calc(72px + var(--safe-t));
       width:56px; height:56px; margin-left:-28px; border-radius:50%;
       align-items:center; justify-content:center; pointer-events:none;
       background:rgba(20,26,38,.82); border:1.5px solid rgba(200,215,240,.4);
       color:#cfd8e8; box-shadow:0 8px 24px rgba(0,0,0,.6);
       transition:transform .16s cubic-bezier(.34,1.5,.64,1), background .16s, color .16s, border-color .16s;
     }
-    #chatHeadX.on { display:flex; animation:chxUp .18s ease-out both; }
+    #chatHeadX.on { display:flex; animation:chxDown .18s ease-out both; }
     #chatHeadX svg { width:24px; height:24px; }
     /* 빨려 들어갈 만큼 가까워졌다 — 놓으면 없어진다 */
     #chatHeadX.armed { transform:scale(1.28); background:#b8342f; color:#fff; border-color:#e88; }
-    @keyframes chxUp { from { transform:translateY(16px); opacity:0 } to { transform:none; opacity:1 } }
+    @keyframes chxDown { from { transform:translateY(-16px); opacity:0 } to { transform:none; opacity:1 } }
     @media (prefers-reduced-motion:reduce) {
       #chatHeadX { transition:none; } #chatHeadX.on { animation:none; }
     }
@@ -4314,8 +4320,11 @@
       font-size:1.35rem; cursor:pointer; transition:transform .1s, background .1s;
     }
     #emotePicker button:hover { background:rgba(144,167,200,.15); transform:scale(1.15); }
+    /* 팩을 사면 이모트가 이 단추 뒤에 붙는다(refreshEmotes 가 append 한다).
+       그러면 차단 단추가 목록 한가운데에 끼어 버린다. 적어 놓은 차례와
+       상관없이 늘 맨 아래로 내린다 — 몇 개가 붙든 자리가 안 바뀐다. */
     #emotePicker .emote-mute {
-      grid-column:1/-1; width:auto; height:32px; font-size:.8rem; font-weight:600;
+      order:99; grid-column:1/-1; width:auto; height:32px; font-size:.8rem; font-weight:600;
       color:#9faec5; background:rgba(0,0,0,.25); border:1px solid rgba(131,150,180,.3);
       border-radius:9px; margin-top:2px; white-space:nowrap;
     }

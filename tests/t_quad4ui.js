@@ -194,6 +194,16 @@ console.log('\n⑥ 2인전과 결이 맞는가');
   ok('남은 카드 표는 판 한가운데', /#q-leftPanel \{[\s\S]{0,140}top:50%; left:50%;/.test(html));
   ok('판이 끝나면 표를 걷는다', /const lp = \$\('q-leftPanel'\); if \(lp\) lp\.classList\.remove\('show'\)/.test(c4));
 
+  // 시간을 다 쓰면 서버는 그 자리를 AI 에게 넘기고 소켓을 놓는다. 그러면 이쪽으로
+  // 상태가 더 안 와서, 자가복구가 g4_gone 을 불러 "접속이 끊겼다" 고 띄웠다.
+  // 끊긴 적이 없는데 끊겼다고 하는 셈이다 — 시간을 다 쓴 것은 몰수패다.
+  ok('시간 초과는 몰수패로 닫는다', /function showTimeoutOver\(\)/.test(c4)
+     && /'시간 초과 — 몰수패'/.test(c4)
+     && /socket\.on\('g4_timeout'[\s\S]{0,320}showTimeoutOver\(\)/.test(c4));
+  ok('그 판은 여기서 끝난다', /function showTimeoutOver\(\)[\s\S]{0,260}q4Live = false;[\s\S]{0,160}removeItem\('ff_q4'\)/.test(c4));
+  // 판이 통째로 갈리는 순간을 막으로 덮는다
+  ok('나갈 때 막을 덮는다', /window\.q4Quit = function \(\) \{[\s\S]{0,220}veil\(\(\) => q4QuitNow\(\)\)/.test(c4));
+
   // 아래 차례: 낸 카드 → 획득 → 내 자리 → 손패 → 확정.
   // 확정을 손패 위에 두던 시절엔 고를 카드와 누를 버튼이 붙어 손가락이 엉켰다.
   // 2인전처럼 버튼을 맨 아래로 내렸다.
@@ -291,7 +301,8 @@ console.log('\n⑩ 나가기·설명·설정·프로필');
   // 나갈 때 판 곡이 계속 흐르면 안 된다 — 2인전은 새로고침으로 저절로 로비 곡이 된다.
   // 다인전은 화면만 숨기므로 직접 로비 곡으로 바꿔 준다.
   ok('배경음악 정지 함수', /function stopBGM/.test(cli));
-  ok('나갈 때 로비 곡으로', /q4Quit = function[\s\S]{0,320}startBGM\('lobby'\)/.test(c4));
+  // 나가는 일은 q4QuitNow 가 한다 — q4Quit 은 막을 덮고 그걸 부른다
+  ok('나갈 때 로비 곡으로', /function q4QuitNow\(\)[\s\S]{0,320}startBGM\('lobby'\)/.test(c4));
 }
 
 console.log('\n⑪ 상대 정보·친구 신청');

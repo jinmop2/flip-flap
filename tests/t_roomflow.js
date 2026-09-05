@@ -387,13 +387,16 @@ ok('클래식에는 안 붙인다', /r\.mode !== 'classic'/.test(cli));
 
 // 탭을 옮길 때 한 번 덮었다 걷는다 — 창이 통째로 갈리는 순간을 가려 준다
 ok('덮개가 있다', /id="fadeVeil"/.test(htm) && /#fadeVeil \{[\s\S]{0,160}opacity:0; pointer-events:none/.test(htm));
-ok('덮은 동안은 손가락도 막는다', /#fadeVeil\.on \{ opacity:1; pointer-events:auto; \}/.test(htm));
+ok('덮은 동안은 손가락도 막는다', /#fadeVeil\.on \{ opacity:1; pointer-events:auto;/.test(htm));
 // 예전엔 "눈에 안 걸릴 만큼만 짧게" 였다. 그런데 새까만 막이 한 번 번쩍이면
 // 화면이 잠깐 꺼진 것처럼 보인다 — 이제 고리와 로고를 얹고, 그것이 읽힐
 // 만큼만 머문다. 화면을 바꾸는 일 자체는 여전히 85ms 뒤에 한다.
+// 켤 때는 즉시(transition:none), 걷을 때만 서서히 — 서서히 짙어지게 두면
+// 그 사이 옛 화면이 비쳐 "탭을 넘기면 로비가 잠깐씩 보인다" 가 된다.
 ok('덮개는 곧바로 덮고, 보일 만큼만 머문다',
-   /transition:opacity \.12s linear/.test(htm) && /\}, 85\);/.test(cli)
-   && /const VEIL_MIN = 320;/.test(cli));
+   /#fadeVeil\.on \{[^}]*transition:none;/.test(htm)
+   && /transition:opacity \.16s linear/.test(htm)
+   && /\}, 85\);/.test(cli) && /const VEIL_MIN = 320;/.test(cli));
 ok('탭 이동이 덮개를 거친다', /function navGo\(key\)[\s\S]{0,200}veil\(\(\) => \{/.test(cli));
 ok('새 화면을 그린 뒤에 걷는다', /requestAnimationFrame\(\(\) => requestAnimationFrame\(/.test(cli));
 ok('넘어가는 중에 또 눌러도 안 엉킨다', /if \(veilBusy\) \{ fn\(\); return; \}/.test(cli));

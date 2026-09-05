@@ -103,7 +103,7 @@ console.log('\n⑤ 끌어서 ✕ 로 치운다');
 {
   // 메신저와 같은 손짓 — 꾹 눌러 끌면 아래에 ✕ 가 올라오고, 거기 놓으면 없어진다.
   ok('버리는 자리가 있다', /<div id="chatHeadX"/.test(htm)
-     && /#chatHeadX \{[\s\S]{0,200}bottom:calc\(38px \+ var\(--safe-b\)\)/.test(htm));
+     && /#chatHeadX \{[\s\S]{0,200}top:calc\(72px \+ var\(--safe-t\)\)/.test(htm));
   // 어디로 가져가야 없앨 수 있는지 보여야 손이 간다
   ok('끌기 시작할 때만 올라온다', /#chatHeadX\.on \{ display:flex;/.test(htm)
      && /if \(x\) x\.classList\.add\('on'\)/.test(cli));
@@ -119,6 +119,13 @@ console.log('\n⑤ 끌어서 ✕ 로 치운다');
   ok('새 메시지가 오면 돌아온다', /function gcPaintDot\(\)[\s\S]{0,400}if \(on\) \{ try \{ chWake\(\); \}/.test(cli));
   ok('메뉴에서 열어도 돌아온다', /if \(show\) \{ try \{ chWake\(\); \}/.test(cli));
   ok('치웠다고 말해 준다', /채팅 동그라미를 치웠어요/.test(cli));
+  // 아래에 두면 손패·확정 단추와 같은 자리라, 치우려다 판을 건드린다
+  ok('버리는 자리는 위쪽', /#chatHeadX \{[\s\S]{0,200}top:calc\(72px \+ var\(--safe-t\)\)/.test(htm)
+     && /@keyframes chxDown \{ from \{ transform:translateY\(-16px\)/.test(htm));
+  // 치우기 전 자리로 돌려보내면, 그 자리가 구석이었을 때 "안 돌아왔다" 로 보인다
+  ok('돌아올 때는 삼선 메뉴 아래', /function chMenuBottom\(\)/.test(cli)
+     && /\['q-menuWrap', 'tv-menuWrap', 'g-menuBtn'\]/.test(cli)
+     && /chPos = \{ side: 'r', ry: Math\.max\(0, Math\.min\(1, \(under \+ 10 - b\.top\)/.test(cli));
 }
 
 console.log('\n' + (bad ? 'FAIL ' + bad + '/' + n : 'OK ' + n + '개'));

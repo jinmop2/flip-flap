@@ -766,6 +766,25 @@
     if (p.classList.contains('show')) renderLeft();
   };
 
+  // 시간을 다 써서 지는 자리. 서버가 주는 순위표가 없으므로(그 판은 남은
+  // 사람들끼리 계속 돈다) 짧게 사실만 적는다.
+  function showTimeoutOver() {
+    { const lp = $('q-leftPanel'); if (lp) lp.classList.remove('show'); }
+    q4Live = false;
+    try { localStorage.removeItem('ff_q4'); } catch (_) {}
+    $('q-status').textContent = '';
+    $('q-otitle').textContent = '시간 초과 — 몰수패';
+    const rk = $('q-orank'); rk.innerHTML = '';
+    const row = document.createElement('div');
+    row.className = 'q-rrow me';
+    row.textContent = '제한 시간을 다 써서 이 판은 졌어요.';
+    rk.appendChild(row);
+    const note = $('q-rpnote');
+    if (note) { note.textContent = '남은 판은 다른 자리끼리 계속됩니다.'; note.style.display = ''; }
+    sfx('defeat');
+    $('q-over').classList.add('show');
+  }
+
   function showOver(s) {
     // 남은 카드 표가 열려 있으면 결과창을 덮는다 — 판이 끝나면 걷는다
     { const lp = $('q-leftPanel'); if (lp) lp.classList.remove('show'); }
@@ -917,6 +936,12 @@
   };
 
   window.q4Quit = function () {
+    // 다인전은 새로고침 없이 화면만 숨긴다 — 판이 통째로 갈리는 순간을
+    // 막으로 덮어 준다. 2인전은 fastReload 가 같은 일을 한다.
+    if (typeof veil === 'function') { veil(() => q4QuitNow()); return; }
+    q4QuitNow();
+  };
+  function q4QuitNow() {
     if (q4Spec) socket.emit('g4_spec_leave'); else socket.emit('g4_leave');
     q4Spec = false; document.body.classList.remove('q-spec');
     // 2인전은 나갈 때 페이지를 새로고침해서 저절로 로비 곡으로 돌아간다.
@@ -928,7 +953,7 @@
     $('q-startPanel').classList.remove('show');
     document.body.classList.remove('quad4', 'q-n3', 'q-waiting');
     $('q-over').classList.remove('show');
-  };
+  }
 
   window.q4Type = function (t) {
     // 내 자리는 0번이 아닐 수 있다(멀티). 0 으로 박아 뒀더니 1·2·3번 자리 사람은
@@ -1014,9 +1039,15 @@
     socket.on('g4_error', (m) => { alert(m); window.q4Quit(); });
     // 시간을 다 쓰면 그 자리는 AI 가 넘겨받는다. 판을 끝내지는 않는다 —
     // 한 사람 때문에 나머지가 끝나면 억울하기 때문.
+    // 시간을 다 쓰면 서버는 그 자리를 AI 에게 넘기고 소켓을 놓는다. 그러면
+    // 이쪽으로는 판 상태가 더 안 오고, 잠시 뒤 자가복구가 "판을 못 찾겠다"
+    // 며 g4_gone 을 불러 "접속이 끊겨 판이 종료됐어요" 라고 띄웠다.
+    // 끊긴 적이 없는데 끊겼다고 하는 셈이다. 시간을 다 쓴 것은 몰수패다 —
+    // 그렇게 적고 여기서 판을 닫는다.
     socket.on('g4_timeout', () => {
-      $('q-status').textContent = '시간을 다 썼어요 — 남은 판은 AI 가 대신합니다';
+      if (!q4Live) return;
       const tm = $('q-timer'); if (tm) { tm.textContent = '0:00'; tm.classList.add('warn'); }
+      showTimeoutOver();
     });
     socket.on('g4_gone', () => {
       if (!q4Live) return;

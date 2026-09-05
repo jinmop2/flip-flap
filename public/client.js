@@ -277,10 +277,19 @@ function offlineBoot() {
 }
 if (typeof navigator !== 'undefined' && navigator.onLine === false) setTimeout(offlineBoot, 250);
 socket.on('connect_error', () => setTimeout(offlineBoot, 600));
-// 내부 이동용 새로고침 (스플래시 없이)
+// 내부 이동용 새로고침 (스플래시 없이).
+// 나가는 길에도 막을 덮는다. 안 덮으면 판이 사라지고 흰 화면이 한 번
+// 지나간 뒤에야 로비가 뜬다 — 나가다 만 것처럼 보였다.
 function fastReload() {
   sessionStorage.setItem('ff_skipsplash', '1');
-  location.href = location.origin + location.pathname;
+  veilHold();
+  setTimeout(() => { location.href = location.origin + location.pathname; }, 130);
+}
+// 막을 덮고 그대로 둔다(걷지 않는다). 페이지가 갈리거나 화면이 통째로
+// 바뀌는 길에서 쓴다 — 걷는 쪽은 새 화면이 알아서 한다.
+function veilHold() {
+  const v = document.getElementById('fadeVeil');
+  if (v) v.classList.add('on');
 }
 
 socket.on('connect', () => {
@@ -5191,9 +5200,26 @@ function chApply() {
 // 방법을 모른 채 "채팅이 사라졌다" 로 남는다.
 //   ① 새 메시지가 오면 저절로 돌아온다 (메신저와 같다)
 //   ② 메뉴에서 채팅을 열면 돌아온다
+//
+// 돌아올 때는 삼선 메뉴 바로 아래에 선다. 치우기 전 자리로 돌려보내면,
+// 그 자리가 눈에 안 띄는 구석이었을 때 "안 돌아왔다" 로 보인다. 메뉴 밑은
+// 어느 판에서든 비어 있고, 눈이 가장 먼저 가는 자리다.
+function chMenuBottom() {
+  for (const id of ['q-menuWrap', 'tv-menuWrap', 'g-menuBtn']) {
+    const el = document.getElementById(id);
+    const r = el && el.getBoundingClientRect();
+    if (r && r.height) return r.bottom;
+  }
+  return null;
+}
 function chWake() {
   if (!chPos.off) return;
-  chPos.off = false; chSave(); chApply();
+  chPos.off = false;
+  const b = chBounds();
+  const under = chMenuBottom();
+  if (under != null && b.bot > b.top)
+    chPos = { side: 'r', ry: Math.max(0, Math.min(1, (under + 10 - b.top) / (b.bot - b.top))), off: false };
+  chSave(); chApply();
 }
 (function chInit() {
   const el = document.getElementById('chatHead'); if (!el) return;
