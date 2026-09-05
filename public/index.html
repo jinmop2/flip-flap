@@ -4000,6 +4000,27 @@
        그래서 여기 기본값을 none 으로 두면 영영 안 켜진다 — 다른 점들과 같은 방식이다. */
     .ch-dot { position:absolute; top:-1px; right:-1px; width:12px; height:12px;
       border-radius:50%; background:#ff5b5b; border:2px solid #0e1420; display:block; }
+    /* 치운 동그라미 — 새 메시지가 오거나 메뉴에서 채팅을 열면 돌아온다 */
+    #chatHead.gone { display:none !important; }
+    /* ✕ 위에 얹혀 있는 동안은 삼켜지는 중이라는 걸 보여 준다 */
+    #chatHead.over-x { transform:scale(.82); opacity:.75; }
+    /* 버리는 자리 — 끌기 시작할 때만 아래에서 올라온다 */
+    #chatHeadX {
+      display:none; position:fixed; z-index:42; left:50%; bottom:calc(38px + var(--safe-b));
+      width:56px; height:56px; margin-left:-28px; border-radius:50%;
+      align-items:center; justify-content:center; pointer-events:none;
+      background:rgba(20,26,38,.82); border:1.5px solid rgba(200,215,240,.4);
+      color:#cfd8e8; box-shadow:0 8px 24px rgba(0,0,0,.6);
+      transition:transform .16s cubic-bezier(.34,1.5,.64,1), background .16s, color .16s, border-color .16s;
+    }
+    #chatHeadX.on { display:flex; animation:chxUp .18s ease-out both; }
+    #chatHeadX svg { width:24px; height:24px; }
+    /* 빨려 들어갈 만큼 가까워졌다 — 놓으면 없어진다 */
+    #chatHeadX.armed { transform:scale(1.28); background:#b8342f; color:#fff; border-color:#e88; }
+    @keyframes chxUp { from { transform:translateY(16px); opacity:0 } to { transform:none; opacity:1 } }
+    @media (prefers-reduced-motion:reduce) {
+      #chatHeadX { transition:none; } #chatHeadX.on { animation:none; }
+    }
     @media (prefers-reduced-motion:reduce) { #chatHead { transition:none; } }
 
     /* ── 인게임 채팅 ── */
@@ -4335,6 +4356,28 @@
     .lb-empty { font-size:.78rem; color:#566174; text-align:center; padding:16px 0; }
 
     #rematchNote { color:#dcebff; font-size:.82rem; min-height:18px; margin-bottom:10px; }
+    /* 상대가 먼저 '한 판 더' 를 눌렀다는 표시. 글줄로만 알리면 눈이 버튼이
+       아니라 문장에 가 있어야 한다 — 눌러야 할 그 자리에 붙인다. */
+    #rematchBtn { position:relative; overflow:visible; }
+    .rb-badge { display:none; position:absolute; top:-9px; right:-6px;
+      font-size:.56rem; font-weight:900; font-style:normal; white-space:nowrap;
+      background:#ffd94a; color:#241a05; border-radius:999px; padding:2px 7px;
+      box-shadow:0 2px 8px rgba(0,0,0,.5); }
+    #rematchBtn.wanted .rb-badge { display:block; animation:rbPop .3s cubic-bezier(.34,1.6,.64,1) both; }
+    /* 버튼도 같이 숨쉰다 — 배지만 있으면 작아서 안 보고 지나친다.
+       퍼지는 고리는 따로 얹는다. box-shadow 를 무한히 애니메이션하면 매 프레임
+       다시 그려야 해서 판이 무거워진다 — transform·opacity 만 쓴다. */
+    #rematchBtn.wanted::after {
+      content:''; position:absolute; inset:-2px; border-radius:inherit; pointer-events:none;
+      border:2px solid rgba(255,217,74,.8);
+      animation:rbRing 1.25s ease-out infinite;
+    }
+    @keyframes rbPop { from { transform:scale(.4); opacity:0 } to { transform:scale(1); opacity:1 } }
+    @keyframes rbRing { from { transform:scale(1); opacity:.8 } to { transform:scale(1.14); opacity:0 } }
+    @media (prefers-reduced-motion:reduce) {
+      #rematchBtn.wanted::after { animation:none; opacity:.8; }
+      #rematchBtn.wanted .rb-badge { animation:none; }
+    }
 
     /* 룰 모달 */
     .rules-modal {
@@ -6983,6 +7026,11 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
   <svg class="svgi" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
   <i class="ch-dot" id="chatHeadDot" style="display:none"></i>
 </button>
+<!-- 버리는 자리 — 동그라미를 끌기 시작하면 아래에서 올라온다.
+     어디로 가져가야 없앨 수 있는지 보여야 손이 간다. -->
+<div id="chatHeadX" aria-hidden="true">
+  <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+</div>
 
 <div id="rules4Modal" class="rules-modal" onclick="if(event.target===this)toggleRules4(false)">
   <div class="rules-wrap">
@@ -7757,7 +7805,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <div id="goStats"></div>
     <div id="rematchNote"></div>
     <div id="goBtns" style="display:flex; gap:8px; justify-content:center;">
-      <button class="btn btn-gold" id="rematchBtn" style="width:auto" onclick="rematch(this)"><svg class="btni" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M21 3v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>한 판 더!</button>
+      <button class="btn btn-gold" id="rematchBtn" style="width:auto" onclick="rematch(this)"><svg class="btni" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M21 3v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>한 판 더!<i class="rb-badge" id="rematchBadge">상대 준비!</i></button>
       <button class="btn btn-outline" style="width:auto" onclick="goLobby()">로비로</button>
     </div>
     <button class="btn btn-kakao btn-sm" style="width:100%;margin-top:8px" onclick="challengeFriend()"><svg class="btni" viewBox="0 0 24 24"><path d="M4 21V4a1 1 0 0 1 1-1h11l-2.5 3.5L17 10H5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>친구에게 도전장 보내기</button>

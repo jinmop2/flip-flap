@@ -50,6 +50,24 @@ console.log('② 화면이 새로고침 없이 잇는다');
   ok('트웰브 결과창에도 붙는다', /roomBackBtn\(btns, fromRoom && !tvBot\)/.test(cli));
   // '한 판 더' 는 남긴다 — 같은 모드로 바로 하는 빠른 길이다
   ok("'한 판 더' 를 없애지 않았다", /id="rematchBtn"/.test(fs.readFileSync(path.join(root, 'public/index.html'), 'utf8')));
+  {
+    // 상대가 먼저 눌렀다는 것을 글줄로만 알리면, 눈이 버튼이 아니라 문장에
+    // 가 있어야 한다. 눌러야 할 그 자리에 붙인다.
+    const htm = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
+    const cli = fs.readFileSync(path.join(root, 'public/client.js'), 'utf8');
+    ok('버튼 자체에 표시가 붙는다', /한 판 더!<i class="rb-badge" id="rematchBadge">상대 준비!<\/i>/.test(htm)
+       && /#rematchBtn\.wanted \.rb-badge \{ display:block;/.test(htm));
+    // box-shadow 를 무한히 애니메이션하면 매 프레임 다시 그린다 — 고리는 transform 으로
+    ok('버튼도 같이 숨쉰다', /#rematchBtn\.wanted::after \{[\s\S]{0,180}animation:rbRing/.test(htm)
+       && /@keyframes rbRing \{ from \{ transform:scale\(1\)/.test(htm));
+    ok('상대가 누르면 켠다', /socket\.on\('rematch_wanted'[\s\S]{0,200}rematchMark\(true\)/.test(cli));
+    ok('새 판이 열리면 끈다', (cli.match(/rematchMark\(false\)/g) || []).length >= 2);
+    // 결과창을 안 보고 있을 수도 있다
+    ok('소리로도 알린다', /rematchMark\(true\);[\s\S]{0,160}sfx\('ping'\)/.test(cli));
+    // 세 나라 말로 다 나와야 한다
+    for (const f of ['public/i18n.js', 'public/lang-ja.js', 'public/lang-zh.js'])
+      ok(f.replace('public/', '') + ' 에 배지 문구', /'상대 준비!':/.test(fs.readFileSync(path.join(root, f), 'utf8')));
+  }
 }
 
 console.log('③ 진짜로 방 → 판 → 방 → 다른 모드');

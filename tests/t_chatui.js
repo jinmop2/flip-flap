@@ -85,18 +85,40 @@ console.log('\n④ 채팅 머리 — 안 쓸 때는 작은 동그라미');
   // 끊김 덮개(44)가 떴을 때 그 위에 동그라미가 떠 있으면 안 된다
   ok('덮개보다는 아래층', /#chatHead \{[\s\S]{0,120}z-index:43;/.test(htm));
   // 손가락은 누를 때도 1~2px 흔들린다 — 그 안쪽은 '눌렀다' 로 본다
-  ok('누르면 열리고 끌면 안 열린다', /if \(!moved\) \{ toggleGameChat\(true\); return; \}/.test(cli)
+  ok('누르면 열리고 끌면 안 열린다', /if \(!moved\) \{ endDrag\(\); toggleGameChat\(true\); return; \}/.test(cli)
      && /Math\.abs\(e\.clientX - sx\) \+ Math\.abs\(e\.clientY - sy\) < 5/.test(cli));
   // 한가운데 떠 있으면 판을 가린다
   ok('놓으면 가까운 변에 붙는다', /chPos\.side = \(r\.left \+ r\.width \/ 2\) < window\.innerWidth \/ 2 \? 'l' : 'r'/.test(cli));
   // 픽셀로 적어 두면 화면이 작아졌을 때 밖으로 나간다
-  ok('자리는 변·세로비율로 적어 둔다', /chPos = \{ side: 'r', ry: 0\.62 \}/.test(cli)
+  ok('자리는 변·세로비율로 적어 둔다', /chPos = \{ side: 'r', ry: 0\.62, off: false \}/.test(cli)
      && /localStorage\.setItem\(CH_KEY/.test(cli));
   ok('화면이 바뀌면 다시 앉힌다', /window\.addEventListener\('resize', chApply\)/.test(cli));
   // gcPaintDot 는 인라인 style 을 '' 로 되돌려 켠다 — CSS 기본이 none 이면 영영 안 켜진다
   ok('안 읽은 것이 있으면 점이 붙는다', /'chatHeadDot'\]/.test(cli)
      && /\.ch-dot \{[\s\S]{0,140}display:block; \}/.test(htm)
      && /id="chatHeadDot" style="display:none"/.test(htm));
+}
+
+console.log('\n⑤ 끌어서 ✕ 로 치운다');
+{
+  // 메신저와 같은 손짓 — 꾹 눌러 끌면 아래에 ✕ 가 올라오고, 거기 놓으면 없어진다.
+  ok('버리는 자리가 있다', /<div id="chatHeadX"/.test(htm)
+     && /#chatHeadX \{[\s\S]{0,200}bottom:calc\(38px \+ var\(--safe-b\)\)/.test(htm));
+  // 어디로 가져가야 없앨 수 있는지 보여야 손이 간다
+  ok('끌기 시작할 때만 올라온다', /#chatHeadX\.on \{ display:flex;/.test(htm)
+     && /if \(x\) x\.classList\.add\('on'\)/.test(cli));
+  // 안 움직여도 꾹 누르고 있으면 내민다 — "길게 눌러서 가져간다" 는 그 손짓이다
+  ok('길게 누르면 내민다', /hold = setTimeout\(beginDrag, 320\)/.test(cli));
+  // 손끝으로 정확히 맞추지 않아도 되게
+  ok('가까이 가면 빨려 들어간다', /const CH_MAGNET = 62;/.test(cli)
+     && /if \(d < CH_MAGNET\) \{ armed = true;/.test(cli)
+     && /#chatHeadX\.armed \{/.test(htm));
+  ok('놓으면 없어진다', /if \(wasArmed\) \{[\s\S]{0,120}chPos\.off = true;/.test(cli)
+     && /#chatHead\.gone \{ display:none !important; \}/.test(htm));
+  // 없앤 사람이 되돌릴 길을 모르면 "채팅이 사라졌다" 로 남는다 — 길이 둘 있어야 한다
+  ok('새 메시지가 오면 돌아온다', /function gcPaintDot\(\)[\s\S]{0,400}if \(on\) \{ try \{ chWake\(\); \}/.test(cli));
+  ok('메뉴에서 열어도 돌아온다', /if \(show\) \{ try \{ chWake\(\); \}/.test(cli));
+  ok('치웠다고 말해 준다', /채팅 동그라미를 치웠어요/.test(cli));
 }
 
 console.log('\n' + (bad ? 'FAIL ' + bad + '/' + n : 'OK ' + n + '개'));

@@ -5154,60 +5154,111 @@ function gcRestorePos() {
 // 안 쓸 때는 작은 동그라미로 판 가장자리에 붙어 있다가, 누르면 창이 열린다.
 // 여태 채팅은 메뉴를 열고 그 안에서 한 번 더 찾아야 했다 — 판을 두면서
 // 그러기는 번거롭다. 끌어서 옮길 수 있고, 놓으면 가까운 쪽 변에 붙는다.
+// 아래쪽 ✕ 로 끌고 가면 치울 수 있다(메신저와 같은 손짓).
 const CH_KEY = 'ff_chathead';
 const CH_SIZE = 46, CH_PAD = 12;
+const CH_MAGNET = 62;                 // ✕ 에 이만큼 가까우면 빨려 들어간다
 // 자리는 '어느 변에, 세로로 몇 %' 로 적어 둔다. 화면 크기가 달라져도(회전·
 // 주소창) 같은 자리로 온다 — 픽셀로 적어 두면 작은 화면에서 밖으로 나간다.
-let chPos = { side: 'r', ry: 0.62 };
+let chPos = { side: 'r', ry: 0.62, off: false };
 function chSave() { try { localStorage.setItem(CH_KEY, JSON.stringify(chPos)); } catch (_) {} }
 function chLoad() {
   try {
     const p = JSON.parse(localStorage.getItem(CH_KEY) || 'null');
-    if (p && (p.side === 'l' || p.side === 'r') && typeof p.ry === 'number') chPos = p;
+    if (p && (p.side === 'l' || p.side === 'r') && typeof p.ry === 'number') chPos = { off: false, ...p };
   } catch (_) {}
 }
 function chBounds() {
-  const top = CH_PAD + (parseInt(getComputedStyle(document.documentElement)
-    .getPropertyValue('--safe-t')) || 0);
-  const bot = window.innerHeight - CH_SIZE - CH_PAD
-    - (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-b')) || 0);
+  const cs = getComputedStyle(document.documentElement);
+  const top = CH_PAD + (parseInt(cs.getPropertyValue('--safe-t')) || 0);
+  const bot = window.innerHeight - CH_SIZE - CH_PAD - (parseInt(cs.getPropertyValue('--safe-b')) || 0);
   return { top, bot: Math.max(top, bot) };
 }
 function chApply() {
   const el = document.getElementById('chatHead'); if (!el) return;
+  el.classList.toggle('gone', !!chPos.off);
   const b = chBounds();
   el.style.top = Math.round(b.top + (b.bot - b.top) * chPos.ry) + 'px';
   el.style.left = (chPos.side === 'l' ? CH_PAD : window.innerWidth - CH_SIZE - CH_PAD) + 'px';
 }
+// 치웠어도 다시 부를 길이 둘 있어야 한다 — 안 그러면 없앤 사람은 되돌릴
+// 방법을 모른 채 "채팅이 사라졌다" 로 남는다.
+//   ① 새 메시지가 오면 저절로 돌아온다 (메신저와 같다)
+//   ② 메뉴에서 채팅을 열면 돌아온다
+function chWake() {
+  if (!chPos.off) return;
+  chPos.off = false; chSave(); chApply();
+}
 (function chInit() {
   const el = document.getElementById('chatHead'); if (!el) return;
+  const x = document.getElementById('chatHeadX');
   chLoad(); chApply();
   window.addEventListener('resize', chApply);
 
   // 누른 것인지 끈 것인지는 움직인 거리로 가른다. 손가락은 누를 때도
   // 1~2px 은 흔들리므로, 그 안쪽은 '눌렀다' 로 본다.
-  let id = null, sx = 0, sy = 0, ox = 0, oy = 0, moved = false;
+  let id = null, sx = 0, sy = 0, ox = 0, oy = 0, moved = false, armed = false, hold = null;
+  const xCenter = () => {
+    if (!x) return null;
+    const r = x.getBoundingClientRect();
+    return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+  };
+  // 끌기 시작 — ✕ 를 내민다. 어디로 가져가야 없앨 수 있는지 보여야 손이 간다.
+  const beginDrag = () => {
+    if (moved) return;
+    moved = true;
+    el.classList.add('dragging');
+    if (x) x.classList.add('on');
+    try { if (navigator.vibrate) navigator.vibrate(8); } catch (_) {}
+  };
+  const endDrag = () => {
+    el.classList.remove('dragging');
+    if (x) x.classList.remove('on', 'armed');
+    if (hold) { clearTimeout(hold); hold = null; }
+  };
+
   el.addEventListener('pointerdown', (e) => {
-    id = e.pointerId; moved = false;
+    id = e.pointerId; moved = false; armed = false;
     const r = el.getBoundingClientRect();
     sx = e.clientX; sy = e.clientY; ox = e.clientX - r.left; oy = e.clientY - r.top;
     // 손가락이 이미 놓인 뒤면 붙잡기가 터진다 — 붙잡기는 거들 뿐이라, 터져도 끌기는 된다
     try { el.setPointerCapture(id); } catch (_) {}
+    // 꾹 누르고 있으면 안 움직여도 ✕ 를 내민다 — "길게 눌러서 가져간다" 는 그 손짓이다
+    if (hold) clearTimeout(hold);
+    hold = setTimeout(beginDrag, 320);
   });
   el.addEventListener('pointermove', (e) => {
     if (id === null || e.pointerId !== id) return;
     if (!moved && Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) < 5) return;
-    if (!moved) { moved = true; el.classList.add('dragging'); }
+    beginDrag();
     const b = chBounds();
-    el.style.left = Math.max(0, Math.min(window.innerWidth - CH_SIZE, e.clientX - ox)) + 'px';
-    el.style.top = Math.max(b.top, Math.min(b.bot, e.clientY - oy)) + 'px';
+    let left = Math.max(0, Math.min(window.innerWidth - CH_SIZE, e.clientX - ox));
+    let top = Math.max(b.top, Math.min(b.bot, e.clientY - oy));
+    // ✕ 가까이 가면 빨려 들어간다. 손끝으로 정확히 맞추지 않아도 되게.
+    const c = xCenter();
+    armed = false;
+    if (c) {
+      const d = Math.hypot(left + CH_SIZE / 2 - c.cx, top + CH_SIZE / 2 - c.cy);
+      if (d < CH_MAGNET) { armed = true; left = c.cx - CH_SIZE / 2; top = c.cy - CH_SIZE / 2; }
+    }
+    if (x) x.classList.toggle('armed', armed);
+    el.classList.toggle('over-x', armed);
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
   });
   const end = (e) => {
     if (id === null || (e && e.pointerId !== id)) return;
     try { el.releasePointerCapture(id); } catch (_) {}
     id = null;
-    if (!moved) { toggleGameChat(true); return; }
-    el.classList.remove('dragging');
+    if (!moved) { endDrag(); toggleGameChat(true); return; }
+    const wasArmed = armed;
+    endDrag();
+    el.classList.remove('over-x');
+    if (wasArmed) {
+      chPos.off = true; chSave(); chApply();
+      toast('채팅 동그라미를 치웠어요. 새 메시지가 오면 다시 나타나요.', 2600);
+      return;
+    }
     // 놓으면 가까운 쪽 변에 붙는다 — 한가운데 떠 있으면 판을 가린다
     const r = el.getBoundingClientRect();
     const b = chBounds();
@@ -5225,6 +5276,8 @@ window.toggleGameChat = function (force) {
   p.classList.toggle('show', show);
   // 창이 열려 있는 동안은 채팅 머리를 숨긴다 — 둘이 같이 뜨면 판을 두 번 가린다
   document.body.classList.toggle('gc-open', show);
+  // 메뉴에서 열었다면 치워 둔 동그라미도 되살린다 — 되돌릴 두 번째 길이다
+  if (show) { try { chWake(); } catch (_) {} }
   if (!show) return;
   gcRestorePos();   // 지난번에 옮겨 둔 자리로
   p.classList.add('intro');                       // 열 때 한 번만 미끄러져 들어온다
@@ -5368,6 +5421,9 @@ async function gcRefreshUnread() {
 let gcClanUnread = 0;
 function gcPaintDot() {
   const on = Object.keys(gcUnread).length > 0 || gcClanUnread > 0;
+  // 치워 둔 동그라미는 새 메시지가 오면 저절로 돌아온다 (메신저와 같다).
+  // 안 그러면 없앤 사람은 되돌릴 방법을 모른 채 "채팅이 사라졌다" 로 남는다.
+  if (on) { try { chWake(); } catch (_) {} }
   for (const id of ['chatDot', 'chatDotG', 'chatDot4', 'chatDot4M', 'chatDotTv', 'chatDotTvM',
                     'chatHeadDot']) {
     const d = document.getElementById(id); if (d) d.style.display = on ? '' : 'none';
@@ -5613,8 +5669,17 @@ function rematch(btn) {
     document.getElementById('rematchNote').textContent = '상대에게 재대결 신청 — 대기 중…';
   }
 }
+// 상대가 먼저 눌렀다는 표시를 켜고 끈다. 글줄로만 알리면 눈이 버튼이 아니라
+// 문장에 가 있어야 한다 — 눌러야 할 그 자리에 붙인다.
+function rematchMark(on) {
+  const rb = document.getElementById('rematchBtn');
+  if (rb) rb.classList.toggle('wanted', !!on);
+}
 socket.on('rematch_wanted', () => {
   document.getElementById('rematchNote').innerHTML = '💬 상대가 <b>재대결</b>을 원해요! 재대결 버튼을 누르세요';
+  rematchMark(true);
+  // 결과창을 안 보고 있을 수도 있다 — 소리로도 한 번 알린다
+  try { sfx('ping'); } catch (_) {}
 });
 
 // ── 내 차례 알림 (탭 제목 깜빡임 + 소리) ───────────────────
@@ -7166,6 +7231,7 @@ function onGameStart({ vsBot, difficulty: diff, roomId, nicks, profiles, spectat
   closeModePanels();   // 열려 있던 솔로/멀티 팝업 닫기 (관전 진입 등)
   hideGrace();
   document.getElementById('rematchNote').textContent = '';
+  rematchMark(false);
   const gr = document.getElementById('goRewards'); if (gr) { gr.textContent = ''; gr.style.display = 'none'; }
   const rb = document.getElementById('rematchBtn'); if (rb) { rb.disabled = false; rb.style.opacity = '1'; }
   prevPhase = null; selectedBidCard = null; prevMyAction = false; stopTitleBlink();
@@ -8382,6 +8448,7 @@ socket.on('tv_begin', (d) => {
   const go = document.getElementById('gameOver');
   if (go) go.style.display = 'none';
   const note = document.getElementById('rematchNote'); if (note) note.textContent = '';
+  rematchMark(false);
   // 카드백 스킨은 이 두 값을 보고 붙는다 — 안 넣어 두면 트웰브만 맨 뒷면이 된다
   gameProfiles = d.profiles || null; myIndex = d.me;
   tvOpen();

@@ -76,7 +76,17 @@ ok('막히면 다음 손짓마다 다시 시도한다', /function armKick/.test(
 
 // 알림·관전·손패 탭·랭킹
 ok('로비 탭바 배지에 안 읽은 메시지를 얹는다', /function paintSocialBadges/.test(cli) && /gcClanUnread/.test(cli));
-ok('메시지가 오면 로비 배지도 다시 칠한다', /gcPaintDot[\s\S]{0,400}paintSocialBadges\(\)/.test(cli));
+// 글자 거리로 재면 함수가 조금만 길어져도 헛나간다 — 함수 안에 있는지를 본다
+ok('메시지가 오면 로비 배지도 다시 칠한다', (() => {
+  const i = cli.indexOf('function gcPaintDot()');
+  if (i < 0) return false;
+  let j = cli.indexOf('{', i), depth = 0;
+  for (let k = j; k < cli.length; k++) {
+    if (cli[k] === '{') depth++;
+    else if (cli[k] === '}' && --depth === 0) return /paintSocialBadges\(\)/.test(cli.slice(j, k));
+  }
+  return false;
+})());
 ok('친구 목록에 관전 버튼', /watchFriend\('\$\{esc\(f\.watch\)\}',\$\{f\.watchQuad/.test(cli));
 ok('관전은 서버에 spectate 로 붙는다', /socket\.emit\('spectate'/.test(cli));
 ok('시계는 탭을 삼키지 않는다', /#mebar \.timer[^}]*pointer-events:none/.test(htm));

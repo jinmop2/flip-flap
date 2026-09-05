@@ -473,6 +473,7 @@
     '게임 종료': 'Game Over',
     '결과 공개!': 'Revealing!',
     '패배…': 'Defeat…',
+    '상대 준비!': 'Ready!',
     '경매 방식을 고르세요': 'Choose the auction type',
     '배팅 카드를 고른 뒤 확정을 누르세요': 'Pick a bid card, then confirm',
     '내놓을 카드를 고른 뒤 확정을 누르세요': 'Pick a card to offer, then confirm',
