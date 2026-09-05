@@ -767,6 +767,8 @@
   };
 
   function showOver(s) {
+    // 남은 카드 표가 열려 있으면 결과창을 덮는다 — 판이 끝나면 걷는다
+    { const lp = $('q-leftPanel'); if (lp) lp.classList.remove('show'); }
     const order = (s.over.order && s.over.order.length) ? s.over.order : null;
     const rank = order || [s.over.winner, ...[0, 1, 2, 3].filter((i) => i !== s.over.winner)];
     if (s.over.winner === mySeat)

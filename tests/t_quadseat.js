@@ -34,7 +34,8 @@ ok('오른쪽은 시계로 돈다', /\.q-seat\.at-r \{[^}]*transform:rotate\(90d
 // 가운데를 축으로 돌리면 폭이 내용에 따라 변해 절반이 화면 밖으로 나간다.
 // 모서리를 축으로 잡아야 "가장자리에 붙어 안쪽으로 깊이만큼" 이 성립한다.
 ok('도는 축은 모서리다', (html.match(/transform-origin:0 0; transform:rotate\((-)?90deg\)/g) || []).length === 2);
-ok('옆자리 폭은 고정이다', /\.q-seat\.at-l, \.q-seat\.at-r \{ width:var\(--q-seat-w/.test(html));
+// 폭은 자리마다 고정이다 — 옆자리는 그 폭이 화면 세로로 눕는다
+ok('자리 폭은 고정이다', /\.q-seat \{[\s\S]{0,160}width:var\(--q-seat-w/.test(html));
 // 명패는 가장자리, 낸 카드는 판 안쪽 — DOM 순서가 곧 깊이 순서다
 ok('명패가 먼저, 앞자리가 나중', /d\.appendChild\(bar\); d\.appendChild\(front\);/.test(c4));
 

@@ -142,7 +142,7 @@ console.log('\n⑥ 2인전과 결이 맞는가');
   // 자기에게서 먼 쪽(판 한가운데)이다 — 어느 자리든 칸을 180도 돌리면 맞는다.
   // 옆자리는 자리가 이미 ∓90 도라, 거기에 180 을 더한 값이 그 사람의 '위' 다.
   // (옆자리를 안 돌렸을 때 "카드를 180도 돌려서 낸다" 는 말을 들었다.)
-  ok('낸 카드는 각자 보는 쪽을 향한다', /\.q-seat \.q-bslot \{ transform:rotate\(180deg\); \}/.test(html));
+  ok('낸 카드는 각자 보는 쪽을 향한다', /\.q-seat \.q-bslot, \.q-seat \.q-oacq \{ transform:rotate\(180deg\); \}/.test(html));
   // 판은 네 자리를 재서 그린다. 카드가 없을 때와 있을 때 자리 깊이가 달라지면
   // 배팅할 때마다 판이 통째로 커졌다 작아졌다 한다(재 보니 28px).
   ok('자리 깊이를 못 박아 판이 안 흔들린다',
@@ -172,6 +172,27 @@ console.log('\n⑥ 2인전과 결이 맞는가');
   ok('덱 층이 삐져나오는 만큼 자리를 잡는다', /#q-deckstack \{[^}]*width:54px/.test(html));
   // 칸 안(bottom:2px)에 두었더니 장수가 카드 밑동을 5px 파고들어 무늬에 묻혔다
   ok('덱 장수는 카드 아래에 앉는다', /#q-deckstack \.q-dcount \{[^}]*bottom:-7px/.test(html));
+
+  // 딴 카드도 낸 카드와 같이 그 사람이 보는 쪽을 향한다
+  ok('딴 카드도 자기 쪽으로 놓인다', /\.q-seat \.q-bslot, \.q-seat \.q-oacq \{ transform:rotate\(180deg\); \}/.test(html));
+  // [딴 카드][낸 카드] 를 한 덩어리로 가운데 맞춤하면, 배팅할 때마다 딴 카드가 밀린다
+  ok('낸 카드는 줄 끝에 못 박는다', /\.q-sfront \{[\s\S]{0,140}justify-content:space-between;/.test(html));
+  // 명패를 축에 맞춰야 거울로 앉은 두 사람의 명패가 나란해진다
+  ok('명패는 자리 한가운데, 시계는 그 옆', /\.q-sbar \{[\s\S]{0,160}grid-template-columns:1fr auto 1fr;/.test(html)
+     && /\.q-sbar \.q-splate \{ grid-column:2; grid-row:1; \}/.test(html)
+     && /\.q-sbar \.q-stime \{ grid-column:3; grid-row:1;/.test(html));
+  // 적어 놓은 차례가 [시계][명패] 라, 줄을 안 박으면 명패가 다음 줄로 내려간다
+  ok('한 줄로 못 박는다', (html.match(/grid-row:1/g) || []).length >= 2);
+  // 거울로 앉은 둘은 같은 '명패 오른쪽' 이 화면 위·아래로 갈린다
+  ok('왼쪽 시계만 반대 칸에 건다', /\.q-seat\.at-l \.q-stime \{ grid-column:1; justify-self:end; \}/.test(html));
+  // 가로로 들이면 거울로 앉은 두 자리가 서로 반대쪽으로 밀려 어긋난다
+  ok('가장자리 여백은 깊이 쪽으로', /\.q-seat\.at-l, \.q-seat\.at-r \{ padding-top:3px; \}/.test(html));
+
+  // #q-table 이 z-index:1 로 쌓임 맥락을 만들어, 그 안의 패널은 자리(z 3) 밑에 깔렸다
+  ok('남은 카드 표가 자리 위에 뜬다', /<div id="q-opps"><\/div>[\s\S]{0,400}<div id="q-leftPanel">/.test(html)
+     && /#q-leftPanel \{[\s\S]{0,200}z-index:12;/.test(html));
+  ok('남은 카드 표는 판 한가운데', /#q-leftPanel \{[\s\S]{0,140}top:50%; left:50%;/.test(html));
+  ok('판이 끝나면 표를 걷는다', /const lp = \$\('q-leftPanel'\); if \(lp\) lp\.classList\.remove\('show'\)/.test(c4));
 
   // 아래 차례: 낸 카드 → 획득 → 내 자리 → 손패 → 확정.
   // 확정을 손패 위에 두던 시절엔 고를 카드와 누를 버튼이 붙어 손가락이 엉켰다.

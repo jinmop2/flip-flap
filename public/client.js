@@ -3422,18 +3422,24 @@ function closeAllNavModals() {
 // 툭 끊기지 않고 이어진 동작으로 읽힌다. 덮은 동안은 손가락도 막아
 // 두 번 눌려 엉키는 일이 없다.
 let veilBusy = false;
+// 막이 떠 있는 최소 시간. 고리가 반 바퀴는 돌아야 '넘어가는 중' 으로 읽힌다 —
+// 눈에 안 잡힐 만큼 짧으면 화면이 한 번 깜빡인 것으로만 보인다.
+const VEIL_MIN = 320;
 function veil(fn) {
   const v = document.getElementById('fadeVeil');
   if (!v) { fn(); return; }
   if (veilBusy) { fn(); return; }            // 이미 넘어가는 중이면 그냥 처리
   veilBusy = true;
   v.classList.add('on');
+  const t0 = Date.now();
   setTimeout(() => {
     try { fn(); } finally {
       // 새 화면이 한 번 그려진 뒤에 걷는다 — 걷고 나서 그리면 다시 깜빡인다
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        v.classList.remove('on');
-        setTimeout(() => { veilBusy = false; }, 90);
+        setTimeout(() => {
+          v.classList.remove('on');
+          setTimeout(() => { veilBusy = false; }, 90);
+        }, Math.max(0, VEIL_MIN - (Date.now() - t0)));
       }));
     }
   }, 85);

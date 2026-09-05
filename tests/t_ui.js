@@ -93,5 +93,19 @@ ok('움직이지 않는 칸을 잰다',
 ok('가로 모드에서는 밀어 둔 자리를 푼다',
    /function gAlignRow\(\)[\s\S]{0,400}for \(const el of \[deck, rail, turn\]\) if \(el\) el\.style\.marginTop = '';\s*\n\s*return;/.test(cli));
 
+console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
+{
+  // 여태 막이 새까맣기만 해서 잠깐 화면이 꺼진 것처럼 보였다
+  ok('막에 고리와 로고가 있다', /<div id="fadeVeil">[\s\S]{0,240}fv-ring[\s\S]{0,160}fv-logo/.test(htm)
+     && /<b>FLIP<\/b><i>FLAP<\/i>/.test(htm));
+  // 늘 돌려 두면 안 보이는 채로 판이 도는 내내 폰을 깨워 둔다
+  ok('막이 켜졌을 때만 돈다', /#fadeVeil\.on \.fv-ring \{ animation:fvSpin/.test(htm)
+     && !/^\s*\.fv-ring \{[^}]*animation:/m.test(htm));
+  // 눈에 안 잡힐 만큼 짧으면 화면이 한 번 깜빡인 것으로만 보인다
+  ok('고리가 보일 만큼은 머문다', /const VEIL_MIN = 320;/.test(cli)
+     && /Math\.max\(0, VEIL_MIN - \(Date\.now\(\) - t0\)\)/.test(cli));
+  ok('로고는 로비 로고와 같은 백금색', /\.fv-logo b, \.fv-logo i \{[\s\S]{0,400}-webkit-text-fill-color:transparent/.test(htm));
+}
+
 console.log(`\n결과: ${pass} 통과, ${fail} 실패`);
 process.exit(fail ? 1 : 0);
