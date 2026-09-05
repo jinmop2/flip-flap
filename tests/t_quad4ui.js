@@ -175,8 +175,13 @@ console.log('\n⑥ 2인전과 결이 맞는가');
 
   // 딴 카드도 낸 카드와 같이 그 사람이 보는 쪽을 향한다
   ok('딴 카드도 자기 쪽으로 놓인다', /\.q-seat \.q-bslot, \.q-seat \.q-oacq \{ transform:rotate\(180deg\); \}/.test(html));
-  // [딴 카드][낸 카드] 를 한 덩어리로 가운데 맞춤하면, 배팅할 때마다 딴 카드가 밀린다
-  ok('낸 카드는 줄 끝에 못 박는다', /\.q-sfront \{[\s\S]{0,140}justify-content:space-between;/.test(html));
+  // 낸 카드는 그 사람 한가운데 — 명패와 같은 축이라 누가 낸 것인지가 자리로 읽힌다.
+  // 전리품은 옆 칸으로 물린다: 맞은편은 자기 앞(화면 왼쪽), 옆자리 둘은 조금 위쪽.
+  // (한 덩어리로 가운데 맞춤하면 배팅할 때마다 전리품이 밀려 다닌다.)
+  ok('낸 카드는 자기 한가운데', /\.q-sfront \{[\s\S]{0,160}grid-template-columns:1fr auto 1fr;/.test(html)
+     && /\.q-sfront \.q-bslot \{ grid-column:2; grid-row:1; justify-self:center;/.test(html));
+  ok('전리품은 옆으로 물린다', /\.q-sfront \.q-oacq  \{ grid-column:1; grid-row:1; justify-self:end; \}/.test(html)
+     && /\.q-seat\.at-l \.q-sfront \.q-oacq \{ grid-column:3; justify-self:start; \}/.test(html));
   // 명패를 축에 맞춰야 거울로 앉은 두 사람의 명패가 나란해진다
   ok('명패는 자리 한가운데, 시계는 그 옆', /\.q-sbar \{[\s\S]{0,160}grid-template-columns:1fr auto 1fr;/.test(html)
      && /\.q-sbar \.q-splate \{ grid-column:2; grid-row:1; \}/.test(html)
@@ -594,8 +599,10 @@ console.log('\n⑮ 다인전도 2인전과 같은 판 위에서 논다');
      && /\.q-seat\.at-r \{ left:100%;/.test(htm2)
      && /transform:rotate\(-90deg\)/.test(htm2) && /transform:rotate\(90deg\)/.test(htm2));
   // 사람이 레일에 걸터앉으므로 판의 네 변은 네 사람의 한가운데를 지난다
-  ok('판이 네 사람을 품는다', /mid\(q\('\.q-seat\.at-l'\), 'x'\)/.test(cli2)
-     && /mid\(q\('\.q-seat\.at-r'\), 'x'\)/.test(cli2));
+  // 변은 '사람'(명패)을 지나야 한다. 자리 상자를 재면 그 안에 명패와 카드가
+  // 같이 들어 있어 변이 둘 사이를 지나고, 그 사람 카드가 판 밖에 놓인다.
+  ok('판이 네 사람을 품는다', /mid\(q\('\.q-seat\.at-l \.q-splate'\), 'x'\)/.test(cli2)
+     && /mid\(q\('\.q-seat\.at-r \.q-splate'\), 'x'\)/.test(cli2));
   // 판은 자리를 잡은 요소라 흐름에 있는 구역들 위에 얹힌다 — 확정 버튼이 깔렸었다.
   // 자리 칸은 이제 판 위에 얹힌 겹이라 여기서 뺐다.
   ok('구역이 판보다 위에 있다', /#q-table, #q-me \{ position:relative; z-index:1; \}/.test(htm2));

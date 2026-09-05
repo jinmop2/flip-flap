@@ -145,9 +145,12 @@ function quadLayTable() {
     return axis === 'x' ? b.left + b.width / 2 : b.top + b.height / 2;
   };
   const q = (sel) => document.querySelector(sel);
-  const left0 = mid(q('.q-seat.at-l'), 'x');
-  const right0 = mid(q('.q-seat.at-r'), 'x');
-  const top0 = mid(q('.q-seat.at-t'), 'y');
+  // 판의 변은 '사람' 을 지나야 한다 — 곧 명패다. 자리 상자를 재면 그 안에
+  // 명패와 카드가 같이 들어 있어, 변이 둘 사이를 지나가 버린다. 그러면 그
+  // 사람의 딴 카드·낸 카드가 판 밖에 놓인다("패들이 판 위에 안 있다").
+  const left0 = mid(q('.q-seat.at-l .q-splate'), 'x');
+  const right0 = mid(q('.q-seat.at-r .q-splate'), 'x');
+  const top0 = mid(q('.q-seat.at-t .q-splate'), 'y');
   const me0 = mid(document.getElementById('q-mebar'), 'y');
   const myhand = r('q-myhand');
 
@@ -164,7 +167,7 @@ function quadLayTable() {
   // (경매대를 내리면 판도 같이 내려가 제자리걸음이 된다.)
   // 그래서 옆에 앉은 사람에게서 뽑는다. 다른 변이 사람에게서 나오는 것과 같다.
   const sideTop = (() => {
-    const a = q('.q-seat.at-l'), b2 = q('.q-seat.at-r');
+    const a = q('.q-seat.at-l .q-splate'), b2 = q('.q-seat.at-r .q-splate');
     const t = [a, b2].map((e) => { const r = e && e.getBoundingClientRect(); return r && r.height ? r.top : null; })
                      .filter((x) => x != null);
     return t.length ? Math.min(...t) : null;
@@ -1537,6 +1540,15 @@ function openLeaderboard() {
   const modal = document.getElementById('lbModal'), list = document.getElementById('lbList');
   if (!cacheGet('lb')) list.innerHTML = '<div class="lb-empty">불러오는 중…</div>';
   modal.classList.add('show');
+  // 열 때만 올라온다. 켜 두면 새로 받아 다시 그릴 때마다 또 올라와,
+  // 가만히 보고 있는데 목록이 들썩인다.
+  const box = document.getElementById('lbBox');
+  if (box) {
+    box.classList.add('lb-in');
+    clearTimeout(openLeaderboard._t);
+    // 줄이 스무 개면 마지막 줄이 1.3초쯤에 올라온다 — 그보다 넉넉히 둔다
+    openLeaderboard._t = setTimeout(() => box.classList.remove('lb-in'), 2200);
+  }
   return showThenRefresh('lb',
     () => fetch('/api/leaderboard').then((x) => x.json()), renderLeaderboard);
 }
@@ -1574,9 +1586,10 @@ async function renderLeaderboard(r) {
     }
 
     // 시상대에 올린 셋은 목록에서 뺀다 — 같은 사람이 두 번 나올 이유가 없다
-    r.players.slice(3).forEach(p => {
+    r.players.slice(3).forEach((p, i) => {
       const row = document.createElement('div');
       row.className = 'lb-row' + (myNick && p.nick === myNick ? ' me' : '');
+      row.style.setProperty('--i', String(i));   // 차례로 올라오게 — 몇 번째 줄인지
       row.innerHTML = `<span class="lb-no${p.no <= 3 ? ' top' : ''}">${p.no <= 3 ? rankIco(['🥇','🥈','🥉'][p.no-1]) : p.no}</span>
         <span class="lb-rank" style="color:${p.rankColor}">${faceOf(p)}</span>
         <span class="lb-nick${ncClass(p.nickColor)}${npClass(p.plate)}">${nickHTML(p.nick, p.nickColor)}</span>

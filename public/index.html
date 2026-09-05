@@ -115,7 +115,12 @@
       #waitCard .wc-mode { padding:6px 4px; }
     }
     .logo { text-align:center; line-height:.9; }
+    /* 글자를 그 자체로 오려 내는 칠(background-clip:text)이라, 칠할 바탕은
+       요소 상자만큼이다. line-height 가 글자보다 작아(51px vs 57px) 상자를
+       벗어난 부분은 칠이 안 들어가 잘려 보였다 — FLAP 의 P 가 그랬다.
+       안쪽 여백으로 바탕을 넓히고, 넓힌 만큼 바깥 여백으로 도로 줄인다. */
     .logo h1, .logo .flap {
+      padding:9px 6px; margin:-9px -6px;
       font-family:'Bangers',cursive; font-size:4.4rem; letter-spacing:5px;
       background:linear-gradient(180deg,#ffffff 0%,#d8e4f8 38%,#93a8cc 62%,#4e5e7e 100%);
       -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
@@ -126,7 +131,27 @@
     }
     /* FLAP 을 끌어올려 붙여 놨더니 FLIP 의 아랫부분과 겹쳤다.
        글자 크기와 뒤집힌 모양은 그대로 두고 간격만 벌린다. */
-    .logo .flap { transform:rotate(180deg); margin-top:-2px; display:inline-block; opacity:.92; }
+    .logo .flap { transform:rotate(180deg); margin-top:-11px; display:inline-block; opacity:.92; }
+    /* 이따금 불이 한 번 나갔다 들어온다 — 네온 간판처럼. 7초에 한 번만이라
+       눈에 거슬리지 않고, opacity 만 움직여서 그리는 값이 싸다
+       (filter·box-shadow 를 무한히 애니메이션하면 매 프레임 다시 그린다). */
+    #lobby .logo h1 { animation:logoFlicker 7s steps(1, end) infinite; }
+    #lobby .logo .flap { animation:logoFlicker 7s steps(1, end) infinite .16s; }
+    @keyframes logoFlicker {
+      0%, 86%   { opacity:1; }
+      87%       { opacity:.22; }
+      88.5%     { opacity:1; }
+      90%       { opacity:.38; }
+      91%       { opacity:1; }
+      93%       { opacity:.15; }
+      94.5%     { opacity:1; }
+      100%      { opacity:1; }
+    }
+    /* FLAP 은 원래 조금 흐리다 — 깜빡임이 그 값을 덮어쓰지 않게 따로 잡는다 */
+    #lobby .logo .flap { opacity:.92; }
+    @media (prefers-reduced-motion:reduce) {
+      #lobby .logo h1, #lobby .logo .flap { animation:none; }
+    }
     /* 로고 아래 마감 줄 — 가운데 마름모가 로고와 아래 내용을 갈라 준다.
        예전엔 로고가 그냥 허공에 떠 있어 어디까지가 제목인지가 안 보였다. */
     .logo-rule { display:flex; align-items:center; gap:10px; width:172px; margin:13px auto 0; }
@@ -1113,7 +1138,8 @@
        로비 로고와 같은 백금색·같은 글꼴을 작게 줄여 쓴다. */
     .fv-logo { text-align:center; line-height:.92; perspective:420px; }
     .fv-logo b, .fv-logo i {
-      display:block; font-family:'Bangers',cursive; font-style:normal;
+      display:block; padding:6px 5px; margin:-6px -5px;
+      font-family:'Bangers',cursive; font-style:normal;
       font-size:2rem; letter-spacing:3px;
       background:linear-gradient(180deg,#ffffff 0%,#d8e4f8 38%,#93a8cc 62%,#4e5e7e 100%);
       -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
@@ -1126,16 +1152,18 @@
     .fv-logo i { transform:rotate(180deg); opacity:.92; }
     /* 한 바퀴(1.7초) 안에서 앞뒤로 나눠 넘어간다 — 겹치면 둘이 동시에 돌아
        무슨 글자인지 안 읽힌다. 넘어간 뒤에는 제자리에서 기다린다(-360 ≡ 0). */
-    #fadeVeil.on .fv-logo b { animation:fvFlipUp 1.7s cubic-bezier(.5,.05,.4,1) infinite; }
-    #fadeVeil.on .fv-logo i { animation:fvFlapDown 1.7s cubic-bezier(.5,.05,.4,1) infinite; }
+    /* 넘어가는 결은 여유롭게. 빨리 홱 도니 급해 보였다 — 한 바퀴를 2.6초로
+       늘리고, 도는 구간도 넓혀 천천히 붙었다 천천히 떨어지게 한다. */
+    #fadeVeil.on .fv-logo b { animation:fvFlipUp 2.6s cubic-bezier(.45,.02,.3,1) infinite; }
+    #fadeVeil.on .fv-logo i { animation:fvFlapDown 2.6s cubic-bezier(.45,.02,.3,1) infinite; }
     @keyframes fvFlipUp {
       0%   { transform:rotateX(0deg); }
-      38%  { transform:rotateX(-360deg); }
+      44%  { transform:rotateX(-360deg); }
       100% { transform:rotateX(-360deg); }
     }
     @keyframes fvFlapDown {
       0%, 50% { transform:rotate(180deg) rotateX(0deg); }
-      88%     { transform:rotate(180deg) rotateX(360deg); }
+      94%     { transform:rotate(180deg) rotateX(360deg); }
       100%    { transform:rotate(180deg) rotateX(360deg); }
     }
     @media (prefers-reduced-motion:reduce) {
@@ -2028,12 +2056,20 @@
        거울로 앉은 두 자리에서 서로 반대쪽으로 밀려 4px 씩 어긋난다. */
     .q-seat.at-l, .q-seat.at-r { padding-top:3px; }
     .q-seat.at-t .q-sbar { padding-top:2px; }
-    /* 낸 카드는 늘 줄 끝에 놓는다. 여태 [딴 카드][낸 카드] 를 한 덩어리로
-       가운데 맞춤해서, 배팅할 때마다 딴 카드 더미가 옆으로 밀려 다녔다.
-       양끝에 못 박으면 딴 카드는 배팅과 상관없이 제자리에 있는다. */
-    .q-sfront { width:100%; display:flex; align-items:flex-start;
-      justify-content:space-between; gap:6px; }
-    .q-bslot { flex-shrink:0; }
+    /* 낸 카드는 그 사람 한가운데에 놓는다 — 명패와 같은 축이라, 누가 낸
+       카드인지가 자리만 보고 읽힌다. 딴 카드(전리품)는 옆으로 물린다.
+       명패와 같은 격자를 쓴다: 가운데 칸에 낸 카드, 옆 칸에 전리품.
+       전리품이 옆 칸보다 길어지면 바깥쪽으로 자란다 — 가운데(낸 카드)
+       쪽으로는 안 자라므로 서로 안 겹친다. */
+    .q-sfront { width:100%; display:grid; grid-template-columns:1fr auto 1fr;
+      align-items:start; column-gap:6px; }
+    .q-sfront .q-bslot { grid-column:2; grid-row:1; justify-self:center; flex-shrink:0; }
+    .q-sfront .q-oacq  { grid-column:1; grid-row:1; justify-self:end; }
+    /* 전리품을 두는 쪽. 우리가 보는 화면 기준으로 정한다 —
+       맞은편은 자기 앞(화면 왼쪽), 옆자리 둘은 조금 위쪽.
+       옆자리는 서로 거울이라 '위쪽' 이 각각 다른 칸이다:
+       왼쪽 자리는 +x 가 화면 위(3칸), 오른쪽 자리는 -x 가 화면 위(1칸). */
+    .q-seat.at-l .q-sfront .q-oacq { grid-column:3; justify-self:start; }
     /* 명패 — 내 것(.game-pcard)과 같은 판이되 한 치수 작다.
        .game-pcard 는 저 아래에서 position:absolute 로 잡혀 있다. 같은 굵기로
        맞서면 뒤에 쓴 쪽이 이겨 명패가 흐름에서 빠지고, 자리 크기에 안 잡혀
@@ -4432,6 +4468,23 @@
     @media (max-width:420px) { .lb-row .lb-title { max-width:30%; } .lb-wl { display:none; } }
     .lb-empty { font-size:.78rem; color:#566174; text-align:center; padding:16px 0; }
 
+    /* ── 랭킹이 올라온다 ────────────────────────────────────────────────
+       열었을 때 다 떠 있으면 등수가 그냥 목록으로만 읽힌다. 3등 → 2등 → 1등
+       순으로 아래에서 올라와, 마지막에 1등이 선다. 뒤이어 나머지 줄이
+       차례로 붙는다. transform·opacity 만 움직여 그리는 값이 싸다. */
+    #lbBox.lb-in .pod { animation:lbRise .55s cubic-bezier(.2,.9,.3,1) both; }
+    #lbBox.lb-in .pod-3 { animation-delay:0s; }
+    #lbBox.lb-in .pod-2 { animation-delay:.14s; }
+    #lbBox.lb-in .pod-1 { animation-delay:.3s; }
+    #lbBox.lb-in .lb-row, #lbBox.lb-in .lb-mydiv {
+      animation:lbRise .42s cubic-bezier(.2,.9,.3,1) both;
+      animation-delay:calc(.46s + var(--i, 0) * 26ms);
+    }
+    @keyframes lbRise { from { transform:translateY(24px); opacity:0 } to { transform:none; opacity:1 } }
+    @media (prefers-reduced-motion:reduce) {
+      #lbBox.lb-in .pod, #lbBox.lb-in .lb-row, #lbBox.lb-in .lb-mydiv { animation:none; }
+    }
+
     #rematchNote { color:#dcebff; font-size:.82rem; min-height:18px; margin-bottom:10px; }
     /* 상대가 먼저 '한 판 더' 를 눌렀다는 표시. 글줄로만 알리면 눈이 버튼이
        아니라 문장에 가 있어야 한다 — 눌러야 할 그 자리에 붙인다. */
@@ -6651,7 +6704,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 
 <!-- 랭킹 -->
 <div class="lb-modal" id="lbModal" onclick="if(event.target===this)closeLb()">
-  <div class="lb-box rank-box">
+  <div class="lb-box rank-box" id="lbBox">
     <div class="lb-title"><span data-ico="🏆"></span> 랭킹 <span class="close-x" onclick="closeLb()">×</span></div>
     <div id="lbSeason" class="lb-season"></div>
     <div id="lbPodium"></div>

@@ -97,9 +97,11 @@ ok('이모트는 왼쪽 아래', /#q-emoteSlot \{ position:absolute; left:14px; 
 ok('이모트를 데려오고 돌려준다', /q4MoveEmote\('q-emoteSlot'\)/.test(c4) && /q4MoveEmote\('game'\)/.test(c4));
 
 console.log('\n⑦ 판은 네 사람을 품는다');
-ok('좌·우 변은 옆 사람 한가운데', /mid\(q\('\.q-seat\.at-l'\), 'x'\)/.test(cli)
-   && /mid\(q\('\.q-seat\.at-r'\), 'x'\)/.test(cli));
-ok('윗변은 위쪽 사람 한가운데', /mid\(q\('\.q-seat\.at-t'\), 'y'\)/.test(cli));
+// 변은 '사람'(명패)을 지난다. 자리 상자를 재면 그 안에 명패와 카드가 같이
+// 들어 있어 변이 둘 사이를 지나가고, 그 사람의 딴 카드·낸 카드가 판 밖에 놓인다.
+ok('좌·우 변은 옆 사람 명패 한가운데', /mid\(q\('\.q-seat\.at-l \.q-splate'\), 'x'\)/.test(cli)
+   && /mid\(q\('\.q-seat\.at-r \.q-splate'\), 'x'\)/.test(cli));
+ok('윗변은 위쪽 사람 명패 한가운데', /mid\(q\('\.q-seat\.at-t \.q-splate'\), 'y'\)/.test(cli));
 ok('아랫변은 내 자리', /mid\(document\.getElementById\('q-mebar'\), 'y'\)/.test(cli));
 // 안내 문구가 딴 카드와 같은 높이면 긴 문구의 꼬리가 카드에 가린다
 ok('안내 문구는 경매대 위에 있다',

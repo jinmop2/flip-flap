@@ -104,13 +104,36 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   // FLIP 이 위로 넘어간 뒤 FLAP 이 아래로 넘어간다 — 겹치면 둘이 동시에 돌아
   // 무슨 글자인지 안 읽힌다
   ok('FLIP 다음에 FLAP 이 넘어간다',
-     /@keyframes fvFlipUp \{[\s\S]{0,140}38%\s*\{ transform:rotateX\(-360deg\)/.test(htm)
+     /@keyframes fvFlipUp \{[\s\S]{0,140}44%\s*\{ transform:rotateX\(-360deg\)/.test(htm)
      && /@keyframes fvFlapDown \{\s*0%, 50% \{ transform:rotate\(180deg\) rotateX\(0deg\)/.test(htm));
   // 늘 돌려 두면 안 보이는 채로 판이 도는 내내 폰을 깨워 둔다
   ok('막이 켜졌을 때만 넘어간다', /#fadeVeil\.on \.fv-logo b \{ animation:fvFlipUp/.test(htm)
      && !/^\s*\.fv-logo b, \.fv-logo i \{[^}]*animation:/m.test(htm));
   // transform 은 통째로 덮이는 값이라, FLAP 의 180도를 키프레임에도 적어야 한다
   ok('FLAP 은 뒤집힌 채로 넘어간다', (htm.match(/rotate\(180deg\) rotateX\(/g) || []).length >= 2);
+  // 빨리 홱 도니 급해 보였다 — 한 바퀴를 늘리고 도는 구간도 넓혔다
+  ok('여유롭게 넘어간다', /animation:fvFlipUp 2\.6s/.test(htm) && /animation:fvFlapDown 2\.6s/.test(htm));
+  // 글자를 오려 내는 칠이라, 칠할 바탕은 요소 상자만큼이다. line-height 가
+  // 글자보다 작아 상자를 벗어난 부분은 칠이 안 들어가 잘려 보였다(FLAP 의 P).
+  ok('로고 글자가 안 잘린다',
+     /\.logo h1, \.logo \.flap \{\n\s*padding:9px 6px; margin:-9px -6px;/.test(htm)
+     && /\.fv-logo b, \.fv-logo i \{\n\s*display:block; padding:6px 5px; margin:-6px -5px;/.test(htm));
+  // 네온 간판처럼 이따금 한 번. opacity 만 움직여 그리는 값이 싸다.
+  ok('로비 로고가 이따금 깜빡인다', /#lobby \.logo h1 \{ animation:logoFlicker 7s/.test(htm)
+     && /@keyframes logoFlicker \{[\s\S]{0,200}87%\s*\{ opacity:\.22; \}/.test(htm));
+}
+
+console.log('\n⑪ 랭킹은 올라온다');
+{
+  // 열었을 때 다 떠 있으면 등수가 그냥 목록으로만 읽힌다 — 3등부터 차례로 선다
+  ok('3등 → 2등 → 1등 차례로', /#lbBox\.lb-in \.pod-3 \{ animation-delay:0s; \}/.test(htm)
+     && /#lbBox\.lb-in \.pod-2 \{ animation-delay:\.14s; \}/.test(htm)
+     && /#lbBox\.lb-in \.pod-1 \{ animation-delay:\.3s; \}/.test(htm));
+  ok('나머지 줄도 차례로', /#lbBox\.lb-in \.lb-row[\s\S]{0,180}var\(--i, 0\) \* 26ms/.test(htm)
+     && /row\.style\.setProperty\('--i', String\(i\)\)/.test(cli));
+  // 켜 두면 새로 받아 다시 그릴 때마다 또 올라와 목록이 들썩인다
+  ok('열 때만 올라온다', /box\.classList\.add\('lb-in'\)/.test(cli)
+     && /box\.classList\.remove\('lb-in'\), 2200\)/.test(cli));
   // 눈에 안 잡힐 만큼 짧으면 화면이 한 번 깜빡인 것으로만 보인다
   ok('고리가 보일 만큼은 머문다', /const VEIL_MIN = 320;/.test(cli)
      && /Math\.max\(0, VEIL_MIN - \(Date\.now\(\) - t0\)\)/.test(cli));
