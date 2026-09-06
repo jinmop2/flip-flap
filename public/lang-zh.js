@@ -1253,7 +1253,7 @@ Object.assign(B, {
 rulesEtc: `
     <span class="close-x" onclick="rulesClose()">×</span>
     <h2>其他</h2>
-    <p style="color:#8a7a80">段位、RP、等级和奖励是怎么变的，都在这里。</p>
+    <p class="r-lead">段位、RP、等级和奖励是怎么变的，都在这里。</p>
 
     <h3><span data-ico="🏅"></span> 级与段</h3>
     <p>围棋式的阶梯。<b>从 10 级到 1 级</b>只要 RP 攒够就自动升，
@@ -1267,7 +1267,7 @@ rulesEtc: `
     </div>
     <p><b>从初段起要打升段赛。</b>RP 攒够只是拿到资格，
        实际升段还需要<b>五局三胜</b>。失败要扣 <b>100 RP</b>。</p>
-    <p style="color:#8a7a80;font-size:.78rem">ACE 只有 100 个席位，所以名额按 RP 排名流转。
+    <p class="r-note">ACE 只有 100 个席位，所以名额按 RP 排名流转。
        段位和 ACE <b>超过三天不来，每天掉 10 RP</b>（级位不会掉）。</p>
 
     <h3><span data-ico="📈"></span> RP — 只看排位赛</h3>
@@ -1281,7 +1281,7 @@ rulesEtc: `
     </div>
     <p>实力差会改变数值。赢<b>比自己高 300 RP 以上</b>的人算 <b>1.3 倍</b>；
        赢低这么多的人算 <b>0.7 倍</b>。</p>
-    <p style="color:#8a7a80;font-size:.78rem">多人局按名次结算 — 第 1 名 +25、第 2 名 +8、第 3 名 −8、第 4 名 −22。</p>
+    <p class="r-note">多人局按名次结算 — 第 1 名 +25、第 2 名 +8、第 3 名 −8、第 4 名 −22。</p>
 
     <h3><span data-ico="⭐"></span> 等级与经验</h3>
     <p>等级只升不降。升到下一级需要的经验：</p>
@@ -1291,7 +1291,7 @@ rulesEtc: `
       <div class="etc-row"><span>10〜19 级</span><span>等级 × 100</span></div>
       <div class="etc-row"><span>20 级以上</span><span>等级 × 150</span></div>
     </div>
-    <p style="color:#8a7a80;font-size:.78rem">创建战队需要<b>等级 5</b> 和 <b>🪙 1,000</b>。</p>
+    <p class="r-note">创建战队需要<b>等级 5</b> 和 <b>🪙 1,000</b>。</p>
 
     <h3><span data-ico="🪙"></span> 打完一局能拿到什么</h3>
     <div class="etc-table">
@@ -1301,7 +1301,7 @@ rulesEtc: `
       <div class="etc-row"><span>AI 专家</span><span>🪙 40 · 20 XP</span><span>🪙 5 · 5 XP</span></div>
       <div class="etc-row"><span>真人</span><span>🪙 60 · 50 XP</span><span>🪙 25 · 20 XP</span></div>
     </div>
-    <p style="color:#8a7a80;font-size:.78rem">结束得太快的对局（不到 5 回合或 30 秒）什么都不给。
+    <p class="r-note">结束得太快的对局（不到 5 回合或 30 秒）什么都不给。
        和同一个对手每天只算 <b>3 局</b>。</p>
 
     <h3><span data-ico="🎁"></span> 每天</h3>
@@ -1343,7 +1343,7 @@ Object.assign(B, {
 rulesItem: `
       <span class="close-x" onclick="toggleRulesItem(false)">×</span>
       <h2>道具局</h2>
-      <p style="color:#8a7a80">两人局的规则原封不动，只是加上了<b style="color:#ffe9a8">道具</b> —
+      <p class="r-lead">两人局的规则原封不动，只是加上了<b style="color:#ffe9a8">道具</b> —
          手牌、套牌和取胜条件都和经典一样。</p>
 
       <h3><span data-ico="🎁"></span> 道具从哪里来</h3>
@@ -1398,7 +1398,7 @@ rulesItem: `
         <li><b>烟雾弹</b> — 只对对手遮住这次的拍品</li>
         <li><b>重拍</b> — 把<b>输掉的那次竞拍</b>作废重来。<b>刚刚出过的牌，双方都不能再用</b></li>
       </ul>
-      <p style="color:#8a7a80;font-size:.78rem">只有重拍限定<b>这次竞拍输掉的人</b>才能用。
+      <p class="r-note">只有重拍限定<b>这次竞拍输掉的人</b>才能用。
          要是赢家也能反悔，不满意的结果就可以无限重来。
          让发起的人也烧掉自己那张牌，是为了逼他掂量"现在反悔值不值"。</p>
 
@@ -1409,7 +1409,7 @@ rulesItem: `
       <h3><span data-ico="🧿"></span> 护符 — 读心的较量</h3>
       <p>护符是<b>预先布下</b>的东西。布下之后，会吞掉对手接下来使用的一个道具，被挡下的道具就此消失。
          但它<b>只在那一轮有效</b>。所以对手也可以先扔个便宜道具把护符烧掉。什么时候布，就是读心的较量。</p>
-      <p style="color:#8a7a80;font-size:.78rem">护符挡不住护符 — 否则先布的人永远占便宜，就成了抢先的比赛。
+      <p class="r-note">护符挡不住护符 — 否则先布的人永远占便宜，就成了抢先的比赛。
          对手这一轮已经用过道具，或者一个道具都没有时，也不能布。</p>`,
 });
 
@@ -1418,7 +1418,7 @@ Object.assign(B, {
 rulesTwelve: `
       <span class="close-x" onclick="rulesClose()">×</span>
       <h2>TWELVE</h2>
-      <p style="color:#8a7a80">牌和经典完全一样。不同的是<b style="color:#ffe9a8">用什么付账</b> —
+      <p class="r-lead">牌和经典完全一样。不同的是<b style="color:#ffe9a8">用什么付账</b> —
          不用手牌，而是用<b style="color:#8fd8ff">20 枚筹码</b>出价。</p>
 
       <h3><span data-ico="📦"></span> 准备</h3>
@@ -1441,19 +1441,19 @@ rulesTwelve: `
         <div class="r4-step"><b>4</b><span>竞出胜负，<b>筹码交进庄库</b></span></div>
         <div class="r4-step"><b>5</b><span>拍品两张摆到<b>赢家面前</b>，<b>庄家交给对方</b></span></div>
       </div>
-      <p style="color:#8a7a80;font-size:.78rem">庄家每轮要用掉一张手牌，所以手牌 6 张就意味着<b>你会当 6 次庄家</b>。</p>
+      <p class="r-note">庄家每轮要用掉一张手牌，所以手牌 6 张就意味着<b>你会当 6 次庄家</b>。</p>
 
       <h3><span data-ico="👁"></span> 明拍 — 亮着往上加</h3>
       <p><b>庄家先出价</b>，之后轮流。轮到自己时，要么<b>比上一口至少多加 1</b>，要么<b>收手</b>。
          一方收手，另一方就拿下拍品。</p>
-      <p style="color:#8a7a80;font-size:.78rem">开局那口至少要 <b>1 枚</b>，而且在没人下注时不能收手 —
+      <p class="r-note">开局那口至少要 <b>1 枚</b>，而且在没人下注时不能收手 —
          什么都不押就退出，那不是竞拍，是白送。</p>
 
       <h3><span data-ico="🙈"></span> 暗拍 — 只知价钱，不知货</h3>
       <p>庄家报一个<b>偶数</b>，只报一次，竞价就结束了。此时<b>出品牌一直盖着</b> —
          对手知道价钱，却<b>不知道自己买的是什么</b>。</p>
       <p>对手只有两种选择：付<b>报价 +1</b> 买下，或者不买。不买的话，拍品归庄家。</p>
-      <p style="color:#8a7a80;font-size:.78rem">庄家筹码不足 2 枚就不能选暗拍（报不出偶数）。
+      <p class="r-note">庄家筹码不足 2 枚就不能选暗拍（报不出偶数）。
          对手的筹码若不够<b>报价 +1</b>，也无法买下，拍品同样归庄家。</p>
 
       <h3><span data-ico="🏦"></span> 结算 — 输家也要付</h3>
@@ -1463,7 +1463,7 @@ rulesTwelve: `
         <div class="etc-row"><span>输的一方</span><span>报价的<b>一半</b>（向下取整）</span></div>
       </div>
       <p>拍品<b>两张都</b>摆到赢家面前。输的一方拿不到牌，还要照付筹码。</p>
-      <p style="color:#8a7a80;font-size:.78rem"><b>例）</b>报 7 并赢下，就付 7。跟到 4 之后收手，就付一半，也就是 2。</p>
+      <p class="r-note"><b>例）</b>报 7 并赢下，就付 7。跟到 4 之后收手，就付一半，也就是 2。</p>
 
       <h3><span data-ico="🏁"></span> 三种结束方式</h3>
       <ul>
@@ -1472,9 +1472,9 @@ rulesTwelve: `
         <li><b>牌堆见底</b> — 场上牌堆或庄家手牌用尽时，<b>离凑齐更近的一方</b>获胜；
             相同则比<b>收到的牌更多</b>，仍相同则平局</li>
       </ul>
-      <p style="color:#8a7a80;font-size:.78rem">和经典一样，每人<b>5 分钟</b>，只在自己回合走，用完就算输。</p>
-      <p style="color:#8a7a80;font-size:.78rem">AI 分简单、普通、专家三档。专家会数剩牌，不会把筹码花光，还会用暗拍把对手的筹码耗干。</p>
-      <p style="color:#8a7a80;font-size:.78rem">TWELVE 不计入段位（RP），只给金币和经验。</p>`,
+      <p class="r-note">和经典一样，每人<b>5 分钟</b>，只在自己回合走，用完就算输。</p>
+      <p class="r-note">AI 分简单、普通、专家三档。专家会数剩牌，不会把筹码花光，还会用暗拍把对手的筹码耗干。</p>
+      <p class="r-note">TWELVE 不计入段位（RP），只给金币和经验。</p>`,
 });
 
 // ── 설명서 · 다인전 ──
@@ -1482,7 +1482,7 @@ Object.assign(B, {
 rules4: `
     <span class="close-x" onclick="toggleRules4(false)">×</span>
     <h2>FLIP FLAP <span class="r4-tag">3〜4 人</span></h2>
-    <p style="color:#8a7a80">牌、竞拍和取胜方式都和两人局一样 — 先凑齐一<b style="color:#ffe9a8">套</b>就赢。<br>
+    <p class="r-lead">牌、竞拍和取胜方式都和两人局一样 — 先凑齐一<b style="color:#ffe9a8">套</b>就赢。<br>
     这里只讲<b style="color:#ffe9a8">人多了以后有什么不同</b>。</p>
 
     <h3><span data-ico="🎯"></span> 怎么赢</h3>
@@ -1498,7 +1498,7 @@ rules4: `
       <li>手牌用完的人跳过庄家轮次 — 因为已经没有牌可以出品了</li>
     </ul>
 
-    <h3><span data-ico="🗂"></span> 牌堆 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 四人 38 张，三人 30 张</span></h3>
+    <h3><span data-ico="🗂"></span> 牌堆 <span class="r-sub">— 四人 38 张，三人 30 张</span></h3>
     <p style="font-size:.78rem;margin-top:-2px">比两人局（24 张）更厚。三人牌堆是四人牌堆<b>抽掉 8 张</b>而来，一副牌就能兼顾两种人数。</p>
     <div class="r-comp">
       <div class="r-comp-row"><div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
@@ -1578,7 +1578,7 @@ Object.assign(B, {
 rules2: `
     <span class="close-x" onclick="toggleRules(false)">×</span>
     <h2>FLIP FLAP</h2>
-    <p style="color:#8a7a80">赢下竞拍、收集卡牌，抢先凑齐一<b style="color:#ffe9a8">套</b>。</p>
+    <p class="r-lead">赢下竞拍、收集卡牌，抢先凑齐一<b style="color:#ffe9a8">套</b>。</p>
 
     <h3>🃏 怎么看一张牌</h3>
     <div class="r-anatomy">
@@ -1603,7 +1603,7 @@ rules2: `
     <p style="font-size:.78rem">各种类需要的张数： <b>2</b>→2 · <b>3</b>→3 · <b>4</b>→4 · <b>6</b>→6<br>
     <span data-ico="⚠"></span> 只有<b>竞拍拿到并摆在自己面前的牌</b>才算。手上的牌再多也不成套。</p>
 
-    <h3><span data-ico="🗂"></span> 牌堆 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 共 24 张</span></h3>
+    <h3><span data-ico="🗂"></span> 牌堆 <span class="r-sub">— 共 24 张</span></h3>
     <div class="r-comp">
       <div class="r-comp-row"><div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
         <span><b>种类 2</b> · 2 张 <span class="r-comp-g">（等级 1〜2）</span></span></div>
@@ -1614,7 +1614,7 @@ rules2: `
       <div class="r-comp-row"><div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
         <span><b>种类 6</b> · 10 张 <span class="r-comp-g">（等级 1〜10）</span></span></div>
     </div>
-    <p style="font-size:.76rem;color:#8a7a80"><b style="color:#ffe9a8">张数越多的种类，套牌也越长。</b>
+    <p class="r-note"><b style="color:#ffe9a8">张数越多的种类，套牌也越长。</b>
       6 有十张，看着好收，可要凑满六张；2 只要两张，但全场就只有两张。</p>
 
     <h3><span data-ico="🚀"></span> 准备</h3>
@@ -1634,12 +1634,12 @@ rules2: `
       <div class="r-step"><span class="r-ico" data-ico="🔁"></span><span class="r-tx"><b>⑥</b> 用来竞价的两张<b>互相交换</b>进对方手牌 — 不是弃牌</span></div>
       <div class="r-step"><span class="r-ico" data-ico="👑"></span><span class="r-tx"><b>⑦</b> 把庄家交给对方，进入下一次竞拍</span></div>
     </div>
-    <p style="font-size:.76rem;color:#8a7a80">
+    <p class="r-note">
       庄家要出两张（出品一张、竞价一张），却只收回对手的一张。
       也就是说<b style="color:#ffe9a8">每当庄，手牌就少一张</b> — 这就是这一局的时钟。</p>
 
     <h3><span data-ico="🎭"></span> 明拍还是暗拍 — 你要藏哪一边</h3>
-    <p style="font-size:.78rem;color:#8a7a80">只有庄家能选。无论选哪一种，<b>总有一样东西要露出来</b>。</p>
+    <p class="r-note">只有庄家能选。无论选哪一种，<b>总有一样东西要露出来</b>。</p>
     <div class="r-two">
       <div class="r-panel open">
         <div class="r-ptitle">明拍</div>
@@ -1656,7 +1656,7 @@ rules2: `
         对手只要压你一线就能拿走。</span>
       </div>
     </div>
-    <p style="font-size:.76rem;color:#8a7a80">
+    <p class="r-note">
       <span data-ico="💡"></span> 所以暗拍用在<b style="color:#ffe9a8">拿不到也无所谓</b>的局面。
       丢张弱牌逼对手用掉强牌，或者故意报高把对手最强的一张抠出来
       — 别忘了竞价牌是会易主的。</p>
@@ -1700,7 +1700,7 @@ rules2: `
       <div class="r-step"><span class="r-ico" data-ico="🗄"></span><span class="r-tx"><b>牌堆见底</b>时就地清点</span></div>
       <div class="r-step"><span class="r-ico" data-ico="⏱"></span><span class="r-tx"><b>每人 5 分钟</b> — 只在自己回合走，用完就算输</span></div>
     </div>
-    <p style="font-size:.76rem;color:#8a7a80">
+    <p class="r-note">
       牌堆见底时按这个顺序比。<br>
       <b style="color:#ffe9a8">①</b> 离凑齐更近的一方 — 用一个种类里<b>已收到需求张数的几成</b>来量
       （6 收 3 张＝一半，4 收 3 张＝四分之三 → <b>4 更靠前</b>）。<br>

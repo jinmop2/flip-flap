@@ -1267,7 +1267,7 @@ Object.assign(B, {
 rulesEtc: `
     <span class="close-x" onclick="rulesClose()">×</span>
     <h2>その他</h2>
-    <p style="color:#8a7a80">段位・RP・レベル・報酬の動きを一か所にまとめました。</p>
+    <p class="r-lead">段位・RP・レベル・報酬の動きを一か所にまとめました。</p>
 
     <h3><span data-ico="🏅"></span> 級と段</h3>
     <p>囲碁式のはしごです。<b>10級から1級まで</b>は RP が貯まれば自動で上がり、
@@ -1281,7 +1281,7 @@ rulesEtc: `
     </div>
     <p><b>初段からは昇段戦があります。</b>RP を満たすと挑戦する資格が生まれるだけで、
        実際に上がるには<b>5局中3勝</b>が必要です。落ちると<b>100 RP</b> 減ります。</p>
-    <p style="color:#8a7a80;font-size:.78rem">ACE は定員100人なので、席は RP 順位で入れ替わります。
+    <p class="r-note">ACE は定員100人なので、席は RP 順位で入れ替わります。
        段位と ACE は<b>3日以上あけると1日10 RP</b>ずつ減ります（級位は減りません）。</p>
 
     <h3><span data-ico="📈"></span> RP — ランク戦だけ</h3>
@@ -1295,7 +1295,7 @@ rulesEtc: `
     </div>
     <p>実力差で数字が変わります。<b>RP が300以上高い相手</b>に勝てば<b>1.3倍</b>、
        それだけ低い相手に勝てば<b>0.7倍</b>です。</p>
-    <p style="color:#8a7a80;font-size:.78rem">多人数戦は順位で決まります — 1位 +25、2位 +8、3位 −8、4位 −22。</p>
+    <p class="r-note">多人数戦は順位で決まります — 1位 +25、2位 +8、3位 −8、4位 −22。</p>
 
     <h3><span data-ico="⭐"></span> レベルと経験値</h3>
     <p>レベルは上がる一方です。次のレベルまでに必要な経験値は次のとおり。</p>
@@ -1305,7 +1305,7 @@ rulesEtc: `
       <div class="etc-row"><span>10〜19レベル</span><span>レベル × 100</span></div>
       <div class="etc-row"><span>20レベル以上</span><span>レベル × 150</span></div>
     </div>
-    <p style="color:#8a7a80;font-size:.78rem">クランを作るには<b>レベル5</b>と<b>🪙 1,000</b>が必要です。</p>
+    <p class="r-note">クランを作るには<b>レベル5</b>と<b>🪙 1,000</b>が必要です。</p>
 
     <h3><span data-ico="🪙"></span> 一局終えるともらえるもの</h3>
     <div class="etc-table">
@@ -1315,7 +1315,7 @@ rulesEtc: `
       <div class="etc-row"><span>AI エキスパート</span><span>🪙 40 · 20 XP</span><span>🪙 5 · 5 XP</span></div>
       <div class="etc-row"><span>人</span><span>🪙 60 · 50 XP</span><span>🪙 25 · 20 XP</span></div>
     </div>
-    <p style="color:#8a7a80;font-size:.78rem">早く終わりすぎた対局（5ターン未満または30秒未満）は何ももらえません。
+    <p class="r-note">早く終わりすぎた対局（5ターン未満または30秒未満）は何ももらえません。
        同じ相手とは<b>1日3局</b>までが対象です。</p>
 
     <h3><span data-ico="🎁"></span> 毎日</h3>
@@ -1357,7 +1357,7 @@ Object.assign(B, {
 rulesItem: `
       <span class="close-x" onclick="toggleRulesItem(false)">×</span>
       <h2>アイテム戦</h2>
-      <p style="color:#8a7a80">2人戦の規則はそのままで、<b style="color:#ffe9a8">アイテム</b>が乗ります —
+      <p class="r-lead">2人戦の規則はそのままで、<b style="color:#ffe9a8">アイテム</b>が乗ります —
          手札もセットも勝利条件もクラシックと同じです。</p>
 
       <h3><span data-ico="🎁"></span> アイテムはどこから出るか</h3>
@@ -1412,7 +1412,7 @@ rulesItem: `
         <li><b>煙幕</b> — この競り札を相手にだけ隠します</li>
         <li><b>再競り</b> — <b>負けた競り</b>を無効にしてやり直します。<b>いま出した札は両者とも使えません</b></li>
       </ul>
-      <p style="color:#8a7a80;font-size:.78rem">再競りだけは<b>その競りで負けた人</b>しか使えません。
+      <p class="r-note">再競りだけは<b>その競りで負けた人</b>しか使えません。
          勝った人が取り消せるなら、気に入らない結果をいくらでもやり直せてしまうからです。
          やり直す側も自分の札を焼くのは、「いま取り消す価値があるか」を天秤にかけさせるためです。</p>
 
@@ -1423,7 +1423,7 @@ rulesItem: `
       <h3><span data-ico="🧿"></span> お守り — 読み合い</h3>
       <p>お守りは<b>先に張っておく</b>ものです。張れば相手が次に使うアイテムをひとつ飲み込み、封じられたアイテムはそのまま消えます。
          ただし<b>その手のあいだだけ</b>効きます。だから相手が安いアイテムを先に投げてお守りを焼く手も生まれます。いつ張るかが読み合いです。</p>
-      <p style="color:#8a7a80;font-size:.78rem">お守りでお守りは封じられません — 先に張ったほうが必ず勝つ先取り合戦になってしまうからです。
+      <p class="r-note">お守りでお守りは封じられません — 先に張ったほうが必ず勝つ先取り合戦になってしまうからです。
          相手がこの手ですでにアイテムを使っているときや、アイテムを1つも持っていないときも張れません。</p>`,
 });
 
@@ -1432,7 +1432,7 @@ Object.assign(B, {
 rulesTwelve: `
       <span class="close-x" onclick="rulesClose()">×</span>
       <h2>TWELVE</h2>
-      <p style="color:#8a7a80">札はクラシックとまったく同じ。違うのは<b style="color:#ffe9a8">何で払うか</b> —
+      <p class="r-lead">札はクラシックとまったく同じ。違うのは<b style="color:#ffe9a8">何で払うか</b> —
          手札ではなく<b style="color:#8fd8ff">チップ20枚</b>で値をつけます。</p>
 
       <h3><span data-ico="📦"></span> 準備</h3>
@@ -1455,19 +1455,19 @@ rulesTwelve: `
         <div class="r4-step"><b>4</b><span>競りで落札者を決め、<b>チップをバンクに払う</b></span></div>
         <div class="r4-step"><b>5</b><span>競り札2枚は<b>落札者の前へ</b>。<b>親の座を渡す</b></span></div>
       </div>
-      <p style="color:#8a7a80;font-size:.78rem">親は毎回手札を1枚使います。つまり手札6枚は<b>親を6回務める</b>ということです。</p>
+      <p class="r-note">親は毎回手札を1枚使います。つまり手札6枚は<b>親を6回務める</b>ということです。</p>
 
       <h3><span data-ico="👁"></span> オープンの競り — 見せ合って上げる</h3>
       <p><b>先に値をつけるのは親</b>で、そこから交互に進みます。自分の番では<b>前の値を1でも超える</b>か、<b>降りる</b>かのどちらかです。
          どちらかが降りた時点で、残ったほうが落札します。</p>
-      <p style="color:#8a7a80;font-size:.78rem">最初の値は<b>1以上</b>で、誰も賭けていない場では降りられません。
+      <p class="r-note">最初の値は<b>1以上</b>で、誰も賭けていない場では降りられません。
          何も出さずに引けるなら、それは競りではなくただの譲渡だからです。</p>
 
       <h3><span data-ico="🙈"></span> クローズの競り — 値段だけ分かって買う</h3>
       <p>親が<b>偶数</b>を一度だけ言い、それで終わりです。このとき<b>出し札は伏せたまま</b> —
          相手にはいくらかは分かっても、<b>何を買うのかは分かりません</b>。</p>
       <p>相手の選択は二つだけ。<b>その値＋1</b>を払って買うか、見送るか。見送れば競り札は親のものです。</p>
-      <p style="color:#8a7a80;font-size:.78rem">親のチップが2枚未満だとクローズは選べません（言える偶数がないため）。
+      <p class="r-note">親のチップが2枚未満だとクローズは選べません（言える偶数がないため）。
          相手のチップが<b>値＋1</b>に届かないときも買えず、そのまま親のものになります。</p>
 
       <h3><span data-ico="🏦"></span> 精算 — 負けたほうも払う</h3>
@@ -1477,7 +1477,7 @@ rulesTwelve: `
         <div class="etc-row"><span>負けたほう</span><span>つけた値の<b>半分</b>（端数切り捨て）</span></div>
       </div>
       <p>競り札は<b>2枚とも</b>勝ったほうの前に並びます。負けたほうは札を得られず、チップだけを失います。</p>
-      <p style="color:#8a7a80;font-size:.78rem"><b>例）</b>7 をつけて勝てば 7 払い。4 まで追って降りれば、その半分の 2 を払います。</p>
+      <p class="r-note"><b>例）</b>7 をつけて勝てば 7 払い。4 まで追って降りれば、その半分の 2 を払います。</p>
 
       <h3><span data-ico="🏁"></span> 決着のつきかた三つ</h3>
       <ul>
@@ -1486,10 +1486,10 @@ rulesTwelve: `
         <li><b>山札切れ</b> — 場の山か親の手札が尽きたら<b>セットに近いほう</b>の勝ち。
             同じなら<b>集めた札が多いほう</b>、それも同じなら引き分けです</li>
       </ul>
-      <p style="color:#8a7a80;font-size:.78rem">持ち時間はクラシックと同じ<b>ひとり5分</b>。自分の番だけ減り、使い切ると負けです。</p>
-      <p style="color:#8a7a80;font-size:.78rem">AIはやさしい・ふつう・エキスパートの三段階です。エキスパートは残り札を数え、
+      <p class="r-note">持ち時間はクラシックと同じ<b>ひとり5分</b>。自分の番だけ減り、使い切ると負けです。</p>
+      <p class="r-note">AIはやさしい・ふつう・エキスパートの三段階です。エキスパートは残り札を数え、
          チップを使い切らず、クローズで相手のチップを枯らす手まで使います。</p>
-      <p style="color:#8a7a80;font-size:.78rem">TWELVE はランク（RP）には影響しません。コインと経験値だけです。</p>`,
+      <p class="r-note">TWELVE はランク（RP）には影響しません。コインと経験値だけです。</p>`,
 });
 
 // ── 설명서 · 다인전 ──
@@ -1497,7 +1497,7 @@ Object.assign(B, {
 rules4: `
     <span class="close-x" onclick="toggleRules4(false)">×</span>
     <h2>FLIP FLAP <span class="r4-tag">3〜4人</span></h2>
-    <p style="color:#8a7a80">札も競りも勝ちかたも2人戦と同じ — 先に<b style="color:#ffe9a8">セット</b>を揃えたほうが勝ちです。<br>
+    <p class="r-lead">札も競りも勝ちかたも2人戦と同じ — 先に<b style="color:#ffe9a8">セット</b>を揃えたほうが勝ちです。<br>
     ここでは<b style="color:#ffe9a8">人が増えて変わるところ</b>だけをまとめます。</p>
 
     <h3><span data-ico="🎯"></span> 勝ちかた</h3>
@@ -1513,7 +1513,7 @@ rules4: `
       <li>手札が尽きた人は親の番を飛ばします — 出す札がないからです</li>
     </ul>
 
-    <h3><span data-ico="🗂"></span> 山札 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 4人は38枚、3人は30枚</span></h3>
+    <h3><span data-ico="🗂"></span> 山札 <span class="r-sub">— 4人は38枚、3人は30枚</span></h3>
     <p style="font-size:.78rem;margin-top:-2px">2人戦（24枚）より厚めです。3人の山は4人の山から<b>8枚抜いた</b>もので、ひと組の札で両方まかなえます。</p>
     <div class="r-comp">
       <div class="r-comp-row"><div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
@@ -1593,7 +1593,7 @@ Object.assign(B, {
 rules2: `
     <span class="close-x" onclick="toggleRules(false)">×</span>
     <h2>FLIP FLAP</h2>
-    <p style="color:#8a7a80">競りに勝って札を集め、先に<b style="color:#ffe9a8">セット</b>を揃えましょう。</p>
+    <p class="r-lead">競りに勝って札を集め、先に<b style="color:#ffe9a8">セット</b>を揃えましょう。</p>
 
     <h3>🃏 札の読みかた</h3>
     <div class="r-anatomy">
@@ -1618,7 +1618,7 @@ rules2: `
     <p style="font-size:.78rem">種類ごとに必要な枚数： <b>2</b>→2 · <b>3</b>→3 · <b>4</b>→4 · <b>6</b>→6<br>
     <span data-ico="⚠"></span> 数えるのは<b>競りで取って自分の前に並べた札</b>だけです。手札はどれだけ集まってもセットになりません。</p>
 
-    <h3><span data-ico="🗂"></span> 山札 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 24枚</span></h3>
+    <h3><span data-ico="🗂"></span> 山札 <span class="r-sub">— 24枚</span></h3>
     <div class="r-comp">
       <div class="r-comp-row"><div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
         <span><b>種類 2</b> · 2枚 <span class="r-comp-g">（等級 1〜2）</span></span></div>
@@ -1629,7 +1629,7 @@ rules2: `
       <div class="r-comp-row"><div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
         <span><b>種類 6</b> · 10枚 <span class="r-comp-g">（等級 1〜10）</span></span></div>
     </div>
-    <p style="font-size:.76rem;color:#8a7a80"><b style="color:#ffe9a8">枚数の多い種類ほど、セットも長くなります。</b>
+    <p class="r-note"><b style="color:#ffe9a8">枚数の多い種類ほど、セットも長くなります。</b>
       6 は10枚もあって集めやすそうに見えますが、6枚そろえなければなりません。2 は2枚でいい代わりに、場に2枚しかありません。</p>
 
     <h3><span data-ico="🚀"></span> 準備</h3>
@@ -1649,12 +1649,12 @@ rules2: `
       <div class="r-step"><span class="r-ico" data-ico="🔁"></span><span class="r-tx"><b>⑥</b> 入札に使った2枚は<b>そのまま交換</b>して手札に入ります — 捨て札ではありません</span></div>
       <div class="r-step"><span class="r-ico" data-ico="👑"></span><span class="r-tx"><b>⑦</b> 親の座を相手に渡し、次の競りへ</span></div>
     </div>
-    <p style="font-size:.76rem;color:#8a7a80">
+    <p class="r-note">
       親は出し札1枚と入札札1枚を出し、受け取るのは相手の入札札1枚だけです。
       つまり<b style="color:#ffe9a8">親を務めるたびに手札が1枚ずつ減ります</b> — これが一局の時計になります。</p>
 
     <h3><span data-ico="🎭"></span> オープンとクローズ — 何を隠すか</h3>
-    <p style="font-size:.78rem;color:#8a7a80">選ぶのは親だけ。どちらを選んでも<b>何かひとつは必ず見せる</b>ことになります。</p>
+    <p class="r-note">選ぶのは親だけ。どちらを選んでも<b>何かひとつは必ず見せる</b>ことになります。</p>
     <div class="r-two">
       <div class="r-panel open">
         <div class="r-ptitle">オープンの競り</div>
@@ -1671,7 +1671,7 @@ rules2: `
         ぴったり一枚分だけ上を出されて持っていかれます。</span>
       </div>
     </div>
-    <p style="font-size:.76rem;color:#8a7a80">
+    <p class="r-note">
       <span data-ico="💡"></span> ですからクローズは<b style="color:#ffe9a8">取れなくてもいい局</b>で使います。
       弱い札を投げて相手に強い札を使わせたり、大きく出して相手の最強札を抜いたりする手にもなります
       — 入札した札は相手に渡るのですから。</p>
@@ -1715,7 +1715,7 @@ rules2: `
       <div class="r-step"><span class="r-ico" data-ico="🗄"></span><span class="r-tx"><b>山札が尽きたら</b>その時点で数えます</span></div>
       <div class="r-step"><span class="r-ico" data-ico="⏱"></span><span class="r-tx"><b>持ち時間はひとり5分</b> — 自分の番だけ減り、使い切ると負けです</span></div>
     </div>
-    <p style="font-size:.76rem;color:#8a7a80">
+    <p class="r-note">
       山札が尽きたときは、この順に見ます。<br>
       <b style="color:#ffe9a8">①</b> セットに近いほう — ひとつの種類で<b>必要な枚数のうち何枚そろったか</b>で測ります
       （6が3枚＝半分、4が3枚＝4分の3 → <b>4のほうが上</b>）。<br>

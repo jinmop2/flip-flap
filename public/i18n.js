@@ -1538,7 +1538,7 @@
     rulesEtc: `
     <span class="close-x" onclick="rulesClose()">\u00d7</span>
     <h2>More</h2>
-    <p style="color:#8a7a80">Ranks, RP, levels and rewards \u2014 all in one place.</p>
+    <p class="r-lead">Ranks, RP, levels and rewards \u2014 all in one place.</p>
 
     <h3><span data-ico="\ud83c\udfc5"></span> Kyu and dan</h3>
     <p>A Go-style ladder. From <b>10 kyu up to 1 kyu</b> you rise automatically as RP accumulates,
@@ -1552,7 +1552,7 @@
     </div>
     <p><b>From 1 dan you must pass a promotion series.</b> Reaching the RP only earns you the attempt \u2014
        you then need <b>3 wins out of 5</b>. Failing costs <b>100 RP</b>.</p>
-    <p style="color:#8a7a80;font-size:.78rem">ACE holds only 100 seats, so places change hands by RP ranking.
+    <p class="r-note">ACE holds only 100 seats, so places change hands by RP ranking.
        Dan and ACE players lose <b>10 RP per day after 3 days away</b> (kyu ranks never decay).</p>
 
     <h3><span data-ico="\ud83d\udcc8"></span> RP \u2014 ranked matches only</h3>
@@ -1566,7 +1566,7 @@
     </div>
     <p>A gap in strength changes the figure. Beating someone <b>300 RP above you</b> pays <b>1.3\u00d7</b>;
        beating someone that far below pays <b>0.7\u00d7</b>.</p>
-    <p style="color:#8a7a80;font-size:.78rem">Multiplayer games settle by placement \u2014 1st +25, 2nd +8, 3rd \u22128, 4th \u221222.</p>
+    <p class="r-note">Multiplayer games settle by placement \u2014 1st +25, 2nd +8, 3rd \u22128, 4th \u221222.</p>
 
     <h3><span data-ico="\u2b50"></span> Levels and XP</h3>
     <p>Levels only ever go up. The XP needed for the next one:</p>
@@ -1576,7 +1576,7 @@
       <div class="etc-row"><span>Levels 10\u201319</span><span>level \u00d7 100</span></div>
       <div class="etc-row"><span>Level 20+</span><span>level \u00d7 150</span></div>
     </div>
-    <p style="color:#8a7a80;font-size:.78rem">Founding a clan needs <b>level 5</b> and <b>\ud83e\ude99 1,000</b>.</p>
+    <p class="r-note">Founding a clan needs <b>level 5</b> and <b>\ud83e\ude99 1,000</b>.</p>
 
     <h3><span data-ico="\ud83e\ude99"></span> What a finished game pays</h3>
     <div class="etc-table">
@@ -1586,7 +1586,7 @@
       <div class="etc-row"><span>AI expert</span><span>\ud83e\ude99 40 \u00b7 20 XP</span><span>\ud83e\ude99 5 \u00b7 5 XP</span></div>
       <div class="etc-row"><span>A person</span><span>\ud83e\ude99 60 \u00b7 50 XP</span><span>\ud83e\ude99 25 \u00b7 20 XP</span></div>
     </div>
-    <p style="color:#8a7a80;font-size:.78rem">Games that end too quickly (under 5 turns or 30 seconds) pay nothing.
+    <p class="r-note">Games that end too quickly (under 5 turns or 30 seconds) pay nothing.
        Against the same opponent only <b>3 games a day</b> count.</p>
 
     <h3><span data-ico="\ud83c\udf81"></span> Daily</h3>
@@ -1626,7 +1626,7 @@
     rulesItem: `
       <span class="close-x" onclick="toggleRulesItem(false)">\u00d7</span>
       <h2>Item Match</h2>
-      <p style="color:#8a7a80">The 2-player rules are untouched. <b style="color:#ffe9a8">Items</b> are laid on top \u2014
+      <p class="r-lead">The 2-player rules are untouched. <b style="color:#ffe9a8">Items</b> are laid on top \u2014
          hands, sets and winning all work exactly as in Classic.</p>
 
       <h3><span data-ico="\ud83c\udf81"></span> Where items come from</h3>
@@ -1684,7 +1684,7 @@
         <li><b>Smoke</b> \u2014 hide this lot from your opponent only</li>
         <li><b>Re-auction</b> \u2014 void an auction <b>you lost</b> and bid again. <b>Neither player may reuse the card they just played</b></li>
       </ul>
-      <p style="color:#8a7a80;font-size:.78rem">Re-auction alone is limited to <b>the player who lost that auction</b> \u2014
+      <p class="r-note">Re-auction alone is limited to <b>the player who lost that auction</b> \u2014
          if the winner could take it back, they could rerun any result they disliked.
          Burning the caller's own card is what makes them ask whether the do-over is worth it.</p>
 
@@ -1695,14 +1695,14 @@
       <h3><span data-ico="\ud83e\uddff"></span> Ward \u2014 a reading contest</h3>
       <p>A ward is <b>set in advance</b>. Once placed, it swallows the next item your opponent plays, and the blocked item is simply gone.
          But it <b>only lives for that turn</b>. So they can throw a cheap item first to burn it. Knowing when to place it is the whole game.</p>
-      <p style="color:#8a7a80;font-size:.78rem">A ward cannot block a ward \u2014 otherwise whoever placed one first would always win the exchange.
+      <p class="r-note">A ward cannot block a ward \u2014 otherwise whoever placed one first would always win the exchange.
          You also cannot place one if your opponent has already used their item this turn, or holds no items at all.</p>`,
     // TWELVE 설명서 — 영어판. 화면에는 data-i18n-block="rulesTwelve" 로 붙어
     // 있는데 여기 짝이 없어서, 영어로 바꿔도 이 설명서만 한국어로 남아 있었다.
     rulesTwelve: `
       <span class="close-x" onclick="rulesClose()">\u00d7</span>
       <h2>TWELVE</h2>
-      <p style="color:#8a7a80">The cards are exactly those of Classic. What changes is <b style="color:#ffe9a8">what you pay with</b> \u2014
+      <p class="r-lead">The cards are exactly those of Classic. What changes is <b style="color:#ffe9a8">what you pay with</b> \u2014
          instead of cards you bid <b style="color:#8fd8ff">20 chips</b>.</p>
 
       <h3><span data-ico="\ud83d\udce6"></span> Setup</h3>
@@ -1725,19 +1725,19 @@
         <div class="r4-step"><b>4</b><span>The auction decides a winner and <b>chips go to the bank</b></span></div>
         <div class="r4-step"><b>5</b><span>Both cards go <b>in front of the winner</b>, then the <b>seat passes</b></span></div>
       </div>
-      <p style="color:#8a7a80;font-size:.78rem">The auctioneer spends one card from hand every turn, so six cards means <b>six turns running the auction</b>.</p>
+      <p class="r-note">The auctioneer spends one card from hand every turn, so six cards means <b>six turns running the auction</b>.</p>
 
       <h3><span data-ico="\ud83d\udc41"></span> Open auction \u2014 raise in the open</h3>
       <p><b>The auctioneer bids first</b>, then you alternate. On your turn you either <b>beat the last bid by at least one</b> or <b>step back</b>.
          The moment somebody steps back, the other takes the lot.</p>
-      <p style="color:#8a7a80;font-size:.78rem">The opening bid must be <b>at least 1</b>, and you cannot step back while nothing is staked \u2014
+      <p class="r-note">The opening bid must be <b>at least 1</b>, and you cannot step back while nothing is staked \u2014
          backing out of an empty table is not an auction, it is a gift.</p>
 
       <h3><span data-ico="\ud83d\ude48"></span> Closed auction \u2014 you know the price, not the goods</h3>
       <p>The auctioneer names an <b>even number</b>, once, and that is the whole bidding. The <b>offered card stays face down</b> \u2014
          your opponent knows what it costs but <b>not what they are buying</b>.</p>
       <p>They have two choices: pay <b>that bid +1</b> and take it, or pass. Pass, and the lot stays with the auctioneer.</p>
-      <p style="color:#8a7a80;font-size:.78rem">With fewer than 2 chips the auctioneer cannot choose Closed \u2014 there is no even number to name.
+      <p class="r-note">With fewer than 2 chips the auctioneer cannot choose Closed \u2014 there is no even number to name.
          And an opponent who cannot afford <b>bid +1</b> simply cannot buy, so the lot goes to the auctioneer.</p>
 
       <h3><span data-ico="\ud83c\udfe6"></span> Settling \u2014 the loser pays too</h3>
@@ -1747,7 +1747,7 @@
         <div class="etc-row"><span>Loser</span><span><b>half</b> their bid (rounded down)</span></div>
       </div>
       <p><b>Both cards</b> go in front of the winner. The loser takes no card and still pays.</p>
-      <p style="color:#8a7a80;font-size:.78rem"><b>Example:</b> bid 7 and win, you pay 7. Follow to 4 and step back, you pay 2.</p>
+      <p class="r-note"><b>Example:</b> bid 7 and win, you pay 7. Follow to 4 and step back, you pay 2.</p>
 
       <h3><span data-ico="\ud83c\udfc1"></span> Three ways the game ends</h3>
       <ul>
@@ -1756,16 +1756,16 @@
         <li><b>Deck out</b> \u2014 when the centre deck or the auctioneer's hand runs dry, <b>whoever is closer to a set</b> wins;
             tied, <b>whoever collected more cards</b>; still tied, a draw</li>
       </ul>
-      <p style="color:#8a7a80;font-size:.78rem">As in Classic, each player has <b>five minutes</b>. Your clock runs only on your turn, and running out loses.</p>
-      <p style="color:#8a7a80;font-size:.78rem">The AI comes in three grades. Expert counts the unseen cards, never spends its last chip,
+      <p class="r-note">As in Classic, each player has <b>five minutes</b>. Your clock runs only on your turn, and running out loses.</p>
+      <p class="r-note">The AI comes in three grades. Expert counts the unseen cards, never spends its last chip,
          and uses closed auctions to drain yours.</p>
-      <p style="color:#8a7a80;font-size:.78rem">TWELVE does not affect your rank (RP) \u2014 only coins and experience.</p>`,
+      <p class="r-note">TWELVE does not affect your rank (RP) \u2014 only coins and experience.</p>`,
     // 미니게임 설명서 — 영어판. 본 게임과 규칙이 달라 따로 둔다.
     // 미니게임 설명서 — 영어판. 본 게임과 규칙이 달라 따로 둔다.
     rulesMini: `
     <span class="close-x" onclick="toggleRulesMini(false)">\u00d7</span>
     <h2>Two-Card Duel</h2>
-    <p style="color:#8a7a80">2\u20134 players. A Sutda-style mini game: take two cards, keep them <b style="color:#ffe9a8">hidden</b>, and bet.</p>
+    <p class="r-lead">2\u20134 players. A Sutda-style mini game: take two cards, keep them <b style="color:#ffe9a8">hidden</b>, and bet.</p>
 
     <h3><span data-ico="\ud83c\udfb4"></span> How a hand goes</h3>
     <div class="r4-steps">
@@ -1827,7 +1827,7 @@
       <li>Against anything that is not a Pair (a Twin or Points) it counts as the <b>weakest Points hand</b> and loses.</li>
       <li>One combination out of 190 \u2014 which is why it is an event when it lands.</li>
     </ul>
-    <p style="color:#8a7a80;font-size:.78rem">Because betrayal inverts the order, with three or more still in
+    <p class="r-note">Because betrayal inverts the order, with three or more still in
        you can get a loop \u2014 <b>A beats B, B beats C, C beats A</b>. Then the pot goes to whoever
        <b>beat the most players</b>, and ties fall back to the plain ranking.</p>
 
@@ -1841,7 +1841,7 @@
     rules2: `
     <span class="close-x" onclick="toggleRules(false)">\u00d7</span>
     <h2>FLIP FLAP</h2>
-    <p style="color:#8a7a80">Win auctions, collect cards, and be the first to complete a <b style="color:#ffe9a8">set</b>.</p>
+    <p class="r-lead">Win auctions, collect cards, and be the first to complete a <b style="color:#ffe9a8">set</b>.</p>
 
     <h3>\ud83c\udccf Reading a card</h3>
     <div class="r-anatomy">
@@ -1866,7 +1866,7 @@
     <p style="font-size:.78rem">Cards needed per kind: <b>2</b>\u21922 \u00b7 <b>3</b>\u21923 \u00b7 <b>4</b>\u21924 \u00b7 <b>6</b>\u21926<br>
     <span data-ico="\u26a0"></span> Only cards <b>won at auction and laid in front of you</b> count. Cards in your hand never form a set.</p>
 
-    <h3><span data-ico="\ud83d\uddc2"></span> The deck <span style="color:#8a7a80;font-weight:400;font-size:.85rem">\u2014 24 cards</span></h3>
+    <h3><span data-ico="\ud83d\uddc2"></span> The deck <span class="r-sub">\u2014 24 cards</span></h3>
     <div class="r-comp">
       <div class="r-comp-row"><div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
         <span><b>Kind 2</b> \u00b7 2 cards <span class="r-comp-g">(ranks 1\u20132)</span></span></div>
@@ -1877,7 +1877,7 @@
       <div class="r-comp-row"><div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
         <span><b>Kind 6</b> \u00b7 10 cards <span class="r-comp-g">(ranks 1\u201310)</span></span></div>
     </div>
-    <p style="font-size:.76rem;color:#8a7a80"><b style="color:#ffe9a8">The commoner the kind, the longer its set.</b>
+    <p class="r-note"><b style="color:#ffe9a8">The commoner the kind, the longer its set.</b>
       There are ten 6s, so they look easy \u2014 but you need all six. There are only two 2s, and you need both.</p>
 
     <h3><span data-ico="\ud83d\ude80"></span> Setup</h3>
@@ -1897,12 +1897,12 @@
       <div class="r-step"><span class="r-ico" data-ico="\ud83d\udd01"></span><span class="r-tx"><b>\u2465</b> The two bid cards are <b>swapped</b> back into your hands \u2014 nothing is discarded</span></div>
       <div class="r-step"><span class="r-ico" data-ico="\ud83d\udc51"></span><span class="r-tx"><b>\u2466</b> Pass the auctioneer's seat and start the next auction</span></div>
     </div>
-    <p style="font-size:.76rem;color:#8a7a80">
+    <p class="r-note">
       The auctioneer spends two cards (one offered, one bid) and gets only one back.
       So <b style="color:#ffe9a8">every turn you run the auction, your hand shrinks by one</b> \u2014 that is the clock on the game.</p>
 
     <h3><span data-ico="\ud83c\udfad"></span> Open vs Closed \u2014 what will you hide?</h3>
-    <p style="font-size:.78rem;color:#8a7a80">Only the auctioneer chooses. Either way, <b>something has to be shown</b>.</p>
+    <p class="r-note">Only the auctioneer chooses. Either way, <b>something has to be shown</b>.</p>
     <div class="r-two">
       <div class="r-panel open">
         <div class="r-ptitle">Open auction</div>
@@ -1919,7 +1919,7 @@
         so they can beat it by exactly one.</span>
       </div>
     </div>
-    <p style="font-size:.76rem;color:#8a7a80">
+    <p class="r-note">
       <span data-ico="\ud83d\udca1"></span> So Closed is for lots you <b style="color:#ffe9a8">can afford to lose</b>.
       Throw a weak card to make them spend a strong one, or bid high to pull their best card out of their hand
       \u2014 bid cards change owners, remember.</p>
@@ -1963,7 +1963,7 @@
       <div class="r-step"><span class="r-ico" data-ico="\ud83d\uddc4"></span><span class="r-tx"><b>If the deck runs out</b>, you compare what you have collected</span></div>
       <div class="r-step"><span class="r-ico" data-ico="\u23f1"></span><span class="r-tx"><b>Five minutes each</b> \u2014 your clock runs only on your turn, and running out loses</span></div>
     </div>
-    <p style="font-size:.76rem;color:#8a7a80">
+    <p class="r-note">
       When the deck runs out, compare in this order.<br>
       <b style="color:#ffe9a8">\u2460</b> Closer to a set \u2014 measured as <b>how much of one kind you have collected</b>
       (three 6s = half, three 4s = three quarters \u2192 <b>the 4s are ahead</b>).<br>
@@ -1974,7 +1974,7 @@
     rules4: `
     <span class="close-x" onclick="toggleRules4(false)">\u00d7</span>
     <h2>FLIP FLAP <span class="r4-tag">3\u20134 Players</span></h2>
-    <p style="color:#8a7a80">Cards, bidding and winning all work as in the 2-player game \u2014 complete a <b style="color:#ffe9a8">set</b> first.<br>
+    <p class="r-lead">Cards, bidding and winning all work as in the 2-player game \u2014 complete a <b style="color:#ffe9a8">set</b> first.<br>
     Listed here is only <b style="color:#ffe9a8">what changes with more players</b>.</p>
 
     <h3><span data-ico="\ud83c\udfaf"></span> How to win</h3>
@@ -1990,7 +1990,7 @@
       <li>A player with an empty hand is skipped as auctioneer \u2014 there is nothing left to offer</li>
     </ul>
 
-    <h3><span data-ico="\ud83d\uddc2"></span> The deck <span style="color:#8a7a80;font-weight:400;font-size:.85rem">\u2014 38 cards for 4 \u00b7 30 for 3</span></h3>
+    <h3><span data-ico="\ud83d\uddc2"></span> The deck <span class="r-sub">\u2014 38 cards for 4 \u00b7 30 for 3</span></h3>
     <p style="font-size:.78rem;margin-top:-2px">Thicker than the 24-card 2-player deck. The 3-player deck is the 4-player deck <b>with 8 cards taken out</b>, so one set of cards covers both.</p>
     <div class="r-comp">
       <div class="r-comp-row">

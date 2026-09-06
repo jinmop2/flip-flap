@@ -4779,6 +4779,18 @@
       filter:drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
     .rules-box h3 { font-size:.98rem; color:#ffd97a; margin:18px 0 7px; padding-bottom:5px; border-bottom:1px solid rgba(131,150,180,.3); }
     .rules-box p, .rules-box li { font-size:.84rem; line-height:1.65; color:#c3cedf; }
+    /* 설명서의 곁말 — 본문보다 한 단 낮되, 읽을 수는 있어야 한다.
+       예전 #7a7f89 은 12.5px 에서 대비가 4.2:1 로 기준(4.5:1)에 못 미쳤다.
+       색만 올리면 본문과 구별이 안 되므로, 왼쪽에 선을 그어 곁말임을 모양으로 알린다. */
+    .rules-box .r-lead { color:#9db0c9; }
+    .rules-box .r-note {
+      font-size:.79rem; line-height:1.62; color:#9fb0c8;
+      margin:9px 0 4px; padding:1px 0 1px 11px;
+      border-left:2px solid rgba(131,150,180,.34);
+    }
+    .rules-box .r-note + .r-note { margin-top:5px; }
+    .rules-box .r-note b { color:#d3e2f6; }
+    .rules-box h3 .r-sub { color:#9db0c9; font-weight:400; font-size:.85rem; }
     .rules-box ul { padding-left:18px; }
     .rules-box b { color:#dcebff; }
     /* ── 다인전 설명에만 쓰는 것들 ── */
@@ -7152,7 +7164,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
   <div id="rulesBox4" class="rules-box" data-i18n-block="rules4">
     <span class="close-x" onclick="toggleRules4(false)">×</span>
     <h2>FLIP FLAP <span class="r4-tag">3·4인전</span></h2>
-    <p style="color:#7a7f89">고르는 법도, 이기는 법도 2인전과 같습니다 — <b style="color:#dcebff">세트</b>를 먼저 완성하면 승리입니다.<br>
+    <p class="r-lead">고르는 법도, 이기는 법도 2인전과 같습니다 — <b style="color:#dcebff">세트</b>를 먼저 완성하면 승리입니다.<br>
     여기서는 <b style="color:#dcebff">사람이 늘면서 달라지는 것</b>만 정리했습니다.</p>
 
     <h3><span data-ico="🎯"></span> 이기는 법</h3>
@@ -7168,7 +7180,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
       <li>손패가 다 떨어진 사람은 진행자 차례를 건너뜁니다 — 출품할 카드가 없기 때문입니다</li>
     </ul>
 
-    <h3><span data-ico="🗂"></span> 카드 구성 <span style="color:#7a7f89;font-weight:400;font-size:.85rem">— 4인 38장 · 3인 30장</span></h3>
+    <h3><span data-ico="🗂"></span> 카드 구성 <span class="r-sub">— 4인 38장 · 3인 30장</span></h3>
     <p style="font-size:.78rem;margin-top:-2px">2인전(24장)보다 두툼합니다. 3인 덱은 <b>4인 덱에서 8장을 덜어낸</b> 것이라 카드 한 벌로 두 인원을 모두 볼 수 있습니다.</p>
 <div class="r-comp">
       <div class="r-comp-row">
@@ -7275,7 +7287,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
   <div class="rules-box" data-i18n-block="rulesMini">
     <span class="close-x" onclick="toggleRulesMini(false)">×</span>
     <h2>두 장 승부</h2>
-    <p style="color:#7a7f89">2~4인. 카드 두 장을 <b style="color:#dcebff">서로 안 보이게</b> 쥐고 배팅하는 섯다식 미니게임입니다.</p>
+    <p class="r-lead">2~4인. 카드 두 장을 <b style="color:#dcebff">서로 안 보이게</b> 쥐고 배팅하는 섯다식 미니게임입니다.</p>
 
     <h3><span data-ico="🎴"></span> 한 판의 흐름</h3>
     <div class="r4-steps">
@@ -7362,7 +7374,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <div class="rules-box" data-i18n-block="rulesItem">
       <span class="close-x" onclick="toggleRulesItem(false)">×</span>
       <h2>아이템전</h2>
-      <p style="color:#7a7f89">2인전 규칙은 그대로입니다. 거기에 <b style="color:#dcebff">아이템</b>이 얹힙니다 —
+      <p class="r-lead">2인전 규칙은 그대로입니다. 거기에 <b style="color:#dcebff">아이템</b>이 얹힙니다 —
          손패도, 세트도, 승리 조건도 클래식과 똑같습니다.</p>
 
       <h3><span data-ico="🎁"></span> 아이템은 어디서 나오나</h3>
@@ -7420,7 +7432,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
         <li><b>연막탄</b> — 이번 경매품을 상대에게만 가립니다</li>
         <li><b>재경매</b> — <b>진 경매</b>를 무효로 하고 다시 배팅합니다. <b>방금 낸 카드는 둘 다 못 씁니다</b></li>
       </ul>
-      <p style="color:#7a7f89;font-size:.78rem">재경매만은 <b>그 경매에서 진 사람</b>만 쓸 수 있습니다.
+      <p class="r-note">재경매만은 <b>그 경매에서 진 사람</b>만 쓸 수 있습니다.
          이긴 사람이 물릴 수 있다면 마음에 안 드는 판을 무한정 되돌릴 수 있으니까요.
          무르는 쪽도 제 카드를 태우게 한 것은 "지금 무를 값어치가 있나" 를 저울질하게 만들기 위해서입니다.</p>
 
@@ -7432,7 +7444,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
       <p>부적은 <b>미리 걸어 두는</b> 물건입니다. 걸어 두면 상대가 다음에 쓰는 아이템 하나를 삼키고,
          막힌 아이템은 그대로 사라집니다. 다만 <b>그 턴에만 삽니다.</b>
          그래서 상대가 값싼 아이템을 먼저 던져 부적을 태우는 수도 생깁니다. 언제 걸지가 곧 읽기 싸움입니다.</p>
-      <p style="color:#7a7f89;font-size:.78rem">부적으로 부적은 막지 못합니다 — 그러면 먼저 건 쪽이 늘 이기는 선점 싸움이 되기 때문입니다.
+      <p class="r-note">부적으로 부적은 막지 못합니다 — 그러면 먼저 건 쪽이 늘 이기는 선점 싸움이 되기 때문입니다.
          상대가 이번 턴에 이미 아이템을 썼거나 아이템이 하나도 없을 때도 걸 수 없습니다.</p>
     </div>
   </div>
@@ -7450,7 +7462,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <div class="rules-box" data-i18n-block="rulesTwelve">
       <span class="close-x" onclick="rulesClose()">×</span>
       <h2>TWELVE</h2>
-      <p style="color:#7a7f89">카드는 클래식과 똑같습니다. 다른 것은 <b style="color:#dcebff">무엇으로 값을 치르느냐</b> —
+      <p class="r-lead">카드는 클래식과 똑같습니다. 다른 것은 <b style="color:#dcebff">무엇으로 값을 치르느냐</b> —
          손패 대신 <b style="color:#8fd8ff">칩 20개</b>로 값을 부릅니다.</p>
 
       <h3><span data-ico="📦"></span> 준비</h3>
@@ -7473,12 +7485,12 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
         <div class="r4-step"><b>4</b><span>경매로 낙찰자를 가리고 <b>칩을 은행에 냅니다</b></span></div>
         <div class="r4-step"><b>5</b><span>경매품 두 장은 <b>낙찰자 앞에</b> 깔고, <b>진행자를 넘깁니다</b></span></div>
       </div>
-      <p style="color:#7a7f89;font-size:.78rem">진행자는 턴마다 손패를 한 장씩 씁니다. 그래서 손패 6장은 곧 <b>내가 진행자를 여섯 번 맡는다</b>는 뜻입니다.</p>
+      <p class="r-note">진행자는 턴마다 손패를 한 장씩 씁니다. 그래서 손패 6장은 곧 <b>내가 진행자를 여섯 번 맡는다</b>는 뜻입니다.</p>
 
       <h3><span data-ico="👁"></span> 오픈 경매 — 서로 보며 올린다</h3>
       <p><b>진행자가 먼저</b> 값을 부르고, 그다음부터 번갈아 갑니다. 자기 차례에는 <b>앞사람보다 하나라도 더 부르거나</b>, <b>물러서거나</b> 둘 중 하나입니다.
          한 사람이 물러서면 남은 쪽이 낙찰받습니다.</p>
-      <p style="color:#7a7f89;font-size:.78rem">첫 호가는 <b>1개 이상</b>이어야 하고, 아무도 걸지 않은 판에서는 물러설 수 없습니다.
+      <p class="r-note">첫 호가는 <b>1개 이상</b>이어야 하고, 아무도 걸지 않은 판에서는 물러설 수 없습니다.
          그냥 빠질 수 있다면 경매가 아니라 상대에게 카드를 건네주는 것이 되니까요.</p>
 
       <h3><span data-ico="🙈"></span> 클로즈 경매 — 값만 알고 산다</h3>
@@ -7486,7 +7498,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
          상대는 얼마짜리인지만 알고, <b>무엇을 사는지는 모릅니다</b>.</p>
       <p>상대의 선택은 둘뿐입니다. <b>부른 값 +1</b>을 내고 사거나, <b>사지 않거나</b>.
          사지 않으면 경매품은 진행자가 가져갑니다.</p>
-      <p style="color:#7a7f89;font-size:.78rem">진행자의 칩이 2개보다 적으면 클로즈를 고를 수 없습니다(부를 짝수가 없으므로).
+      <p class="r-note">진행자의 칩이 2개보다 적으면 클로즈를 고를 수 없습니다(부를 짝수가 없으므로).
          상대의 칩이 <b>부른 값 +1</b>에 못 미치면 살 수 없어, 그대로 진행자에게 넘어갑니다.</p>
 
       <h3><span data-ico="🏦"></span> 정산 — 진 쪽도 낸다</h3>
@@ -7496,7 +7508,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
         <div class="etc-row"><span>진 쪽</span><span>부른 값의 <b>절반</b>(소수점 버림)</span></div>
       </div>
       <p>경매품 <b>두 장 모두</b> 이긴 쪽 앞에 깔립니다. 진 쪽은 카드를 못 받고 칩만 잃습니다.</p>
-      <p style="color:#7a7f89;font-size:.78rem"><b>예)</b> 내가 7을 불러 이기면 7을 냅니다. 4까지 따라갔다가 물러서면 그 절반인 2를 냅니다.</p>
+      <p class="r-note"><b>예)</b> 내가 7을 불러 이기면 7을 냅니다. 4까지 따라갔다가 물러서면 그 절반인 2를 냅니다.</p>
 
       <h3><span data-ico="🏁"></span> 게임이 끝나는 세 가지 경우</h3>
       <ul>
@@ -7506,10 +7518,10 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
         <li><b>덱 소진</b> — 중앙덱이나 진행자의 손패가 떨어지면 <b>세트에 더 가까운 쪽</b>이 이깁니다.
             같으면 <b>모은 카드가 많은 쪽</b>, 그것도 같으면 무승부입니다</li>
       </ul>
-      <p style="color:#7a7f89;font-size:.78rem">클래식과 같이 <b>각자 5분</b>의 시계를 씁니다. 내 차례에만 줄어들고, 다 쓰면 집니다.</p>
-      <p style="color:#7a7f89;font-size:.78rem">AI는 쉬움 · 보통 · 전문가 세 단계입니다. 전문가는 남은 카드를 세고, 칩을 0까지 쓰지 않으며,
+      <p class="r-note">클래식과 같이 <b>각자 5분</b>의 시계를 씁니다. 내 차례에만 줄어들고, 다 쓰면 집니다.</p>
+      <p class="r-note">AI는 쉬움 · 보통 · 전문가 세 단계입니다. 전문가는 남은 카드를 세고, 칩을 0까지 쓰지 않으며,
          클로즈로 상대의 칩을 말리는 수까지 씁니다.</p>
-      <p style="color:#7a7f89;font-size:.78rem">TWELVE 는 랭킹 점수(RP)에 들어가지 않습니다. 코인과 경험치만 얻습니다.</p>
+      <p class="r-note">TWELVE 는 랭킹 점수(RP)에 들어가지 않습니다. 코인과 경험치만 얻습니다.</p>
     </div>
   </div>
 </div>
@@ -7526,7 +7538,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <div class="rules-box" data-i18n-block="rulesEtc">
       <span class="close-x" onclick="rulesClose()">×</span>
       <h2>기타</h2>
-      <p style="color:#7a7f89">급수 · RP · 레벨 · 보상이 어떻게 움직이는지 한자리에 모았습니다.</p>
+      <p class="r-lead">급수 · RP · 레벨 · 보상이 어떻게 움직이는지 한자리에 모았습니다.</p>
 
       <h3><span data-ico="🏅"></span> 급수와 단</h3>
       <p>바둑식 사다리입니다. <b>10급에서 시작해 1급까지</b>는 RP 만 채우면 자동으로 오르고,
@@ -7540,7 +7552,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
       </div>
       <p><b>단부터는 승단전</b>입니다. RP 를 채우면 자격이 생기고, <b>5판 중 3승</b>을 해야 실제로 오릅니다.
          승단전에서 떨어지면 <b>RP 100</b>이 깎입니다.</p>
-      <p style="color:#7a7f89;font-size:.78rem">ACE 는 정원 100명이라 RP 순위로 자리가 오갑니다.
+      <p class="r-note">ACE 는 정원 100명이라 RP 순위로 자리가 오갑니다.
          단·ACE 는 <b>3일 이상 안 오면 하루 10 RP</b>씩 줄어듭니다(급수는 안 깎입니다).</p>
 
       <h3><span data-ico="📈"></span> RP — 랭크게임에서만</h3>
@@ -7554,7 +7566,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
       </div>
       <p>실력 차가 나면 값이 달라집니다. RP 가 <b>300 이상 높은 상대</b>를 이기면 <b>1.3배</b>,
          그만큼 낮은 상대를 이기면 <b>0.7배</b>입니다.</p>
-      <p style="color:#7a7f89;font-size:.78rem">다인전은 순위로 갈립니다 — 1위 +25, 2위 +8, 3위 −8, 4위 −22.</p>
+      <p class="r-note">다인전은 순위로 갈립니다 — 1위 +25, 2위 +8, 3위 −8, 4위 −22.</p>
 
       <h3><span data-ico="⭐"></span> 레벨과 경험치</h3>
       <p>레벨은 판을 할수록 오르기만 하고 떨어지지 않습니다. 다음 레벨까지 필요한 경험치는 이렇습니다.</p>
@@ -7564,7 +7576,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
         <div class="etc-row"><span>10~19레벨</span><span>레벨×100</span></div>
         <div class="etc-row"><span>20레벨 이상</span><span>레벨×150</span></div>
       </div>
-      <p style="color:#7a7f89;font-size:.78rem">클랜을 만들려면 <b>레벨 5</b>와 <b>🪙1,000</b>이 필요합니다.</p>
+      <p class="r-note">클랜을 만들려면 <b>레벨 5</b>와 <b>🪙1,000</b>이 필요합니다.</p>
 
       <h3><span data-ico="🪙"></span> 판이 끝나면 받는 것</h3>
       <div class="etc-table">
@@ -7574,7 +7586,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
         <div class="etc-row"><span>AI 전문가</span><span>🪙40 · 20XP</span><span>🪙5 · 5XP</span></div>
         <div class="etc-row"><span>사람</span><span>🪙60 · 50XP</span><span>🪙25 · 20XP</span></div>
       </div>
-      <p style="color:#7a7f89;font-size:.78rem">너무 짧게 끝난 판(5턴 미만 또는 30초 미만)은 보상이 없습니다.
+      <p class="r-note">너무 짧게 끝난 판(5턴 미만 또는 30초 미만)은 보상이 없습니다.
          같은 상대와는 <b>하루 3판</b>까지만 보상이 인정됩니다.</p>
 
       <h3><span data-ico="🎁"></span> 매일 받는 것</h3>
@@ -7624,7 +7636,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
   <div id="rulesBox" class="rules-box" data-i18n-block="rules2">
     <span class="close-x" onclick="toggleRules(false)">×</span>
     <h2>FLIP FLAP</h2>
-    <p style="color:#7a7f89">경매로 카드를 모아 <b style="color:#dcebff">세트</b>를 먼저 완성하면 승리!</p>
+    <p class="r-lead">경매로 카드를 모아 <b style="color:#dcebff">세트</b>를 먼저 완성하면 승리!</p>
 
     <h3>🃏 카드 읽는 법</h3>
     <div class="r-anatomy">
@@ -7649,7 +7661,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <p style="font-size:.78rem">종류별 필요 장수: <b>2</b>→2장 · <b>3</b>→3장 · <b>4</b>→4장 · <b>6</b>→6장<br>
     <span data-ico="⚠"></span> 세트로 세는 것은 <b>경매로 따서 내 앞에 깐 카드</b>뿐입니다. 손에 든 카드는 아무리 모여도 세트가 아닙니다.</p>
 
-    <h3><span data-ico="🗂"></span> 카드 구성 <span style="color:#7a7f89;font-weight:400;font-size:.85rem">— 총 24장</span></h3>
+    <h3><span data-ico="🗂"></span> 카드 구성 <span class="r-sub">— 총 24장</span></h3>
     <div class="r-comp">
       <div class="r-comp-row">
         <div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
@@ -7668,7 +7680,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
         <span><b>6짜리</b> · 10장 <span class="r-comp-g">(등급 1–10)</span></span>
       </div>
     </div>
-    <p style="font-size:.76rem;color:#7a7f89"><b style="color:#dcebff">장수가 많은 종류일수록 세트도 깁니다.</b>
+    <p class="r-note"><b style="color:#dcebff">장수가 많은 종류일수록 세트도 깁니다.</b>
       6짜리는 열 장이나 있어 모으기 쉬워 보이지만 여섯 장을 다 따야 하고,
       2짜리는 두 장만 따면 되지만 판에 딱 두 장뿐입니다.</p>
 
@@ -7732,13 +7744,13 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
       <div class="r-step"><span class="r-ico" data-ico="🔁"></span><span class="r-tx"><b>⑥</b> 배팅에 쓴 두 장은 <b>서로 맞바꿔</b> 손패로 들어갑니다 — 버리는 게 아닙니다</span></div>
       <div class="r-step"><span class="r-ico" data-ico="👑"></span><span class="r-tx"><b>⑦</b> 진행자를 상대에게 넘기고 다음 경매로</span></div>
     </div>
-    <p style="font-size:.76rem;color:#7a7f89">
+    <p class="r-note">
       첫 진행자는 시작 전 카드 뽑기로 정합니다 — <b style="color:#dcebff">강한 카드를 뽑은 쪽</b>이 먼저 진행합니다.<br>
       진행자는 출품으로 한 장, 배팅으로 한 장을 내고 상대 배팅 한 장만 받습니다.
       그래서 <b style="color:#dcebff">진행할 때마다 손패가 한 장씩 줄어듭니다</b> — 판이 끝을 향해 가는 시계입니다.</p>
 
     <h3><span data-ico="🎭"></span> 오픈 vs 클로즈 — 무엇을 숨길까</h3>
-    <p style="font-size:.78rem;color:#7a7f89">고르는 사람은 진행자뿐입니다. 어느 쪽을 골라도 <b>무엇 하나는 반드시 보여 주게</b> 되어 있습니다.</p>
+    <p class="r-note">고르는 사람은 진행자뿐입니다. 어느 쪽을 골라도 <b>무엇 하나는 반드시 보여 주게</b> 되어 있습니다.</p>
     <div class="r-two">
       <div class="r-panel open">
         <div class="r-ptitle">오픈 경매</div>
@@ -7755,7 +7767,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
         상대가 딱 한 끗 위로 눌러 가져갈 수 있습니다.</span>
       </div>
     </div>
-    <p style="font-size:.76rem;color:#7a7f89">
+    <p class="r-note">
       <span data-ico="💡"></span> 그래서 클로즈는 <b style="color:#dcebff">못 가져도 그만인 판</b>에 씁니다.
       약한 카드를 던져 상대에게 강한 카드를 쓰게 만들거나, 세게 질러 상대의 최강 카드를 빼내는 수로도 씁니다
       — 배팅 카드는 서로 넘어가니까요.</p>
@@ -7799,7 +7811,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
       <div class="r-step"><span class="r-ico" data-ico="🗄"></span><span class="r-tx"><b>덱이 떨어지면</b> 그 자리에서 셈합니다</span></div>
       <div class="r-step"><span class="r-ico" data-ico="⏱"></span><span class="r-tx"><b>제한 시간 5분</b> — 내 차례에만 줄어들고, 다 쓰면 집니다</span></div>
     </div>
-    <p style="font-size:.76rem;color:#7a7f89">
+    <p class="r-note">
       덱이 떨어졌을 때는 이 차례로 봅니다.<br>
       <b style="color:#dcebff">①</b> 세트에 더 가까운 쪽 — 한 종류에서 <b>필요한 장수 대비 몇 장을 모았는지</b>로 잽니다
       (6짜리 3장 = 절반, 4짜리 3장 = 4분의 3 → <b>4짜리 쪽이 앞섭니다</b>).<br>
