@@ -1,0 +1,178 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; font-family:'Fredoka',system-ui,sans-serif; }
+    a { color:#8fb2e0; } a:hover { color:#b8d0ef; }
+    .tile { position:relative; border-radius:16px; border:1.5px solid; overflow:hidden;
+            box-shadow:inset 0 1px 0 rgba(200,222,255,.14); }
+    .tile::after { content:''; position:absolute; inset:0; border-radius:15px;
+            background:radial-gradient(120% 62% at 50% -8%, rgba(255,255,255,.055), transparent 70%); pointer-events:none; }
+    .mark { position:relative; }
+    .mark::before { content:''; position:absolute; left:50%; top:50%; width:62px; height:62px;
+            transform:translate(-50%,-50%); border-radius:50%; filter:blur(11px); opacity:.5; }
+  </style>
+</helmet>
+
+<div style="width:375px; height:812px; position:relative; overflow:hidden;
+     background:linear-gradient(180deg,#152037 0%,#0c1220 40%,#090e19 100%);">
+
+  <!-- 테이블(펠트)의 기운을 아주 옅게 위쪽에 남긴다 — 이 앱의 판 색이다 -->
+  <div style="position:absolute; left:50%; top:-150px; width:520px; height:330px; transform:translateX(-50%);
+       background:radial-gradient(50% 50% at 50% 50%, rgba(44,79,71,.34), transparent 72%); pointer-events:none;"></div>
+
+  <!-- 제목 줄 -->
+  <div style="position:absolute; left:16px; top:16px; width:343px; height:48px;
+       display:flex; align-items:center; gap:9px;">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
+      <path d="M12 3.2 5.6 10.1c-2.1 2.2-1.4 5.7 1.4 6.8 1.6.6 3.2.1 4-1v2.2l-1.5 2.5h5l-1.5-2.5v-2.2c.8 1.1 2.4 1.6 4 1 2.8-1.1 3.5-4.6 1.4-6.8L12 3.2Z"
+            fill="#9fb4d8" fill-opacity=".16" stroke="#9fb4d8" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>
+    <span style="font-size:19.2px; font-weight:700; color:#eaf1fd; letter-spacing:-.3px;">솔로플레이</span>
+    <span style="margin-left:auto; width:40px; height:40px; display:flex; align-items:center; justify-content:center;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+        <path d="M5 5 19 19M19 5 5 19" stroke="#93a1b8" stroke-width="1.9" stroke-linecap="round"/>
+      </svg>
+    </span>
+  </div>
+  <div style="position:absolute; left:16px; top:63px; width:343px; height:1px;
+       background:linear-gradient(90deg, rgba(159,180,216,.30), rgba(159,180,216,.05) 72%, transparent);"></div>
+
+  <!-- 모드 격자 — 클래식이 맨 위 한 줄 -->
+  <div style="position:absolute; left:16px; top:70px; width:343px; height:648px;
+       display:grid; grid-template-columns:1fr 1fr; grid-template-rows:104px 1fr 1fr; gap:10px;">
+      <div class="tile" style="grid-column:1 / -1; border-color:rgba(143,178,224,.46);
+           background:linear-gradient(100deg, rgba(143,178,224,.15), rgba(143,178,224,.03) 62%), linear-gradient(180deg,#182440,#0d1524);">
+        <div style="position:absolute; inset:0; display:flex; align-items:center; gap:15px; padding:0 17px;">
+          <div class="mark" style="width:38px; height:38px; flex-shrink:0;">
+            <span style="position:absolute; left:50%; top:50%; width:70px; height:70px; transform:translate(-50%,-50%);
+                  border-radius:50%; background:rgba(143,178,224,.22); filter:blur(12px);"></span>
+            <span style="position:relative; display:block;"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" style="position:relative;">
+            <rect x="2.6" y="7" width="10" height="13.6" rx="2" transform="rotate(-13 2.6 7)"
+                  stroke="#8fb2e0" stroke-width="1.6" fill="#0d1524"/>
+            <rect x="10.2" y="3.6" width="11" height="15" rx="2.2"
+                  stroke="#cfe0f6" stroke-width="1.6" fill="#111a2e"/>
+            <path d="M15.7 6.9 12.1 10.7c-1.2 1.2-.7 3.2.9 3.7.9.3 1.8 0 2.3-.6v1.3l-.9 1.6h2.8l-.9-1.6v-1.3c.5.6 1.4.9 2.3.6 1.6-.5 2.1-2.5.9-3.7L15.7 6.9Z"
+                  fill="#dfeafb"/>
+          </svg></span>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:19.2px; font-weight:600; color:#eaf2ff; letter-spacing:-.4px;">클래식</div>
+            <div style="font-size:11.7px; font-weight:500; color:#95a2b6; line-height:1.35; margin-top:4px;">경매로 세트를 먼저 완성하면 승리</div>
+          </div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="flex-shrink:0; opacity:.7;">
+            <path d="M9 5l7 7-7 7" stroke="#8fb2e0" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="tile" style="border-color:rgba(183,154,228,.40);
+           background:linear-gradient(180deg, rgba(183,154,228,.11), rgba(183,154,228,.02) 46%), linear-gradient(180deg,#1b1936,#100e21);">
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+             gap:13px; padding:16px 13px; text-align:center;">
+          <div class="mark" style="width:34px; height:34px;">
+            <span style="position:absolute; left:50%; top:50%; width:62px; height:62px; transform:translate(-50%,-50%);
+                  border-radius:50%; background:rgba(183,154,228,.20); filter:blur(11px);"></span>
+            <span style="position:relative; display:block;"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" style="position:relative;">
+            <rect x="3.6" y="8.4" width="16.8" height="11.4" rx="2.1" stroke="#b79ae4" stroke-width="1.6" fill="#151129"/>
+            <path d="M3.6 12.4h16.8" stroke="#b79ae4" stroke-width="1.5"/>
+            <path d="M12 8.4v11.4" stroke="#e2d4ff" stroke-width="1.5"/>
+            <path d="M12 8.4c-2.6 0-4.3-.9-4.3-2.4S9 3.9 10.2 4.6C11.2 5.2 12 6.7 12 8.4Zm0 0c2.6 0 4.3-.9 4.3-2.4S15 3.9 13.8 4.6C12.8 5.2 12 6.7 12 8.4Z"
+                  stroke="#e2d4ff" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg></span>
+          </div>
+          <div>
+            <div style="font-size:17.6px; font-weight:600; color:#ecdfff; letter-spacing:-.3px;">아이템전</div>
+            <div style="font-size:11.2px; font-weight:500; color:#9d94b4; line-height:1.35; margin-top:5px;">경매에서 지면<br>아이템이 들어와요</div>
+          </div>
+        </div>
+      </div>
+      <div class="tile" style="border-color:rgba(111,188,212,.40);
+           background:linear-gradient(180deg, rgba(111,188,212,.11), rgba(111,188,212,.02) 46%), linear-gradient(180deg,#0f2534,#08161f);">
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+             gap:13px; padding:16px 13px; text-align:center;">
+          <div class="mark" style="width:34px; height:34px;">
+            <span style="position:absolute; left:50%; top:50%; width:62px; height:62px; transform:translate(-50%,-50%);
+                  border-radius:50%; background:rgba(111,188,212,.20); filter:blur(11px);"></span>
+            <span style="position:relative; display:block;"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" style="position:relative;">
+            <ellipse cx="12" cy="16.9" rx="7.4" ry="2.9" stroke="#6fbcd4" stroke-width="1.6" fill="#0b1c26"/>
+            <path d="M4.6 16.9v-2.6M19.4 16.9v-2.6" stroke="#6fbcd4" stroke-width="1.6" stroke-linecap="round"/>
+            <ellipse cx="12" cy="12.7" rx="7.4" ry="2.9" stroke="#9fd9ea" stroke-width="1.6" fill="#0d222e"/>
+            <path d="M4.6 12.7v-2.6M19.4 12.7v-2.6" stroke="#9fd9ea" stroke-width="1.6" stroke-linecap="round"/>
+            <ellipse cx="12" cy="8.5" rx="7.4" ry="2.9" stroke="#cbeefb" stroke-width="1.6" fill="#122b39"/>
+          </svg></span>
+          </div>
+          <div>
+            <div style="font-size:17.6px; font-weight:600; color:#d5f0fb; letter-spacing:-.3px;">TWELVE</div>
+            <div style="font-size:11.2px; font-weight:500; color:#8ea4b0; line-height:1.35; margin-top:5px;">카드가 아니라<br>칩으로 값을 부르는 경매</div>
+          </div>
+        </div>
+      </div>
+      <div class="tile" style="border-color:rgba(111,191,157,.40);
+           background:linear-gradient(180deg, rgba(111,191,157,.11), rgba(111,191,157,.02) 46%), linear-gradient(180deg,#102a24,#081a16);">
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+             gap:13px; padding:16px 13px; text-align:center;">
+          <div class="mark" style="width:34px; height:34px;">
+            <span style="position:absolute; left:50%; top:50%; width:62px; height:62px; transform:translate(-50%,-50%);
+                  border-radius:50%; background:rgba(111,191,157,.20); filter:blur(11px);"></span>
+            <span style="position:relative; display:block;"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" style="position:relative;">
+            <circle cx="4.9" cy="9.4" r="2.5" stroke="#6fbf9d" stroke-width="1.6" fill="#081a16"/>
+            <path d="M1 19.2c0-2.6 1.7-4.4 3.9-4.4" stroke="#6fbf9d" stroke-width="1.6" stroke-linecap="round"/>
+            <circle cx="19.1" cy="9.4" r="2.5" stroke="#6fbf9d" stroke-width="1.6" fill="#081a16"/>
+            <path d="M23 19.2c0-2.6-1.7-4.4-3.9-4.4" stroke="#6fbf9d" stroke-width="1.6" stroke-linecap="round"/>
+            <circle cx="12" cy="7.6" r="3.1" stroke="#a8e6c9" stroke-width="1.7" fill="#0c221c"/>
+            <path d="M6.6 19.2c0-3.2 2.4-5.4 5.4-5.4s5.4 2.2 5.4 5.4"
+                  stroke="#a8e6c9" stroke-width="1.7" stroke-linecap="round" fill="#0c221c"/>
+          </svg></span>
+          </div>
+          <div>
+            <div style="font-size:17.6px; font-weight:600; color:#d6f3e5; letter-spacing:-.3px;">다인전</div>
+            <div style="font-size:11.2px; font-weight:500; color:#8ba99b; line-height:1.35; margin-top:5px;">셋·넷이서 ·<br>지는 것도 수가 되는 판</div>
+          </div>
+        </div>
+      </div>
+      <div class="tile" style="border-color:rgba(203,176,114,.40);
+           background:linear-gradient(180deg, rgba(203,176,114,.11), rgba(203,176,114,.02) 46%), linear-gradient(180deg,#1e1a10,#12100a);">
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+             gap:13px; padding:16px 13px; text-align:center;">
+          <div class="mark" style="width:34px; height:34px;">
+            <span style="position:absolute; left:50%; top:50%; width:62px; height:62px; transform:translate(-50%,-50%);
+                  border-radius:50%; background:rgba(203,176,114,.20); filter:blur(11px);"></span>
+            <span style="position:relative; display:block;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
+      <path d="M12 3.2 5.6 10.1c-2.1 2.2-1.4 5.7 1.4 6.8 1.6.6 3.2.1 4-1v2.2l-1.5 2.5h5l-1.5-2.5v-2.2c.8 1.1 2.4 1.6 4 1 2.8-1.1 3.5-4.6 1.4-6.8L12 3.2Z"
+            fill="#9fb4d8" fill-opacity=".16" stroke="#9fb4d8" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg></span>
+          </div>
+          <div>
+            <div style="font-size:17.6px; font-weight:600; color:#f4e6bd; letter-spacing:-.3px;">토너먼트</div>
+            <div style="font-size:11.2px; font-weight:500; color:#a2977a; line-height:1.35; margin-top:5px;">8강 · 세 판을 이기면 우승<br>매 경기 모드가 바뀐다</div>
+          </div>
+        </div>
+      </div>
+  </div>
+
+  <!-- 하단 바 (자리 확인용) -->
+  <div style="position:absolute; left:0; top:754px; width:375px; height:58px;
+       background:rgba(10,15,26,.94); border-top:1px solid rgba(131,150,180,.20);
+       display:flex; align-items:center; justify-content:space-around; padding:0 6px;">
+    <span style="font-size:10px; color:#9fb4d8; font-weight:600;">홈</span>
+    <span style="font-size:10px; color:#5b6678; font-weight:500;">미션</span>
+    <span style="font-size:10px; color:#5b6678; font-weight:500;">상점</span>
+    <span style="font-size:10px; color:#5b6678; font-weight:500;">친구</span>
+    <span style="font-size:10px; color:#5b6678; font-weight:500;">클랜</span>
+    <span style="font-size:10px; color:#5b6678; font-weight:500;">랭킹</span>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":375,"height":812}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

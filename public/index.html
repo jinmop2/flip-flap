@@ -225,34 +225,63 @@
     .mm-sec i { flex:1; height:1px; background:linear-gradient(90deg, rgba(131,150,180,.45), transparent); }
     .mm-sec .mc-tag { flex-shrink:0; }
 
+    /* 모드 색 한 벌 — 솔로 칸·멀티 칸·큰 칸이 같은 값을 물려 쓴다.
+       예전 색은 밝기가 제각각이었다(보라 .20 · 청록 .62). 한 화면에 다섯이
+       나란히 서면 그게 그대로 어수선함이 된다. 밝기·채도를 맞춰 한 식구로
+       묶고, 칸 바탕은 앱의 남색에 붙이고 색은 테두리와 표식만 지게 했다.
+         --a  칸 색 (r,g,b — rgba() 로 농도를 바꿔 쓴다)
+         --s1/--s2  바탕 그러데이션   --nm 이름색   --sb 설명색 */
+    .sm-item, .mm-tile, .mm-hero {
+      --a:143,178,224; --s1:#16203a; --s2:#0d1524; --nm:#e8f0fd; --sb:#95a2b6; }
+    .sm-item.t-item, .mm-tile.t-item {
+      --a:183,154,228; --s1:#1a1830; --s2:#0f0d1d; --nm:#ecdfff; --sb:#9d94b4; }
+    .sm-item.t-tv, .mm-tile.t-tv, .mm-tile.t-twelve {
+      --a:111,188,212; --s1:#10222f; --s2:#09141c; --nm:#d5f0fb; --sb:#8ea4b0; }
+    .sm-item.t-quad, .mm-tile.t-quad {
+      --a:111,191,157; --s1:#112420; --s2:#081714; --nm:#d6f3e5; --sb:#8ba99b; }
+    .sm-item.t-tour, .mm-tile.t-tour, .mm-hero {
+      --a:203,176,114; --s1:#1b1810; --s2:#100e09; --nm:#f4e6bd; --sb:#a2977a; }
+    .sm-item.t-mini, .mm-tile.t-mini {
+      --a:222,142,182; --s1:#2a1220; --s2:#180a13; --nm:#ffd6e8; --sb:#b08a9c; }
+
+    /* 표식 — 칸이 물려준 색으로 그려지고, 뒤에 같은 색 번짐을 깐다 */
+    .ic { display:block; flex-shrink:0; color:rgb(var(--a));
+          filter:drop-shadow(0 0 9px rgba(var(--a),.42)); }
+
     /* 큰 칸 하나 — 그 창에서 제일 하고 싶은 것 */
     .mm-hero {
       display:flex; align-items:center; gap:12px; width:100%; text-align:left;
       padding:13px 15px; border-radius:15px; cursor:pointer; font-family:'Fredoka';
-      background:linear-gradient(135deg,#465366 0%,#5a6b83 45%,#384252 100%);
-      border:1.5px solid #e0b45c; box-shadow:inset 0 1px 0 rgba(221,237,255,.35), 0 4px 16px rgba(0,0,0,.4);
+      background:linear-gradient(100deg, rgba(var(--a),.15), rgba(var(--a),.03) 62%),
+                 linear-gradient(180deg, var(--s1), var(--s2));
+      border:1.5px solid rgba(var(--a),.46);
+      box-shadow:inset 0 1px 0 rgba(200,222,255,.14), 0 4px 16px rgba(0,0,0,.34);
       transition:.14s;
     }
     .mm-hero:hover { filter:brightness(1.1); transform:translateY(-1px); }
     .mm-hero:active { transform:translateY(0); }
-    .mm-hero .hh-ico { font-size:1.7rem; line-height:1; flex-shrink:0; filter:drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+    .mm-hero .hh-ico { width:28px; height:28px; }
     .mm-hero .hh-txt { flex:1; min-width:0; }
     /* span 을 블록으로 — 안 그러면 이름과 설명이 한 줄에 이어 붙어 읽기 나쁘다 */
-    .mm-hero .hh-name { display:block; font-size:1rem; font-weight:900; color:#f0f7ff; }
-    .mm-hero .hh-sub { display:block; font-size:.66rem; color:rgba(233,242,255,.75); margin-top:1px; }
-    .mm-hero .hh-side { flex-shrink:0; text-align:right; font-size:.66rem; font-weight:800; color:#e8f2ff; }
+    .mm-hero .hh-name { display:block; font-size:1rem; font-weight:900; color:var(--nm); letter-spacing:-.3px; }
+    .mm-hero .hh-sub { display:block; font-size:.66rem; color:var(--sb); margin-top:2px; }
+    .mm-hero .hh-side { flex-shrink:0; text-align:right; font-size:.66rem; font-weight:800; color:var(--nm); }
     .mm-hero .hh-side b { display:block; font-size:.86rem; }
     /* ⚡ 빠른대전 — 랭크 바로 아래에 오지만 등급이 안 걸리는 자리다.
        금색을 그대로 쓰면 둘이 같은 무게로 읽혀, 한 단계 낮은 청록으로 낸다. */
     .mm-hero.quick {
-      background:linear-gradient(135deg,#14413a 0%,#1b5a4c 45%,#0e2f2a 100%);
-      border-color:#5cc8a8;
-      box-shadow:inset 0 1px 0 rgba(180,255,230,.28), 0 3px 12px rgba(0,0,0,.35);
+      --a:111,191,157; --s1:#112420; --s2:#081714; --nm:#d6f3e5; --sb:#8ba99b;
+      box-shadow:inset 0 1px 0 rgba(200,222,255,.12), 0 3px 12px rgba(0,0,0,.3);
+    }
+    /* 랭크게임은 이 창에서 유일하게 등급이 걸리는 자리다 — 색만으로는 빠른대전과
+       같은 무게로 읽혀서, 테두리를 한 단계 세우고 옅은 띠를 한 겹 두른다. */
+    .mm-hero:not(.quick) {
+      border-color:rgba(var(--a),.56);
+      box-shadow:inset 0 1px 0 rgba(200,222,255,.16), 0 4px 18px rgba(0,0,0,.34), 0 0 0 1px rgba(var(--a),.11);
     }
     /* 둘이 딱 붙어 있어 한 덩이로 읽혔다. 서로 다른 것을 고르는 자리라 띄운다. */
     .mm-hero + .mm-hero.quick { margin-top:9px; }
-    .mm-hero.quick .hh-name { color:#dffaef; font-size:.94rem; }
-    .mm-hero.quick .hh-sub { color:rgba(210,250,235,.72); }
+    .mm-hero.quick .hh-name { font-size:.94rem; }
 
     /* 랭크게임 모드 룰렛 — 세 판 중 무엇이 걸릴지 돌려서 보여 준다 */
     .rk-roulette { display:none; flex-direction:column; align-items:center; gap:4px; width:100%; margin-top:2px; }
@@ -316,17 +345,25 @@
     .sm-head {
       display:flex; flex-direction:column; align-items:center; justify-content:center;
       gap:7px; text-align:center; cursor:pointer; padding:14px 12px; font-family:'Fredoka';
-      background:linear-gradient(180deg,#152037,#0d1424); border:1.5px solid #8396b4;
-      box-shadow:inset 0 1px 0 rgba(200,222,255,.16);
+      background:linear-gradient(180deg, rgba(var(--a),.11), rgba(var(--a),.02) 46%),
+                 linear-gradient(180deg, var(--s1), var(--s2));
+      border:1.5px solid rgba(var(--a),.40);
+      box-shadow:inset 0 1px 0 rgba(200,222,255,.14);
     }
     .sm-head:hover { filter:brightness(1.12); }
+    /* 한 줄을 다 쓰는 칸은 색도 가로로 흐른다 — 세로 그러데이션을 그대로 쓰면
+       넓고 낮은 칸에서 위아래 차이가 안 보여 통짜로 칠한 것처럼 보인다. */
+    .sm-item.wide .sm-head, .mm-hero {
+      background:linear-gradient(100deg, rgba(var(--a),.11), rgba(var(--a),.025) 58%),
+                 linear-gradient(180deg, var(--s1), var(--s2));
+    }
     .sm-item.wide .sm-head { flex-direction:row; gap:11px; text-align:left; padding:11px 14px; }
     .sm-item.wide .sm-txt { flex:1; min-width:0; }
-    .sm-ico { font-size:2.3rem; line-height:1; flex-shrink:0; }
-    .sm-item.wide .sm-ico { font-size:1.7rem; }
+    .sm-ico { width:34px; height:34px; }
+    .sm-item.wide .sm-ico { width:30px; height:30px; }
     .sm-txt { min-width:0; }
-    .sm-txt b { display:block; font-size:1.1rem; color:#dee8f6; }
-    .sm-txt small { display:block; font-size:.7rem; color:#949ba5; margin-top:3px; line-height:1.35; }
+    .sm-txt b { display:block; font-size:1.1rem; color:var(--nm); letter-spacing:-.3px; }
+    .sm-txt small { display:block; font-size:.7rem; color:var(--sb); margin-top:4px; line-height:1.35; }
     .sm-item.wide .sm-txt b { font-size:1rem; }
     /* 껍질이 걷힌다 — 위로 살짝 들리며 사라진다 */
     .sm-item.on .sm-head { opacity:0; transform:translateY(-7px) scale(.97); pointer-events:none; }
@@ -335,9 +372,23 @@
     .sm-body {
       display:flex; flex-direction:column; gap:6px; padding:8px;
       opacity:0; transform:translateY(7px) scale(.97); pointer-events:none;
-      background:rgba(0,0,0,.32); border:1.5px solid var(--gold);
-      box-shadow:inset 0 1px 0 rgba(200,222,255,.12);
+      background:linear-gradient(180deg, rgba(var(--a),.09), rgba(var(--a),.02) 46%),
+                 linear-gradient(180deg,#141d33,#0b1220);
+      border:1.5px solid rgba(var(--a),.62);
+      box-shadow:inset 0 1px 0 rgba(200,222,255,.12), 0 0 0 3px rgba(var(--a),.10);
     }
+    /* 껍질이 걷히면 모드 이름이 화면에서 사라져, 어느 모드의 난이도인지가
+       없어졌다. 이름을 위 한 줄로 남긴다 — 닫는 ×도 여기 둔다. */
+    .sm-body { padding-top:28px; }
+    .sm-body .sd-top { position:absolute; left:11px; right:7px; top:6px; height:18px;
+      display:flex; align-items:center; gap:6px; }
+    .sm-body .sd-top .ic { width:14px; height:14px; filter:none; }
+    .sm-body .sd-top b { font-size:.72rem; font-weight:600; color:var(--nm);
+      letter-spacing:-.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sm-body .sd-x { flex-shrink:0; width:26px; height:24px; margin:-3px -4px -3px auto;
+      display:flex; align-items:center; justify-content:center; cursor:pointer;
+      font-size:.9rem; line-height:1; color:rgba(var(--a),.75); background:none; border:0; }
+    .sm-body .sd-x:hover { color:rgb(var(--a)); }
     .sm-item.on .sm-body { opacity:1; transform:none; pointer-events:auto; }
     .sm-item.wide .sm-body { flex-direction:row; gap:6px; }
     /* 난이도 한 줄 — 별·이름·값을 한 줄에 나란히 */
@@ -349,32 +400,27 @@
     }
     .sm-d:hover { border-color:var(--gold); filter:brightness(1.12); }
     .sm-d b { font-size:.95rem; font-weight:700; }
-    .sm-d .sd-s { font-size:.8rem; color:#ffd94a; letter-spacing:-.5px; flex-shrink:0; }
-    .sm-d .sd-s i { opacity:.28; font-style:normal; }
-    .sm-d .sd-c { font-size:.72rem; color:#9aa3b2; flex-shrink:0; }
-    .sm-d.d-expert { border-color:rgba(224,180,92,.55); }
+    /* 난이도 눈금 — 별표는 글꼴마다 모양이 다르고, 흐린 별(투명도 .28)은
+       어두운 칸에서 거의 안 보였다. 채운 칸 수로 읽게 한다. */
+    .sm-d .sd-m { display:flex; align-items:flex-end; gap:2.5px; height:14px; flex-shrink:0; }
+    .sm-d .sd-m i { width:3px; border-radius:2px; background:#8fb2e0; opacity:.22; }
+    .sm-d .sd-m i:nth-child(1) { height:8px; }
+    .sm-d .sd-m i:nth-child(2) { height:11px; }
+    .sm-d .sd-m i:nth-child(3) { height:14px; }
+    /* 다인전 두 칸은 난이도가 아니라 사람 수다 — 눈금 자리에 표식을 세운다 */
+    .sm-d .sd-m.sd-n { align-items:center; }
+    .sm-d .sd-m.sd-n .ic { width:15px; height:15px; }
+    .sm-d .sd-m[data-lv="1"] i:nth-child(-n+1),
+    .sm-d .sd-m[data-lv="2"] i:nth-child(-n+2),
+    .sm-d .sd-m[data-lv="3"] i:nth-child(-n+3) { opacity:1; }
+    .sm-d .sd-c { display:flex; align-items:center; gap:4px; font-size:.72rem; color:#8b96a8; flex-shrink:0; }
+    .sm-d .sd-c .ic { width:11px; height:11px; color:currentColor; filter:none; }
+    .sm-d.d-expert { border-color:rgba(203,176,114,.52); }
+    .sm-d.d-expert .sd-m i { background:#e2c886; }
+    .sm-d.d-expert b { color:#f4e6bd; }
+    .sm-d.d-expert .sd-c { color:#bda878; }
     .sm-item.wide .sm-d { flex-direction:column; gap:1px; justify-content:center; }
 
-    .sm-item.t-item .sm-head { background:linear-gradient(180deg,#3a2358,#241040); border-color:#8b6ad8; }
-    .sm-item.t-item .sm-txt b { color:#e2d4ff; }
-    .sm-item.t-item .sm-body { border-color:#8b6ad8; }
-    .sm-item.t-tv .sm-head { background:linear-gradient(180deg,#173a55,#0d2233); border-color:#6ac0f0; }
-    .sm-item.t-tv .sm-txt b { color:#bfe8ff; }
-    .sm-item.t-tv .sm-body { border-color:#6ac0f0; }
-    .sm-item.t-quad .sm-head { background:linear-gradient(180deg,#123a30,#0c2620); border-color:#4a9a7a; }
-    .sm-item.t-quad .sm-txt b { color:#c8f0dc; }
-    .sm-item.t-quad .sm-body { border-color:#4a9a7a; }
-    .sm-item.t-mini .sm-head { background:linear-gradient(180deg,#4a1030,#2c0820); border-color:#d06a9a; }
-    .sm-item.t-mini .sm-txt b { color:#ffd6e8; }
-    .sm-item.t-mini .sm-body { border-color:#d06a9a; }
-    .sm-item.t-tour .sm-head { background:linear-gradient(180deg,#4a3508,#2a1d04); border-color:#e0b45c; }
-    .sm-item.t-tour .sm-txt b { color:#ffeec0; }
-    .sm-item.t-tour .sm-body { border-color:#e0b45c; }
-    .mm-tile.t-tour { border-color:rgba(224,180,92,.45); }
-    .mm-hero.tour {
-      background:linear-gradient(135deg,#29313c 0%,#3e4959 45%,#1c2129 100%);
-      border-color:#94a8c5;
-    }
     @media (prefers-reduced-motion: reduce) { .sm-head, .sm-body { transition:opacity .12s; transform:none !important; } }
 
     /* ── 솔로 토너먼트 ────────────────────────────────────────
@@ -459,8 +505,8 @@
     .mm-tiles.c6 { grid-template-columns:repeat(6, 1fr); gap:4px; }
     .mm-tiles.c5 .mt-name, .mm-tiles.c6 .mt-name { font-size:.62rem; letter-spacing:-.3px; }
     .mm-tiles.c6 .mt-name { font-size:.56rem; }
-    .mm-tiles.c5 .mt-ico, .mm-tiles.c6 .mt-ico { font-size:1.05rem; }
-    .mm-tiles.c6 .mt-ico { font-size:.98rem; }
+    .mm-tiles.c5 .mt-ico, .mm-tiles.c6 .mt-ico { width:19px; height:19px; }
+    .mm-tiles.c6 .mt-ico { width:17px; height:17px; }
     .mm-tiles.c6 .mt-sub { font-size:.5rem; }
     .mm-tiles.c5 .mm-tile, .mm-tiles.c6 .mm-tile { padding:10px 3px 8px; border-radius:11px; }
     .mm-tiles.c6 .mm-tile { padding:9px 2px 7px; }
@@ -471,27 +517,18 @@
     .mm-tile {
       display:flex; flex-direction:column; align-items:center; gap:3px;
       padding:12px 6px 10px; border-radius:13px; cursor:pointer; font-family:'Fredoka';
-      background:linear-gradient(180deg,#152037,#0d1424); border:1.5px solid #8396b4;
-      box-shadow:inset 0 1px 0 rgba(200,222,255,.16); transition:.14s;
+      background:linear-gradient(180deg, rgba(var(--a),.11), rgba(var(--a),.02) 46%),
+                 linear-gradient(180deg, var(--s1), var(--s2));
+      border:1.5px solid rgba(var(--a),.40);
+      box-shadow:inset 0 1px 0 rgba(200,222,255,.14); transition:.14s;
     }
     .mm-tile:hover { transform:translateY(-2px); filter:brightness(1.14); }
     .mm-tile:active { transform:translateY(0); }
     /* 난이도 별은 색을 안 줘서 버튼 기본색(검정)을 물려받고 있었다 — 어두운
        타일 위에서는 거의 안 보인다. 금색으로 못 박는다. */
-    .mm-tile .mt-ico { font-size:1.3rem; line-height:1.1; color:#c6dcfc; filter:drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
-    /* 흐린 별(아직 안 채운 칸)도 같은 금색에서 옅게 — 검정으로 두면 그냥 사라진다 */
-    .mm-tile .mt-ico span { color:#c6dcfc; }
-    .mm-tile .mt-name { font-size:.86rem; font-weight:800; color:#dee8f6; }
-    .mm-tile .mt-sub { font-size:.6rem; color:#949ba5; text-align:center; line-height:1.35; }
-    /* 아이템전은 보라, 다인전은 청록 — 판이 다르다는 걸 색으로 먼저 알린다 */
-    .mm-tile.t-item { background:linear-gradient(180deg,#3a2358,#241040); border-color:#8b6ad8; }
-    .mm-tile.t-twelve { background:linear-gradient(180deg,#173a55,#0d2233); border-color:#6ac0f0; }
-    .mm-tile.t-item .mt-name { color:#e2d4ff; }
-    .mm-tile.t-quad { background:linear-gradient(180deg,#123a30,#0c2620); border-color:#4a9a7a; }
-    .mm-tile.t-quad .mt-name { color:#c8f0dc; }
-    /* 미니게임은 본 게임과 규칙이 아예 달라서 색도 따로 준다 */
-    .mm-tile.t-mini { background:linear-gradient(180deg,#4a1030,#2c0820); border-color:#d06a9a; }
-    .mm-tile.t-mini .mt-name { color:#ffd6e8; }
+    .mm-tile .mt-ico { width:22px; height:22px; }
+    .mm-tile .mt-name { font-size:.86rem; font-weight:800; color:var(--nm); letter-spacing:-.3px; }
+    .mm-tile .mt-sub { font-size:.6rem; color:var(--sb); text-align:center; line-height:1.35; }
 
     .sec-title { display:flex; justify-content:space-between; align-items:center; font-size:.72rem; font-weight:600; color:#566174; letter-spacing:1px; padding:0 2px; }
     .qenter-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:8px; }
@@ -6158,6 +6195,54 @@
 </head>
 <body>
 
+<!-- 모드 표식 — 솔로·멀티가 같은 그림을 쓴다. 색은 쓰는 자리가 정한다. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-classic" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <rect x="2.6" y="7" width="10" height="13.6" rx="2" transform="rotate(-13 2.6 7)" stroke-width="1.6" fill="rgba(5,9,16,.55)" opacity=".6"/>
+    <rect x="10.2" y="3.6" width="11" height="15" rx="2.2" stroke-width="1.6" fill="rgba(5,9,16,.55)"/>
+    <path d="M15.7 6.9 12.1 10.7c-1.2 1.2-.7 3.2.9 3.7.9.3 1.8 0 2.3-.6v1.3l-.9 1.6h2.8l-.9-1.6v-1.3c.5.6 1.4.9 2.3.6 1.6-.5 2.1-2.5.9-3.7L15.7 6.9Z" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="ic-item" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+    <rect x="3.6" y="8.4" width="16.8" height="11.4" rx="2.1" fill="rgba(5,9,16,.55)" opacity=".6"/>
+    <path d="M3.6 12.4h16.8" opacity=".6"/>
+    <path d="M12 8.4v11.4"/>
+    <path d="M12 8.4c-2.6 0-4.3-.9-4.3-2.4S9 3.9 10.2 4.6C11.2 5.2 12 6.7 12 8.4Zm0 0c2.6 0 4.3-.9 4.3-2.4S15 3.9 13.8 4.6C12.8 5.2 12 6.7 12 8.4Z" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="ic-twelve" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+    <ellipse cx="12" cy="16.9" rx="7.4" ry="2.9" fill="rgba(5,9,16,.55)" opacity=".55"/>
+    <path d="M4.6 16.9v-2.6M19.4 16.9v-2.6" opacity=".55"/>
+    <ellipse cx="12" cy="12.7" rx="7.4" ry="2.9" fill="rgba(5,9,16,.55)" opacity=".78"/>
+    <path d="M4.6 12.7v-2.6M19.4 12.7v-2.6" opacity=".78"/>
+    <ellipse cx="12" cy="8.5" rx="7.4" ry="2.9" fill="rgba(5,9,16,.55)"/>
+  </symbol>
+  <symbol id="ic-quad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round">
+    <circle cx="4.9" cy="9.4" r="2.5" stroke-width="1.6" fill="rgba(5,9,16,.55)" opacity=".62"/>
+    <path d="M1 19.2c0-2.6 1.7-4.4 3.9-4.4" stroke-width="1.6" opacity=".62"/>
+    <circle cx="19.1" cy="9.4" r="2.5" stroke-width="1.6" fill="rgba(5,9,16,.55)" opacity=".62"/>
+    <path d="M23 19.2c0-2.6-1.7-4.4-3.9-4.4" stroke-width="1.6" opacity=".62"/>
+    <circle cx="12" cy="7.6" r="3.1" stroke-width="1.7" fill="rgba(5,9,16,.55)"/>
+    <path d="M6.6 19.2c0-3.2 2.4-5.4 5.4-5.4s5.4 2.2 5.4 5.4" stroke-width="1.7" fill="rgba(5,9,16,.55)"/>
+  </symbol>
+  <symbol id="ic-tour" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.6 6.2h4.6v11.6H2.6M7.2 12h3.4"/>
+    <path d="M12.6 3.4h4.2v17.2h-4.2" opacity=".5"/>
+    <path d="M16.8 12h2.2"/>
+    <circle cx="20.8" cy="12" r="2.2" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="ic-rank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.6 13.2 6 21.4l6-3 6 3-2.6-8.2" stroke-width="1.6" opacity=".62"/>
+    <circle cx="12" cy="8.6" r="5.6" stroke-width="1.7" fill="rgba(5,9,16,.55)"/>
+    <path d="M12 5.6l1.3 2.1 2.4.5-1.6 1.8.2 2.4-2.3-1-2.3 1 .2-2.4-1.6-1.8 2.4-.5L12 5.6Z" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="ic-quick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+    <path d="M13.4 2.6 5.6 13.4h5.2l-.8 8 7.8-10.8h-5.2l.8-8Z" fill="currentColor" fill-opacity=".14"/>
+  </symbol>
+  <symbol id="ic-coin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <circle cx="12" cy="12" r="8.4" stroke-width="1.7"/>
+    <circle cx="12" cy="12" r="4.2" stroke-width="1.4" opacity=".5"/>
+  </symbol>
+</defs></svg>
+
 <!-- 로딩 스플래시 (접속되면 사라짐) -->
 <div id="splash">
   <div class="sp-mid">
@@ -6391,61 +6476,66 @@
     <div class="sm-list">
       <div class="sm-item" data-m="classic">
         <button class="sm-head" onclick="soloPick('classic')">
-          <span class="sm-ico">🃏</span>
+          <svg class="ic sm-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-classic"/></svg>
           <span class="sm-txt"><b>클래식</b><small>경매로 세트를 먼저 완성하면 승리</small></span>
         </button>
         <div class="sm-body">
-          <button class="sm-d" onclick="soloPlay('easy')"><span class="sd-s">★<i>★★</i></span><b>쉬움</b><span class="sd-c">🪙 5</span></button>
-          <button class="sm-d" onclick="soloPlay('hard')"><span class="sd-s">★★<i>★</i></span><b>보통</b><span class="sd-c">🪙 15</span></button>
-          <button class="sm-d d-expert" onclick="soloPlay('expert')"><span class="sd-s">👑</span><b>전문가</b><span class="sd-c">🪙 40</span></button>
+          <div class="sd-top"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-classic"/></svg><b>클래식</b><button class="sd-x" onclick="soloPick(null)" aria-label="닫기">×</button></div>
+          <button class="sm-d" onclick="soloPlay('easy')"><span class="sd-m" data-lv="1"><i></i><i></i><i></i></span><b>쉬움</b><span class="sd-c"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>5</span></button>
+          <button class="sm-d" onclick="soloPlay('hard')"><span class="sd-m" data-lv="2"><i></i><i></i><i></i></span><b>보통</b><span class="sd-c"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>15</span></button>
+          <button class="sm-d d-expert" onclick="soloPlay('expert')"><span class="sd-m" data-lv="3"><i></i><i></i><i></i></span><b>전문가</b><span class="sd-c"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>40</span></button>
         </div>
       </div>
 
       <div class="sm-item t-item" data-m="item">
         <button class="sm-head" onclick="soloPick('item')">
-          <span class="sm-ico">🎪</span>
+          <svg class="ic sm-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-item"/></svg>
           <span class="sm-txt"><b>아이템전</b><small>경매에서 지면 아이템이 들어와요</small></span>
         </button>
         <div class="sm-body">
-          <button class="sm-d" onclick="startItemGame('easy')"><span class="sd-s">★<i>★★</i></span><b>쉬움</b><span class="sd-c">🪙 5</span></button>
-          <button class="sm-d" onclick="startItemGame('hard')"><span class="sd-s">★★<i>★</i></span><b>보통</b><span class="sd-c">🪙 15</span></button>
-          <button class="sm-d d-expert" onclick="startItemGame('expert')"><span class="sd-s">👑</span><b>전문가</b><span class="sd-c">🪙 40</span></button>
+          <div class="sd-top"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-item"/></svg><b>아이템전</b><button class="sd-x" onclick="soloPick(null)" aria-label="닫기">×</button></div>
+          <button class="sm-d" onclick="startItemGame('easy')"><span class="sd-m" data-lv="1"><i></i><i></i><i></i></span><b>쉬움</b><span class="sd-c"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>5</span></button>
+          <button class="sm-d" onclick="startItemGame('hard')"><span class="sd-m" data-lv="2"><i></i><i></i><i></i></span><b>보통</b><span class="sd-c"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>15</span></button>
+          <button class="sm-d d-expert" onclick="startItemGame('expert')"><span class="sd-m" data-lv="3"><i></i><i></i><i></i></span><b>전문가</b><span class="sd-c"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>40</span></button>
         </div>
       </div>
 
       <div class="sm-item t-tv" data-m="twelve">
         <button class="sm-head" onclick="soloPick('twelve')">
-          <span class="sm-ico">🔵</span>
+          <svg class="ic sm-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-twelve"/></svg>
           <span class="sm-txt"><b>TWELVE</b><small>카드가 아니라 칩으로 값을 부르는 경매</small></span>
         </button>
         <div class="sm-body">
-          <button class="sm-d" onclick="tvSolo('easy')"><span class="sd-s">★<i>★★</i></span><b>쉬움</b><span class="sd-c">🪙 5</span></button>
-          <button class="sm-d" onclick="tvSolo('hard')"><span class="sd-s">★★<i>★</i></span><b>보통</b><span class="sd-c">🪙 15</span></button>
-          <button class="sm-d d-expert" onclick="tvSolo('expert')"><span class="sd-s">👑</span><b>전문가</b><span class="sd-c">🪙 40</span></button>
+          <div class="sd-top"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-twelve"/></svg><b>TWELVE</b><button class="sd-x" onclick="soloPick(null)" aria-label="닫기">×</button></div>
+          <button class="sm-d" onclick="tvSolo('easy')"><span class="sd-m" data-lv="1"><i></i><i></i><i></i></span><b>쉬움</b><span class="sd-c"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>5</span></button>
+          <button class="sm-d" onclick="tvSolo('hard')"><span class="sd-m" data-lv="2"><i></i><i></i><i></i></span><b>보통</b><span class="sd-c"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>15</span></button>
+          <button class="sm-d d-expert" onclick="tvSolo('expert')"><span class="sd-m" data-lv="3"><i></i><i></i><i></i></span><b>전문가</b><span class="sd-c"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>40</span></button>
         </div>
       </div>
 
       <div class="sm-item t-quad" data-m="quad">
         <button class="sm-head" onclick="soloPick('quad')">
-          <span class="sm-ico">👥</span>
+          <svg class="ic sm-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-quad"/></svg>
           <span class="sm-txt"><b>다인전</b><small>셋·넷이서 · 지는 것도 수가 되는 판</small></span>
         </button>
         <div class="sm-body">
-          <button class="sm-d" onclick="q4Start(3)"><span class="sd-s">👥</span><b>3인전</b><span class="sd-c">AI 2명</span></button>
-          <button class="sm-d" onclick="q4Start(4)"><span class="sd-s">👪</span><b>4인전</b><span class="sd-c">AI 3명</span></button>
+          <div class="sd-top"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-quad"/></svg><b>다인전</b><button class="sd-x" onclick="soloPick(null)" aria-label="닫기">×</button></div>
+          <button class="sm-d" onclick="q4Start(3)"><span class="sd-m sd-n"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-quad"/></svg></span><b>3인전</b><span class="sd-c">AI 2명</span></button>
+          <button class="sm-d" onclick="q4Start(4)"><span class="sd-m sd-n"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-quad"/></svg></span><b>4인전</b><span class="sd-c">AI 3명</span></button>
         </div>
       </div>
 
       <!-- 토너먼트는 한 판이 아니라 한 대회다 — 자리도 한 줄을 통째로 쓴다 -->
       <div class="sm-item t-tour wide" data-m="tour">
         <button class="sm-head" onclick="soloPick('tour')">
-          <span class="sm-ico">🏆</span>
+          <svg class="ic sm-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-tour"/></svg>
           <span class="sm-txt"><b>토너먼트</b><small>8강 · 세 판을 이기면 우승 · 매 경기 모드가 바뀐다</small></span>
         </button>
         <div class="sm-body">
-          <button class="sm-d" onclick="stourStart('easy')"><span class="sd-s">★<i>★★</i></span><b>쉬움</b><span class="sd-c">🪙 60</span></button>
-          <button class="sm-d" onclick="stourStart('hard')"><span class="sd-s">★★<i>★</i></span><b>보통</b><span class="sd-c">🪙 200</span></button>
-          <button class="sm-d d-expert" onclick="stourStart('expert')"><span class="sd-s">👑</span><b>전문가</b><span class="sd-c">🪙 500</span></button>
+          <div class="sd-top"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-tour"/></svg><b>토너먼트</b><button class="sd-x" onclick="soloPick(null)" aria-label="닫기">×</button></div>
+          <button class="sm-d" onclick="stourStart('easy')"><span class="sd-m" data-lv="1"><i></i><i></i><i></i></span><b>쉬움</b><span class="sd-c"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>60</span></button>
+          <button class="sm-d" onclick="stourStart('hard')"><span class="sd-m" data-lv="2"><i></i><i></i><i></i></span><b>보통</b><span class="sd-c"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>200</span></button>
+          <button class="sm-d d-expert" onclick="stourStart('expert')"><span class="sd-m" data-lv="3"><i></i><i></i><i></i></span><b>전문가</b><span class="sd-c"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>500</span></button>
         </div>
       </div>
 
@@ -6460,9 +6550,9 @@
           <span class="sm-txt"><b>미니게임</b><small>두 장으로 겨루는 섯다식 판</small></span>
         </button>
         <div class="sm-body">
-          <button class="sm-d" onclick="miniGo(2, false)"><span class="sd-s">🃏</span><b>2인</b><span class="sd-c">AI 1명</span></button>
-          <button class="sm-d" onclick="miniGo(3, false)"><span class="sd-s">🃏</span><b>3인</b><span class="sd-c">AI 2명</span></button>
-          <button class="sm-d" onclick="miniGo(4, false)"><span class="sd-s">🃏</span><b>4인</b><span class="sd-c">AI 3명</span></button>
+          <button class="sm-d" onclick="miniGo(2, false)"><span class="sd-m sd-n"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-classic"/></svg></span><b>2인</b><span class="sd-c">AI 1명</span></button>
+          <button class="sm-d" onclick="miniGo(3, false)"><span class="sd-m sd-n"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-classic"/></svg></span><b>3인</b><span class="sd-c">AI 2명</span></button>
+          <button class="sm-d" onclick="miniGo(4, false)"><span class="sd-m sd-n"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-classic"/></svg></span><b>4인</b><span class="sd-c">AI 3명</span></button>
         </div>
       </div>
       -->
@@ -6493,7 +6583,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 
     <!-- 랭크게임 — RP 가 오가는 유일한 곳이라 제일 크게 -->
     <button class="mm-hero" onclick="quickMatch()">
-      <span class="hh-ico">🏆</span>
+      <svg class="ic hh-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-rank"/></svg>
       <span class="hh-txt">
         <span class="hh-name">랭크게임</span>
         <span class="hh-sub">클래식 · 아이템전 · TWELVE 무작위 · RP 반영</span>
@@ -6504,7 +6594,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <!-- ⚡ 빠른대전 — 랭크 바로 아래. 모드를 안 고르는 대신 등급도 안 건다.
          "뭐라도 좋으니 지금 바로" 를 누르는 자리다. -->
     <button class="mm-hero quick" onclick="quickAny()">
-      <span class="hh-ico">⚡</span>
+      <svg class="ic hh-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-quick"/></svg>
       <span class="hh-txt">
         <span class="hh-name">빠른대전</span>
         <span class="hh-sub">모드 상관없이 가장 빨리 · RP 미반영</span>
@@ -6514,32 +6604,32 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
     <div class="mm-sec"><b>빠른 입장</b><i></i></div>
     <div class="mm-tiles c5">
       <button class="mm-tile" onclick="quickJoin('classic')">
-        <span class="mt-ico">🃏</span>
+        <svg class="ic mt-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-classic"/></svg>
         <span class="mt-name">클래식</span>
       </button>
       <button class="mm-tile t-item" onclick="quickJoin('item')">
-        <span class="mt-ico">🎪</span>
+        <svg class="ic mt-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-item"/></svg>
         <span class="mt-name">아이템전</span>
       </button>
       <button class="mm-tile t-tv" onclick="quickJoin('twelve')">
-        <span class="mt-ico">🔵</span>
+        <svg class="ic mt-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-twelve"/></svg>
         <span class="mt-name">TWELVE</span>
       </button>
       <button class="mm-tile t-quad" onclick="quickJoin('quad')">
-        <span class="mt-ico">👥</span>
+        <svg class="ic mt-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-quad"/></svg>
         <span class="mt-name">다인전</span>
       </button>
       <!-- 미니게임 — 섯다식 배팅이라 국내에서 사행성 모사로 분류될 수 있어
            입구를 다 막았다(솔로 패널·설명서·튜토리얼도 같이). 여기만 남아 있어
            빠른 입장으로는 들어가졌다.
       <button class="mm-tile t-mini" onclick="quickJoin('mini')">
-        <span class="mt-ico">🃏</span>
+        <svg class="ic mt-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-classic"/></svg>
         <span class="mt-name">미니게임</span>
       </button>
       -->
       <!-- 대회도 한 칸이다. 따로 빼 두면 "지금 되는 건가" 를 눌러 봐야 안다. -->
       <button class="mm-tile t-tour" onclick="tourOpen()">
-        <span class="mt-ico">🏆</span>
+        <svg class="ic mt-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-tour"/></svg>
         <span class="mt-name">토너먼트</span>
         <span class="mt-sub">4명↑</span>
       </button>
