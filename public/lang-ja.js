@@ -226,7 +226,7 @@ Object.assign(D, {
   '현재 페이지 추가': '現在のページを追加',
   '홈 화면': 'ホーム画面',
   '앱 설치': 'アプリをインストール',
-  'AI는 쉬움·보통·전문가 세 급이에요. 전문가는 남은 카드를 세고,\n         칩을 0까지 쓰지 않으며, 클로즈로 상대 칩을 말리는 수까지 씁니다.': 'AIはやさしい・ふつう・エキスパートの三段階です。エキスパートは残り札を数え、チップを使い切らず、クローズで相手のチップを枯らす手まで使います。',
+  'AI는 쉬움 · 보통 · 전문가 세 단계입니다. 전문가는 남은 카드를 세고, 칩을 0까지 쓰지 않으며,\n         클로즈로 상대의 칩을 말리는 수까지 씁니다.': 'AIはやさしい・ふつう・エキスパートの三段階です。エキスパートは残り札を数え、チップを使い切らず、クローズで相手のチップを枯らす手まで使います。',
   '클래식 · 아이템전 · TWELVE 무작위 · RP 반영': 'クラシック・アイテム戦・TWELVE からランダム · RP に反映',
   '빠른대전': 'クイックマッチ',
   '모드 상관없이 가장 빨리 · RP 미반영': 'モードを問わず一番早く始まる卓へ · RP は動きません',
@@ -298,7 +298,7 @@ Object.assign(D, {
   '기록 안 됨': '記録されません',
   '방': 'ルーム',
   '기타': 'その他',
-  '급수·RP·레벨·보상이 어떻게 움직이는지 한자리에 모았습니다.': '段位・RP・レベル・報酬の動きを一か所にまとめました。',
+  '급수 · RP · 레벨 · 보상이 어떻게 움직이는지 한자리에 모았습니다.': '段位・RP・レベル・報酬の動きを一か所にまとめました。',
   '들어가기': '入る',
   '내 방': '自分のルーム',
   '부르기': '値をつける',
@@ -1355,70 +1355,76 @@ rulesEtc: `
 // ── 설명서 · 아이템전 ──
 Object.assign(B, {
 rulesItem: `
-    <span class="close-x" onclick="toggleRulesItem(false)">×</span>
-    <h2>アイテム戦</h2>
-    <p style="color:#8a7a80">2人戦のルールに<b style="color:#ffe9a8">アイテム</b>を足したもの — アイテムは
-       場の山に混ぜた<b style="color:#ffe9a8">アイテム札</b>に乗ってやって来ます。</p>
+      <span class="close-x" onclick="toggleRulesItem(false)">×</span>
+      <h2>アイテム戦</h2>
+      <p style="color:#8a7a80">2人戦の規則はそのままで、<b style="color:#ffe9a8">アイテム</b>が乗ります —
+         手札もセットも勝利条件もクラシックと同じです。</p>
 
-    <h3><span data-ico="🎁"></span> アイテムはどこから来るのか</h3>
-    <div class="r4-tbl">
-      <div class="r4-row r4-head"><span>札</span><span>だれのものになるか</span><span>見えかた</span></div>
-      <div class="r4-row"><span>🎁 ボーナス</span><span>めくった親</span><span>表向き</span></div>
-      <div class="r4-row"><span>🏷 おまけ</span><span>その競りに<b>負けた</b>ほう</span><span>表向き</span></div>
-      <div class="r4-row"><span>ふつうの札</span><span>—</span><span>アイテムなし</span></div>
-    </div>
-    <p><b>アイテム札は別の札です。</b>種類も等級も持たないので、セットには数えません。
-       <b>ボーナス2枚・おまけ2枚</b>の計4枚が場の山に入ります。めくったら
-       <b>すぐもう1枚引く</b>ので、そのターンの競り札は<b>3枚</b>になります（🏷 おまけ＋場札＋出し札）。</p>
-    <p>4枚は<b>ふつうの札2枚につき1枚</b>の割合で置かれます。対局はたいてい6ターンあたりで終わり、
-       山の半分はめくられないまま残るため、自由に混ぜると<b>アイテムが一度も出ない対局</b>がありました。
-       いまは<b>おおむね1ターンおき</b>に出ます — ただし枠の中のどこに来るかは無作為です。</p>
-    <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>🎁 ボーナスはめくった<b>親</b>のものです。親は交代するので偏りません。</span></div>
-      <div class="r4-step"><b>2</b><span>🏷 おまけは<b>見えるかたち</b>で競り札に乗り、その競りに<b>負けた</b>ほうへ渡ります — だから「わざと落とすか」を天秤にかけることになります。</span></div>
-      <div class="r4-step"><b>★</b><span>アイテム札は<b>表向き</b>です。絵も名前も等級の枠も見えます。何が懸かっているか分からなければ「わざと負ける」に意味がありません。<b>見えたものがそのまま手に入ります。</b></span></div>
-      <div class="r4-step"><b>3</b><span>持てるのは<b>3つ</b>まで、使えるのは<b>1ターンに1つ</b>。入札の札を出したあとは使えません。</span></div>
-    </div>
-    <p>おまけは負けているほうに溜まるので、対局は自然と縮まります — その一行だけが、独走を止めるブレーキです。
-       等級を見ないので、レジェンドを狙って<b>1回落とす</b>のは十分に理由のある手です。</p>
+      <h3><span data-ico="🎁"></span> アイテムはどこから出るか</h3>
+      <p>アイテムは<b>アイテム札</b>からしか出ません。アイテム札は種類も位もない<b>別の札</b>なのでセットには数えられず、
+         場の山に<b>🎁ボーナス2枚・🏷おまけ2枚</b>が混ざっています。</p>
+      <div class="r4-tbl">
+        <div class="r4-row r4-head"><span>札</span><span>だれが受け取るか</span><span>いつ</span></div>
+        <div class="r4-row"><span>🎁 ボーナス</span><span>めくった<b>親</b></span><span>めくった瞬間</span></div>
+        <div class="r4-row"><span>🏷 おまけ</span><span>その競りで<b>負けたほう</b></span><span>精算のとき</span></div>
+      </div>
+      <p>アイテム札がめくれたら<b>その場でもう1枚めくって</b>競りを開きます。ですからボーナスの回はいつもどおり競り札2枚、
+         <b>おまけの回はそこにアイテムがひとつ乗った</b>まま進みます。アイテム札が出なかった競りでは、アイテムも出ません。</p>
+      <p>4枚は<b>ふつうの札2枚ごとに1枚</b>の位置に置かれています。一局はだいたい6手前後で終わり山が半分残るので、
+         まるごと混ぜると残り半分にアイテムが埋もれ、<b>一局で1枚も見ない</b>ことが起きるからです。
+         いまは<b>2手に1回ほど</b>必ず出ますが、その窓のどこに入っているかはランダムなので、いつ出るかは分かりません。</p>
+      <div class="r4-steps">
+        <div class="r4-step"><b>★</b><span>アイテム札は<b>表向きで公開</b>されます — 絵も名前も等級の縁取りも見えます。
+           何が懸かっているか分からなければ「あれのためにわざと負ける」が成り立たないからです。
+           <b>見せたそのアイテムがそのまま</b>渡ります。</span></div>
+        <div class="r4-step"><b>1</b><span>持てるのは<b>3個</b>まで。いっぱいのままボーナスをめくると、そのアイテムは消えます。</span></div>
+        <div class="r4-step"><b>2</b><span>1手に<b>1個</b>だけ。入札札を出したあとは使えません — あとから勝負をひっくり返させないためです。</span></div>
+      </div>
+      <p>おまけが<b>負けたほう</b>に積まれるので、勝負は自然と縮まります。先行した人がどんどん強くなる雪だるまを止めているのは、この規則ひとつです。
+         そのぶん<b>わざと負ける</b>のも立派な手になります — 競り札よりも乗っているアイテムが欲しいときがあるからです。</p>
 
-    <h3><span data-ico="🎲"></span> 出やすさ</h3>
-    <p><b>等級は見ません。</b><b>13種すべて</b>を<b>ひと山に混ぜて</b>上から引きます —
-       ノーマルもレジェンドも同じ土俵です。等級（枠の色）はアイテムの強さを示すもので、出やすさとは関係ありません。</p>
-    <p><b>抽選ではなく山引きです</b>：同じアイテムが続けて出ることはなく、13枚をひと回りすれば
-       全種がちょうど一度ずつ出ます。山を使い切ったら新しく混ぜ直します。</p>
+      <h3><span data-ico="🎲"></span> 何が出るか — 抽選ではなく引き</h3>
+      <p><b>等級は出やすさに関係ありません。</b><b>13種</b>をひと組にして切り、上から1枚ずつ引きます —
+         ボーナスでもおまけでも、コモンでもレジェンドでも同じ資格です。等級（縁の色）はその強さを示すだけです。</p>
+      <p>回すのではなく引くので同じものが続けて出ず、ひと組のなかでは13種が1回ずつ出そろいます。使い切ったら新しく切りなおします。</p>
 
-    <h3><span data-ico="🔍"></span> ノーマル</h3>
-    <ul>
-      <li><b>虫めがね</b> — 相手の手札を2枚のぞき見る</li>
-      <li><b>ものさし</b> — この競り札が<b>相手に</b>どれだけ役立つか見る</li>
-      <li><b>手札入れ替え</b> — 手札1枚を山札の一番上と交換する</li>
-    </ul>
+      <h3><span data-ico="🔍"></span> コモン</h3>
+      <ul>
+        <li><b>虫めがね</b> — 相手の手札2枚をのぞき見します</li>
+        <li><b>ものさし</b> — この競り札が<b>相手に</b>どれだけ役立つかを3段階で教えます</li>
+        <li><b>持ち替え</b> — 手札1枚を山の一番上の札と交換します（出した札は山の底へ）</li>
+      </ul>
 
-    <h3><span data-ico="💨"></span> レア</h3>
-    <ul>
-      <li><b>反転</b> — この競りだけ<b>弱い</b>札が勝つ</li>
-      <li><b>交換券</b> — 自分の獲得札1枚と相手の獲得札1枚を交換する</li>
-      <li><b>爆弾</b> — 競り札に爆弾を仕掛ける：落札した側が手札を<b>1枚捨てる</b></li>
-      <li><b>お守り</b> — <b>このターンのあいだ</b>、相手の次のアイテムを封じる</li>
-    </ul>
+      <h3><span data-ico="💣"></span> レア</h3>
+      <ul>
+        <li><b>爆弾</b> — 競り札に爆弾を乗せます。<b>落札したほうが手札を1枚捨てます</b>（自分が取っても捨てます）</li>
+        <li><b>交換券</b> — 自分が取った札1枚と相手が取った札1枚を交換します（相手のセット完成直前の札は選ばれません）</li>
+        <li><b>ひっくり返し</b> — この競りだけ<b>弱い札が勝ちます</b></li>
+        <li><b>お守り</b> — 相手が次に使うアイテム1個を<b>この手のあいだ</b>封じます</li>
+      </ul>
 
-    <h3><span data-ico="👑"></span> レジェンド</h3>
-    <ul>
-      <li><b>煙幕</b> — この競り札を相手にだけ隠す</li>
-      <li><b>競り直し</b> — 負けた競りを無効にしてやり直す（<b>両方</b>の出した札が使えなくなる）</li>
-      <li><b>ドロボウネコ</b> — 相手が獲得した札を1枚、山札へ戻す</li>
-      <li><b>コピー機</b> — 自分が獲得した札を1枚複製する</li>
-      <li><b>暴君</b> — このターンの親の座を奪う</li>
-      <li><b>選び取り</b> — 山札の上3枚を見て、今回の場札を選ぶ</li>
-    </ul>
+      <h3><span data-ico="👑"></span> レジェンド</h3>
+      <ul>
+        <li><b>どろぼう猫</b> — 相手が取った札1枚を山に戻します（セット完成直前の種類には触れません）</li>
+        <li><b>コピー機</b> — 自分が取った札1枚を複製します — セットにいちばん近い種類を選びます</li>
+        <li><b>暴君</b> — この手の親の座を奪います（手札2枚以上のときだけ）</li>
+        <li><b>三択</b> — 山の上<b>3枚を見て1枚を選び</b>、この回の表向き札にします</li>
+        <li><b>煙幕</b> — この競り札を相手にだけ隠します</li>
+        <li><b>再競り</b> — <b>負けた競り</b>を無効にしてやり直します。<b>いま出した札は両者とも使えません</b></li>
+      </ul>
+      <p style="color:#8a7a80;font-size:.78rem">再競りだけは<b>その競りで負けた人</b>しか使えません。
+         勝った人が取り消せるなら、気に入らない結果をいくらでもやり直せてしまうからです。
+         やり直す側も自分の札を焼くのは、「いま取り消す価値があるか」を天秤にかけさせるためです。</p>
 
-    <h3><span data-ico="🧿"></span> お守り — 読み合いになります</h3>
-    <p>お守りは<b>先に置いておく</b>ものです。置けば相手が次に使うアイテムを1つ飲み込み、
-       そのアイテムは永久に消えます。ただし<b>効くのはそのターンだけ</b>なので、
-       賢い相手は安いアイテムを先に投げて焼き払います。いつ置くかがすべてです。</p>
-    <p style="color:#8a7a80;font-size:.78rem">封じるものがないときは置けません — 相手がこのターンすでにアイテムを使っている、あるいは1つも持っていない場合です。</p>
-    `,
+      <h3><span data-ico="💣"></span> 爆弾 — 勝っていい局か</h3>
+      <p>爆弾の乗った競りは<b>勝ったほうが手札を1枚捨てます。</b>仕掛けた本人も例外ではありません。
+         おかげで初めて「この競り札は手札1枚ぶんの値打ちがあるか」を天秤にかけることになります。捨てる札は自分で選びます。</p>
+
+      <h3><span data-ico="🧿"></span> お守り — 読み合い</h3>
+      <p>お守りは<b>先に張っておく</b>ものです。張れば相手が次に使うアイテムをひとつ飲み込み、封じられたアイテムはそのまま消えます。
+         ただし<b>その手のあいだだけ</b>効きます。だから相手が安いアイテムを先に投げてお守りを焼く手も生まれます。いつ張るかが読み合いです。</p>
+      <p style="color:#8a7a80;font-size:.78rem">お守りでお守りは封じられません — 先に張ったほうが必ず勝つ先取り合戦になってしまうからです。
+         相手がこの手ですでにアイテムを使っているときや、アイテムを1つも持っていないときも張れません。</p>`,
 });
 
 // ── 설명서 · TWELVE ──
@@ -1426,53 +1432,64 @@ Object.assign(B, {
 rulesTwelve: `
       <span class="close-x" onclick="rulesClose()">×</span>
       <h2>TWELVE</h2>
-      <p style="color:#8a7a80">札はクラシックと同じ。違うのは<b style="color:#ffe9a8">何で払うか</b> —
-         札ではなく<b style="color:#8fd8ff">チップ20枚</b>で値をつけます。</p>
+      <p style="color:#8a7a80">札はクラシックとまったく同じ。違うのは<b style="color:#ffe9a8">何で払うか</b> —
+         手札ではなく<b style="color:#8fd8ff">チップ20枚</b>で値をつけます。</p>
 
-      <h3><span data-ico="🔵"></span> なぜ別物になるのか</h3>
-      <p>クラシックでは強い札が競りに勝っても、その札は相手の手に渡ります。TWELVE ではチップが
-         <b>バンクへ消えます</b> — 勝ったほうはつけた値を全額、負けたほうも
-         <b>半分</b>払います。<b>負けてもチップは焼けます。</b>いつ引くかを知っていることが、そのまま腕前です。</p>
+      <h3><span data-ico="📦"></span> 準備</h3>
+      <ul>
+        <li><b>24枚</b>を切り、<b>場の山12枚</b>と<b>手札6枚</b>ずつに分けます</li>
+        <li>チップは<b>ひとり20枚</b>から始めます</li>
+        <li>最初の<b>親</b>を決め、一手ごとに親の座を次へ渡します</li>
+      </ul>
+
+      <h3><span data-ico="🔵"></span> クラシックとどう違うのか</h3>
+      <p>クラシックの強い札は<b>借りもの</b>です — 出せば勝てますが、その札は相手の手に渡ります。
+         TWELVE のチップは<b>使えば消えます</b>。勝ったほうはつけた値を全額、負けたほうもその半分をバンクに払います。
+         <b>負けるだけでチップは減ります。</b>だからいくらつけるかより、<b>いつ引くか</b>が腕前です。</p>
 
       <h3><span data-ico="🔄"></span> 一手の流れ</h3>
       <div class="r4-steps">
-        <div class="r4-step"><b>1</b><span>親が場の山から<b>1枚めくる</b></span></div>
+        <div class="r4-step"><b>1</b><span>親が場の山から<b>1枚めくる</b> — 二人とも見える札</span></div>
         <div class="r4-step"><b>2</b><span>親が<b>手札から1枚足す</b> — この2枚が競り札</span></div>
-        <div class="r4-step"><b>3</b><span>親が<b>オープンかクローズ</b>を選ぶ</span></div>
-        <div class="r4-step"><b>4</b><span>精算して、<b>親の座を次へ渡す</b></span></div>
+        <div class="r4-step"><b>3</b><span>親が<b>オープン</b>か<b>クローズ</b>を選ぶ</span></div>
+        <div class="r4-step"><b>4</b><span>競りで落札者を決め、<b>チップをバンクに払う</b></span></div>
+        <div class="r4-step"><b>5</b><span>競り札2枚は<b>落札者の前へ</b>。<b>親の座を渡す</b></span></div>
       </div>
+      <p style="color:#8a7a80;font-size:.78rem">親は毎回手札を1枚使います。つまり手札6枚は<b>親を6回務める</b>ということです。</p>
 
-      <h3><span data-ico="👁"></span> オープンの競り</h3>
-      <p>値は<b>見せ合い</b>で、交互に上げていきます。前の値を超えるか、降りるか — どちらかが降りるまで続きます。</p>
-      <p style="color:#8a7a80;font-size:.78rem">先に値をつける人は<b>そのまま降りることはできません</b> —
-         最低でも1枚は賭ける必要があります。何も出さずに引くのは競りではなく、ただの譲渡です。</p>
+      <h3><span data-ico="👁"></span> オープンの競り — 見せ合って上げる</h3>
+      <p><b>先に値をつけるのは親</b>で、そこから交互に進みます。自分の番では<b>前の値を1でも超える</b>か、<b>降りる</b>かのどちらかです。
+         どちらかが降りた時点で、残ったほうが落札します。</p>
+      <p style="color:#8a7a80;font-size:.78rem">最初の値は<b>1以上</b>で、誰も賭けていない場では降りられません。
+         何も出さずに引けるなら、それは競りではなくただの譲渡だからです。</p>
 
-      <h3><span data-ico="🙈"></span> クローズの競り</h3>
-      <p>親が<b>偶数</b>を一度だけ言います。相手には数字は見えますが
-         <b>出し札は伏せたまま</b> — 値段は分かっても、何を買うのかは分かりません。
-         相手は<b>チップを1枚足して</b>買うか、見送るかを選びます。<b>見送れば競り札は親のものです。</b></p>
-      <p style="color:#8a7a80;font-size:.78rem">チップが2枚未満だとクローズは選べません — 言える偶数がないからです。</p>
+      <h3><span data-ico="🙈"></span> クローズの競り — 値段だけ分かって買う</h3>
+      <p>親が<b>偶数</b>を一度だけ言い、それで終わりです。このとき<b>出し札は伏せたまま</b> —
+         相手にはいくらかは分かっても、<b>何を買うのかは分かりません</b>。</p>
+      <p>相手の選択は二つだけ。<b>その値＋1</b>を払って買うか、見送るか。見送れば競り札は親のものです。</p>
+      <p style="color:#8a7a80;font-size:.78rem">親のチップが2枚未満だとクローズは選べません（言える偶数がないため）。
+         相手のチップが<b>値＋1</b>に届かないときも買えず、そのまま親のものになります。</p>
 
-      <h3><span data-ico="🏦"></span> 精算 — ここが肝です</h3>
+      <h3><span data-ico="🏦"></span> 精算 — 負けたほうも払う</h3>
       <div class="etc-table">
-        <div class="etc-row etc-head"><span>だれが</span><span>いくら払うか</span></div>
+        <div class="etc-row etc-head"><span>だれが</span><span>バンクに払うチップ</span></div>
         <div class="etc-row"><span>勝ったほう</span><span>つけた値の<b>全額</b></span></div>
         <div class="etc-row"><span>負けたほう</span><span>つけた値の<b>半分</b>（端数切り捨て）</span></div>
       </div>
-      <p><b>札は2枚とも勝ったほうへ。</b>負けたほうは札を得られず、それでもチップは半分減ります。
-         7 をつけて勝てば 7 払い、4 をつけて負ければ 2 払いです。</p>
+      <p>競り札は<b>2枚とも</b>勝ったほうの前に並びます。負けたほうは札を得られず、チップだけを失います。</p>
+      <p style="color:#8a7a80;font-size:.78rem"><b>例）</b>7 をつけて勝てば 7 払い。4 まで追って降りれば、その半分の 2 を払います。</p>
 
-      <h3><span data-ico="🏁"></span> 勝ちかた</h3>
+      <h3><span data-ico="🏁"></span> 決着のつきかた三つ</h3>
       <ul>
-        <li>自分の前で<b>セットが揃えば</b>その場で勝ち（2は2枚 · 3は3枚 · 4は4枚 · 6は6枚）</li>
-        <li>チップが<b>0</b>になると負け。ただしその競りでセットが揃った場合は別です</li>
-        <li>山札が尽きたら<b>セットに近いほう</b>の勝ち</li>
-        <li>持ち時間は2人戦と同じ<b>ひとり5分</b> — 自分の番だけ減り、使い切ると負けです</li>
+        <li><b>セット完成</b> — 自分の前の札でセットが揃えば、その場で勝ちです（2は2枚 · 3は3枚 · 4は4枚 · 6は6枚）</li>
+        <li><b>チップ切れ</b> — 0になると負け。ただしそのチップを使った競りでセットが揃ったなら<b>勝ちが先</b>です</li>
+        <li><b>山札切れ</b> — 場の山か親の手札が尽きたら<b>セットに近いほう</b>の勝ち。
+            同じなら<b>集めた札が多いほう</b>、それも同じなら引き分けです</li>
       </ul>
-      <p style="color:#8a7a80;font-size:.78rem">AIはやさしい・ふつう・エキスパートの三段階です。エキスパートは
-         残り札を数え、チップを使い切らず、クローズで相手のチップを枯らす手まで使います。</p>
-      <p style="color:#8a7a80;font-size:.78rem">TWELVE はランク（RP）には影響しません — コインと経験値だけです。</p>
-    `,
+      <p style="color:#8a7a80;font-size:.78rem">持ち時間はクラシックと同じ<b>ひとり5分</b>。自分の番だけ減り、使い切ると負けです。</p>
+      <p style="color:#8a7a80;font-size:.78rem">AIはやさしい・ふつう・エキスパートの三段階です。エキスパートは残り札を数え、
+         チップを使い切らず、クローズで相手のチップを枯らす手まで使います。</p>
+      <p style="color:#8a7a80;font-size:.78rem">TWELVE はランク（RP）には影響しません。コインと経験値だけです。</p>`,
 });
 
 // ── 설명서 · 다인전 ──
@@ -1480,8 +1497,8 @@ Object.assign(B, {
 rules4: `
     <span class="close-x" onclick="toggleRules4(false)">×</span>
     <h2>FLIP FLAP <span class="r4-tag">3〜4人</span></h2>
-    <p style="color:#8a7a80">芯は2人戦と同じ — 先に<b style="color:#ffe9a8">セット</b>を揃えたほうが勝ちです。<br>
-    ここでは人が増えて変わるところだけをまとめます。</p>
+    <p style="color:#8a7a80">札も競りも勝ちかたも2人戦と同じ — 先に<b style="color:#ffe9a8">セット</b>を揃えたほうが勝ちです。<br>
+    ここでは<b style="color:#ffe9a8">人が増えて変わるところ</b>だけをまとめます。</p>
 
     <h3><span data-ico="🎯"></span> 勝ちかた</h3>
     <p>ひとつの種類をその数字の枚数だけ集めれば、その場で勝ちです。<br>
@@ -1489,9 +1506,15 @@ rules4: `
     <span data-ico="⚠"></span> 数えるのは<b>競りで取って自分の前に並べた札</b>だけです（手札は入りません）<br>
     <span data-ico="🏁"></span> 山札が尽きたら、<b>セットにいちばん近い人</b>の勝ちです</span></p>
 
+    <h3><span data-ico="📦"></span> 準備</h3>
+    <ul>
+      <li>人数に合う山を切り、<b>手札6枚</b>ずつ配ります。残りが<b>場の山</b>です</li>
+      <li>最初の<b>親</b>はランダムに決まり、そのあとは<b>時計回り</b>に渡ります</li>
+      <li>手札が尽きた人は親の番を飛ばします — 出す札がないからです</li>
+    </ul>
+
     <h3><span data-ico="🗂"></span> 山札 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 4人は38枚、3人は30枚</span></h3>
-    <p style="font-size:.78rem;margin-top:-2px">2人戦（24枚）より厚めです。3人は同じ山から<b>8枚抜いて</b>使います —
-       札が多いほど、1枚あたりの重みは軽くなります。</p>
+    <p style="font-size:.78rem;margin-top:-2px">2人戦（24枚）より厚めです。3人の山は4人の山から<b>8枚抜いた</b>もので、ひと組の札で両方まかなえます。</p>
     <div class="r-comp">
       <div class="r-comp-row"><div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
         <span><b>種類 2</b> · 4枚 <span class="r-comp-g">（3人：3枚）</span></span></div>
@@ -1510,32 +1533,33 @@ rules4: `
 
     <h3><span data-ico="🔄"></span> 競りひとつの流れ</h3>
     <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>山札から<b>表向きの札</b>を1枚めくる</span></div>
+      <div class="r4-step"><b>1</b><span>場の山から<b>表向きの札</b>を1枚めくる</span></div>
       <div class="r4-step"><b>2</b><span>親が手札から<b>出し札</b>を1枚足す — この2枚が競り札</span></div>
       <div class="r4-step"><b>3</b><span>親が<b>オープン</b>か<b>クローズ</b>を選ぶ</span></div>
-      <div class="r4-step"><b>4</b><span><b>全員</b>が入札 — 親も一緒に出します</span></div>
-      <div class="r4-step"><b>5</b><span>いちばん<b>強い</b>入札が競り札2枚をすべて取る</span></div>
+      <div class="r4-step"><b>4</b><span><b>全員</b>が手札から1枚ずつ入札 — 親も一緒に出します</span></div>
+      <div class="r4-step"><b>5</b><span>いちばん<b>強い</b>入札が競り札2枚を取る</span></div>
+      <div class="r4-step"><b>6</b><span>入札した札を<b>逆順で分け合い</b>、親の座を時計回りに渡す</span></div>
     </div>
     <p style="font-size:.78rem"><span data-ico="⚠"></span> 手札が尽きた人は入札を飛ばします。誰も入札できなければ<b>流れ</b>、競り札は親が引き取ります。</p>
 
-    <h3><span data-ico="👁"></span> オープンとクローズ — ここが違います</h3>
+    <h3><span data-ico="👁"></span> オープンとクローズ — ここが2人戦と違います</h3>
     <div class="r4-two">
       <div class="r4-card"><div class="r4-ct">オープン</div>
         <p>競り札は<b>公開</b>。<br>全員が伏せて出し、<b>いっせいに</b>めくります。<br>賞品は見えても、誰の手も読めません。</p></div>
       <div class="r4-card"><div class="r4-ct">クローズ</div>
-        <p>競り札は<b>伏せ</b>。<br>代わりに親から<b>時計回りにひとりずつ</b>公開して出します。<br>あとの人ほど、前の札を全部見てから決められます。</p></div>
+        <p>競り札は<b>伏せ</b>。<br>代わりに親から<b>時計回りにひとりずつ</b>公開して出します。<br>あとの人ほど、前の札を多く見てから決められます。</p></div>
     </div>
-    <p style="font-size:.78rem">クローズは順番制なので、<b>早い順で大きく出すと後ろを降ろせます</b> — 読み合いはそこに生まれます。
-    いっせいに出す形だと、ひとりを読めても他の人に取られてしまい、読み合いになりません。</p>
+    <p style="font-size:.78rem">クローズが順番制なのには理由があります。いっせいに出す形だと、ひとりを読めても他の人に取られてしまい、読み合いが成立しません。
+    ひとりずつなら<b>早い順で大きく出して後ろを降ろす</b>はったりが効きます。代わりに後ろほど情報が多いので、親はその損を承知で選ぶことになります。</p>
 
     <h3><span data-ico="🎁"></span> 入札した札は逆順で戻る</h3>
-    <p>入札した札は捨てられず、参加者どうしで入れ替わります。
-    <b>いちばん弱く入札した人が、いちばん強い札を受け取ります。</b></p>
+    <p>入札した札は捨てず、参加者どうしで<b>入れ替えます</b>。高く出した人ほど弱い札を受け取り、
+    <b>いちばん弱く入札した人がいちばん強い札</b>を持ち帰ります。</p>
     <div class="r4-flow">
       <div class="r4-fr"><span class="r4-fl">最高の入札</span><span class="r-arrow">→</span><span>競り札2枚を獲得 · ただし<b>いちばん弱い</b>入札札を受け取る</span></div>
       <div class="r4-fr"><span class="r4-fl">最低の入札</span><span class="r-arrow">→</span><span>競り札はなし、代わりに<b>いちばん強い</b>入札札を受け取る</span></div>
     </div>
-    <p style="font-size:.78rem">だから<b>わざと負けるのも立派な手</b>です — 低く出して手札を厚くします。</p>
+    <p style="font-size:.78rem">だから<b>わざと負けるのも立派な手</b>です — 競り札が自分のセットに関係ないなら、低く出して次のための手札を厚くしたほうが得です。</p>
 
     <div class="r-special">
       <div class="r-st"><span data-ico="⚔"></span> 大番狂わせ！ 下っ端の裏切り</div>
@@ -1546,14 +1570,22 @@ rules4: `
         <span class="r-arrow">→</span>
         <span class="r-win">6-18 の勝ち！</span>
       </div>
-      <p style="font-size:.76rem;margin-top:6px">いちばん弱い<b style="color:var(--gold)">6-18</b>だけが、いちばん強い<b style="color:var(--gold)">2-1</b>を破ります。
-      （2人戦では 6-10 です — 山が違えば、いちばん弱い札も違います。）<br>
-      裏切りが決まったときは、その2枚は<b>それぞれの持ち主に戻ります</b> — 競り札も最強札も取れてしまうと、傾きすぎるからです。</p>
+      <p style="font-size:.76rem;margin-top:6px">いちばん弱い<b style="color:var(--gold)">種類6の最終位</b>だけが、いちばん強い<b style="color:var(--gold)">2-1</b>を破ります。
+      山が違えばいちばん弱い札も変わります — <b style="color:var(--gold)">4人は 6-18</b> · <b style="color:var(--gold)">3人は 6-14</b> · 2人戦は 6-10 です。<br>
+      裏切りが決まったときは、その2枚は入れ替えず<b>それぞれの持ち主に戻ります</b>。競り札も最強札も取れてしまうと、一局が傾きすぎるからです。</p>
     </div>
 
+    <h3><span data-ico="🏁"></span> 終わりかた</h3>
+    <ul>
+      <li>誰かが<b>セットを揃えたら</b>即終了です。同じ競りで2人以上が同時に揃えたときは、<b>その競りを落札した人</b>の勝ちです</li>
+      <li><b>場の山が尽きる</b>か、全員の手札が空になったら、その時点で順位をつけます</li>
+    </ul>
+    <p style="font-size:.78rem">山札切れの順位は、① <b>セットまでの残り枚数</b>が少ない人 → ② ひとつの種類を<b>より多く埋めた</b>人 →
+    ③ 集めた札が<b>多い</b>人 → ④ 集めた札が<b>強い</b>人、の順に見ます。</p>
+
     <h3><span data-ico="⏱"></span> 持ち時間</h3>
-    <p>ひとり<b>3分</b>。自分の番のあいだだけ減ります。
-    使い切ると<b>その席はAIが打ちます</b>。</p>`,
+    <p>ひとり<b>3分</b>で、自分が出す番のあいだだけ減ります。
+    使い切ると<b>その席はAIが引き継ぎます</b> — ひとりのために残りの人の一局まで終わることはありません。</p>`,
 });
 
 // ── 설명서 · 클래식 ──
@@ -1561,7 +1593,7 @@ Object.assign(B, {
 rules2: `
     <span class="close-x" onclick="toggleRules(false)">×</span>
     <h2>FLIP FLAP</h2>
-    <p style="color:#8a7a80">競りに勝って札を集め、先に<b style="color:#ffe9a8">セット</b>を揃えましょう！</p>
+    <p style="color:#8a7a80">競りに勝って札を集め、先に<b style="color:#ffe9a8">セット</b>を揃えましょう。</p>
 
     <h3>🃏 札の読みかた</h3>
     <div class="r-anatomy">
@@ -1584,8 +1616,7 @@ rules2: `
       <span class="r-arrow">→</span><span class="r-win"><span data-ico="🏆"></span> 勝ち！</span>
     </div>
     <p style="font-size:.78rem">種類ごとに必要な枚数： <b>2</b>→2 · <b>3</b>→3 · <b>4</b>→4 · <b>6</b>→6<br>
-    <span data-ico="⚠"></span> 数えるのは<b>競りで取って自分の前に並べた札</b>だけです（手札は入りません）<br>
-    <span data-ico="🏁"></span> 山札が尽きたら、<b>セットにいちばん近い人</b>の勝ちです</p>
+    <span data-ico="⚠"></span> 数えるのは<b>競りで取って自分の前に並べた札</b>だけです。手札はどれだけ集まってもセットになりません。</p>
 
     <h3><span data-ico="🗂"></span> 山札 <span style="color:#8a7a80;font-weight:400;font-size:.85rem">— 24枚</span></h3>
     <div class="r-comp">
@@ -1598,24 +1629,71 @@ rules2: `
       <div class="r-comp-row"><div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
         <span><b>種類 6</b> · 10枚 <span class="r-comp-g">（等級 1〜10）</span></span></div>
     </div>
-    <p style="font-size:.78rem">種類の数字が大きいほど枚数も多く、そのぶんセットは遠くなります。</p>
+    <p style="font-size:.76rem;color:#8a7a80"><b style="color:#ffe9a8">枚数の多い種類ほど、セットも長くなります。</b>
+      6 は10枚もあって集めやすそうに見えますが、6枚そろえなければなりません。2 は2枚でいい代わりに、場に2枚しかありません。</p>
 
-    <h3><span data-ico="🔄"></span> 競りひとつの流れ</h3>
-    <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>山札から<b>表向きの札</b>を1枚めくる</span></div>
-      <div class="r4-step"><b>2</b><span>親が手札から<b>出し札</b>を1枚足す — この2枚が競り札</span></div>
-      <div class="r4-step"><b>3</b><span>親が<b>オープン</b>か<b>クローズ</b>を選ぶ</span></div>
-      <div class="r4-step"><b>4</b><span>ふたりとも<b>入札の札</b>を1枚ずつ出す</span></div>
-      <div class="r4-step"><b>5</b><span><b>強い</b>ほうが競り札2枚をすべて取る</span></div>
+    <h3><span data-ico="🚀"></span> 準備</h3>
+    <div class="r-flow">
+      <div class="r-step"><span class="r-ico" data-ico="🂠"></span><span class="r-tx">24枚を切って<b>ひとり6枚</b>ずつ配ります</span></div>
+      <div class="r-step"><span class="r-ico" data-ico="🗄"></span><span class="r-tx">残りの<b>12枚</b>を伏せて場の山にします</span></div>
+      <div class="r-step"><span class="r-ico" data-ico="👑"></span><span class="r-tx">1枚ずつ引き、<b>強いほうが最初の親</b>になります</span></div>
     </div>
-    <p style="font-size:.78rem">入札した札は捨てられません — ふたりで<b>交換します</b>。競りに負けても、強い札が手に入ります。</p>
 
-    <h3><span data-ico="👁"></span> オープンとクローズ</h3>
-    <div class="r4-two">
-      <div class="r4-card"><div class="r4-ct">オープン</div>
-        <p>競り札は<b>公開</b>。<br>入札はふたりとも出すまで伏せたまま。<br>賞品は見えても、相手は読めません。</p></div>
-      <div class="r4-card"><div class="r4-ct">クローズ</div>
-        <p>競り札は<b>伏せ</b>。<br>親が先に、見せながら入札します。<br>ハッタリにも、相手の強い札を抜くのにも使えます。</p></div>
+    <h3><span data-ico="🔄"></span> 一手の流れ</h3>
+    <div class="r-flow">
+      <div class="r-step"><span class="r-ico">🂠</span><span class="r-tx"><b>①</b> 親が山から1枚めくります — <b>表向きの札</b></span></div>
+      <div class="r-step"><span class="r-ico" data-ico="📤"></span><span class="r-tx"><b>②</b> 親が手札から1枚足します — <b>出し札</b>。この2枚が<b>競り札</b>です</span></div>
+      <div class="r-step"><span class="r-ico" data-ico="🎭"></span><span class="r-tx"><b>③</b> 親が<b>オープン</b>か<b>クローズ</b>を選びます</span></div>
+      <div class="r-step"><span class="r-ico" data-ico="🎯"></span><span class="r-tx"><b>④</b> ふたりが手札から入札札を1枚ずつ出します — <b>親が先</b>です</span></div>
+      <div class="r-step"><span class="r-ico" data-ico="🏆"></span><span class="r-tx"><b>⑤</b> 強い札を出したほうが競り札2枚を<b>自分の前に並べます</b></span></div>
+      <div class="r-step"><span class="r-ico" data-ico="🔁"></span><span class="r-tx"><b>⑥</b> 入札に使った2枚は<b>そのまま交換</b>して手札に入ります — 捨て札ではありません</span></div>
+      <div class="r-step"><span class="r-ico" data-ico="👑"></span><span class="r-tx"><b>⑦</b> 親の座を相手に渡し、次の競りへ</span></div>
+    </div>
+    <p style="font-size:.76rem;color:#8a7a80">
+      親は出し札1枚と入札札1枚を出し、受け取るのは相手の入札札1枚だけです。
+      つまり<b style="color:#ffe9a8">親を務めるたびに手札が1枚ずつ減ります</b> — これが一局の時計になります。</p>
+
+    <h3><span data-ico="🎭"></span> オープンとクローズ — 何を隠すか</h3>
+    <p style="font-size:.78rem;color:#8a7a80">選ぶのは親だけ。どちらを選んでも<b>何かひとつは必ず見せる</b>ことになります。</p>
+    <div class="r-two">
+      <div class="r-panel open">
+        <div class="r-ptitle">オープンの競り</div>
+        競り札 <span data-ico="👁"></span> <b>公開</b><br>
+        入札 <span data-ico="🙈"></span> <b>ふたりとも伏せて出す</b><br>（出そろってから公開）<br>
+        <span style="color:#8fe08a;font-size:.74rem"><span data-ico="💡"></span> 値打ちは分かる代わりに、相手は読めません。
+        どうしても欲しい局ならこちら — 強く出しても気づかれません。</span>
+      </div>
+      <div class="r-panel closed">
+        <div class="r-ptitle">クローズの競り</div>
+        競り札 <span data-ico="🙈"></span> <b>出し札を隠す</b><br>
+        入札 <span data-ico="👁"></span> <b>親のものが先に見える</b><br>（相手はそれを見て出す）<br>
+        <span style="color:#ff9a9a;font-size:.74rem"><span data-ico="⚠"></span> 品物を隠す代わりに、自分の札を先に見せることになります —
+        ぴったり一枚分だけ上を出されて持っていかれます。</span>
+      </div>
+    </div>
+    <p style="font-size:.76rem;color:#8a7a80">
+      <span data-ico="💡"></span> ですからクローズは<b style="color:#ffe9a8">取れなくてもいい局</b>で使います。
+      弱い札を投げて相手に強い札を使わせたり、大きく出して相手の最強札を抜いたりする手にもなります
+      — 入札した札は相手に渡るのですから。</p>
+
+    <h3><span data-ico="⚔"></span> どちらの入札が勝つか</h3>
+    <p style="font-size:.8rem"><b>①</b> 種類の数字が小さいほど強い</p>
+    <div class="r-cards">
+      <div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
+      <span class="r-arrow">&gt;</span>
+      <div class="rc" data-kind="3"><span class="rc-rank">1</span><span class="rc-num">3</span></div>
+      <span class="r-arrow">&gt;</span>
+      <div class="rc" data-kind="4"><span class="rc-rank">1</span><span class="rc-num">4</span></div>
+      <span class="r-arrow">&gt;</span>
+      <div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
+    </div>
+    <p style="font-size:.8rem"><b>②</b> 同じ種類なら等級が小さいほど強い</p>
+    <div class="r-match">
+      <div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
+      <span class="r-arrow">vs</span>
+      <div class="rc" data-kind="6"><span class="rc-rank">5</span><span class="rc-num">6</span></div>
+      <span class="r-arrow">→</span>
+      <span class="r-win">等級1の勝ち</span>
     </div>
 
     <div class="r-special">
@@ -1627,8 +1705,22 @@ rules2: `
         <span class="r-arrow">→</span>
         <span class="r-win">6-10 の勝ち！</span>
       </div>
-      <p style="font-size:.76rem;margin-top:6px">いちばん弱い<b style="color:var(--gold)">6-10</b>だけが、いちばん強い<b style="color:var(--gold)">2-1</b>を破ります。</p>
-    </div>`,
+      <p style="font-size:.76rem;margin-top:6px">いちばん弱い<b style="color:var(--gold)">6-10</b>だけが、いちばん強い<b style="color:var(--gold)">2-1</b>を破ります。
+      最強札を最後まで抱えておく手を、この1枚が止めています。</p>
+    </div>
+
+    <h3><span data-ico="🏁"></span> 終わりかた</h3>
+    <div class="r-flow">
+      <div class="r-step"><span class="r-ico" data-ico="🏆"></span><span class="r-tx"><b>セットが揃えば</b>その場で勝ち — 山札が残っていても終わります</span></div>
+      <div class="r-step"><span class="r-ico" data-ico="🗄"></span><span class="r-tx"><b>山札が尽きたら</b>その時点で数えます</span></div>
+      <div class="r-step"><span class="r-ico" data-ico="⏱"></span><span class="r-tx"><b>持ち時間はひとり5分</b> — 自分の番だけ減り、使い切ると負けです</span></div>
+    </div>
+    <p style="font-size:.76rem;color:#8a7a80">
+      山札が尽きたときは、この順に見ます。<br>
+      <b style="color:#ffe9a8">①</b> セットに近いほう — ひとつの種類で<b>必要な枚数のうち何枚そろったか</b>で測ります
+      （6が3枚＝半分、4が3枚＝4分の3 → <b>4のほうが上</b>）。<br>
+      <b style="color:#ffe9a8">②</b> それも同じなら、取った札が多いほう。<br>
+      <b style="color:#ffe9a8">③</b> それも同じなら引き分けです。</p>`,
 });
 
 root.FF && root.FF.register('ja', { name: '日本語', dict: D, patterns: P, blocks: B });
