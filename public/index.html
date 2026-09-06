@@ -298,12 +298,16 @@
        아래 것은 스크롤해야 보였다.
        칸은 그대로 두고 안에 든 것만 갈아 끼운다 — 두 겹을 겹쳐 두고 서로
        넘긴다. 난이도를 아래 따로 두면 어느 모드의 것인지 눈이 한 번 더 오간다. */
-    .sm-list { display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; }
-    /* 설명이 한 줄인 것과 두 줄인 것이 섞여 있다 — 높이를 못 박아 두지 않으면
-       윗줄과 아랫줄의 단추 크기가 달라 격자가 어그러진다. */
-    .sm-item { position:relative; min-height:97px; border-radius:14px; }
+    /* 남는 자리를 단추가 나눠 갖는다. 창은 화면을 꽉 채우는데 단추만 위쪽에
+       모여 있으면 아래가 텅 빈다 — 그만큼 하나하나가 작아 누르기도 나쁘다.
+       줄 높이를 1fr 로 두면 화면이 크든 작든 알아서 늘고 준다.
+       토너먼트 줄만 조금 낮게(.62fr) — 가로로 길어 그만큼은 필요 없다. */
+    .sm-list { display:grid; grid-template-columns:1fr 1fr;
+      grid-template-rows:1fr 1fr .62fr; gap:10px; width:100%;
+      flex:1; min-height:0; }
+    .sm-item { position:relative; min-height:0; border-radius:16px; }
     /* 토너먼트는 한 판이 아니라 한 대회다 — 자리도 한 줄을 통째로 쓴다 */
-    .sm-item.wide { grid-column:1 / -1; min-height:58px; }
+    .sm-item.wide { grid-column:1 / -1; }
     /* 두 겹 다 칸을 꽉 채운다 — 그래야 높이가 안 변한다 */
     .sm-head, .sm-body {
       position:absolute; inset:0; border-radius:14px;
@@ -311,23 +315,25 @@
     }
     .sm-head {
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:3px; text-align:center; cursor:pointer; padding:11px 9px; font-family:'Fredoka';
+      gap:7px; text-align:center; cursor:pointer; padding:14px 12px; font-family:'Fredoka';
       background:linear-gradient(180deg,#152037,#0d1424); border:1.5px solid #8396b4;
       box-shadow:inset 0 1px 0 rgba(200,222,255,.16);
     }
     .sm-head:hover { filter:brightness(1.12); }
     .sm-item.wide .sm-head { flex-direction:row; gap:11px; text-align:left; padding:11px 14px; }
     .sm-item.wide .sm-txt { flex:1; min-width:0; }
-    .sm-ico { font-size:1.5rem; line-height:1; flex-shrink:0; }
+    .sm-ico { font-size:2.3rem; line-height:1; flex-shrink:0; }
+    .sm-item.wide .sm-ico { font-size:1.7rem; }
     .sm-txt { min-width:0; }
-    .sm-txt b { display:block; font-size:.9rem; color:#dee8f6; }
-    .sm-txt small { display:block; font-size:.62rem; color:#949ba5; margin-top:2px; line-height:1.3; }
+    .sm-txt b { display:block; font-size:1.1rem; color:#dee8f6; }
+    .sm-txt small { display:block; font-size:.7rem; color:#949ba5; margin-top:3px; line-height:1.35; }
+    .sm-item.wide .sm-txt b { font-size:1rem; }
     /* 껍질이 걷힌다 — 위로 살짝 들리며 사라진다 */
     .sm-item.on .sm-head { opacity:0; transform:translateY(-7px) scale(.97); pointer-events:none; }
     /* 난이도는 그 자리에서 올라온다. 반 칸 너비라 가로로 셋을 늘어놓으면
        글자가 안 읽힌다 — 세로로 쌓는다. 한 줄을 다 쓰는 토너먼트만 가로다. */
     .sm-body {
-      display:flex; flex-direction:column; gap:4px; padding:6px;
+      display:flex; flex-direction:column; gap:6px; padding:8px;
       opacity:0; transform:translateY(7px) scale(.97); pointer-events:none;
       background:rgba(0,0,0,.32); border:1.5px solid var(--gold);
       box-shadow:inset 0 1px 0 rgba(200,222,255,.12);
@@ -336,16 +342,16 @@
     .sm-item.wide .sm-body { flex-direction:row; gap:6px; }
     /* 난이도 한 줄 — 별·이름·값을 한 줄에 나란히 */
     .sm-d {
-      flex:1; min-height:0; display:flex; align-items:center; justify-content:center; gap:6px;
-      border-radius:9px; cursor:pointer; padding:0 6px; font-family:'Fredoka';
+      flex:1; min-height:0; display:flex; align-items:center; justify-content:center; gap:8px;
+      border-radius:11px; cursor:pointer; padding:0 8px; font-family:'Fredoka';
       background:linear-gradient(180deg,#1b2740,#10182a); border:1px solid rgba(144,167,200,.35);
       color:#dbe6f5; white-space:nowrap; overflow:hidden;
     }
     .sm-d:hover { border-color:var(--gold); filter:brightness(1.12); }
-    .sm-d b { font-size:.78rem; font-weight:700; }
-    .sm-d .sd-s { font-size:.66rem; color:#ffd94a; letter-spacing:-.5px; flex-shrink:0; }
+    .sm-d b { font-size:.95rem; font-weight:700; }
+    .sm-d .sd-s { font-size:.8rem; color:#ffd94a; letter-spacing:-.5px; flex-shrink:0; }
     .sm-d .sd-s i { opacity:.28; font-style:normal; }
-    .sm-d .sd-c { font-size:.6rem; color:#9aa3b2; flex-shrink:0; }
+    .sm-d .sd-c { font-size:.72rem; color:#9aa3b2; flex-shrink:0; }
     .sm-d.d-expert { border-color:rgba(224,180,92,.55); }
     .sm-item.wide .sm-d { flex-direction:column; gap:1px; justify-content:center; }
 

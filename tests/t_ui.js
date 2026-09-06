@@ -178,9 +178,11 @@ console.log('\n⑩ 솔로플레이 모드 고르기');
   // 길게 한 줄씩 늘어놓으면 아래 것은 스크롤해야 보였다 — 한 줄에 둘씩
   ok('모드는 두 개씩 한 줄', /\.sm-list \{ display:grid; grid-template-columns:1fr 1fr;/.test(htm));
   // 설명이 한 줄인 것과 두 줄인 것이 섞여 있다 — 높이를 못 박아야 격자가 안 어그러진다
-  ok('칸 높이를 못 박는다', /\.sm-item \{ position:relative; min-height:97px;/.test(htm));
+  // 창은 화면을 꽉 채우는데 단추만 위쪽에 모여 있으면 아래가 텅 빈다
+  ok('남는 자리를 단추가 나눠 갖는다', /\.sm-list \{[\s\S]{0,220}grid-template-rows:1fr 1fr \.62fr;/.test(htm)
+     && /\.sm-list \{[\s\S]{0,260}flex:1; min-height:0;/.test(htm));
   // 토너먼트는 한 판이 아니라 한 대회다
-  ok('토너먼트는 한 줄을 다 쓴다', /\.sm-item\.wide \{ grid-column:1 \/ -1; min-height:58px; \}/.test(htm));
+  ok('토너먼트는 한 줄을 다 쓴다', /\.sm-item\.wide \{ grid-column:1 \/ -1; \}/.test(htm));
   // 난이도를 아래 따로 두면 어느 모드의 것인지 눈이 한 번 더 오간다
   ok('난이도는 그 칸 안에서 드러난다',
      /\.sm-item\.on \.sm-head \{ opacity:0;/.test(htm)
