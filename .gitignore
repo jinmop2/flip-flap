@@ -22,3 +22,5 @@ design-work/*.html
 !design-work/*.dc.html
 design-solo/*.html
 !design-solo/*.dc.html
+design-logo/*.html
+!design-logo/*.dc.html
