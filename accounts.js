@@ -97,6 +97,10 @@ async function loadFromDB() {
       db.meta_ipsalt = (im.rows[0] && im.rows[0].data) || null;   // 없으면 첫 사용 때 생성된다
     } catch (_) { db.meta_ipsalt = null; }
     try {
+      const rf = await pool.query("SELECT data FROM ff_meta WHERE k = 'rtfrom'");
+      db.meta_rtfrom = (rf.rows[0] && rf.rows[0].data) || null;   // 리텐션 측정을 시작한 날
+    } catch (_) { db.meta_rtfrom = null; }
+    try {
       const al = await pool.query("SELECT data FROM ff_meta WHERE k = 'adminlog'");
       db.adminLog = (al.rows[0] && al.rows[0].data) || [];        // 누가 무엇을 했는지
     } catch (_) { db.adminLog = []; }
@@ -3439,16 +3443,77 @@ function adminOverview() {
     coins: users.reduce((n, u) => n + (u.coins || 0), 0),
     reports: (db.reports || []).length,
     season: seasonState(),
+    retention: retentionStats(),
+    retentionRough: retentionRough(),
   };
+}
+
+// ── 리텐션 ────────────────────────────────────────────────────────────────
+// 며칠 만에 다시 오는지를 알아야 무엇을 고칠지가 정해진다. lastSeen 하나로는
+// "마지막에 언제 왔나" 밖에 모른다 — 가입 후 3일째에 왔는지 7일째에 왔는지는
+// 사라진다. 그래서 가입 후 31일치를 한 줄로 적는다: 'ㅇ번째 칸이 1이면 그날 왔다'.
+// 31칸이면 D1·D7·D30 이 다 나오고, 한 사람당 31바이트면 끝난다.
+const RT_DAYS = 31;
+function markRetention(u, now = Date.now()) {
+  if (!u || !u.createdAt) return false;
+  const off = kstDayIndex(now) - kstDayIndex(u.createdAt);
+  if (off < 0 || off >= RT_DAYS) return false;
+  const s = String(u.rt || '').padEnd(RT_DAYS, '0');
+  if (s[off] === '1') return false;                       // 오늘 몫은 이미 적혔다
+  u.rt = s.slice(0, off) + '1' + s.slice(off + 1);
+  return true;
+}
+// 측정을 시작한 날. 이 날보다 먼저 가입한 사람은 기록이 없으므로 셈에서 뺀다 —
+// 없는 기록을 0 으로 세면 리텐션이 실제보다 낮게 나온다.
+function rtFrom() {
+  if (!db.meta_rtfrom) {
+    db.meta_rtfrom = kstDayIndex();
+    persistMeta('rtfrom', db.meta_rtfrom);
+  }
+  return db.meta_rtfrom;
+}
+const rtDayStr = (idx) => new Date(idx * 86400000).toISOString().slice(0, 10);
+
+// 코호트 리텐션 — 가입 후 정확히 n일째에 다시 왔는가.
+// 아직 n일이 안 지난 사람은 답을 알 수 없으므로 분모에서 뺀다.
+function retentionStats() {
+  const from = rtFrom();
+  const today = kstDayIndex();
+  const tracked = Object.values(db.users).filter((u) => u.createdAt && kstDayIndex(u.createdAt) >= from);
+  const d = {};
+  for (const n of [1, 7, 30]) {
+    const mature = tracked.filter((u) => today - kstDayIndex(u.createdAt) >= n);
+    const back = mature.filter((u) => String(u.rt || '')[n] === '1').length;
+    d['d' + n] = { of: mature.length, back, pct: mature.length ? Math.round(back * 1000 / mature.length) / 10 : null };
+  }
+  return { since: rtDayStr(from), tracked: tracked.length, d };
+}
+
+// 측정 전에 가입한 사람들 몫 — createdAt 과 lastSeen 만으로 낼 수 있는 값이다.
+// "가입하고 n일 뒤에도 살아 있었나" 라서 위의 코호트 값과 뜻이 다르다(더 느슨하다).
+// 정확한 값이 쌓이기 전까지 눈금 노릇을 하라고 둔다.
+function retentionRough() {
+  const today = kstDayIndex();
+  const users = Object.values(db.users).filter((u) => u.createdAt);
+  const d = {};
+  for (const n of [1, 7, 30]) {
+    const mature = users.filter((u) => today - kstDayIndex(u.createdAt) >= n);
+    const alive = mature.filter((u) => (u.lastSeen || 0) - u.createdAt >= n * 86400000).length;
+    d['d' + n] = { of: mature.length, back: alive, pct: mature.length ? Math.round(alive * 1000 / mature.length) / 10 : null };
+  }
+  return { of: users.length, d };
 }
 
 // 마지막 접속 시각 — 정지·활동 판단의 바탕이 된다.
 // 판을 둘 때마다 적으면 저장이 잦아지므로, 하루에 한 번만 적는다.
+// 다만 리텐션 칸은 하루가 바뀌면 반드시 켜야 한다 — 자정 직후에 들어온 사람이
+// "한 시간 안 지났다" 로 걸러지면 그날이 통째로 빈다.
 function touchSeen(token) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
   if (!u) return;
   const now = Date.now();
-  if (u.lastSeen && now - u.lastSeen < 3600000) return;   // 한 시간에 한 번이면 충분하다
+  const grew = markRetention(u, now);
+  if (!grew && u.lastSeen && now - u.lastSeen < 3600000) return;   // 한 시간에 한 번이면 충분하다
   u.lastSeen = now;
   persist(idl);
 }
@@ -3529,4 +3594,5 @@ module.exports = {
   adminOverview, adminSearch, adminUser, adminSameDevice, adminBan, adminUnban, adminMute, adminUnmute,
   adminNotice, adminNoticeAll, adminCoins, adminLog, adminLogList,
   banInfo, muteInfo, myNotices, markNoticesRead, touchSeen, setAdminWho,
+  markRetention, retentionStats, retentionRough,
 };

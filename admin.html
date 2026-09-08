@@ -55,6 +55,7 @@
  .tag.warn{color:#ffc98a;border-color:#8a6a35}
  .hint{font-size:.74rem;color:var(--dim);line-height:1.5}
  .empty{color:var(--dim);font-size:.8rem;padding:14px;text-align:center}
+    .kpi.wide { grid-column:1 / -1; text-align:left; }
 </style>
 
 <header>
@@ -96,6 +97,10 @@
   <div class="card">
     <h2>누적</h2>
     <div class="kpis" id="totals"></div>
+  </div>
+  <div class="card">
+    <h2>리텐션 <small style="font-weight:400;opacity:.6">가입 후 그날 다시 왔나</small></h2>
+    <div class="kpis" id="retention"></div>
   </div>
   <div class="card">
     <h2>최근 30일 방문</h2>
@@ -305,6 +310,19 @@ async function loadDash(){
     ['정지',o.banned],['재갈',o.muted],['클랜',o.clans],
     ['코인 총량',o.coins],['신고',o.reports],
   ].map(([k,v])=>'<div class="kpi"><b>'+n(v)+'</b><span>'+k+'</span></div>').join('');
+
+  // 리텐션 — 가입 후 며칠째에 다시 왔나. 아직 그 날짜가 안 온 사람은 분모에서 빠진다.
+  // 측정 시작 전에 가입한 사람은 기록이 없어 '대략' 쪽에서만 센다(뜻이 더 느슨하다).
+  const rt=o.retention, rg=o.retentionRough;
+  const cell=(lab,x)=>'<div class="kpi"><b>'+(x&&x.pct!=null?x.pct+'%':'—')+'</b><span>'+lab
+      +(x?' <small>('+x.back+'/'+x.of+')</small>':'')+'</span></div>';
+  const el=$('retention');
+  if(el) el.innerHTML = rt
+    ? cell('D1',rt.d.d1)+cell('D7',rt.d.d7)+cell('D30',rt.d.d30)
+      +'<div class="kpi"><b>'+n(rt.tracked)+'</b><span>측정 대상 <small>('+esc(rt.since)+'~)</small></span></div>'
+      +(rg?'<div class="kpi wide"><b>대략</b><span>D1 '+(rg.d.d1.pct??'—')+'% · D7 '+(rg.d.d7.pct??'—')
+        +'% · D30 '+(rg.d.d30.pct??'—')+'% <small>(전체 '+n(rg.of)+'명 · 가입 n일 뒤에도 살아 있었나)</small></span></div>':'')
+    : '';
 
   const days=(o.days||[]).slice().reverse();          // 왼쪽이 과거
   const maxPv=Math.max(1,...days.map(d=>d.pv||0));
