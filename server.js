@@ -6,6 +6,7 @@ const http = require('http').createServer(app);
 // 이 서버로 붙어 우리 이용자 이름으로 판을 열 수 있다.
 const APP_ORIGINS = ['https://localhost', 'capacitor://localhost', 'http://localhost'];
 const io = require('socket.io')(http, { cors: { origin: APP_ORIGINS, credentials: false } });
+const admobSsv = require('./admob-ssv');
 const path = require('path');
 const crypto = require('crypto');
 const accounts = require('./accounts');
@@ -689,6 +690,25 @@ app.post('/api/push-off', rateLimit(20), (req, res) => {
   res.json(accounts.pushDrop(token, String(endpoint || '')));
 });
 
+// AdMob 보상형 서버 검증 — 이용자가 광고를 끝까지 보면 구글이 이 주소를 부른다.
+// 화면을 거치지 않으므로 "봤다" 를 클라이언트가 말하지 않는다.
+// 주소는 AdMob 콘솔의 보상형 광고 단위 설정에 그대로 넣는다:
+//   https://flip-flap.onrender.com/api/admob-ssv
+// 서명을 확인하는 것이 전부다 — 확인을 안 하면 누구나 이 주소를 불러 코인을 받는다.
+app.get('/api/admob-ssv', rateLimit(300), async (req, res) => {
+  // express 가 갈라 놓은 것을 다시 조립하면 순서와 인코딩이 달라져 서명이 안 맞는다.
+  // 원문 그대로가 필요하다.
+  const q = req.originalUrl.slice(req.originalUrl.indexOf('?') + 1);
+  try {
+    const v = await admobSsv.verify(q);
+    if (!v.ok) { console.warn('[광고] 확인 실패:', v.why); return res.sendStatus(400); }
+    accounts.bonusVerify(v.ticket, v);
+    res.sendStatus(200);                  // 구글은 200 이 아니면 계속 다시 부른다
+  } catch (e) {
+    console.error('[광고] 확인 중 오류:', e.message);
+    res.sendStatus(500);                  // 잠시 뒤 다시 부르게 둔다
+  }
+});
 app.post('/api/bonus',       rateLimit(30), (req, res) => { const { token } = req.body || {}; res.json(accounts.bonusState(token)); });
 app.post('/api/bonus-start', rateLimit(20), (req, res) => { const { token } = req.body || {}; res.json(accounts.bonusStart(token)); });
 app.post('/api/bonus-claim', rateLimit(20), (req, res) => { const { token, ticket } = req.body || {}; res.json(accounts.bonusClaim(token, ticket)); });

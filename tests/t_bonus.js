@@ -60,8 +60,10 @@ console.log('③ 화면은 표를 나르기만 한다');
   ok('받는 건 창 안의 단추다', /window\.claimBonus = async function/.test(cli)
      && /id="bnClaim"[^>]*onclick="claimBonus\(\)"/.test(html));
   ok('창은 뒤로가기로도 닫힌다', /\['bonusModal',\s*\(\) => closeBonus\(\)\]/.test(cli));
-  // 광고를 끼울 자리가 코드에 남아 있어야 나중에 헷갈리지 않는다
-  ok('광고를 끼울 자리가 적혀 있다', /광고 모드면 여기서 광고를 보여 주고/.test(cli));
+  // 자리만 비워 두던 시절이 끝났다 — 표와 지급 사이에 실제로 광고가 들어간다
+  ok('표와 지급 사이에 광고가 들어간다',
+     /bonus-start[\s\S]{0,600}FF\.ad\.reward\(st\.ticket\)[\s\S]{0,900}bonus-claim/.test(cli));
+  ok('웹에서는 예전처럼 시간만 채운다', /else if \(st\.minSec\)/.test(cli));
 }
 
 console.log('④ 진짜로 돌려 본다');

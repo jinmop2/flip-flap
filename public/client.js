@@ -761,10 +761,22 @@ window.claimBonus = async function () {
   try {
     const st = await apiPost('/api/bonus-start', { token: authToken() });
     if (st.error) { said = `<span class="bn-err">${esc(st.error)}</span>`; return; }
-    // 광고 모드면 여기서 광고를 보여 주고, 끝난 뒤에 표를 돌려준다.
-    // 지금은 광고가 없으므로 바로 돌려준다 (서버의 최소 시간도 0 이다).
-    if (st.minSec) await new Promise((go) => setTimeout(go, st.minSec * 1000 + 300));
-    const got = await apiPost('/api/bonus-claim', { token: authToken(), ticket: st.ticket });
+    // 앱이면 여기서 광고 한 편. 표(st.ticket)를 같이 넘기면 구글이 그 값을
+    // 그대로 서버로 되돌려 주므로, 서버는 "이 표의 광고를 봤다" 를 구글에게
+    // 직접 듣는다. 웹에서는 FF.ad.ready() 가 false 라 예전처럼 시간만 채운다.
+    if (window.FF && FF.ad && FF.ad.ready()) {
+      const watched = await FF.ad.reward(st.ticket);
+      if (!watched) { said = '<span class="bn-err">광고를 끝까지 봐야 받을 수 있어요.</span>'; return; }
+    } else if (st.minSec) {
+      await new Promise((go) => setTimeout(go, st.minSec * 1000 + 300));
+    }
+    // 광고가 끝나도 구글의 확인이 몇 초 늦게 올 수 있다 — 그동안 표는 살아
+    // 있으므로 몇 번 더 물어본다. 여기서 포기하면 정말 본 사람이 못 받는다.
+    let got = await apiPost('/api/bonus-claim', { token: authToken(), ticket: st.ticket });
+    for (let i = 0; got.pending && i < 6; i++) {
+      await new Promise((go) => setTimeout(go, 1200));
+      got = await apiPost('/api/bonus-claim', { token: authToken(), ticket: st.ticket });
+    }
     if (got.error) { said = `<span class="bn-err">${esc(got.error)}</span>`; return; }
     myAccount = got.profile; renderAccount();
     playSound('setwin');

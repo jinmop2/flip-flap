@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FLIP FLAP</string>
+    <string name="title_activity_main">FLIP FLAP</string>
+    <string name="package_name">com.mongdung.flipflap</string>
+    <string name="custom_url_scheme">com.mongdung.flipflap</string>
+</resources>

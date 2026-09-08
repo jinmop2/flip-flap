@@ -2127,6 +2127,10 @@ const AD_MODE = process.env.AD_MODE === 'ad';        // 광고 켜짐 여부 (�
 const BONUS = AD_MODE
   ? { perDay: 5, coins: 50, minSec: 15 }             // 광고를 본 값
   : { perDay: 3, coins: 30, minSec: 0 };             // 광고 없이 그냥 주는 값
+// 광고를 정말 봤는지는 구글이 서버로 직접 알려 준다(SSV). 그 확인이 온 표만
+// 지급한다 — 화면이 "봤다" 고 말하는 것은 믿지 않는다.
+// 광고 콘솔에 확인 주소를 아직 안 넣었다면 AD_SSV=off 로 잠시 끌 수 있다.
+const SSV_ON = AD_MODE && process.env.AD_SSV !== 'off';
 const BONUS_TICKET_TTL = 10 * 60 * 1000;             // 표는 10분이면 상한다
 const bonusTickets = new Map();                      // 표 → { idl, at, day }
 const bonusLocks = new Set();                        // 재진입(중복 수령) 방지
@@ -2137,6 +2141,8 @@ function bonusUsedToday(u) {
   if (!u.bonus || u.bonus.day !== today) return 0;
   return u.bonus.n || 0;
 }
+// 지금 광고가 어떤 모드로 돌고 있나 — 부팅 로그와 운영 화면이 본다
+function adConfig() { return { ad: AD_MODE, ssv: SSV_ON, perDay: BONUS.perDay, coins: BONUS.coins, minSec: BONUS.minSec }; }
 // 화면에 보여 줄 상태 (남은 횟수·금액·광고 여부)
 function bonusState(token) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
@@ -2157,6 +2163,17 @@ function bonusStart(token) {
   bonusTickets.set(t, { idl, at: now, day: kstDayIndex() });
   return { ok: true, ticket: t, minSec: BONUS.minSec, coins: BONUS.coins };
 }
+// ② 구글이 "이 표의 광고를 끝까지 봤다" 고 알려 오면 도장을 찍는다.
+// 표가 없으면(이미 받았거나 상했거나) 조용히 넘긴다 — 구글은 재시도를 하는데,
+// 오류를 돌려주면 같은 확인이 계속 다시 온다.
+function bonusVerify(ticket, info) {
+  const e = bonusTickets.get(String(ticket || ''));
+  if (!e) return { ok: true, known: false };
+  e.ssv = true;
+  e.ssvAt = Date.now();
+  if (info && info.txn) e.txn = info.txn;
+  return { ok: true, known: true };
+}
 // ③ 표를 확인하고 지급한다
 function bonusClaim(token, ticket) {
   const idl = tokenIndex[token]; const u = idl ? db.users[idl] : null;
@@ -2172,6 +2189,10 @@ function bonusClaim(token, ticket) {
     if (e.day !== kstDayIndex()) { bonusTickets.delete(ticket); return { error: '날이 바뀌었어요. 다시 시도해 주세요.' }; }
     // 광고 모드에서는 최소 시간을 채워야 한다 — 안 그러면 안 본 것이다
     if (BONUS.minSec && now - e.at < BONUS.minSec * 1000) return { error: '아직 끝나지 않았어요.' };
+    // 구글의 확인이 아직이면 표를 버리지 않고 기다리게 한다. 광고가 끝난 뒤
+    // 확인이 오기까지 몇 초가 걸릴 수 있어서, 여기서 표를 지우면 정말 본
+    // 사람이 못 받는다.
+    if (SSV_ON && !e.ssv) return { error: '광고 확인 중이에요. 잠시 후 다시 눌러 주세요.', pending: true };
     // 한도는 표를 낼 때가 아니라 줄 때 다시 본다 (표를 여러 장 받아 두는 것 방지)
     const used = bonusUsedToday(u);
     if (used >= BONUS.perDay) { bonusTickets.delete(ticket); return { error: '오늘 몫은 다 받았어요. 내일 다시 오세요.' }; }
@@ -3595,4 +3616,5 @@ module.exports = {
   adminNotice, adminNoticeAll, adminCoins, adminLog, adminLogList,
   banInfo, muteInfo, myNotices, markNoticesRead, touchSeen, setAdminWho,
   markRetention, retentionStats, retentionRough,
+  bonusVerify, adConfig,
 };
