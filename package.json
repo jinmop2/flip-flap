@@ -19,6 +19,8 @@
   "devDependencies": {
     "@capacitor-community/admob": "^8.1.0",
     "@capacitor/android": "^8.5.1",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
     "@capacitor/cli": "^8.5.1",
     "@capacitor/core": "^8.5.1",
     "socket.io-client": "^4.8.3"

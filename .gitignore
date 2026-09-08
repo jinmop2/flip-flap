@@ -25,3 +25,6 @@ design-solo/*.html
 design-logo/*.html
 !design-logo/*.dc.html
 app-www/
+
+# 안드로이드 서명 — 비밀번호가 들어간다. 절대 커밋 금지.
+android/keystore.properties

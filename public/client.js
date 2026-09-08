@@ -1325,6 +1325,34 @@ async function submitNick() {
 
 // ── 카카오 로그인 콜백 처리 (#ktoken=… / #kerr=…) ──
 let kakaoFirstLogin = false;
+// 소셜 로그인 — 웹은 그 자리에서 이동하고, 앱은 시스템 브라우저로 연다.
+// 앱 안의 웹뷰에서 구글 로그인을 열면 구글이 막는다(disallowed_useragent).
+window.socialLogin = function (provider) {
+  if (window.FF && FF.login && FF.login(provider)) return;   // 앱이 맡았다
+  location.href = '/auth/' + provider;
+};
+// 앱에서 로그인을 마치고 돌아왔을 때 — 웹의 그 처리를 그대로 한 번 더 돈다
+function readAuthHash(h) {
+  if (h.startsWith('#ktoken=')) {
+    const p = new URLSearchParams(h.slice(1));
+    localStorage.setItem('ff_auth', p.get('ktoken'));
+    kakaoFirstLogin = !!p.get('knew');
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+    const tk = localStorage.getItem('ff_auth');
+    if (tk && typeof socket !== 'undefined' && socket.connected) socket.emit('auth', { token: tk });
+    if (kakaoFirstLogin) setTimeout(() => { if (typeof openNickModal === 'function') openNickModal(); }, 400);
+    return true;
+  }
+  if (h.startsWith('#kerr=')) {
+    const msg = decodeURIComponent(h.slice(6));
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+    setTimeout(() => alert('⚠️ ' + msg), 300);
+    return true;
+  }
+  return false;
+}
+window.FF = window.FF || {};
+window.FF.onAuthReturn = readAuthHash;
 (function handleKakaoReturn() {
   const h = location.hash || '';
   if (h.startsWith('#ktoken=')) {

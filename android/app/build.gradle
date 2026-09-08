@@ -1,5 +1,25 @@
 apply plugin: 'com.android.application'
 
+// 서명 열쇠와 비밀번호는 저장소에 두지 않는다. android/keystore.properties 에
+// 적거나 환경변수로 준다 — 둘 다 .gitignore 에 걸려 있다.
+//
+//   android/keystore.properties
+//     storeFile=../../android-build/android.keystore
+//     storePassword=…
+//     keyAlias=flipflap
+//     keyPassword=…
+//
+// 값이 없으면 서명 설정을 아예 안 만든다. 그래야 debug 빌드는 그냥 되고,
+// release 빌드는 "서명이 없다" 고 분명히 말하며 멈춘다.
+def ksProps = new Properties()
+def ksFile = rootProject.file('keystore.properties')
+if (ksFile.exists()) ksFile.withInputStream { ksProps.load(it) }
+def ksPath  = ksProps['storeFile']     ?: System.getenv('FF_KEYSTORE')
+def ksPass  = ksProps['storePassword'] ?: System.getenv('FF_KEYSTORE_PASSWORD')
+def ksAlias = ksProps['keyAlias']      ?: System.getenv('FF_KEY_ALIAS') ?: 'flipflap'
+def ksKey   = ksProps['keyPassword']   ?: System.getenv('FF_KEY_PASSWORD') ?: ksPass
+def canSign = ksPath && ksPass && file(ksPath).exists()
+
 android {
     namespace = "com.mongdung.flipflap"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +27,8 @@ android {
         applicationId "com.mongdung.flipflap"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 5          // TWA 가 4 까지 썼다. 스토어는 늘 더 큰 번호만 받는다.
+        versionName "1.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +36,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    if (canSign) {
+        signingConfigs {
+            release {
+                storeFile file(ksPath)
+                storePassword ksPass
+                keyAlias ksAlias
+                keyPassword ksKey
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (canSign) signingConfig signingConfigs.release
         }
     }
 }

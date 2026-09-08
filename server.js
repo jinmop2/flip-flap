@@ -751,60 +751,76 @@ const KAKAO_CLIENT_SECRET = process.env.KAKAO_CLIENT_SECRET || '';   // 콘솔 [
 const GOOGLE_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 function baseURL(req) { return `${req.protocol}://${req.get('host')}`; }
+// 앱에서 시작한 로그인은 앱으로 돌아가야 한다.
+//
+// 웹에서는 로그인이 끝나면 '/#ktoken=…' 로 돌려보내면 됐다. 앱에서는 로그인
+// 창이 시스템 브라우저에서 열리므로, 거기서 우리 주소로 돌려봐야 앱이 아니라
+// 브라우저에 머문다 — 앱은 영영 토큰을 못 받는다.
+//
+// 그래서 앱에서 시작했다는 표시를 state 에 실어 보내고(구글·카카오 둘 다
+// state 를 그대로 돌려준다), 콜백에서 그 표시를 보고 앱의 주소로 보낸다.
+const APP_SCHEME = process.env.APP_SCHEME || 'com.mongdung.flipflap';
+const fromApp = (req) => String(req.query.state || '') === 'app' || String(req.query.app || '') === '1';
+// 돌아갈 자리 — 앱이면 앱의 주소, 아니면 예전 그대로
+function authBack(req, hash) {
+  return fromApp(req) ? `${APP_SCHEME}://auth${hash}` : `/${hash}`;
+}
 // 어떤 소셜 로그인이 설정됐는지 클라에 알림 (미설정 버튼은 숨김)
 app.get('/api/auth-config', (req, res) => res.json({ kakao: !!KAKAO_REST_KEY, google: !!GOOGLE_ID }));
 app.get('/api/kakao-enabled', (req, res) => res.json({ enabled: !!KAKAO_REST_KEY }));   // 하위호환
 app.get('/auth/google', rateLimit(30), (req, res) => {
-  if (!GOOGLE_ID) return res.redirect('/#kerr=' + encodeURIComponent('구글 로그인이 아직 설정되지 않았어요'));
+  if (!GOOGLE_ID) return res.redirect(authBack(req, '#kerr=' + encodeURIComponent('구글 로그인이 아직 설정되지 않았어요')));
   const redirect = encodeURIComponent(baseURL(req) + '/auth/google/callback');
   const p = new URLSearchParams({ client_id: GOOGLE_ID, redirect_uri: baseURL(req) + '/auth/google/callback', response_type: 'code', scope: 'openid email profile', prompt: 'select_account' });
+  if (String(req.query.app || '') === '1') p.set('state', 'app');   // 앱에서 시작했다
   res.redirect('https://accounts.google.com/o/oauth2/v2/auth?' + p.toString());
 });
 app.get('/auth/google/callback', rateLimit(30), async (req, res) => {
   try {
     const code = String(req.query.code || '');
-    if (!code || !GOOGLE_ID) return res.redirect('/#kerr=' + encodeURIComponent('구글 인증이 취소됐어요'));
+    if (!code || !GOOGLE_ID) return res.redirect(authBack(req, '#kerr=' + encodeURIComponent('구글 인증이 취소됐어요')));
     const tr = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ grant_type: 'authorization_code', client_id: GOOGLE_ID, client_secret: GOOGLE_SECRET, redirect_uri: baseURL(req) + '/auth/google/callback', code }),
     });
     const tok = await tr.json();
-    if (!tok.access_token) { console.error('구글 토큰 실패:', JSON.stringify(tok)); return res.redirect('/#kerr=' + encodeURIComponent('구글 인증에 실패했어요')); }
+    if (!tok.access_token) { console.error('구글 토큰 실패:', JSON.stringify(tok)); return res.redirect(authBack(req, '#kerr=' + encodeURIComponent('구글 인증에 실패했어요'))); }
     const ur = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', { headers: { Authorization: 'Bearer ' + tok.access_token } });
     const gu = await ur.json();
-    if (!gu.id) { console.error('구글 유저 조회 실패:', JSON.stringify(gu)); return res.redirect('/#kerr=' + encodeURIComponent('구글 정보를 가져오지 못했어요')); }
+    if (!gu.id) { console.error('구글 유저 조회 실패:', JSON.stringify(gu)); return res.redirect(authBack(req, '#kerr=' + encodeURIComponent('구글 정보를 가져오지 못했어요'))); }
     const nick = gu.name || (gu.email ? gu.email.split('@')[0] : '플레이어');
     const out = accounts.googleLogin(gu.id, nick);
     if (out.isNew) stats.bump('signups');
-    res.redirect('/#ktoken=' + out.token + (out.isNew ? '&knew=1' : ''));
-  } catch (e) { console.error('구글 콜백 오류:', e.message); res.redirect('/#kerr=' + encodeURIComponent('구글 로그인 중 오류가 났어요')); }
+    res.redirect(authBack(req, '#ktoken=' + out.token + (out.isNew ? '&knew=1' : '')));
+  } catch (e) { console.error('구글 콜백 오류:', e.message); res.redirect(authBack(req, '#kerr=' + encodeURIComponent('구글 로그인 중 오류가 났어요'))); }
 });
 app.get('/auth/kakao', rateLimit(30), (req, res) => {
-  if (!KAKAO_REST_KEY) return res.redirect('/#kerr=' + encodeURIComponent('카카오 로그인이 아직 설정되지 않았어요'));
+  if (!KAKAO_REST_KEY) return res.redirect(authBack(req, '#kerr=' + encodeURIComponent('카카오 로그인이 아직 설정되지 않았어요')));
   const redirect = encodeURIComponent(baseURL(req) + '/auth/kakao/callback');
-  res.redirect(`https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_REST_KEY}&redirect_uri=${redirect}&response_type=code`);
+  const st = String(req.query.app || '') === '1' ? '&state=app' : '';   // 앱에서 시작했다
+  res.redirect(`https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_REST_KEY}&redirect_uri=${redirect}&response_type=code${st}`);
 });
 app.get('/auth/kakao/callback', rateLimit(30), async (req, res) => {
   try {
     const code = String(req.query.code || '');
-    if (!code || !KAKAO_REST_KEY) return res.redirect('/#kerr=' + encodeURIComponent('카카오 인증이 취소됐어요'));
+    if (!code || !KAKAO_REST_KEY) return res.redirect(authBack(req, '#kerr=' + encodeURIComponent('카카오 인증이 취소됐어요')));
     // 인가 코드 → 액세스 토큰
     const tr = await fetch('https://kauth.kakao.com/oauth/token', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ grant_type: 'authorization_code', client_id: KAKAO_REST_KEY, redirect_uri: baseURL(req) + '/auth/kakao/callback', code, ...(KAKAO_CLIENT_SECRET ? { client_secret: KAKAO_CLIENT_SECRET } : {}) }),
     });
     const tok = await tr.json();
-    if (!tok.access_token) { console.error('카카오 토큰 실패:', JSON.stringify(tok)); return res.redirect('/#kerr=' + encodeURIComponent('카카오 인증에 실패했어요')); }
+    if (!tok.access_token) { console.error('카카오 토큰 실패:', JSON.stringify(tok)); return res.redirect(authBack(req, '#kerr=' + encodeURIComponent('카카오 인증에 실패했어요'))); }
     // 회원번호·닉네임 조회
     const ur = await fetch('https://kapi.kakao.com/v2/user/me', { headers: { Authorization: 'Bearer ' + tok.access_token } });
     const ku = await ur.json();
-    if (!ku.id) { console.error('카카오 유저 조회 실패:', JSON.stringify(ku)); return res.redirect('/#kerr=' + encodeURIComponent('카카오 정보를 가져오지 못했어요')); }
+    if (!ku.id) { console.error('카카오 유저 조회 실패:', JSON.stringify(ku)); return res.redirect(authBack(req, '#kerr=' + encodeURIComponent('카카오 정보를 가져오지 못했어요'))); }
     const nick = (ku.kakao_account && ku.kakao_account.profile && ku.kakao_account.profile.nickname) || (ku.properties && ku.properties.nickname) || '플레이어';
     const out = accounts.kakaoLogin(ku.id, nick);
     // 토큰은 URL 프래그먼트로 전달 (서버 로그·리퍼러에 안 남음) — 클라가 저장 후 지움
     if (out.isNew) stats.bump('signups');
-    res.redirect('/#ktoken=' + out.token + (out.isNew ? '&knew=1' : ''));   // 첫 로그인이면 닉 설정 유도
-  } catch (e) { console.error('카카오 콜백 오류:', e.message); res.redirect('/#kerr=' + encodeURIComponent('카카오 로그인 중 오류가 났어요')); }
+    res.redirect(authBack(req, '#ktoken=' + out.token + (out.isNew ? '&knew=1' : '')));   // 첫 로그인이면 닉 설정 유도
+  } catch (e) { console.error('카카오 콜백 오류:', e.message); res.redirect(authBack(req, '#kerr=' + encodeURIComponent('카카오 로그인 중 오류가 났어요'))); }
 });
 
 // ── 카드 모델 ──────────────────────────────────────────────

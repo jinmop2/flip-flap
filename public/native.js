@@ -63,7 +63,37 @@
     });
   }
 
+  // ── 소셜 로그인 ──────────────────────────────────────────────────────────
+  // 앱 안의 웹뷰에서 그냥 이동시키면 안 된다. 구글은 웹뷰 안의 로그인을 막고
+  // (disallowed_useragent), 통과하더라도 앱 껍데기를 벗어나 돌아올 길이 없다.
+  //
+  // 그래서 시스템 브라우저로 열고, 서버가 끝나면 앱의 주소로 돌려보낸다.
+  //   com.mongdung.flipflap://auth#ktoken=…
+  // 그 주소가 열리면 아래 listener 가 받아 화면에 넘긴다.
+  var Browser = P.Browser || null, App = P.App || null;
+
+  function login(provider) {
+    if (!native || !Browser) return false;
+    Browser.open({ url: (window.FF_BASE || '') + '/auth/' + provider + '?app=1' });
+    return true;
+  }
+
+  // 앱 주소로 돌아왔다 — 토큰을 꺼내 화면에 넘기고 브라우저를 닫는다
+  if (native && App) {
+    App.addListener('appUrlOpen', function (e) {
+      var url = String((e && e.url) || '');
+      var cut = url.indexOf('#');
+      if (cut < 0) return;
+      if (Browser) { try { Browser.close(); } catch (_) {} }
+      var hash = url.slice(cut);
+      // 화면 쪽 코드가 보는 것은 location.hash 하나다 — 거기에 얹고 다시 부른다
+      try { location.hash = hash; } catch (_) {}
+      if (window.FF && FF.onAuthReturn) FF.onAuthReturn(hash);
+    });
+  }
+
   window.FF = window.FF || {};
+  window.FF.login = login;
   window.FF.ad = {
     ready: function () { return native && !!AdMob; },
     testing: function () { return TESTING; },

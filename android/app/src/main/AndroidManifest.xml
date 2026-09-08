@@ -22,6 +22,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- 로그인을 마친 브라우저가 앱으로 돌려보낼 때 쓰는 주소.
+                 com.mongdung.flipflap://auth#ktoken=…
+                 이 걸림쇠가 없으면 브라우저에 그대로 머물고 앱은 토큰을 못 받는다. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.mongdung.flipflap" android:host="auth" />
+            </intent-filter>
+
         </activity>
 
         <!-- AdMob 앱 ID. 지금 값은 구글이 공개한 '시험용' 이라 실제 광고가 아니라
