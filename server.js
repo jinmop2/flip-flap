@@ -1,7 +1,11 @@
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+// 앱(Capacitor)의 화면은 기기 안(https://localhost · capacitor://localhost)에 있어
+// 서버 입장에서는 남의 출처다. 그 둘만 열어 준다 — 아무 데나 열면 남의 사이트가
+// 이 서버로 붙어 우리 이용자 이름으로 판을 열 수 있다.
+const APP_ORIGINS = ['https://localhost', 'capacitor://localhost', 'http://localhost'];
+const io = require('socket.io')(http, { cors: { origin: APP_ORIGINS, credentials: false } });
 const path = require('path');
 const crypto = require('crypto');
 const accounts = require('./accounts');
@@ -23,6 +27,19 @@ app.use(require('compression')());   // gzip — html/js/json 전송량 ~75% 절
 // 무시해서 본문 크기 제한이 통째로 사라진다.
 app.use(express.json({ limit: '4kb' }));
 // 보안 헤더
+// 앱에서 오는 요청만 교차 출처를 허용한다. 토큰은 본문으로 오가므로 쿠키를
+// 쓰지 않고, 그래서 credentials 를 열 이유도 없다.
+app.use((req, res, next) => {
+  const o = req.headers.origin;
+  if (o && APP_ORIGINS.includes(o)) {
+    res.setHeader('Access-Control-Allow-Origin', o);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+  }
+  next();
+});
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');

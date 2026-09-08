@@ -1,8 +1,12 @@
 // io 가 없으면 여기서 터지고 아래가 통째로 안 돈다 — 로딩 화면이 영영 안 걷힌다.
 // 캐시가 비었거나 첫 실행이 오프라인이면 실제로 그렇게 된다. 그럴 땐 붙지 않는
 // 가짜 소켓으로 화면을 띄우고, 그물이 돌아오면 그때 제대로 다시 읽는다.
+// 앱에서는 화면이 기기 안에 있어 붙을 곳을 알려 줘야 한다(base.js 의 FF_BASE).
+// 웹에서는 빈 값이라 예전처럼 이 페이지가 온 곳으로 붙는다.
 const socket = (typeof io === 'function')
-  ? io({ transports: ['websocket', 'polling'] })   // 웹소켓 우선 — 폴링 왕복 생략, 연결 빨라짐
+  ? (window.FF_BASE
+      ? io(window.FF_BASE, { transports: ['websocket', 'polling'] })
+      : io({ transports: ['websocket', 'polling'] }))   // 웹소켓 우선 — 폴링 왕복 생략, 연결 빨라짐
   : (() => {
       // 듣는 것만은 진짜로 받아 둔다. 그래야 그물 없이 두는 판이 서버 대신
       // 같은 자리로 상태를 건넬 수 있다 — 화면 코드는 하나로 끝난다.
@@ -517,7 +521,7 @@ function getNick() { return myAccount ? myAccount.nick : (localStorage.getItem('
 let myAccount = null;   // 로그인 프로필 (null=게스트)
 async function apiPost(url, body) {
   try {
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const r = await fetch(ffUrl(url), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const j = await r.json();
     // 200 이 아니면 '서버가 그렇게 판단했다' 가 아니라 '지금은 못 물어봤다' 로 본다.
     // 503(준비 중)·429(너무 잦음)·5xx 를 답으로 믿으면, 멀쩡한 로그인을 지우게 된다.
@@ -680,7 +684,7 @@ window.togglePush = async function () {
   let perm = Notification.permission;
   if (perm === 'default') { try { perm = await Notification.requestPermission(); } catch (_) {} }
   if (perm !== 'granted') { toast('⚠️ 기기 설정에서 알림을 허용해 주세요.', 2600); return applySettings(); }
-  const { key } = await fetch('/api/push-key').then((r) => r.json()).catch(() => ({}));
+  const { key } = await fetch(ffUrl('/api/push-key')).then((r) => r.json()).catch(() => ({}));
   if (!key) { toast('⚠️ 지금은 알림을 켤 수 없어요.', 2400); return applySettings(); }
   try {
     const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key) });
@@ -1020,7 +1024,7 @@ async function openMyInfo() {
 // 내려준다 — 화면에 따로 적어 두면 값을 손댈 때 어긋난다.
 async function openPlate() {
   if (!myAccount) { openAuth('login'); return; }
-  if (!shopItems) { try { shopItems = (await fetch('/api/shop').then((r) => r.json())).items; } catch (_) {} }
+  if (!shopItems) { try { shopItems = (await fetch(ffUrl('/api/shop')).then((r) => r.json())).items; } catch (_) {} }
   renderPlateList();
   document.getElementById('plateModal').classList.add('show');
 }
@@ -1069,7 +1073,7 @@ function miTab(which) {
 }
 async function renderMyInv() {
   const inv = document.getElementById('miInv');
-  if (!shopItems) { try { shopItems = (await fetch('/api/shop').then(r => r.json())).items; } catch (_) {} }
+  if (!shopItems) { try { shopItems = (await fetch(ffUrl('/api/shop')).then(r => r.json())).items; } catch (_) {} }
   const items = myAccount.items || {};
   const owned = (shopItems || []).filter(it => items[it.id]);
 
@@ -1347,7 +1351,7 @@ restoreSession().then(() => {
   if (myAccount || sessionStorage.getItem('ff_guest')) hideTitle();
 });
 // 설정된 소셜 로그인 버튼만 타이틀에 노출
-fetch('/api/auth-config').then(r => r.json()).then(d => {
+fetch(ffUrl('/api/auth-config')).then(r => r.json()).then(d => {
   if (d.google) { const b = document.getElementById('titleGoogle'); if (b) b.style.display = 'flex'; }
   if (d.kakao)  { const b = document.getElementById('titleKakao');  if (b) b.style.display = 'flex'; }
 }).catch(() => {});
@@ -1550,7 +1554,7 @@ function openLeaderboard() {
     openLeaderboard._t = setTimeout(() => box.classList.remove('lb-in'), 2200);
   }
   return showThenRefresh('lb',
-    () => fetch('/api/leaderboard').then((x) => x.json()), renderLeaderboard);
+    () => fetch(ffUrl('/api/leaderboard')).then((x) => x.json()), renderLeaderboard);
 }
 async function renderLeaderboard(r) {
   const list = document.getElementById('lbList');
@@ -1709,7 +1713,7 @@ function prefetchTabs() {
     () => fetchInto('missions', () => apiPost('/api/missions', { token: authToken() }), FRESH),
     () => fetchInto('friends',  () => apiPost('/api/friends',  { token: authToken() }), FRESH),
     () => fetchInto('clan',     () => apiPost('/api/clan',     { token: authToken() }), FRESH),
-    () => fetchInto('lb',       () => fetch('/api/leaderboard').then((x) => x.json()), FRESH),
+    () => fetchInto('lb',       () => fetch(ffUrl('/api/leaderboard')).then((x) => x.json()), FRESH),
     () => fetchInto('clanlist', () => apiPost('/api/clan-list', { token: authToken() }), FRESH),
   ];
   jobs.forEach((j, i) => setTimeout(() => { try { j(); } catch (_) {} }, 400 + i * 250));
@@ -3089,7 +3093,7 @@ async function openShop() {
     try { shopItems = JSON.parse(localStorage.getItem('ff_shop') || 'null'); } catch (_) {}
     if (shopItems) renderShop();
     try {
-      const got = (await fetch('/api/shop').then((r) => r.json())).items;
+      const got = (await fetch(ffUrl('/api/shop')).then((r) => r.json())).items;
       if (got) { shopItems = got; localStorage.setItem('ff_shop', JSON.stringify(got)); }
     } catch (_) { /* 못 받아도 담아 둔 표로 버틴다 */ }
   }
@@ -3572,7 +3576,7 @@ async function openGacha() {
   document.getElementById('gcStage').innerHTML = '<div class="gc-hint">아래 버튼을 눌러 뽑아보세요</div>';
   if (!_gachaInfo) {
     try {
-      const r = await (await fetch('/api/gacha')).json();
+      const r = await (await fetch(ffUrl('/api/gacha'))).json();
       if (r && r.ok) _gachaInfo = r.info;
     } catch (_) {}
   }

@@ -172,7 +172,7 @@ ok('담아 두는 틀이 있다', /function showThenRefresh/.test(cli) && /funct
 ok('로그인하면 미리 받아 둔다', /function prefetchTabs/.test(cli) && /prefetchTabs\(\);/.test(cli));
 ok('미리 받는 것에 미션·친구·클랜·랭킹이 다 있다',
    ['/api/missions', '/api/friends', '/api/clan', '/api/leaderboard', '/api/clan-list']
-     .every((u) => new RegExp("fetchInto\\('[a-z]+',\\s*\\(\\) => (apiPost\\('" + u + "'|fetch\\('" + u + "')").test(cli)));
+     .every((u) => new RegExp("fetchInto\\('[a-z]+',\\s*\\(\\) => (apiPost\\('" + u + "'|fetch\\((ffUrl\\()?'" + u + "')").test(cli)));
 ok('무언가를 바꾸면 담아 둔 값을 버린다', (cli.match(/cacheDrop\(/g) || []).length >= 10);
 ok('창을 열 때는 안 버린다',
    !/function openFriends\(\) \{[\s\S]{0,200}cacheDrop/.test(cli)

@@ -16,7 +16,7 @@ for (const id of ['gachaModal', 'gcStage', 'gcCoins', 'gcShards', 'gcInfo', 'gcE
   ok('#' + id, html.includes('id="' + id + '"'));
 
 console.log('\n② 서버 API 와 물려 있는가');
-ok('확률표를 서버에서 받아온다', /fetch\('\/api\/gacha'\)/.test(cli));
+ok('확률표를 서버에서 받아온다', /fetch\(ffUrl\('\/api\/gacha'\)\)/.test(cli));
 ok('뽑기 요청 경로', /\/api\/gacha\/roll/.test(cli) && /\/api\/gacha\/roll/.test(srv));
 ok('교환 경로가 서버에 있다', /\/api\/gacha\/exchange/.test(srv));
 ok('확률을 코드에 다시 안 적었다 (서버 값만 쓴다)',

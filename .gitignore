@@ -24,3 +24,4 @@ design-solo/*.html
 !design-solo/*.dc.html
 design-logo/*.html
 !design-logo/*.dc.html
+app-www/
