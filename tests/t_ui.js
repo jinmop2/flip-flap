@@ -101,15 +101,21 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   ok('막에 로고가 있다', /<div id="fadeVeil">[\s\S]{0,200}fv-logo/.test(htm)
      && /<b>FLIP<\/b><i>FLAP<\/i>/.test(htm)
      && !/fv-ring/.test(htm));
-  // FLIP 이 위로 넘어간 뒤 FLAP 이 아래로 넘어간다 — 겹치면 둘이 동시에 돌아
+  // FLIP 이 넘어간 뒤 FLAP 이 따라 넘어간다 — 겹치면 둘이 동시에 돌아
   // 무슨 글자인지 안 읽힌다
   ok('FLIP 다음에 FLAP 이 넘어간다',
      /@keyframes fvFlipUp \{[\s\S]{0,140}14%\s*\{ transform:rotateX\(-360deg\)/.test(htm)
-     && /@keyframes fvFlapDown \{\s*0%, 17% \{ transform:rotate\(180deg\) rotateX\(0deg\)/.test(htm));
+     && /@keyframes fvFlapUp \{\s*0%, 17% \{ transform:rotate\(180deg\) rotateX\(0deg\)/.test(htm));
   // 반 바퀴를 기다리게 두었더니, 짧게 스치는 화면 전환(0.32초)에서는 FLIP 만
   // 돌다 끝나 FLAP 이 한 번도 안 넘어갔다 — 한 박자만 늦게 따라 붙는다
   ok('FLAP 은 FLIP 바로 뒤에 따라 넘어간다', /0%, 17% \{ transform:rotate\(180deg\)/.test(htm)
-     && /31%\s*\{ transform:rotate\(180deg\) rotateX\(360deg\)/.test(htm));
+     && /31%\s*\{ transform:rotate\(180deg\) rotateX\(-360deg\)/.test(htm));
+  // FLAP 은 뒤집혀 있어서 같은 부호를 주면 화면에서는 반대로 돈다.
+  // 부호가 갈리면 둘이 위·아래로 엇갈려 돌아 한 덩어리로 안 보인다.
+  ok('둘이 같은 쪽으로 돈다',
+     /fvFlipUp[\s\S]{0,140}rotateX\(-360deg\)/.test(htm)
+     && /fvFlapUp[\s\S]{0,180}rotateX\(-360deg\)/.test(htm)
+     && !/rotate\(180deg\) rotateX\(360deg\)/.test(htm));
   // 늘 돌려 두면 안 보이는 채로 판이 도는 내내 폰을 깨워 둔다
   ok('막이 켜졌을 때만 넘어간다', /#fadeVeil\.on \.fv-logo b \{ animation:fvFlipUp/.test(htm)
      && !/^\s*\.fv-logo b, \.fv-logo i \{[^}]*animation:/m.test(htm));
@@ -120,7 +126,7 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   // 돌다 막이 걷혀 매번 도는 중간만 보인다 — 한 바퀴를 0.25초(1.8s 의 14%)에
   // 맞춰 막 안에서 확실히 마치게 한다. 넘어간 뒤에는 다음 판까지 쉰다.
   ok('막 안에서 한 바퀴를 마친다', /animation:fvFlipUp 1\.8s/.test(htm)
-     && /animation:fvFlapDown 1\.8s/.test(htm)
+     && /animation:fvFlapUp 1\.8s/.test(htm)
      && /const VEIL_MIN = 320;/.test(cli));
   // 글자를 오려 내는 칠이라, 칠할 바탕은 요소 상자만큼이다. line-height 가
   // 글자보다 작아 상자를 벗어난 부분은 칠이 안 들어가 잘려 보였다(FLAP 의 P).
