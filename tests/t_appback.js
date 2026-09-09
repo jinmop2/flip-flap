@@ -35,8 +35,11 @@ console.log('\n③ 앱에서만 죽던 나머지');
   const htm = fs.readFileSync(src + '/public/index.html', 'utf8');
   // 웹 매니페스트와 TWA 는 portrait 인데 앱만 안 잠겨 있었다 — 돌리면 만든 적 없는 화면이 나온다
   ok('세로로 잠근다', /android:screenOrientation="portrait"/.test(man));
-  // 앱에는 서비스워커가 없어서 웹푸시가 아예 못 돈다. 켤 수 있는 척하면 스위치가 멈춘다.
-  ok('앱에서는 알림을 못 켠다고 안다', /const pushCan = \(\) => !!\(!window\.FF_NATIVE/.test(cli));
+  // 앱에는 서비스워커가 없어 웹푸시가 못 돈다. 그 길과 파이어베이스 길을
+  // 갈라 두어야, 앱에서 없는 길로 켜려다 스위치가 멈추지 않는다.
+  ok('웹푸시 길과 앱 길이 갈려 있다',
+     /const webPushCan = \(\) => !!\(!window\.FF_NATIVE/.test(cli)
+     && /const nativePush = \(\) => !!\(window\.FF_NATIVE && window\.FF && FF\.push\)/.test(cli));
   // ready 는 등록된 워커가 없으면 거절이 아니라 영영 안 온다 — 스위치가 조용히 죽는다
   ok('서비스워커 기다리기에 시간을 끊었다', /const swReady = \(ms = 3000\) => Promise\.race\(\[/.test(cli));
   ok('기다리는 자리마다 그것을 쓴다', !/await navigator\.serviceWorker\.ready/.test(cli));

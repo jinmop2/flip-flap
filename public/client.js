@@ -644,11 +644,23 @@ socket.on('auth_retry', () => {
 // 앱을 안 보고 있을 때 도전장을 알린다.
 // 아이폰은 두 가지가 다 맞아야 온다 — iOS 16.4 이상 + 홈 화면에 추가한 상태.
 // 사파리 탭에서는 구독 자체가 안 되므로, 그 경우엔 켜는 자리를 안 보여 준다.
-// 앱에는 서비스워커를 안 깐다(자산이 이미 기기 안이라 캐시를 겹칠 이유가 없다).
-// 웹푸시는 그 워커 위에서만 도는 것이라, 앱에서는 켤 수 있는 척하면 안 된다 —
-// 나중에 FCM(@capacitor/push-notifications)을 붙이면 그때 이 자리를 연다.
-const pushCan = () => !!(!window.FF_NATIVE && window.isSecureContext && 'serviceWorker' in navigator
+// 알림이 가는 길이 둘이다.
+//   웹  — 서비스워커 위의 웹푸시
+//   앱  — 파이어베이스(FCM). 앱에는 서비스워커를 안 깔아서 그 길이 없다.
+// 어느 쪽이든 화면에서는 스위치 하나로 보인다.
+const nativePush = () => !!(window.FF_NATIVE && window.FF && FF.push);
+const webPushCan = () => !!(!window.FF_NATIVE && window.isSecureContext && 'serviceWorker' in navigator
   && 'PushManager' in window && 'Notification' in window);
+const pushCan = () => nativePush() || webPushCan();
+// 서버가 그 길을 열어 뒀는지 (한 번만 묻고 들고 있는다)
+let _fcmReady = null;
+async function fcmReady() {
+  if (_fcmReady === null) {
+    try { _fcmReady = !!(await fetch(ffUrl('/api/fcm-ready')).then((r) => r.json())).ok; }
+    catch (_) { _fcmReady = false; }
+  }
+  return _fcmReady;
+}
 // navigator.serviceWorker.ready 는 등록된 워커가 없으면 거절이 아니라 '영영
 // 안 온다'. 그러면 알림 스위치가 아무 반응 없이 죽는다 — 오류도 안 뜬다.
 // 웹에서도 첫 등록이 실패하면(차단·네트워크) 똑같이 걸린다. 시간을 끊어 둔다.
@@ -670,6 +682,11 @@ function b64ToBytes(b64) {
 
 async function pushState() {
   if (!pushCan() || !myAccount) return { can: false };
+  if (nativePush()) {
+    // 서버에 열쇠가 없으면 켜 봐야 아무 데도 안 간다 — 스위치를 아예 안 보인다
+    if (!(await fcmReady())) return { can: false };
+    return { can: true, on: !!FF.push.token(), native: true };
+  }
   if (isIOS() && !standalone()) return { can: false, needHome: true };
   try {
     const reg = await swReady();
@@ -681,6 +698,19 @@ async function pushState() {
 window.togglePush = async function () {
   const st = await pushState();
   if (!st.can) return;
+  if (st.native) {
+    if (st.on) {                                   // 끄기
+      const t = FF.push.off();
+      if (t) await apiPost('/api/fcm-off', { token: authToken(), fcm: t });
+      toast('알림을 껐어요.', 1800);
+      return applySettings();
+    }
+    const t = await FF.push.on();                  // 켜기 — 권한부터 묻는다
+    if (!t) { toast('⚠️ 기기 설정에서 알림을 허용해 주세요.', 2600); return applySettings(); }
+    const r = await apiPost('/api/fcm-on', { token: authToken(), fcm: t });
+    toast(r && r.ok ? '알림을 켰어요.' : '⚠️ 지금은 알림을 켤 수 없어요.', 2000);
+    return applySettings();
+  }
   let reg;
   try { reg = await swReady(); }
   catch (_) { toast('⚠️ 지금은 알림을 켤 수 없어요.', 2400); return applySettings(); }

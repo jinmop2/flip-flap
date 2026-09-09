@@ -148,7 +148,53 @@
     });
   }
 
+  // ── 앱 알림 ──────────────────────────────────────────────────────────────
+  //
+  // 웹푸시는 서비스워커 위에서 도는데 앱에는 그게 없다. 그래서 앱은 파이어베이스로
+  // 따로 받는다. 화면이 할 일은 두 가지뿐이다 — 권한을 묻고, 기기 토큰을
+  // 서버에 넘긴다. 알림을 그리는 것은 안드로이드가 한다.
+  var Push = P.PushNotifications || null;
+  var fcmToken = null;
+
+  // 토큰은 물어본다고 바로 오지 않는다(등록이 끝나야 온다). 기다리는 사람에게
+  // 넘겨줄 수 있게 약속을 하나 만들어 둔다.
+  var tokenWait = null, tokenGot = null;
+  if (native && Push) {
+    tokenWait = new Promise(function (res) { tokenGot = res; });
+    Push.addListener('registration', function (t) {
+      fcmToken = (t && t.value) || null;
+      if (tokenGot) { tokenGot(fcmToken); tokenGot = null; }
+    });
+    Push.addListener('registrationError', function (e) {
+      console.warn('[알림] 등록 실패', e);
+      if (tokenGot) { tokenGot(null); tokenGot = null; }
+    });
+  }
+
+  // 켠다. 성공하면 기기 토큰, 아니면 null.
+  // 거절당하면 다시 묻지 않는다 — 안드로이드가 두 번째부터는 창을 안 띄운다.
+  function pushOn() {
+    if (!native || !Push) return Promise.resolve(null);
+    if (fcmToken) return Promise.resolve(fcmToken);
+    return Push.requestPermissions().then(function (r) {
+      if (!r || r.receive !== 'granted') return null;
+      Push.register();
+      // 등록이 끝나야 토큰이 온다. 안 오면 그냥 접는다 — 여기서 매달리면
+      // 스위치가 아무 반응 없이 멈춘 것처럼 보인다.
+      return Promise.race([
+        tokenWait,
+        new Promise(function (res) { setTimeout(function () { res(null); }, 8000); }),
+      ]);
+    }).catch(function (e) { console.warn('[알림] 켜기 실패', e); return null; });
+  }
+  function pushOff() {
+    if (native && Push) { try { Push.unregister(); } catch (_) {} }
+    var t = fcmToken; fcmToken = null;
+    return t;
+  }
+
   window.FF = window.FF || {};
+  window.FF.push = native && Push ? { on: pushOn, off: pushOff, token: function () { return fcmToken; } } : null;
   window.FF.login = login;
   window.FF.openExternal = openExternal;
   window.FF.ad = {

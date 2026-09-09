@@ -8,6 +8,8 @@ const APP_ORIGINS = ['https://localhost', 'capacitor://localhost', 'http://local
 const io = require('socket.io')(http, { cors: { origin: APP_ORIGINS, credentials: false } });
 const admobSsv = require('./admob-ssv');
 const appleAuth = require('./apple-auth');
+const fcm = require('./fcm');
+if (!fcm.ON) console.log('ℹ 앱 알림 꺼짐 — FCM_SERVICE_ACCOUNT 환경변수가 없습니다.');
 const path = require('path');
 const crypto = require('crypto');
 const accounts = require('./accounts');
@@ -657,26 +659,51 @@ const PUSH_ON = !!(VAPID_PUB && VAPID_KEY);
 if (PUSH_ON) {
   webpush.setVapidDetails('mailto:jinmo9@yonsei.ac.kr', VAPID_PUB, VAPID_KEY);
 } else {
-  console.log('ℹ 알림 꺼짐 — VAPID_PUBLIC / VAPID_PRIVATE 환경변수가 없습니다.');
+  console.log('ℹ 웹 알림 꺼짐 — VAPID_PUBLIC / VAPID_PRIVATE 환경변수가 없습니다.');
 }
 
 // 한 사람에게 보낸다. 기기가 여럿이면 다 보낸다.
 // 죽은 구독(410 Gone · 404)은 그 자리에서 지운다 — 안 지우면 매번 실패한다.
+// 한 사람이 폰(앱)과 웹을 같이 쓰면 둘 다 받아야 한다. 웹은 서비스워커를
+// 타고, 앱은 파이어베이스를 탄다 — 문구는 같고 길만 다르다.
+const PUSH_TEXT = {
+  challenge: (p) => ({ title: 'FLIP FLAP', body: `${p.from || '누군가'} 님이 도전장을 보냈어요!` }),
+};
+function pushWords(payload) {
+  const f = PUSH_TEXT[payload && payload.kind];
+  return f ? f(payload) : { title: 'FLIP FLAP', body: '새 소식이 있어요.' };
+}
 async function pushTo(idl, payload) {
-  if (!PUSH_ON) return 0;
-  const subs = accounts.pushSubsOf(idl);
-  if (!subs.length) return 0;
   const body = JSON.stringify(payload);
   let sent = 0;
-  await Promise.all(subs.map(async (s) => {
-    try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, body, { TTL: 600 });
-      sent++;
-    } catch (e) {
-      const code = e && e.statusCode;
-      if (code === 410 || code === 404) accounts.pushForget(idl, s.endpoint);
-    }
-  }));
+
+  // ① 웹 — 서비스워커가 받아서 그린다
+  if (PUSH_ON) {
+    const subs = accounts.pushSubsOf(idl);
+    await Promise.all(subs.map(async (s) => {
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, body, { TTL: 600 });
+        sent++;
+      } catch (e) {
+        const code = e && e.statusCode;
+        if (code === 410 || code === 404) accounts.pushForget(idl, s.endpoint);
+      }
+    }));
+  }
+
+  // ② 앱 — 파이어베이스가 받아서 그린다. 문구는 서버가 만든다(앱에는
+  //    서비스워커가 없어 화면이 그릴 기회가 없다).
+  if (fcm.ON) {
+    const words = pushWords(payload);
+    const toks = accounts.fcmTokensOf(idl);
+    await Promise.all(toks.map(async (t) => {
+      try {
+        const r = await fcm.sendTo(t, { ...words, data: payload });
+        if (r === 'ok') sent++;
+        else if (r === 'gone') accounts.fcmForget(idl, t);
+      } catch (e) { console.error('[FCM] ' + e.message); }
+    }));
+  }
   return sent;
 }
 
@@ -686,6 +713,18 @@ app.post('/api/push-on',  rateLimit(20), (req, res) => {
   if (!PUSH_ON) return res.json({ error: '지금은 알림을 켤 수 없어요.' });
   res.json(accounts.pushSave(token, sub));
 });
+// 앱 알림 — 기기 토큰을 맡아 둔다. 웹푸시와 나란히 돈다.
+app.post('/api/fcm-on', rateLimit(20), (req, res) => {
+  const { token, fcm: t } = req.body || {};
+  if (!fcm.ON) return res.json({ error: '지금은 알림을 켤 수 없어요.' });
+  res.json(accounts.fcmSave(token, t));
+});
+app.post('/api/fcm-off', rateLimit(20), (req, res) => {
+  const { token, fcm: t } = req.body || {};
+  res.json(accounts.fcmDrop(token, t));
+});
+// 화면이 "앱 알림을 켤 수 있나" 를 묻는 자리
+app.get('/api/fcm-ready', rateLimit(60), (req, res) => res.json({ ok: fcm.ON }));
 app.post('/api/push-off', rateLimit(20), (req, res) => {
   const { token, endpoint } = req.body || {};
   res.json(accounts.pushDrop(token, String(endpoint || '')));

@@ -3579,6 +3579,42 @@ function pushSubsOf(idl) {
   const u = db.users[Object.prototype.hasOwnProperty.call(db.users, idl) ? idl : null];
   return (u && u.push) || [];
 }
+// ── 앱 알림(FCM) 기기 토큰 ─────────────────────────────────────────────────
+// 웹푸시 구독과 나란히 둔다. 한 사람이 폰과 웹을 같이 쓰면 둘 다 받아야 한다.
+function fcmSave(token, fcmToken) {
+  const u = byToken(token);
+  if (!u) return { error: '로그인이 필요해요.' };
+  const t = String(fcmToken || '').trim();
+  // 화면이 보내는 값이다 — 길이와 모양을 보고 받는다
+  if (t.length < 20 || t.length > 400 || /\s/.test(t)) return { error: '기기 정보가 올바르지 않아요.' };
+  u.fcm = (u.fcm || []).filter((p) => p.t !== t);
+  u.fcm.push({ t, at: Date.now() });
+  while (u.fcm.length > PUSH_MAX) u.fcm.shift();     // 기기 다섯 대까지, 오래된 것부터
+  persist(u.idl);
+  return { ok: true, count: u.fcm.length };
+}
+function fcmDrop(token, fcmToken) {
+  const u = byToken(token);
+  if (!u) return { error: '로그인이 필요해요.' };
+  const before = (u.fcm || []).length;
+  u.fcm = (u.fcm || []).filter((p) => p.t !== String(fcmToken || ''));
+  if (u.fcm.length !== before) persist(u.idl);
+  return { ok: true, count: u.fcm.length };
+}
+function fcmTokensOf(idl) {
+  if (!Object.prototype.hasOwnProperty.call(db.users, idl)) return [];
+  const u = db.users[idl];
+  return ((u && u.fcm) || []).map((p) => p.t);
+}
+// 지워진 앱·바뀐 토큰은 그 자리에서 지운다 — 안 지우면 매번 실패한다
+function fcmForget(idl, t) {
+  if (!Object.prototype.hasOwnProperty.call(db.users, idl)) return;
+  const u = db.users[idl]; if (!u || !u.fcm) return;
+  const before = u.fcm.length;
+  u.fcm = u.fcm.filter((p) => p.t !== t);
+  if (u.fcm.length !== before) persist(idl);
+}
+
 // 죽은 구독(410/404)은 지운다 — 안 지우면 매번 실패한다
 function pushForget(idl, endpoint) {
   if (!Object.prototype.hasOwnProperty.call(db.users, idl)) return;
@@ -3618,6 +3654,7 @@ module.exports = {
   adminOverview, adminSearch, adminUser, adminSameDevice, adminBan, adminUnban, adminMute, adminUnmute,
   adminNotice, adminNoticeAll, adminCoins, adminLog, adminLogList,
   banInfo, muteInfo, myNotices, markNoticesRead, touchSeen, setAdminWho, appleLogin,
+  fcmSave, fcmDrop, fcmTokensOf, fcmForget,
   markRetention, retentionStats, retentionRough,
   bonusVerify, adConfig,
 };

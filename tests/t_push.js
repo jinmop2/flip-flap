@@ -55,7 +55,7 @@ console.log('\n④ 서비스워커도 보낸 값을 안 믿는다');
 
 console.log('\n⑤ 화면 — 켤 수 없는 자리에서는 안 보여 준다');
 {
-  ok('권한은 사람이 누른 자리에서 묻는다', /window\.togglePush = async function[\s\S]{0,900}Notification\.requestPermission\(\)/.test(cli));
+  ok('권한은 사람이 누른 자리에서 묻는다', /window\.togglePush = async function[\s\S]{0,2000}Notification\.requestPermission\(\)/.test(cli));
   ok('아이폰은 홈 화면에 추가해야 한다', /isIOS\(\) && !standalone\(\)/.test(cli) && /needHome: true/.test(cli));
   ok('왜 못 켜는지 알려 준다', /id="spPushNote"/.test(htm) && /홈 화면에 추가<\/b>한 뒤에 켤 수 있어요/.test(htm));
   ok('못 쓰는 기기에서는 줄을 감춘다', /row\.style\.display = st\.can \? '' : 'none'/.test(cli));

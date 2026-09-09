@@ -28,3 +28,6 @@ app-www/
 
 # 안드로이드 서명 — 비밀번호가 들어간다. 절대 커밋 금지.
 android/keystore.properties
+
+# 파이어베이스 설정 — 프로젝트 식별자가 들어간다
+android/app/google-services.json
