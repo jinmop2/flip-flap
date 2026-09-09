@@ -111,8 +111,46 @@
     });
   }
 
+  // 약관·처리방침 같은 바깥 문서. 앱 안 웹뷰에서 열면 게임 화면을 덮어쓰고
+  // 돌아올 길이 없다(뒤로가기가 없는 전체화면이다).
+  function openExternal(url) {
+    if (!native || !Browser) return false;
+    Browser.open({ url: String(url) });
+    return true;
+  }
+
+  // ── 안드로이드 뒤로가기 ──────────────────────────────────────────────────
+  //
+  // 손대지 않으면 뒤로가기가 앱을 통째로 끈다. 이 게임은 창을 history 에
+  // 안 쌓으므로(모달을 pushState 로 열지 않는다) 웹뷰에는 돌아갈 자리가
+  // 없고, Capacitor 는 그럴 때 앱을 닫는다 — 판 도중에도 그렇다.
+  //
+  // 그래서 ESC 가 하던 일을 그대로 시킨다. 닫을 것이 없을 때만 나가는데,
+  // 그때도 한 번에 끄지 않는다 — 실수로 한 번 누른 것과 정말 끄려는 것을
+  // 가릴 수 없기 때문이다(안드로이드 앱들이 다 이렇게 한다).
+  var exitArmed = 0;
+  if (native && App) {
+    App.addListener('backButton', function () {
+      // ① 열려 있는 창이 있으면 그것부터
+      if (window.closeTopLayer && window.closeTopLayer()) return;
+      // ② 판 안이면 안 끈다. 뒤로가기 한 번에 판이 날아가면 같이 두던
+      //    사람들에게도 손해다 — 나가려면 화면의 나가기를 쓴다.
+      if (document.body.classList.contains('ingame')
+          || document.body.classList.contains('quad4')) {
+        if (typeof toast === 'function') toast('나가려면 화면의 <b>나가기</b>를 눌러 주세요', 1800);
+        return;
+      }
+      // ③ 로비에서 두 번 누르면 끈다
+      var now = Date.now();
+      if (now - exitArmed < 2000) { App.exitApp(); return; }
+      exitArmed = now;
+      if (typeof toast === 'function') toast('한 번 더 누르면 종료돼요', 1800);
+    });
+  }
+
   window.FF = window.FF || {};
   window.FF.login = login;
+  window.FF.openExternal = openExternal;
   window.FF.ad = {
     ready: function () { return native && !!AdMob; },
     testing: function () { return TESTING; },

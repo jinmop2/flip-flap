@@ -39,7 +39,9 @@ console.log('\n③ 다음에 또 이러면 한 줄로 알 수 있는가');
 ok('상태를 밖에서 볼 수 있다', /window\.__bgm = \(\) => \(\{[^}]*ac: AC\.state/.test(cli));
 
 console.log('\n④ 예전 함정이 안 남아 있다');
-ok('playSound 는 여전히 resume 을 부른다', /function playSound\(n\) \{\s*\n\s*if \(sfxOff\) return;\s*\n\s*try \{ AC\.resume\(\); \}/.test(cli));
+// resume() 은 프로미스라 try/catch 로는 거절이 안 잡힌다 — .catch 가 붙어 있어야 한다
+  ok('playSound 는 여전히 resume 을 부른다', /if \(sfxOff\) return;[\s\S]{0,220}AC\.resume\(\)\.catch\(\(\) => \{\}\)/.test(cli));
+  ok('resume 거절이 콘솔에 안 쌓인다', (cli.match(/AC\.resume\(\)(?!\.catch|\.then)/g) || []).length === 0);
 ok('음악을 끈 사람에게는 안 만든다', /if \(bgmOff\) return;/.test(cli));
 
 console.log('\n결과: ' + pass + ' 통과, ' + fail + ' 실패');

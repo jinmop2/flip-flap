@@ -4242,7 +4242,9 @@ function jcym(delay, freq, dur, vol) {   // 심벌 크래시/히트
 let NAV_PITCH = 587.33;
 function playSound(n) {
   if (sfxOff) return;
-  try { AC.resume(); } catch(_) {}
+  // resume() 은 프로미스를 돌려준다. try/catch 로는 거절이 안 잡혀서,
+  // 손짓 밖에서 부를 때마다 '처리 안 된 거절' 이 콘솔에 쌓였다.
+  try { AC.resume().catch(() => {}); } catch (_) {}
   switch (n) {
     case 'select': tone(900,'sine',.06,.08); break;
     case 'place':  tone(320,'triangle',.12,.12); tone(240,'triangle',.08,.1,.06); break;   // 원래 카드 놓는 신스음
@@ -4327,7 +4329,7 @@ function startBGM(track = 'game') {
   bgmAudio.loop = true;
   bgmAudio.crossOrigin = 'anonymous';
   try {
-    AC.resume();
+    AC.resume().catch(() => {});           // 거절돼도 아래는 그대로 간다 — 손짓을 기다리면 된다
     const src = AC.createMediaElementSource(bgmAudio);
     bgmGain = AC.createGain();
     bgmGain.gain.value = bgmOff ? 0 : BGM_VOL;
@@ -4358,7 +4360,7 @@ function startBGM(track = 'game') {
   }
   function kick() {
     if (bgmAudio !== el) return armKick(false);      // 이미 다른 곡으로 갈아탔다
-    try { AC.resume(); } catch (_) {}
+    try { AC.resume().catch(() => {}); } catch (_) {}
     tryPlay();
   }
   // 아직 아무도 화면을 안 건드렸으면 play() 를 부르지 않는다.
@@ -5677,17 +5679,27 @@ const ESC_TARGETS = [
 const escIsOpen = (el) => !!el && (el.classList.contains('show') ||
   (el.style.display && el.style.display !== 'none'));
 
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape') return;
+// 맨 위에 뜬 것 하나를 닫는다. 닫을 게 있었으면 true.
+//
+// ESC 와 안드로이드 뒤로가기가 같은 것을 써야 한다. 예전에는 이게 ESC 안에만
+// 있어서, 키보드가 없는 폰에서는 창을 닫는 길이 화면의 × 하나뿐이었다 —
+// 앱에서는 뒤로가기가 창을 닫는 대신 앱을 통째로 껐다.
+window.closeTopLayer = function () {
   // 4인전 화면이면 그쪽 패널을 먼저 처리
   if (document.body.classList.contains('quad4')) {
     const p = document.getElementById('q-leftPanel');
-    if (p && p.classList.contains('show')) { p.classList.remove('show'); e.preventDefault(); return; }
+    if (p && p.classList.contains('show')) { p.classList.remove('show'); return true; }
   }
   // 여러 개가 겹쳐 있으면 목록 뒤쪽(=위에 뜨는 것)을 먼저 닫는다
   let close = null;
   for (const [id, fn] of ESC_TARGETS) if (escIsOpen(document.getElementById(id))) close = fn;
-  if (close) { close(); e.preventDefault(); }
+  if (!close) return false;
+  close();
+  return true;
+};
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (window.closeTopLayer()) e.preventDefault();
 });
 
 // ── 이모트 ──────────────────────────────────────────────────
@@ -8421,7 +8433,18 @@ function animateWinCards() {
 }
 
 // ── PWA 서비스워커 등록 (재방문 로딩 가속 + 홈 화면 설치) ──
-if ('serviceWorker' in navigator) {
+// 약관·처리방침·확률 — 서버에 있는 문서다. 앱에서는 화면이 기기 안에 있어
+// '/terms' 가 기기 안을 가리키므로 아무것도 없다. 서버 주소를 붙이고,
+// 앱이면 시스템 브라우저로 연다(앱 안 웹뷰에서 열면 게임을 덮고 돌아올 길이 없다).
+window.openDoc = function (p) {
+  const u = ffUrl(p);
+  if (!(window.FF && FF.openExternal && FF.openExternal(u))) window.open(u, '_blank', 'noopener');
+  return false;                       // 기본 이동은 막는다
+};
+
+// 서비스워커는 웹에서만 쓴다. 앱은 자산이 이미 기기 안에 있는데 그 위에 또
+// 캐시를 얹으면, 앱을 새로 깔아도 옛 화면이 남는 길이 생긴다.
+if ('serviceWorker' in navigator && !window.FF_NATIVE) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }
 

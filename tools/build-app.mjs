@@ -55,12 +55,20 @@ let h = fs.readFileSync(html, 'utf8');
 const before = h;
 h = h.replace('<script src="/socket.io/socket.io.js"></script>', '<script src="socket.io.js"></script>');
 for (const f of ENGINES) h = h.split('src="/' + f + '"').join('src="' + f + '"');
-// 서비스워커 등록은 앱에서 지운다
-h = h.replace(/navigator\.serviceWorker\s*\.register\([^)]*\)/g, 'Promise.reject()');
 if (h === before) throw new Error('바꿀 주소를 하나도 못 찾았다 — index.html 이 달라졌다');
 fs.writeFileSync(html, h);
 
 // 확인 — 화면이 부르는 파일이 다 들어 있는가. 하나라도 없으면 앱은 흰 화면이다.
+// 서비스워커는 앱에서 돌면 안 된다. 예전에는 여기서 index.html 만 뒤졌는데
+// 등록하는 코드는 client.js 에 있어서 그냥 지나갔다 — 앱에서 없는 sw.js 를
+// 부르다 조용히 실패하고 있었다. 이제 코드가 FF_NATIVE 로 건너뛰므로,
+// 여기서는 그 안전장치가 정말 붙어 있는지만 본다.
+{
+  const cli = fs.readFileSync(path.join(OUT, 'client.js'), 'utf8');
+  if (/serviceWorker' in navigator\)\s*\{/.test(cli) && !/!window\.FF_NATIVE/.test(cli))
+    throw new Error('서비스워커 등록에 앱 예외가 없다 — 앱에서 캐시가 한 겹 더 얹힌다');
+}
+
 const missing = [...h.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1])
   .filter((s) => !/^https?:/.test(s))
   .filter((s) => !fs.existsSync(path.join(OUT, s.replace(/^\.?\//, ''))));

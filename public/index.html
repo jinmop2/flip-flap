@@ -6324,8 +6324,8 @@
     <p class="title-note">로그인하면 랭크·코인·전적이 저장돼요</p>
     <!-- 약관 동의는 시작할 때 한 번. 로비에 늘 띄워 둘 것이 아니다 —
          다만 스토어가 처리방침의 공개 주소를 요구하므로 링크는 살려 둔다. -->
-    <p class="title-terms">시작하면 <a href="/terms" target="_blank" rel="noopener">이용약관</a>과
-      <a href="/privacy" target="_blank" rel="noopener">개인정보 처리방침</a>에 동의하는 것으로 봅니다.</p>
+    <p class="title-terms">시작하면 <a href="/terms" target="_blank" rel="noopener" onclick="return openDoc('/terms')">이용약관</a>과
+      <a href="/privacy" target="_blank" rel="noopener" onclick="return openDoc('/privacy')">개인정보 처리방침</a>에 동의하는 것으로 봅니다.</p>
   </div>
 </div>
 
@@ -6722,7 +6722,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 
       <!-- 확률은 서버가 준 값을 그대로 표시한다 (법적 표시 의무) -->
       <button class="gc-toggle" onclick="toggleGachaInfo()">확률·천장 보기</button>
-      <a class="gc-toggle" href="/rates" target="_blank" rel="noopener"
+      <a class="gc-toggle" href="/rates" target="_blank" rel="noopener" onclick="return openDoc('/rates')"
          style="display:block;text-align:center;text-decoration:none">전체 확률표</a>
       <div class="gc-info" id="gcInfo"></div>
 
@@ -7049,9 +7049,9 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
       <span class="sp-lbl" style="font-weight:500;font-size:.72rem;color:#8794a8;white-space:normal">
         🔔 알림은 <b>홈 화면에 추가</b>한 뒤에 켤 수 있어요</span></div>
     <div class="sp-row sp-docs">
-      <a class="sp-doc" href="/terms" target="_blank" rel="noopener">이용약관</a>
-      <a class="sp-doc" href="/privacy" target="_blank" rel="noopener">개인정보 처리방침</a>
-      <a class="sp-doc" href="/rates" target="_blank" rel="noopener">확률 안내</a>
+      <a class="sp-doc" href="/terms" target="_blank" rel="noopener" onclick="return openDoc('/terms')">이용약관</a>
+      <a class="sp-doc" href="/privacy" target="_blank" rel="noopener" onclick="return openDoc('/privacy')">개인정보 처리방침</a>
+      <a class="sp-doc" href="/rates" target="_blank" rel="noopener" onclick="return openDoc('/rates')">확률 안내</a>
     </div>
     <div class="sp-lang sp-langcol"><span class="sp-lbl">🌐 언어</span>
       <span class="sp-grid">
