@@ -1650,6 +1650,9 @@ function socialLogin(provider, extId, extNick) {
 }
 function kakaoLogin(kakaoId, kNick)   { return socialLogin('kakao', kakaoId, kNick); }
 function googleLogin(googleId, gNick) { return socialLogin('google', googleId, gNick); }
+// 애플은 이름을 첫 로그인 때 한 번만 준다. 안 오면 '플레이어' 로 시작하고
+// 닉 설정 모달에서 본인이 정한다 — 구글·카카오도 nickSet:false 로 같은 길을 간다.
+function appleLogin(appleSub, aNick)  { return socialLogin('apple', appleSub, aNick || '플레이어'); }
 
 // 랭킹 (RP 상위)
 function topPlayers(limit = 100) {
@@ -3614,7 +3617,7 @@ module.exports = {
   // 운영 (관리자) — 전부 서버의 adminOk 를 통과한 뒤에만 불린다
   adminOverview, adminSearch, adminUser, adminSameDevice, adminBan, adminUnban, adminMute, adminUnmute,
   adminNotice, adminNoticeAll, adminCoins, adminLog, adminLogList,
-  banInfo, muteInfo, myNotices, markNoticesRead, touchSeen, setAdminWho,
+  banInfo, muteInfo, myNotices, markNoticesRead, touchSeen, setAdminWho, appleLogin,
   markRetention, retentionStats, retentionRough,
   bonusVerify, adConfig,
 };

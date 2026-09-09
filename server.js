@@ -7,6 +7,7 @@ const http = require('http').createServer(app);
 const APP_ORIGINS = ['https://localhost', 'capacitor://localhost', 'http://localhost'];
 const io = require('socket.io')(http, { cors: { origin: APP_ORIGINS, credentials: false } });
 const admobSsv = require('./admob-ssv');
+const appleAuth = require('./apple-auth');
 const path = require('path');
 const crypto = require('crypto');
 const accounts = require('./accounts');
@@ -766,7 +767,56 @@ function authBack(req, hash) {
   return fromApp(req) ? `${APP_SCHEME}://auth${hash}` : `/${hash}`;
 }
 // 어떤 소셜 로그인이 설정됐는지 클라에 알림 (미설정 버튼은 숨김)
-app.get('/api/auth-config', (req, res) => res.json({ kakao: !!KAKAO_REST_KEY, google: !!GOOGLE_ID }));
+// ── 애플 로그인 (환경변수 APPLE_CLIENT_ID = 서비스 ID) ──
+// 규정 4.8 — 카카오·구글을 쓰면 애플 로그인도 같이 내놔야 심사를 통과한다.
+// 애플은 결과를 POST 로 돌려주고(form_post), 그 안의 id_token 서명만 맞으면
+// 누구인지 알 수 있다 — 코드를 다시 교환하지 않으므로 .p8 비밀키가 필요 없다.
+const APPLE_ID = process.env.APPLE_CLIENT_ID || '';
+// 우리가 보낸 nonce 가 그대로 돌아왔는지 봐야 남의 토큰을 되돌려 쓰지 못한다.
+// 표처럼 잠깐 들고 있다가 쓰면 버린다.
+const appleNonces = new Map();                       // nonce → { at, app }
+const APPLE_NONCE_TTL = 10 * 60 * 1000;
+function appleNonce(isApp) {
+  const now = Date.now();
+  if (appleNonces.size > 2000) for (const [k, v] of appleNonces) if (now - v.at > APPLE_NONCE_TTL) appleNonces.delete(k);
+  const n = crypto.randomBytes(16).toString('hex');
+  appleNonces.set(n, { at: now, app: !!isApp });
+  return n;
+}
+app.get('/auth/apple', rateLimit(30), (req, res) => {
+  if (!APPLE_ID) return res.redirect(authBack(req, '#kerr=' + encodeURIComponent('애플 로그인이 아직 설정되지 않았어요')));
+  const isApp = String(req.query.app || '') === '1';
+  const n = appleNonce(isApp);
+  const p = new URLSearchParams({
+    client_id: APPLE_ID, redirect_uri: baseURL(req) + '/auth/apple/callback',
+    response_type: 'code id_token', response_mode: 'form_post', scope: 'name email',
+    state: (isApp ? 'app:' : 'web:') + n, nonce: n,
+  });
+  res.redirect('https://appleid.apple.com/auth/authorize?' + p.toString());
+});
+// 애플만 POST 다. express.json 은 이 형식을 안 읽으므로 따로 받는다.
+app.post('/auth/apple/callback', express.urlencoded({ extended: false, limit: '8kb' }), rateLimit(30), async (req, res) => {
+  // state 로 '앱에서 왔나' 를 되살린다 — POST 라 req.query 는 비어 있다
+  const st = String((req.body && req.body.state) || '');
+  const isApp = st.startsWith('app:');
+  const nonce = st.slice(4);
+  const back = (hash) => res.redirect(isApp ? `${APP_SCHEME}://auth${hash}` : '/' + hash);
+  try {
+    const known = appleNonces.get(nonce);
+    appleNonces.delete(nonce);                       // 한 번 쓰면 버린다
+    if (!known || Date.now() - known.at > APPLE_NONCE_TTL) return back('#kerr=' + encodeURIComponent('시간이 지났어요. 다시 시도해 주세요'));
+    const v = await appleAuth.verifyIdToken((req.body && req.body.id_token) || '', APPLE_ID, nonce);
+    if (!v.ok) { console.error('애플 토큰 확인 실패:', v.why); return back('#kerr=' + encodeURIComponent('애플 인증에 실패했어요')); }
+    // 이름은 첫 로그인 때 딱 한 번만 온다. 놓치면 다시는 못 받는다.
+    let nick = '';
+    try { const u = JSON.parse((req.body && req.body.user) || '{}'); nick = [u.name && u.name.firstName, u.name && u.name.lastName].filter(Boolean).join(' '); } catch (_) {}
+    if (!nick && v.email) nick = v.email.split('@')[0];
+    const out = accounts.appleLogin(v.sub, nick);
+    if (out.isNew) stats.bump('signups');
+    back('#ktoken=' + out.token + (out.isNew ? '&knew=1' : ''));
+  } catch (e) { console.error('애플 콜백 오류:', e.message); back('#kerr=' + encodeURIComponent('애플 로그인 중 오류가 났어요')); }
+});
+app.get('/api/auth-config', (req, res) => res.json({ kakao: !!KAKAO_REST_KEY, google: !!GOOGLE_ID, apple: !!APPLE_ID }));
 app.get('/api/kakao-enabled', (req, res) => res.json({ enabled: !!KAKAO_REST_KEY }));   // 하위호환
 app.get('/auth/google', rateLimit(30), (req, res) => {
   if (!GOOGLE_ID) return res.redirect(authBack(req, '#kerr=' + encodeURIComponent('구글 로그인이 아직 설정되지 않았어요')));

@@ -1394,6 +1394,7 @@ restoreSession().then(() => {
 fetch(ffUrl('/api/auth-config')).then(r => r.json()).then(d => {
   if (d.google) { const b = document.getElementById('titleGoogle'); if (b) b.style.display = 'flex'; }
   if (d.kakao)  { const b = document.getElementById('titleKakao');  if (b) b.style.display = 'flex'; }
+  if (d.apple)  { const b = document.getElementById('titleApple');  if (b) b.style.display = 'flex'; }
 }).catch(() => {});
 
 // ── 빠른 대전 (자동 매칭) ───────────────────────────────────

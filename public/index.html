@@ -766,6 +766,10 @@
     .social-btn.google { background:#fff; color:#3c4043; box-shadow:0 3px 12px rgba(0,0,0,.35); }
     .social-btn.kakao  { background:#cce4ff; color:#191919; }
     .social-btn.kakao .kbubble { font-size:1.1rem; }
+    /* 애플 로그인 단추는 규정이 정한 세 가지 꼴 중 하나여야 한다
+       (검정 · 흰색 · 검정 테두리). 어두운 화면이라 흰색을 쓴다. */
+    .social-btn.apple { background:#fff; color:#000; border-color:#fff; }
+    .social-btn.apple:hover { background:#f1f1f1; }
     .social-btn.guest  { background:rgba(255,255,255,.08); color:#bbc0ca; border:1.5px solid #25324a; }
     .title-note { font-size:.74rem; color:#74829b; text-align:center; margin-top:-6px; }
     /* ── 로딩 스플래시 ── */
@@ -6279,6 +6283,12 @@
       </button>
       <button class="social-btn kakao" id="titleKakao" style="display:none" onclick="socialLogin('kakao')">
         <span class="kbubble">💬</span><span>카카오로 시작</span>
+      </button>
+      <!-- 애플 로그인 — 심사 규정 4.8. 다른 소셜 버튼과 같은 크기로 둔다.
+           설정(APPLE_CLIENT_ID)이 없으면 화면에 안 나온다. -->
+      <button class="social-btn apple" id="titleApple" style="display:none" onclick="socialLogin('apple')">
+        <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M16.3 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.8-.9-3-.8-1.5 0-2.9.9-3.7 2.3-1.6 2.7-.4 6.8 1.1 9 .8 1.1 1.6 2.3 2.8 2.3 1.1 0 1.6-.7 2.9-.7s1.7.7 2.9.7c1.2 0 2-1.1 2.7-2.2.9-1.2 1.2-2.4 1.2-2.5 0 0-2.4-.9-2.4-3.7zM14.1 5.6c.6-.8 1-1.8.9-2.9-.9 0-2 .6-2.6 1.4-.6.7-1.1 1.7-.9 2.8 1 0 2-.5 2.6-1.3z"/></svg>
+        <span>Apple로 시작</span>
       </button>
       <button class="social-btn guest" onclick="startAsGuest()">
         <span>게스트로 시작</span>
