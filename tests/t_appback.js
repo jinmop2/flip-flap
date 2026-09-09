@@ -29,5 +29,23 @@ ok('로비에서 두 번 눌러야 끝난다', /now - exitArmed < 2000[\s\S]{0,4
 ok('한 번 눌렀을 때 알려 준다', /한 번 더 누르면 종료/.test(nat));
 ok('웹에서는 아무것도 안 건다', /if \(native && App\) \{/.test(nat));
 
+console.log('\n③ 앱에서만 죽던 나머지');
+{
+  const man = fs.readFileSync(src + '/android/app/src/main/AndroidManifest.xml', 'utf8');
+  const htm = fs.readFileSync(src + '/public/index.html', 'utf8');
+  // 웹 매니페스트와 TWA 는 portrait 인데 앱만 안 잠겨 있었다 — 돌리면 만든 적 없는 화면이 나온다
+  ok('세로로 잠근다', /android:screenOrientation="portrait"/.test(man));
+  // 앱에는 서비스워커가 없어서 웹푸시가 아예 못 돈다. 켤 수 있는 척하면 스위치가 멈춘다.
+  ok('앱에서는 알림을 못 켠다고 안다', /const pushCan = \(\) => !!\(!window\.FF_NATIVE/.test(cli));
+  // ready 는 등록된 워커가 없으면 거절이 아니라 영영 안 온다 — 스위치가 조용히 죽는다
+  ok('서비스워커 기다리기에 시간을 끊었다', /const swReady = \(ms = 3000\) => Promise\.race\(\[/.test(cli));
+  ok('기다리는 자리마다 그것을 쓴다', !/await navigator\.serviceWorker\.ready/.test(cli));
+  // 이미 앱인데 "앱으로 추가" 가 떴다 — 눌러도 아무 일이 없다
+  ok('앱에서는 설치 버튼을 숨긴다', /const isStandalone = \(\) => !!window\.FF_NATIVE/.test(cli));
+  // 바깥 문서·링크는 웹뷰가 덮으면 돌아올 길이 없다
+  ok('바깥 링크도 시스템 브라우저로', /open\.kakao\.com[^"]*" target="_blank" rel="noopener" onclick="return openDoc\(/.test(htm));
+  ok('약관·처리방침도 그렇다', (htm.match(/onclick="return openDoc\('\/(terms|privacy|rates)'\)"/g) || []).length >= 5);
+}
+
 console.log('\n결과: ' + pass + ' 통과, ' + fail + ' 실패');
 process.exit(fail ? 1 : 0);

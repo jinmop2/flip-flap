@@ -644,8 +644,18 @@ socket.on('auth_retry', () => {
 // 앱을 안 보고 있을 때 도전장을 알린다.
 // 아이폰은 두 가지가 다 맞아야 온다 — iOS 16.4 이상 + 홈 화면에 추가한 상태.
 // 사파리 탭에서는 구독 자체가 안 되므로, 그 경우엔 켜는 자리를 안 보여 준다.
-const pushCan = () => !!(window.isSecureContext && 'serviceWorker' in navigator
+// 앱에는 서비스워커를 안 깐다(자산이 이미 기기 안이라 캐시를 겹칠 이유가 없다).
+// 웹푸시는 그 워커 위에서만 도는 것이라, 앱에서는 켤 수 있는 척하면 안 된다 —
+// 나중에 FCM(@capacitor/push-notifications)을 붙이면 그때 이 자리를 연다.
+const pushCan = () => !!(!window.FF_NATIVE && window.isSecureContext && 'serviceWorker' in navigator
   && 'PushManager' in window && 'Notification' in window);
+// navigator.serviceWorker.ready 는 등록된 워커가 없으면 거절이 아니라 '영영
+// 안 온다'. 그러면 알림 스위치가 아무 반응 없이 죽는다 — 오류도 안 뜬다.
+// 웹에서도 첫 등록이 실패하면(차단·네트워크) 똑같이 걸린다. 시간을 끊어 둔다.
+const swReady = (ms = 3000) => Promise.race([
+  navigator.serviceWorker.ready,
+  new Promise((_, no) => setTimeout(() => no(new Error('서비스워커 없음')), ms)),
+]);
 // 홈 화면에 추가한 상태인가 (아이폰에서 알림이 오는 유일한 조건)
 const standalone = () => !!(window.matchMedia('(display-mode: standalone)').matches
   || window.navigator.standalone);
@@ -662,7 +672,7 @@ async function pushState() {
   if (!pushCan() || !myAccount) return { can: false };
   if (isIOS() && !standalone()) return { can: false, needHome: true };
   try {
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await swReady();
     const sub = await reg.pushManager.getSubscription();
     return { can: true, on: !!sub, perm: Notification.permission };
   } catch (_) { return { can: false }; }
@@ -671,7 +681,9 @@ async function pushState() {
 window.togglePush = async function () {
   const st = await pushState();
   if (!st.can) return;
-  const reg = await navigator.serviceWorker.ready;
+  let reg;
+  try { reg = await swReady(); }
+  catch (_) { toast('⚠️ 지금은 알림을 켤 수 없어요.', 2400); return applySettings(); }
   const cur = await reg.pushManager.getSubscription();
   if (cur) {                                    // 끄기
     const endpoint = cur.endpoint;
@@ -8452,7 +8464,11 @@ if ('serviceWorker' in navigator && !window.FF_NATIVE) {
 // 안드로이드 크롬: beforeinstallprompt를 잡아뒀다가 버튼 클릭 시 네이티브 설치창 표시
 // 아이폰: 프로그래밍 설치 불가(애플 정책) → 버튼 누르면 방법 안내
 let deferredInstall = null;
-const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+// 앱(Capacitor)의 웹뷰는 display-mode 가 standalone 이 아니다. 그래서 이미
+// 앱인데도 "앱으로 추가" 가 떴다 — 눌러도 아무 일이 없다(웹뷰에는
+// beforeinstallprompt 가 영영 안 온다).
+const isStandalone = () => !!window.FF_NATIVE
+  || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
 const isAndroid = () => /Android/.test(navigator.userAgent);
 const isSamsung = () => /SamsungBrowser/.test(navigator.userAgent);
