@@ -245,8 +245,14 @@
       --a:222,142,182; --s1:#2a1220; --s2:#180a13; --nm:#ffd6e8; --sb:#b08a9c; }
 
     /* 표식 — 칸이 물려준 색으로 그려지고, 뒤에 같은 색 번짐을 깐다 */
-    .ic { display:block; flex-shrink:0; color:rgb(var(--a));
-          filter:drop-shadow(0 0 9px rgba(var(--a),.42)); }
+    /* 표식과 그 뒤의 빛.
+       시안은 아이콘 뒤에 흐린 원 하나를 깔아 빛이 고이게 했다. drop-shadow 로는
+       그 느낌이 안 난다 — 그건 획을 따라 번져서 테두리에 두른 빛이 된다.
+       svg 에 안쪽 여백을 주면 그림 크기는 그대로고 상자만 커지므로(box-sizing
+       은 위에서 border-box 로 잡혀 있다), 그 커진 상자에 원을 깔면 된다. */
+    .ic { display:block; flex-shrink:0; color:rgb(var(--a)); box-sizing:border-box;
+          background:radial-gradient(circle at 50% 50%, rgba(var(--a),.30), rgba(var(--a),.10) 42%, transparent 68%);
+          filter:drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
 
     /* 큰 칸 하나 — 그 창에서 제일 하고 싶은 것 */
     .mm-hero {
@@ -260,7 +266,7 @@
     }
     .mm-hero:hover { filter:brightness(1.1); transform:translateY(-1px); }
     .mm-hero:active { transform:translateY(0); }
-    .mm-hero .hh-ico { width:28px; height:28px; }
+    .mm-hero .hh-ico { width:54px; height:54px; padding:13px; margin:-13px 0 -13px -6px; }
     .mm-hero .hh-txt { flex:1; min-width:0; }
     /* span 을 블록으로 — 안 그러면 이름과 설명이 한 줄에 이어 붙어 읽기 나쁘다 */
     .mm-hero .hh-name { display:block; font-size:1rem; font-weight:900; color:var(--nm); letter-spacing:-.3px; }
@@ -350,6 +356,13 @@
       border:1.5px solid rgba(var(--a),.40);
       box-shadow:inset 0 1px 0 rgba(200,222,255,.14);
     }
+    /* 위에서 빛이 들어오는 결 — 시안에 있던 얇은 하이라이트다.
+       이게 없으면 칸이 그냥 칠한 사각형으로 보인다. */
+    .sm-head::after, .mm-tile::after, .mm-hero::after {
+      content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+      background:radial-gradient(120% 62% at 50% -8%, rgba(255,255,255,.055), transparent 70%);
+    }
+    .mm-tile, .mm-hero { position:relative; }
     .sm-head:hover { filter:brightness(1.12); }
     /* 한 줄을 다 쓰는 칸은 색도 가로로 흐른다 — 세로 그러데이션을 그대로 쓰면
        넓고 낮은 칸에서 위아래 차이가 안 보여 통짜로 칠한 것처럼 보인다. */
@@ -359,8 +372,8 @@
     }
     .sm-item.wide .sm-head { flex-direction:row; gap:11px; text-align:left; padding:11px 14px; }
     .sm-item.wide .sm-txt { flex:1; min-width:0; }
-    .sm-ico { width:34px; height:34px; }
-    .sm-item.wide .sm-ico { width:30px; height:30px; }
+    .sm-ico { width:64px; height:64px; padding:15px; }             /* 그림 34 + 빛 15씩 */
+    .sm-item.wide .sm-ico { width:56px; height:56px; padding:13px; } /* 그림 30 */
     .sm-txt { min-width:0; }
     .sm-txt b { display:block; font-size:1.1rem; color:var(--nm); letter-spacing:-.3px; }
     .sm-txt small { display:block; font-size:.7rem; color:var(--sb); margin-top:4px; line-height:1.35; }
@@ -382,7 +395,7 @@
     .sm-body { padding-top:28px; }
     .sm-body .sd-top { position:absolute; left:11px; right:7px; top:6px; height:18px;
       display:flex; align-items:center; gap:6px; }
-    .sm-body .sd-top .ic { width:14px; height:14px; filter:none; }
+    .sm-body .sd-top .ic { width:14px; height:14px; filter:none; background:none; padding:0; }
     .sm-body .sd-top b { font-size:.72rem; font-weight:600; color:var(--nm);
       letter-spacing:-.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .sm-body .sd-x { flex-shrink:0; width:26px; height:24px; margin:-3px -4px -3px auto;
@@ -409,12 +422,12 @@
     .sm-d .sd-m i:nth-child(3) { height:14px; }
     /* 다인전 두 칸은 난이도가 아니라 사람 수다 — 눈금 자리에 표식을 세운다 */
     .sm-d .sd-m.sd-n { align-items:center; }
-    .sm-d .sd-m.sd-n .ic { width:15px; height:15px; }
+    .sm-d .sd-m.sd-n .ic { width:15px; height:15px; background:none; padding:0; }
     .sm-d .sd-m[data-lv="1"] i:nth-child(-n+1),
     .sm-d .sd-m[data-lv="2"] i:nth-child(-n+2),
     .sm-d .sd-m[data-lv="3"] i:nth-child(-n+3) { opacity:1; }
     .sm-d .sd-c { display:flex; align-items:center; gap:4px; font-size:.72rem; color:#8b96a8; flex-shrink:0; }
-    .sm-d .sd-c .ic { width:11px; height:11px; color:currentColor; filter:none; }
+    .sm-d .sd-c .ic { width:11px; height:11px; color:currentColor; filter:none; background:none; padding:0; }
     .sm-d.d-expert { border-color:rgba(203,176,114,.52); }
     .sm-d.d-expert .sd-m i { background:#e2c886; }
     .sm-d.d-expert b { color:#f4e6bd; }
@@ -505,8 +518,8 @@
     .mm-tiles.c6 { grid-template-columns:repeat(6, 1fr); gap:4px; }
     .mm-tiles.c5 .mt-name, .mm-tiles.c6 .mt-name { font-size:.62rem; letter-spacing:-.3px; }
     .mm-tiles.c6 .mt-name { font-size:.56rem; }
-    .mm-tiles.c5 .mt-ico, .mm-tiles.c6 .mt-ico { width:19px; height:19px; }
-    .mm-tiles.c6 .mt-ico { width:17px; height:17px; }
+    .mm-tiles.c5 .mt-ico, .mm-tiles.c6 .mt-ico { width:37px; height:37px; padding:9px; }
+    .mm-tiles.c6 .mt-ico { width:33px; height:33px; padding:8px; }
     .mm-tiles.c6 .mt-sub { font-size:.5rem; }
     .mm-tiles.c5 .mm-tile, .mm-tiles.c6 .mm-tile { padding:10px 3px 8px; border-radius:11px; }
     .mm-tiles.c6 .mm-tile { padding:9px 2px 7px; }
@@ -526,7 +539,7 @@
     .mm-tile:active { transform:translateY(0); }
     /* 난이도 별은 색을 안 줘서 버튼 기본색(검정)을 물려받고 있었다 — 어두운
        타일 위에서는 거의 안 보인다. 금색으로 못 박는다. */
-    .mm-tile .mt-ico { width:22px; height:22px; }
+    .mm-tile .mt-ico { width:44px; height:44px; padding:11px; }    /* 그림 22 */
     .mm-tile .mt-name { font-size:.86rem; font-weight:800; color:var(--nm); letter-spacing:-.3px; }
     .mm-tile .mt-sub { font-size:.6rem; color:var(--sb); text-align:center; line-height:1.35; }
 
@@ -3384,7 +3397,13 @@
       width:100%; max-width:none; height:100%; max-height:none;
       border-radius:0; border:none; padding:18px 16px calc(18px + var(--safe-b));
       padding-top:calc(16px + var(--safe-t));
-      background:linear-gradient(180deg,#152037 0%,#0c1220 40%,#090e19 100%);
+      /* 맨 위에 판(펠트) 색을 아주 옅게 남긴다 — 모드 칸들이 허공이 아니라
+         테이블 위에 놓인 것처럼 보이게 한다.
+         겹을 하나 얹는 대신 바탕 그림으로 넣는다. 이 상자는 overflow-y:auto 로
+         스크롤을 하는 자리라, 위에 덧대면 스크롤이 막히거나 밖으로 새어 나간다. */
+      background:
+        radial-gradient(58% 20% at 50% -1%, rgba(44,79,71,.36), transparent 72%),
+        linear-gradient(180deg,#152037 0%,#0c1220 40%,#090e19 100%);
     }
     #soloModal .lb-title, #multiModal .lb-title { font-size:1.2rem; margin-bottom:2px; }
     /* × 를 띄워 두면 바로 아래 큰 버튼(랭크게임)과 손가락 자리가 겹친다.
