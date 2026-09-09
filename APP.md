@@ -27,12 +27,23 @@ cp android/keystore.properties.example android/keystore.properties
 
 ### 2. 빌드 도구
 
+**Capacitor 8 은 JDK 21 을 쓴다.** Bubblewrap 이 깔아 둔 JDK 17 로 돌리면
+`invalid source release: 21` 로 멈춘다 — 그것도 그래들을 다 내려받은 뒤에야
+멈춰서 처음이면 30분을 태운다.
+
 ```bash
-export JAVA_HOME=/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home
+brew install openjdk@21          # 한 번만. keg-only 라 기존 17 을 안 건드린다
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
 export ANDROID_HOME=$HOME/android-sdk
 ```
 
-(Bubblewrap 이 깔아 둔 것을 그대로 쓴다 — `~/.bubblewrap/config.json` 에 경로가 있다.)
+안드로이드 SDK 는 Bubblewrap 이 깔아 둔 것을 그대로 쓴다
+(`~/.bubblewrap/config.json` 에 경로가 있다). SDK 경로는
+`android/local.properties` 에도 적히는데, 기기마다 달라서 커밋되지 않는다:
+
+```bash
+echo "sdk.dir=$HOME/android-sdk" > android/local.properties
+```
 
 ### 3. AdMob
 
