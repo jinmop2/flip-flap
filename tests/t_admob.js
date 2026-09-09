@@ -72,12 +72,31 @@ const sign = (q) => b64url(crypto.sign('sha256', Buffer.from(q, 'utf8'), private
   console.log('\n④ 화면이 표를 광고에 넘기는가');
   {
     const c = require('fs').readFileSync(src + '/public/client.js', 'utf8');
-    ok('광고에 표를 넘긴다', /FF\.ad\.reward\(st\.ticket\)/.test(c));
-    ok('끝까지 안 보면 안 받는다', /광고를 끝까지 봐야/.test(c));
-    ok('확인이 늦으면 몇 번 더 묻는다', /got\.pending && i < 6/.test(c));
     const n = require('fs').readFileSync(src + '/public/native.js', 'utf8');
+    ok('광고에 표를 넘긴다', /FF\.ad\.reward\(st\.ticket\)/.test(c));
+    ok('끝까지 안 보면 안 받는다', /how !== 'done'[\s\S]{0,80}광고를 끝까지 봐야/.test(c));
+    // 광고가 없었던 것과 중간에 닫은 것은 다른 일이다 — 같은 말로 뭉뚱그리면
+    // 물량이 없을 때도 이용자 탓으로 들린다
+    ok('광고가 없을 때는 다르게 말한다', /how === 'empty'[\s\S]{0,120}볼 수 있는 광고가 없어요/.test(c));
+    ok('못 불러온 것과 닫은 것을 가른다',
+       /return 'empty';\s*\/\/ 채울 광고가 없었다/.test(n) && /\? 'done' : 'quit'/.test(n));
+    ok('확인이 늦으면 몇 번 더 묻는다', /got\.pending && i < 6/.test(c));
     ok('웹에서는 광고가 없다', /ready: function \(\) \{ return native && !!AdMob; \}/.test(n));
     ok('ssv 로 표를 실어 보낸다', /ssv: ticket \? \{ userId: String\(ticket\) \}/.test(n));
+  }
+
+  console.log('\n⑤ 실제 광고 값이 들어 있는가');
+  {
+    const n = require('fs').readFileSync(src + '/public/native.js', 'utf8');
+    const m = require('fs').readFileSync(src + '/android/app/src/main/AndroidManifest.xml', 'utf8');
+    // 구글 시험용 ID(3940256099942544)로 되돌아가면 테스트 광고만 나가고 수익은 0 원이다.
+    // 화면으로는 구별이 안 되므로 여기서 지킨다. (iOS 는 아직 앱을 안 만들어 예외)
+    ok('안드로이드 앱 ID 가 우리 것이다',
+       /ca-app-pub-2889493659015752~/.test(m) && !/3940256099942544~/.test(m));
+    ok('안드로이드 보상형 단위가 우리 것이다', /android: \{ reward: 'ca-app-pub-2889493659015752\//.test(n));
+    // TESTING 은 켜 둘 수도 내릴 수도 있다 — 다만 무엇을 뜻하는지가 코드에 적혀 있어야 한다
+    ok('테스트 여부가 한 곳에서 정해진다', /var TESTING = (true|false);/.test(n));
+    ok('내 폰으로 실제 광고를 보면 안 된다고 적혀 있다', /자기 노출·자기 클릭/.test(n));
   }
 
   console.log('\n결과: ' + pass + ' 통과, ' + fail + ' 실패');

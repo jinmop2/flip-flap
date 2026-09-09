@@ -9,14 +9,20 @@
 (function () {
   'use strict';
 
-  // 광고 단위 — 지금은 구글이 공개한 시험용이다. AdMob 콘솔에서 만든 것으로
-  // 바꾸면 그때부터 진짜 광고가 나간다. 안드로이드와 iOS 는 단위가 따로다.
+  // 광고 단위. 안드로이드와 iOS 는 단위가 따로다 —
+  // iOS 는 아직 앱을 안 만들어서 구글 시험용 그대로 둔다.
   var UNITS = {
-    android: { reward: 'ca-app-pub-3940256099942544/5224354917' },
-    ios:     { reward: 'ca-app-pub-3940256099942544/1791472922' },
+    android: { reward: 'ca-app-pub-2889493659015752/1319611593' },
+    ios:     { reward: 'ca-app-pub-3940256099942544/1791472922' },   // 아직 시험용
   };
-  // 시험용 단위를 쓰는 동안은 테스트 광고만 나온다. 실제 단위로 바꾸면서
-  // 이 값을 안 내리면 수익이 0 원이다 — 구글이 테스트 노출은 안 쳐 준다.
+  // 실제 광고를 내보낼지 말지.
+  //
+  // true 인 동안은 단위가 진짜여도 테스트 광고만 나오고 수익은 0 원이다.
+  // 그런데 내 폰에서 실제 광고를 보는 것은 자기 노출·자기 클릭이라 계정이
+  // 정지될 수 있다 — 그래서 기본은 true 다.
+  //
+  // 내리기 전에: AdMob 콘솔 [설정 > 테스트 기기] 에 내 기기를 등록한다.
+  // 그러면 false 로 두어도 내 폰에서만 테스트 광고가 나온다.
   var TESTING = true;
 
   var P = (window.Capacitor && window.Capacitor.Plugins) || {};
@@ -42,24 +48,37 @@
     return starting;
   }
 
-  // 보상형 한 편. 끝까지 봤으면 true.
+  // 보상형 한 편.
+  //
+  // 돌려주는 값을 셋으로 나눈다. 예전에는 전부 false 였는데, 그러면 화면이
+  // "광고를 끝까지 봐야 받을 수 있어요" 하나로만 말하게 된다 — 광고가 아예
+  // 없었을 때도 이용자 탓으로 들린다. 물량이 적은 초기에는 이게 흔한 일이다.
+  //
+  //   'done'   끝까지 봤다 → 지급
+  //   'empty'  틀 광고가 없었다 → 이용자 잘못이 아니다. 하루 몫도 안 깎인다
+  //   'quit'   중간에 닫았다 → 보상 없음
+  //
   // ticket 은 서버가 낸 표다 — 구글이 이 값을 그대로 서버로 되돌려 주므로,
   // 서버는 "이 표의 광고를 정말 끝까지 봤다" 를 구글에게서 직접 듣는다.
   function reward(ticket) {
-    if (!native || !AdMob) return Promise.resolve(false);
+    if (!native || !AdMob) return Promise.resolve('empty');
     return start().then(function (up) {
-      if (!up) return false;
+      if (!up) return 'empty';
       return AdMob.prepareRewardVideoAd({
         adId: unit('reward'),
         isTesting: TESTING,
         ssv: ticket ? { userId: String(ticket) } : undefined,
       })
-        .then(function () { return AdMob.showRewardVideoAd(); })
-        .then(function (r) {
-          // 끝까지 본 경우에만 보상 정보가 돌아온다
-          return !!(r && (r.type || r.amount !== undefined));
-        })
-        .catch(function (e) { console.warn('[광고] 재생 실패', e); return false; });
+        .catch(function (e) { console.warn('[광고] 못 불러옴', e); return null; })
+        .then(function (loaded) {
+          if (loaded === null) return 'empty';                  // 채울 광고가 없었다
+          return AdMob.showRewardVideoAd()
+            .then(function (r) {
+              // 끝까지 본 경우에만 보상 정보가 돌아온다
+              return (r && (r.type || r.amount !== undefined)) ? 'done' : 'quit';
+            })
+            .catch(function (e) { console.warn('[광고] 재생 실패', e); return 'quit'; });
+        });
     });
   }
 

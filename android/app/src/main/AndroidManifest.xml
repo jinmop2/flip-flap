@@ -34,13 +34,13 @@
 
         </activity>
 
-        <!-- AdMob 앱 ID. 지금 값은 구글이 공개한 '시험용' 이라 실제 광고가 아니라
-             테스트 광고가 나온다. admob.google.com 에서 앱을 만들고 받은
-             ca-app-pub-XXXXXXXX~YYYYYYYY 로 바꾸면 그때부터 진짜 광고다.
-             이 줄이 없으면 앱이 켜지자마자 죽는다(구글 SDK 가 그렇게 만든다). -->
+        <!-- AdMob 앱 ID (이 앱의 실제 값). 이 줄이 없으면 앱이 켜지자마자
+             죽는다 — 구글 SDK 가 그렇게 만들어 두었다.
+             실제 광고가 나가는지 아닌지는 이 값이 아니라 native.js 의
+             TESTING 이 정한다. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-2889493659015752~3465946132" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

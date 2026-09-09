@@ -765,8 +765,11 @@ window.claimBonus = async function () {
     // 그대로 서버로 되돌려 주므로, 서버는 "이 표의 광고를 봤다" 를 구글에게
     // 직접 듣는다. 웹에서는 FF.ad.ready() 가 false 라 예전처럼 시간만 채운다.
     if (window.FF && FF.ad && FF.ad.ready()) {
-      const watched = await FF.ad.reward(st.ticket);
-      if (!watched) { said = '<span class="bn-err">광고를 끝까지 봐야 받을 수 있어요.</span>'; return; }
+      const how = await FF.ad.reward(st.ticket);
+      // 광고가 없었던 것과 중간에 닫은 것은 다른 일이다. 같은 말로 뭉뚱그리면
+      // 광고가 안 채워졌을 때도 이용자 탓으로 들린다.
+      if (how === 'empty') { said = '<span class="bn-err">지금은 볼 수 있는 광고가 없어요. 잠시 후 다시 시도해 주세요.</span>'; return; }
+      if (how !== 'done')  { said = '<span class="bn-err">광고를 끝까지 봐야 받을 수 있어요.</span>'; return; }
     } else if (st.minSec) {
       await new Promise((go) => setTimeout(go, st.minSec * 1000 + 300));
     }

@@ -47,20 +47,35 @@ echo "sdk.dir=$HOME/android-sdk" > android/local.properties
 
 ### 3. AdMob
 
-1. https://admob.google.com 에서 앱을 만들고 **앱 ID**(`ca-app-pub-…~…`)를 받는다
-2. **보상형 광고 단위**를 만들고 단위 ID(`ca-app-pub-…/…`)를 받는다
-3. 그 단위 설정의 **서버 측 확인(SSV)** 주소에 넣는다:
+안드로이드 값은 이미 코드에 들어 있다.
+
+| | |
+|---|---|
+| 앱 ID | `ca-app-pub-2889493659015752~3465946132` — `AndroidManifest.xml` |
+| 보상형 단위 | `ca-app-pub-2889493659015752/1319611593` — `public/native.js` |
+| iOS | 아직 없음. 구글 시험용 그대로 |
+
+**남은 것은 셋이다.**
+
+1. 그 광고 단위의 **서버 측 확인(SSV)** 주소에 넣는다:
    `https://flip-flap.onrender.com/api/admob-ssv`
-4. 코드 두 곳을 바꾼다
-   - `android/app/src/main/AndroidManifest.xml` → `APPLICATION_ID` 의 값
-   - `public/native.js` → `UNITS` 의 단위 ID, 그리고 **`TESTING = false`**
-5. Render 환경변수에 `AD_MODE=ad`
+   (세 칸 중 첫 번째만 채운다 — 아래 둘은 저장할 때 한 번 쓰는 테스트용이다)
+2. AdMob 콘솔 **[설정 > 테스트 기기]** 에 내 기기를 등록한다
+3. `public/native.js` 의 `TESTING` 을 `false` 로 내리고, Render 에 `AD_MODE=ad`
 
 > **순서를 지킨다.** SSV 주소를 넣기 전에 `AD_MODE=ad` 를 켜면 표는 나가는데
 > 구글의 확인이 안 와서 아무도 보상을 못 받는다. 급하면 `AD_SSV=off` 로 검증만
 > 잠시 끌 수 있지만, 그건 웹 광고와 같은 수준으로 되돌리는 것이다.
 
-> `TESTING = true` 인 동안은 테스트 광고만 나오고 수익은 0 원이다.
+> **테스트 기기 등록을 먼저 한다.** `TESTING=false` 로 내린 뒤 내 폰에서 실제
+> 광고를 보면 자기 노출·자기 클릭이라 계정이 정지될 수 있다. 등록해 두면
+> false 여도 내 폰에서만 테스트 광고가 나온다.
+
+> `TESTING = true` 인 동안은 단위가 진짜여도 테스트 광고만 나오고 수익은 0 원이다.
+
+**최소 eCPM** 은 `Google 최적화 + 모든 가격` 그대로 둔다. 보상형은 이용자가
+스스로 누른 광고라, 안 채워지면 수익을 못 버는 게 아니라 그 사람이 아무것도
+못 받고 끝난다 — 단가보다 채워지는 게 중요하다. 하한은 노출이 쌓인 뒤에 만진다.
 
 ### 4. 소셜 로그인
 
