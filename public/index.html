@@ -4597,6 +4597,14 @@
       border:2px solid rgba(255,217,74,.8);
       animation:rbRing 1.25s ease-out infinite;
     }
+    /* 다인전 "한 판 더" — 누군가 눌렀으면 단추가 스스로 말한다.
+       2인전의 재대결 단추와 같은 결이다. */
+    #q-again.wanted { border-color:var(--gold); box-shadow:0 0 0 2px rgba(159,180,216,.22); }
+    #q-again.wanted::after {
+      content:''; position:absolute; inset:-3px; border-radius:inherit; pointer-events:none;
+      border:1.5px solid rgba(159,180,216,.5); animation:rbRing 1.4s ease-out infinite;
+    }
+    #q-again { position:relative; }
     @keyframes rbPop { from { transform:scale(.4); opacity:0 } to { transform:scale(1); opacity:1 } }
     @keyframes rbRing { from { transform:scale(1); opacity:.8 } to { transform:scale(1.14); opacity:0 } }
     @media (prefers-reduced-motion:reduce) {
@@ -8295,7 +8303,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
       <div id="q-orank"></div>
       <div id="q-rpnote"></div>
       <div style="display:flex; gap:8px; justify-content:center; margin-top:14px">
-        <button class="btn btn-gold" style="width:auto" onclick="q4Start()">한 판 더!</button>
+        <button class="btn btn-gold" id="q-again" style="width:auto" onclick="q4Again()">한 판 더!</button>
         <button class="btn btn-outline" style="width:auto" onclick="q4Quit()">로비로</button>
       </div>
     </div>

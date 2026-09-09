@@ -556,6 +556,39 @@ function attach4(io, hooks = {}) {
       beginPending(p);
     });
 
+    // 사람들과 하던 판이 끝난 뒤 "한 판 더".
+    //
+    // 여태 이 단추가 솔로(g4_start)를 불렀다 — 같이 하던 사람들과 그냥 헤어졌다.
+    // 2인전의 재대결과 같은 결로, 남아 있는 사람이 다 누르면 그 자리 그대로
+    // 새 판을 연다.
+    //
+    // 나간 사람은 안 기다린다. 기다리면 한 사람이 창을 닫는 것으로 나머지가
+    // 영영 못 하게 된다.
+    safe(socket, 'g4_rematch', () => {
+      const roomId = socket.g4room, r = rooms4[roomId];
+      if (!r || r.solo) return;                        // 솔로는 그냥 새 판을 열면 된다
+      if (!r.game || r.game.phase !== 'game_over') return;
+      const me = socket.g4seat;
+      if (me === null || me === undefined) return;
+      const mine = r.seats[me];
+      if (!mine || mine.isBot || mine.left) return;
+      // 끊겼다 붙으면 소켓 id 가 바뀐다 — 자리 임자는 서버가 심어 둔 g4seat 로만 본다
+      mine.sid = socket.id;
+
+      r.rematch = r.rematch || {};
+      r.rematch[me] = true;
+      const here = r.seats.map((s, i) => ({ s, i })).filter(({ s }) => s && !s.isBot && !s.left && s.sid);
+      const ready = here.filter(({ i }) => r.rematch[i]).length;
+      for (const { s, i } of here) {
+        if (i === me) continue;
+        io.to(s.sid).emit('g4_rematch_wanted', { ready, of: here.length });
+      }
+      if (ready >= here.length) {
+        r.dead = true;                                 // 옛 방의 시계·감시를 멈춘다
+        startRoom(here.map(({ s }) => ({ sid: s.sid, nick: s.nick })), false, r.seats.length);
+      }
+    });
+
     safe(socket, 'g4_act', (data = {}) => {
       const roomId = socket.g4room, r = rooms4[roomId];
       if (!r || r.dead) return;

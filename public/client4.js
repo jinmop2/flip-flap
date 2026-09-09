@@ -6,6 +6,8 @@
   let q4 = null;         // 최신 상태
   let q4Live = false;    // 4인전 화면에 있는가
   let q4Room = null;     // 재접속해서 이어하기 위한 방 번호
+  let q4WasMulti = false;   // 방금 판이 사람들과 한 판이었나
+  let q4RematchOn = false;  // 내가 이미 눌렀나
   let lastRecv = 0;      // 마지막으로 상태를 받은 시각
   let prevPhase = null, prevTurn = 0;   // 효과음을 단계가 바뀔 때만 울리려고
   let mySeat = 0;        // 내 좌석 — 멀티에서는 0이 아닐 수 있다
@@ -907,6 +909,23 @@
     if (wrap && slot && wrap.parentElement !== slot) slot.appendChild(wrap);
   }
 
+  // 결과창의 "한 판 더!". 사람들과 한 판이었으면 그 자리 그대로 다시 하자고
+  // 말한다 — 예전에는 무조건 솔로를 열어서 같이 하던 사람들과 헤어졌다.
+  window.q4Again = function () {
+    if (!q4WasMulti) return window.q4Start();
+    if (q4RematchOn) return;
+    q4RematchOn = true;
+    sfx('select');
+    socket.emit('g4_rematch');
+    markRematch(0, 0, '기다리는 중…');
+  };
+  // 몇 명이 눌렀는지를 단추에 적는다. 2인전의 그 표시와 같은 결이다.
+  function markRematch(ready, of, msg) {
+    const b = $('q-again'); if (!b) return;
+    b.classList.toggle('wanted', !!(ready || msg));
+    b.textContent = msg ? '한 판 더 — ' + msg
+                   : (of ? `한 판 더! (${ready}/${of})` : '한 판 더!');
+  }
   window.q4Start = function (n) {
     lastSoloN = (Number(n) === 3) ? 3 : (Number(n) === 4 ? 4 : lastSoloN);
     if (typeof closeModePanels === 'function') closeModePanels();
@@ -980,6 +999,8 @@
       q4Spec = !!d.watching;                       // 관전이면 아무것도 못 낸다
       document.body.classList.toggle('q-spec', q4Spec);
       q4Room = d.roomId; mySeat = d.me || 0; lastRecv = Date.now(); q4Pend = null;
+      q4WasMulti = !d.solo;                        // "한 판 더" 가 어디로 갈지를 가른다
+      q4RematchOn = false; markRematch(0, 0);
       // 앱을 껐다 켜도 돌아올 수 있게 남겨 둔다. 기억에만 두면 새로고침 한 번에
       // 돌아갈 방을 잊어버린다.
       // 방 번호가 없으면(그물 없이 두는 판) 적어 두지 않는다 — 적어 두면
@@ -1016,6 +1037,11 @@
     socket.on('g4_over', (s) => {
       if (!q4Live) return;
       q4 = s; lastRecv = Date.now(); render(); setTimeout(() => showOver(s), 600);
+    });
+    socket.on('g4_rematch_wanted', (d) => {
+      if (!q4Live) return;
+      markRematch((d && d.ready) || 0, (d && d.of) || 0, q4RematchOn ? '기다리는 중…' : null);
+      if (!q4RematchOn && typeof toast === 'function') toast('💬 같이 한 판 더 하재요!', 2200);
     });
     socket.on('g4_clock', (d) => { if (q4Live && d) paintClock(d.clock, d.seat); });
     socket.on('g4_invite_res', (d) => {
