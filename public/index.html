@@ -1242,18 +1242,22 @@
        그보다 느리면 FLIP 이 반쯤 돌다 막이 걷혀, 매번 도는 중간만 보인다.
        0.29초로 뒀더니 막이 걷히는 그 순간에 겨우 마쳐서, 여유를 더 뒀다. */
     #fadeVeil.on .fv-logo b { animation:fvFlipUp 1.8s cubic-bezier(.5,.03,.25,1) infinite; }
-    #fadeVeil.on .fv-logo i { animation:fvFlapDown 1.8s cubic-bezier(.5,.03,.25,1) infinite; }
+    #fadeVeil.on .fv-logo i { animation:fvFlapUp 1.8s cubic-bezier(.5,.03,.25,1) infinite; }
     @keyframes fvFlipUp {
       0%   { transform:rotateX(0deg); }
       14%  { transform:rotateX(-360deg); }
       100% { transform:rotateX(-360deg); }
     }
     /* FLAP 은 FLIP 이 다 넘어간 바로 뒤에 따라 붙는다 —
-       역참 안내판이 위줄부터 차르륵 넘어가는 그 결이다. */
-    @keyframes fvFlapDown {
+       역참 안내판이 위줄부터 차르륵 넘어가는 그 결이다.
+
+       도는 쪽은 FLIP 과 같아야 한다. FLAP 은 rotate(180deg) 로 뒤집혀 있어서
+       같은 부호를 주면 화면에서는 반대로 돈다 — 위·아래로 엇갈려 도니까
+       한 덩어리가 아니라 따로 노는 것으로 보였다. 부호를 뒤집어 맞춘다. */
+    @keyframes fvFlapUp {
       0%, 17% { transform:rotate(180deg) rotateX(0deg); }
-      31%     { transform:rotate(180deg) rotateX(360deg); }
-      100%    { transform:rotate(180deg) rotateX(360deg); }
+      31%     { transform:rotate(180deg) rotateX(-360deg); }
+      100%    { transform:rotate(180deg) rotateX(-360deg); }
     }
     @media (prefers-reduced-motion:reduce) {
       #fadeVeil.on .fv-logo b, #fadeVeil.on .fv-logo i { animation:none; }
