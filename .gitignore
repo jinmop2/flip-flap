@@ -31,3 +31,5 @@ android/keystore.properties
 
 # 파이어베이스 설정 — 프로젝트 식별자가 들어간다
 android/app/google-services.json
+design-lobby/*.html
+!design-lobby/*.dc.html
