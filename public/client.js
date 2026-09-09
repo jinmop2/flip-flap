@@ -4132,6 +4132,29 @@ function renderRoomList(list) {
 
 // ── 사운드 (Web Audio) ──────────────────────────────────────
 const AC = new (window.AudioContext || window.webkitAudioContext)();
+// 오디오 그래프가 잠들어 있으면(state가 running 이 아니면) 소리가 한 톨도
+// 안 나간다. 그런데 <audio> 는 자기 딴에 "재생 중" 이라고 답하므로, 코드도
+// 화면도 나오고 있다고 믿는다 — 소리만 없다. 그래서 재생 성공 여부가 아니라
+// 그래프가 깨어 있는지를 본다.
+const audioAwake = () => AC.state === 'running';
+// 어떤 손짓에서든 한 번 깨운다.
+//
+// 이게 없으면 이런 길로 음악이 영영 죽는다 — 매칭이 잡혀 서버 신호로 판이
+// 열리면 그건 손짓이 아니라서 그 순간 resume 이 거절된다(사파리·웹뷰가 그렇다).
+// 효과음이 켜져 있으면 playSound 가 매번 resume 을 부르니 저절로 살아나는데,
+// 효과음을 꺼 둔 사람은 그 길마저 없다(playSound 는 sfxOff 에서 먼저 돌아간다).
+function wakeAudio() {
+  if (audioAwake()) return;
+  AC.resume().then(() => {
+    // 잠든 사이에 켜 둔 곡이 있으면 같이 되살린다
+    if (bgmOn && bgmAudio && bgmAudio.paused) bgmAudio.play().catch(() => {});
+  }).catch(() => {});
+}
+for (const t of ['pointerdown', 'keydown', 'touchend'])
+  document.addEventListener(t, wakeAudio, true);
+// 다른 앱에 갔다 오면 그래프가 잠든 채로 돌아오기도 한다
+document.addEventListener('visibilitychange', () => { if (!document.hidden) wakeAudio(); });
+
 // 효과음 마스터 볼륨 (전체적으로 한 단계 낮춤)
 const sfxGain = AC.createGain(); sfxGain.gain.value = 0.6; sfxGain.connect(AC.destination);
 // mp3 원샷 샘플 (카드 내는 소리 등) — 디코드해서 낮은 지연으로 재생
@@ -4279,7 +4302,7 @@ function setBgmVolume(v, ramp = 0.2) {
 // (판을 오갈 때마다 처음부터 다시 틀면 뚝뚝 끊긴다)
 const BGM_SRC = { lobby: '/lobby.m4a?v=3', game: '/bgm.m4a?v=3' };
 // 음악이 실제로 흐르는지 밖에서 확인할 창구 (테스트·문제 확인용, 화면에는 안 쓴다)
-window.__bgm = () => ({ on: bgmOn, track: bgmTrack, off: bgmOff,
+window.__bgm = () => ({ on: bgmOn, track: bgmTrack, off: bgmOff, ac: AC.state,
   playing: !!(bgmAudio && !bgmAudio.paused && bgmAudio.currentTime > 0),
   t: bgmAudio ? Math.round(bgmAudio.currentTime * 10) / 10 : null,
   ready: bgmAudio ? bgmAudio.readyState : null, preload: bgmAudio ? bgmAudio.preload : null });
@@ -4322,7 +4345,10 @@ function startBGM(track = 'game') {
 
   // 자동재생은 대개 막힌다. 막히면 다음 손짓마다 다시 시도한다 —
   // 한 번 실패하고 포기하면 그 뒤로는 아무리 눌러도 소리가 안 났다.
-  const tryPlay = () => el.play().then(() => { armKick(false); }).catch(() => { armKick(true); });
+  // play() 가 성공해도 그래프가 자고 있으면 소리는 안 난다. 그때 손짓 기다리기를
+  // 풀어 버리면(예전 코드) 그 뒤로 아무리 눌러도 음악이 안 나온다 — 코드만
+  // "나오는 중" 이라고 믿는 상태로 굳는다.
+  const tryPlay = () => el.play().then(() => { armKick(!audioAwake()); }).catch(() => { armKick(true); });
   let kickArmed = false;
   function armKick(on) {
     if (on === kickArmed) return;
