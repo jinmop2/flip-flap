@@ -2,9 +2,11 @@
 // 규칙은 t_sutda 가 보고, 여기서는 "두 사람이 같은 판을 보는가",
 // "남의 패가 안 새는가", "밑천이 코인으로 정확히 돌아오는가" 를 본다.
 //
-// 서버가 떠 있어야 한다(미리보기 3000). 안 떠 있으면 건너뛴다.
+// 미니게임은 스토어에 낼 때 잠가 두므로(PICKABLE_MODES), 여기서는 MINI_ON=1 로
+// 켠 서버를 따로 띄운다 — 엔진은 살아 있고 길만 막은 것이라 계속 봐야 한다.
 const io = require('socket.io-client');
-const URL = process.env.MINI_URL || 'http://localhost:3000';
+const { liveServer } = require('./live');
+let URL;                       // 아래에서 자기 서버를 띄우고 채운다
 
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra !== undefined ? '  ' + extra : ''))); };
@@ -48,9 +50,7 @@ function client(token) {
 }
 
 (async () => {
-  let up = false;
-  try { up = (await fetch(URL)).ok; } catch (_) {}
-  if (!up) { console.log('서버가 없어 건너뜁니다 (' + URL + ')'); process.exit(0); }
+  URL = (await liveServer(39525, { MINI_ON: '1' })).url;
 
   console.log('① 두 사람이 붙는다');
   const A = await account('a'), B = await account('b');

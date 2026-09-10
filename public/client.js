@@ -1434,6 +1434,14 @@ restoreSession().then(() => {
   if (kakaoFirstLogin && myAccount) openNickModal();
   // 로그인돼 있거나, 게스트로 시작해 게임을 돌던 중(나가기·새로고침)이면 타이틀 건너뜀
   if (myAccount || sessionStorage.getItem('ff_guest')) hideTitle();
+  // TWA(크롬 껍데기)에서 진짜 앱으로 갈아탔다. 저장 공간이 갈리는 바람에
+  // 로그인 표시가 안 넘어온다 — 계정과 기록은 서버에 그대로 있는데
+  // 이용자 눈에는 처음 깔았을 때와 똑같이 보인다. 한 번만 그렇지 않다고
+  // 말해 준다. 웹은 해당이 없어 앱에서만 띄운다.
+  if (window.FF_NATIVE && !myAccount && !localStorage.getItem('ff_twa_note')) {
+    localStorage.setItem('ff_twa_note', '1');
+    setTimeout(() => toast('앱이 새로 바뀌었어요. <b>계정과 기록은 그대로 있습니다</b> — 한 번만 다시 로그인해 주세요.', 6000), 900);
+  }
 });
 // 설정된 소셜 로그인 버튼만 타이틀에 노출
 fetch(ffUrl('/api/auth-config')).then(r => r.json()).then(d => {

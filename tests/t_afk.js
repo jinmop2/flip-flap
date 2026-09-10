@@ -3,10 +3,12 @@
 // 예전에는 사람 차례에 제한이 없어서, 한 명이 가만히 있으면 나머지가
 // 무한정 기다렸다. 이제는 시간이 지나면 AI 가 대신 두고 판이 굴러가야 한다.
 const io = require('/Users/jinmo9/참치/my-game/node_modules/socket.io-client');
+const { liveServer } = require('./live');
+let URL;                       // 아래에서 자기 서버를 띄우고 채운다
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra ? '  ' + extra : ''))); };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const mk = (ip) => io('http://localhost:3000', { transports: ['websocket'], forceNew: true, extraHeaders: { 'X-Forwarded-For': ip } });
+const mk = (ip) => io(URL, { transports: ['websocket'], forceNew: true, extraHeaders: { 'X-Forwarded-For': ip } });
 
 function join(i, base) {
   const p = { i, s: mk(base + i), st: null, room: null, seat: null, begun: false, errors: [] };
@@ -35,6 +37,7 @@ function play(p) {
 }
 
 (async () => {
+  URL = (await liveServer(39521)).url;
   console.log('\n① 사람 셋 중 하나(2번)가 아무것도 안 한다');
   const P = [1, 2, 3].map((i) => join(i, '10.8.1.'));
   await wait(2500);

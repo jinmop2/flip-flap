@@ -62,6 +62,12 @@ head('2. 광고');
       '      순서를 바꾸면 내 광고를 내가 눌러 계정이 정지될 수 있다.');
   else good('실제 광고로 나간다 (TESTING = false)');
 
+  // 시험 스위치가 두 군데 있으면 하나만 끄고 다 껐다고 믿게 된다.
+  // capacitor.config.json 에도 initializeForTesting 이 있었다 — 지웠다.
+  /initializeForTesting/.test(read('capacitor.config.json') || '')
+    ? bad('capacitor.config.json 에 시험 스위치가 또 있다', 'native.js 의 TESTING 하나만 남긴다')
+    : good('시험 스위치는 native.js 한 곳뿐이다');
+
   const man = read('android/app/src/main/AndroidManifest.xml') || '';
   const appId = /ads\.APPLICATION_ID"\s*\n?\s*android:value="([^"]+)"/.exec(man);
   if (!appId) bad('매니페스트에 애드몹 앱 ID 가 없다', '이 줄이 없으면 앱이 켜지자마자 죽는다');
@@ -96,6 +102,14 @@ head('3. 적어 둔 말이 사실인가');
   /계정 삭제 URL \| \S*delete-account/.test(li)
     ? good('계정 삭제 URL 이 삭제 안내를 가리킨다')
     : bad('계정 삭제 URL 이 삭제 안내가 아니다', '처리방침을 적어 두면 심사에서 되돌아온다');
+  // 심사관은 처리방침과 계정 삭제 안내를 나란히 본다 — 연락처가 다르면
+  // 같은 사람이 만든 문서로 안 보이고, 한쪽 편지함은 아무도 안 읽게 된다
+  const mails = new Set();
+  for (const f of ['privacy.html', 'terms.html', 'rates.html', 'public/delete-account.html',
+                   'store-assets/제출용/등록정보.md'])
+    for (const m of (read(f) || '').matchAll(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g)) mails.add(m[0]);
+  mails.size === 1 ? good(`연락처가 한 곳이다 — ${[...mails][0]}`)
+                   : bad('문서마다 연락처가 다르다', [...mails].join(', ') || '(하나도 없다)');
 }
 
 // ── 4. 미니게임 ────────────────────────────────────────────
@@ -110,6 +124,31 @@ head('4. 미니게임 (섯다식 배팅)');
   // 되살리면 IARC 답이 같이 바뀌어야 한다
   /모의 도박[^\n]*아니요/.test(ans) ? good('심사답안: 모의 도박 아니요 (잠긴 것과 맞다)')
                                    : hmm('심사답안의 모의 도박 답을 확인한다', 'store-assets/제출용/심사답안.md');
+}
+
+// ── 4-2. 심사답안이 실제 빌드와 맞는가 ─────────────────────
+head('4-2. 심사답안 ↔ 빌드된 매니페스트');
+{
+  const ans = read('store-assets/제출용/심사답안.md') || '';
+  const merged = ['android/app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml',
+                  'android/app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml']
+    .map(read).find(Boolean);
+  if (!merged) hmm('합쳐진 매니페스트가 없다', './gradlew assembleDebug 를 한 번 돌리면 생긴다');
+  else {
+    // SDK 들이 몰래 넣는 권한이 있다. 답안에 없는 것이 생기면 심사에서 묻는다.
+    const perms = [...new Set([...merged.matchAll(/android:name="([a-z.]*permission[A-Za-z_.]*)"/g)]
+      .map((m) => m[1].split('.').pop()))].filter((x) => x !== 'DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION');
+    const missing = perms.filter((x) => !ans.includes(x));
+    missing.length ? bad(`답안에 없는 권한 ${missing.length}개`, missing.join(', ') + ' — 심사답안 4항에 적는다')
+                   : good(`권한 ${perms.length}개가 모두 답안에 있다`);
+    // TWA 시절 답안은 결제 권한이 있다고 적어 두었다. 지금 빌드에는 없다.
+    if (/BILLING/.test(merged)) hmm('결제 권한이 들어 있다', '인앱 구매 답을 다시 본다');
+    else if (/BILLING[^\n]*있음/.test(ans)) bad('답안이 결제 권한이 있다고 말한다', '지금 빌드에는 없다');
+    else good('결제 권한 없음 — 답안도 그렇게 적혀 있다');
+  }
+  /계정 삭제 URL \| \S*delete-account/.test(ans)
+    ? good('답안의 계정 삭제 URL 이 삭제 안내다')
+    : bad('답안의 계정 삭제 URL 이 삭제 안내가 아니다', 'store-assets/제출용/심사답안.md 3항');
 }
 
 // ── 5. 앱에 넣을 화면 ───────────────────────────────────────
@@ -178,10 +217,20 @@ head('7. 나가면 안 될 것');
 head('8. Render 에 넣을 것');
 {
   const s = read('server.js') + read('accounts.js') + (read('fcm.js') || '');
-  const need = [...new Set((s.match(/process\.env\.[A-Z_0-9]+/g) || []).map(m => m.slice(12)))]
-    .filter(k => !['NODE_ENV', 'PORT', 'MINI_ON', 'AD_MODE'].includes(k));
-  console.log(`  ${D}코드가 찾는 값 — 콘솔에서 하나씩 대조한다${X}`);
-  console.log('      ' + need.sort().join(', '));
+  // 빈 문자열로 떨어지는 것(`|| ''`)은 "기본값이 있다" 가 아니라 "안 넣으면
+  // 그 기능이 조용히 꺼진다" 는 뜻이다. 진짜 기본값이 있는 것만 따로 센다.
+  const all = [...new Set((s.match(/process\.env\.[A-Z_0-9]+/g) || []).map(m => m.slice(12)))]
+    .filter(k => !['NODE_ENV', 'PORT', 'FF_DATA_FILE'].includes(k)).sort();
+  const realDefault = (k) => {
+    const m = new RegExp(`process\\.env\\.${k}\\s*\\|\\|\\s*(['"\`])(.*?)\\1`).exec(s);
+    return m ? m[2] : null;                        // '' 이면 기본값이 아니다
+  };
+  const opt = all.filter(k => realDefault(k));
+  const must = all.filter(k => !realDefault(k));
+  console.log(`  ${D}안 넣으면 그 기능이 조용히 꺼지는 값 — 콘솔에서 하나씩 대조한다${X}`);
+  console.log('      ' + must.join(', '));
+  console.log(`  ${D}진짜 기본값이 있어 안 넣어도 되는 값${X}`);
+  console.log('      ' + opt.map(k => `${k}=${realDefault(k)}`).join(', '));
   has('android/app/google-services.json')
     ? good('google-services.json 이 있다 (앱 알림 켜짐)')
     : hmm('google-services.json 이 없다', '앱 알림(FCM)이 조용히 꺼진 채로 나간다. 필요 없으면 넘어간다');

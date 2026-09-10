@@ -1,12 +1,14 @@
 // 솔로(AI) 3인전·4인전 — 자리 수가 요청대로 잡히는지, 이상한 값은 막는지
 const io = require('/Users/jinmo9/참치/my-game/node_modules/socket.io-client');
+const { liveServer } = require('./live');
+let URL;                       // 아래에서 자기 서버를 띄우고 채운다
 let pass = 0, fail = 0;
 const ok = (n, c) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n)); };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function solo(n, ip) {
   return new Promise((res) => {
-    const s = io('http://localhost:3000', { transports: ['websocket'], forceNew: true,
+    const s = io(URL, { transports: ['websocket'], forceNew: true,
                                             extraHeaders: { 'X-Forwarded-For': ip } });
     let beg = null, st = null;
     s.on('connect', () => s.emit('g4_start', n === undefined ? { nick: 'S' } : { nick: 'S', n }));
@@ -17,6 +19,7 @@ function solo(n, ip) {
 }
 
 (async () => {
+  URL = (await liveServer(39524)).url;
   console.log('\n① 3인전 요청 → AI 2명과 셋이서');
   {
     const { beg, st } = await solo(3, '10.9.1.1');

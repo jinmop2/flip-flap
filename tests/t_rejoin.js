@@ -7,10 +7,12 @@
 // 방을 만들 때 pid 를 안 넣어 두면 유예가 아무 소용이 없다 — 60초를 줘도
 // 돌아올 방법이 없다.
 const io = require('/Users/jinmo9/참치/my-game/node_modules/socket.io-client');
+const { liveServer } = require('./live');
+let URL;                       // 아래에서 자기 서버를 띄우고 채운다
 let pass = 0, fail = 0;
 const ok = (n, c, x) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (x !== undefined ? '  ' + x : ''))); };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const mk = (ip) => io('http://localhost:3000', { transports: ['websocket'], forceNew: true,
+const mk = (ip) => io(URL, { transports: ['websocket'], forceNew: true,
   reconnection: false, extraHeaders: { 'X-Forwarded-For': ip } });
 
 function player(i, pid) {
@@ -25,6 +27,7 @@ function player(i, pid) {
 }
 
 (async () => {
+  URL = (await liveServer(39523)).url;
   console.log('① 둘이 붙어 판을 시작한다');
   // 방을 직접 만든다 — 빠른 매칭은 모드를 무작위로 뽑아서(트웰브가 걸리면
   // 신호가 다르다) 시험이 들쭉날쭉해진다. 재접속 길은 어느 쪽이든 같다.

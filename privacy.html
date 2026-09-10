@@ -36,7 +36,7 @@ AdMob 에 넘기지 않지만, AdMob 은 광고를 고르기 위해 <b>광고 ID
 <table>
 <tr><th>구분</th><th>항목</th><th>모으는 때</th></tr>
 <tr><td>계정 (아이디 가입)</td><td>아이디, 닉네임, 비밀번호(원문이 아닌 <code>scrypt</code> 해시)</td><td>가입할 때</td></tr>
-<tr><td>계정 (소셜 로그인)</td><td>카카오·구글이 주는 <b>고유 번호</b>와 닉네임<br>(이메일·전화번호·프로필 사진은 받지 않습니다)</td><td>소셜 로그인할 때</td></tr>
+<tr><td>계정 (소셜 로그인)</td><td>카카오·구글·애플이 주는 <b>고유 번호</b>와 표시 이름<br>(이메일·전화번호·프로필 사진은 <b>달라고 하지 않습니다</b>)</td><td>소셜 로그인할 때</td></tr>
 <tr><td>게임 기록</td><td>전적·레벨·경험치·등급(RP)·코인·파편·보유 아이템·칭호·출석 기록</td><td>게임을 하는 동안</td></tr>
 <tr><td>소통 내용</td><td>클랜 채팅·친구 쪽지 내용, 친구·클랜 관계, 차단·신고 기록</td><td>보낼 때</td></tr>
 <tr><td>기기 지문</td><td>접속 IP를 <b>되돌릴 수 없게 섞어 만든 해시 16자</b><br>(IP 원문은 저장하지 않습니다)</td><td>가입할 때</td></tr>
@@ -66,6 +66,7 @@ AdMob 에 넘기지 않지만, AdMob 은 광고를 고르기 위해 <b>광고 ID
 <tr><td>Google</td><td>구글 로그인, 글꼴(Google Fonts)</td><td>로그인 시 고유 번호 / 글꼴을 받을 때 접속 IP</td></tr>
 <tr><td>Google AdMob<br><span class="sub">앱에서만</span></td><td>광고 내보내기</td><td>게임이 넘기는 정보는 없습니다.<br>AdMob 이 기기에서 직접 광고 ID·기기 정보를 씁니다
 (<a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener">구글 정책</a>)</td></tr>
+<tr><td>Apple<br><span class="sub">켜 둔 경우에만</span></td><td>애플 로그인</td><td>로그인을 고른 경우에만, 애플이 주는 고유 번호</td></tr>
 <tr><td>Google Firebase<br><span class="sub">앱에서만</span></td><td>알림 보내기</td><td>알림을 켰을 때만, 그 기기의 알림 토큰</td></tr>
 </table>
 <p>광고 ID 는 기기 설정에서 직접 초기화하거나 끌 수 있습니다 —

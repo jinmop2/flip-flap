@@ -3,7 +3,12 @@ npm-debug.log*
 .DS_Store
 .env
 data/
-store-assets/
+# 스토어 제출물 — 스크린샷·그래픽은 결과물이라 넣지 않는다.
+# 다만 심사답안·등록정보는 정책 판단이 적힌 글이라 잃으면 다시 못 만든다.
+store-assets/*
+!store-assets/제출용/
+store-assets/제출용/*
+!store-assets/제출용/*.md
 
 # 안드로이드 빌드 — 서명 키스토어와 비밀번호가 들어있으므로 절대 커밋 금지
 android-build/

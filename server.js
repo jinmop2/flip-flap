@@ -832,7 +832,7 @@ app.get('/auth/apple', rateLimit(30), (req, res) => {
   const n = appleNonce(isApp);
   const p = new URLSearchParams({
     client_id: APPLE_ID, redirect_uri: baseURL(req) + '/auth/apple/callback',
-    response_type: 'code id_token', response_mode: 'form_post', scope: 'name email',
+    response_type: 'code id_token', response_mode: 'form_post', scope: 'name',
     state: (isApp ? 'app:' : 'web:') + n, nonce: n,
   });
   res.redirect('https://appleid.apple.com/auth/authorize?' + p.toString());
@@ -853,7 +853,6 @@ app.post('/auth/apple/callback', express.urlencoded({ extended: false, limit: '8
     // 이름은 첫 로그인 때 딱 한 번만 온다. 놓치면 다시는 못 받는다.
     let nick = '';
     try { const u = JSON.parse((req.body && req.body.user) || '{}'); nick = [u.name && u.name.firstName, u.name && u.name.lastName].filter(Boolean).join(' '); } catch (_) {}
-    if (!nick && v.email) nick = v.email.split('@')[0];
     const out = accounts.appleLogin(v.sub, nick);
     if (out.isNew) stats.bump('signups');
     back('#ktoken=' + out.token + (out.isNew ? '&knew=1' : ''));
@@ -864,7 +863,7 @@ app.get('/api/kakao-enabled', (req, res) => res.json({ enabled: !!KAKAO_REST_KEY
 app.get('/auth/google', rateLimit(30), (req, res) => {
   if (!GOOGLE_ID) return res.redirect(authBack(req, '#kerr=' + encodeURIComponent('구글 로그인이 아직 설정되지 않았어요')));
   const redirect = encodeURIComponent(baseURL(req) + '/auth/google/callback');
-  const p = new URLSearchParams({ client_id: GOOGLE_ID, redirect_uri: baseURL(req) + '/auth/google/callback', response_type: 'code', scope: 'openid email profile', prompt: 'select_account' });
+  const p = new URLSearchParams({ client_id: GOOGLE_ID, redirect_uri: baseURL(req) + '/auth/google/callback', response_type: 'code', scope: 'openid profile', prompt: 'select_account' });
   if (String(req.query.app || '') === '1') p.set('state', 'app');   // 앱에서 시작했다
   res.redirect('https://accounts.google.com/o/oauth2/v2/auth?' + p.toString());
 });
@@ -881,7 +880,10 @@ app.get('/auth/google/callback', rateLimit(30), async (req, res) => {
     const ur = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', { headers: { Authorization: 'Bearer ' + tok.access_token } });
     const gu = await ur.json();
     if (!gu.id) { console.error('구글 유저 조회 실패:', JSON.stringify(gu)); return res.redirect(authBack(req, '#kerr=' + encodeURIComponent('구글 정보를 가져오지 못했어요'))); }
-    const nick = gu.name || (gu.email ? gu.email.split('@')[0] : '플레이어');
+    // 이름이 없어도 메일 앞부분을 닉으로 쓰지 않는다 — 그건 남에게 보이는
+    // 자리라서, 본인이 정하기 전에 메일 주소가 새어 나간다.
+    // 어차피 nickSet:false 라 첫 로그인에서 본인이 바로 고른다.
+    const nick = gu.name || '플레이어';
     const out = accounts.googleLogin(gu.id, nick);
     if (out.isNew) stats.bump('signups');
     res.redirect(authBack(req, '#ktoken=' + out.token + (out.isNew ? '&knew=1' : '')));
