@@ -55,6 +55,20 @@ android {
     }
 }
 
+// 열쇠가 없는데 release 를 부르면 여기서 멈춘다.
+// 안 막으면 그래들은 "성공" 이라 말하며 서명 없는 AAB 를 뱉고,
+// 그걸 올리면 스토어가 알아듣기 힘든 말로 되돌려 보낸다.
+if (!canSign && gradle.startParameter.taskNames.any { it =~ /(?i)(bundle|assemble|install)Release/ }) {
+    def why = !ksPath ? "android/keystore.properties 가 없다 (keystore.properties.example 을 복사해 채운다)"
+            : !file(ksPath).exists() ? "storeFile 이 가리키는 곳에 열쇠가 없다 — ${file(ksPath).absolutePath}"
+            : "storePassword 가 비었다"
+    throw new GradleException(
+        "\n\n  서명 열쇠가 없어 release 를 만들지 않는다.\n" +
+        "  ${why}\n\n" +
+        "  열쇠는 TWA 때 쓰던 그것이어야 한다. 새로 만들면 스토어가 거절한다.\n" +
+        "  시험만 할 거면:  ./gradlew assembleDebug\n")
+}
+
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'

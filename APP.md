@@ -98,7 +98,11 @@ npx cap sync android
 # 2. 판 번호를 올린다 (android/app/build.gradle 의 versionCode)
 #    스토어는 늘 더 큰 번호만 받는다. TWA 가 4 까지 썼으므로 5 부터다.
 
-# 3. 스토어에 올릴 묶음
+# 3. 빠뜨린 게 없는지 훑는다 (막는 게 있으면 1 로 끝난다)
+node tools/preflight.mjs
+node tools/preflight.mjs --net     # 스토어에 적어 둔 주소까지 두드려 본다
+
+# 4. 스토어에 올릴 묶음
 cd android && ./gradlew bundleRelease      # → app/build/outputs/bundle/release/*.aab
 
 # 기기에 바로 넣어 보려면
@@ -107,6 +111,11 @@ cd android && ./gradlew assembleDebug      # → app/build/outputs/apk/debug/app
 
 `node tools/build-app.mjs` 를 빠뜨리면 **앱 안의 화면만 옛 버전으로 남는다.**
 웹은 이미 새것이라 눈치채기 어렵다 — 낼 때마다 첫 줄부터 다시 돈다.
+`preflight` 가 이것도 본다 (app-www 가 public/ 보다 낡았는지).
+
+`android/keystore.properties` 가 없으면 `bundleRelease` 는 **거기서 멈춘다.**
+예전엔 안 멈추고 서명 없는 13MB AAB 를 뱉었다 — 스토어는 그걸
+알아듣기 힘든 말로 되돌려 보낸다. 열쇠는 **TWA 때 쓰던 그것**이어야 한다.
 
 ---
 

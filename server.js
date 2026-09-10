@@ -87,6 +87,10 @@ for (const [route, file] of [['/privacy', 'privacy.html'], ['/terms', 'terms.htm
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.sendFile(path.join(__dirname, file));
   });
+  // 예전에 /privacy.html 로 내보내던 사본이 public/ 에 따로 있었다. 그쪽만
+  // 안 고쳐져 낡은 내용이 계속 나갔다 — 사본을 지우고 이리로 모은다.
+  // 밖에 적어 둔 주소(스토어·카카오·구글)가 .html 쪽일 수 있어 길은 남긴다.
+  app.get(route + '.html', rateLimit(30), (req, res) => res.redirect(301, route));
 }
 app.get('/health', (req, res) => res.json({
   ok: true, rooms: Object.keys(rooms).length, uptime: Math.round(process.uptime()),
