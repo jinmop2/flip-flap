@@ -2,10 +2,12 @@
 // 순서제는 "내 차례가 와야 낼 수 있다" 라서, 서버가 순서를 잘못 잡으면
 // 아무도 못 내고 판이 멈춘다. 그 지점을 집중해서 본다.
 const io = require('/Users/jinmo9/참치/my-game/node_modules/socket.io-client');
+const { liveServer } = require('./live');
+let URL;                       // 아래에서 자기 서버를 띄우고 채운다
 let pass = 0, fail = 0;
 const ok = (n, c, extra) => { c ? (pass++, console.log('  ✓ ' + n)) : (fail++, console.log('  ✗ ' + n + (extra ? '  ' + extra : ''))); };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const mk = (ip) => io('http://localhost:3000', { transports: ['websocket'], forceNew: true, extraHeaders: { 'X-Forwarded-For': ip } });
+const mk = (ip) => io(URL, { transports: ['websocket'], forceNew: true, extraHeaders: { 'X-Forwarded-For': ip } });
 
 function join(i, base) {
   const p = { i, s: mk(base + i), st: null, seat: null, begun: false, errors: [], states: 0 };
@@ -43,6 +45,7 @@ function autoplay(p) {
 }
 
 (async () => {
+  URL = (await liveServer(39522)).url;
   console.log('\n① 사람 셋이 모여 3인전을 시작한다');
   const P = [1, 2, 3].map((i) => join(i, '10.7.1.'));
   await wait(2500);
@@ -54,14 +57,19 @@ function autoplay(p) {
   ok('3인전 · 전원 사람', P[0].st && P[0].st.n === 3 && P[0].st.seats.every((x) => !x.isBot));
 
   console.log('\n② 클로즈 순차 공개 — 순서·공개 범위가 맞는가');
+  // 서버는 한 사람이 안 두면 TURN_MS(25초) 뒤에 AI 가 대신 둔다. 그보다 먼저
+  // "멈췄다" 고 단정하면, 소켓 하나가 잠깐 늦은 것도 실패로 잡힌다 —
+  // 기계가 바쁠 때만 빨개지는 시금석이 되어 아무도 안 믿게 된다.
+  // 서버가 손쓸 시간을 준 뒤에도 그대로면, 그때가 진짜 멈춘 것이다.
+  const STALL = Math.ceil(30000 / 150);            // 30초 (서버 25초 + 여유)
   let sawClosed = false, seqOk = true, leakOk = true, stalls = 0;
   let lastSig = '', same = 0;
-  for (let step = 0; step < 400; step++) {
+  for (let step = 0; step < 600; step++) {
     const s = P[0].st;
     if (s && s.over) break;
     const sig = s ? (s.turn + '|' + s.phase + '|' + JSON.stringify(s.auction && s.auction.bids ? Object.keys(s.auction.bids) : [])) : '';
     if (sig === lastSig) same++; else { same = 0; lastSig = sig; }
-    if (same > 60) { stalls++; break; }
+    if (same > STALL) { stalls++; break; }
 
     if (s && s.phase === 'bidding' && s.auction && s.auction.closed) {
       sawClosed = true;

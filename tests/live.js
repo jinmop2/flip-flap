@@ -14,8 +14,12 @@ const root = path.join(__dirname, '..');
 // port 는 시금석마다 다른 번호로 (같이 쓰면 처음 문제로 되돌아간다)
 async function liveServer(port, env = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fflive-'));
+  // 서버가 뭐라고 했는지 버리지 않는다. 시금석이 빨개졌을 때 정작 서버가
+  // 남긴 말이 없으면, 남는 건 짐작뿐이다.
+  const logPath = path.join(os.tmpdir(), `fflive-${port}.log`);
+  const log = fs.openSync(logPath, 'w');
   const sv = spawn('node', ['server.js'], {
-    cwd: root, stdio: 'ignore',
+    cwd: root, stdio: ['ignore', log, log],
     env: { ...process.env, PORT: String(port), FF_DATA_FILE: path.join(dir, 'a.json'), ...env },
   });
   const url = 'http://localhost:' + port;
@@ -23,6 +27,7 @@ async function liveServer(port, env = {}) {
   // 죽이지는 않는다. 어차피 임시 폴더라 남아도 기계가 치운다.
   const stop = () => {
     try { sv.kill('SIGKILL'); } catch (_) {}
+    try { fs.closeSync(log); } catch (_) {}
     try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); } catch (_) {}
   };
   process.on('exit', stop);
@@ -30,11 +35,11 @@ async function liveServer(port, env = {}) {
 
   // 뜰 때까지 기다린다 — 고정 시간으로 재면 기계가 바쁜 날에 깨진다
   for (let i = 0; i < 150; i++) {
-    try { if ((await fetch(url + '/health')).ok) return { url, stop, proc: sv }; } catch (_) {}
+    try { if ((await fetch(url + '/health')).ok) return { url, stop, proc: sv, logPath }; } catch (_) {}
     await new Promise((r) => setTimeout(r, 100));
   }
   stop();
-  throw new Error(`서버가 ${port} 에서 15초 안에 안 떴다`);
+  throw new Error(`서버가 ${port} 에서 15초 안에 안 떴다 — 서버가 남긴 말: ${logPath}`);
 }
 
 module.exports = { liveServer };

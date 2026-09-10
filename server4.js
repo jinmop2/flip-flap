@@ -218,7 +218,19 @@ function attach4(io, hooks = {}) {
           return schedule(roomId, T.bid);
         }
         if (G.allBidsIn(g) || !G.bidderSeats(g).length) return toShowdown(roomId);
-        return push(roomId);
+        // 낼 사람이 남았는데 사람도 AI 도 아니다 — 끊긴 자리가 되찾을 시간을
+        // 쓰는 중이다(SEAT_GRACE). 여기서 그냥 돌아가면 다음 박자가 없어
+        // 이 방의 시계가 아예 선다. 남은 사람은 아무 설명 없이 멈춘 판을 본다.
+        // 이 모듈의 불변식은 "step 은 늘 다음 박자를 남기거나 끝을 낸다" 이다.
+        // 480ms 마다 다시 들르므로, 같은 자리를 두고는 한 번만 적는다
+        const key = g.turn + ':' + g.phase + ':' + G.turnToBid(g);
+        if (r.waitingNobody !== key) {
+          r.waitingNobody = key;
+          console.warn('[g4] 낼 사람이 자리에 없어 기다립니다 room=' + roomId
+                       + ' seat=' + G.turnToBid(g) + ' phase=' + g.phase);
+        }
+        push(roomId);
+        return schedule(roomId, T.bid);
       }
 
       // 다 냈지만 아직 안 뒤집은 상태. 화면에는 뒷면이 그대로 깔려 있다.
