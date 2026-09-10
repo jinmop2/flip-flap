@@ -81,9 +81,13 @@ ok('빠른 입장에 없다', !/<button class="mm-tile t-mini" onclick="quickJoi
 ok('솔로 패널에도 없다', !/<div class="sm-item t-mini"/.test(live));
 ok('방 모드 고르기에도 없다', !/<button class="wc-mode" data-m="mini"/.test(live));
 ok('설명서·튜토리얼에도 없다', !/tutStart\('mini'\)/.test(live) && !/soloPick\('mini'\)/.test(live));
+// 판정·화면 코드는 그대로 두고 입구만 막았다 — 규제 정리가 끝나면 되살린다.
+// 다만 서버까지 막아야 "도박 요소 없음" 이 사실이 된다(t_minilock 이 실제로 불러 본다).
 ok('되살릴 자리는 남겨 두었다', /quickJoin\('mini'\)/.test(htm)
-   && /\['classic', 'item', 'quad', 'twelve', 'mini'\]\.includes\(mode\)/.test(srv)
+   && /const MINI_ON = process\.env\.MINI_ON === '1'/.test(srv)
    && /mini: '미니게임'/.test(cli));
+ok('기본은 서버에서도 잠겨 있다',
+   /const PICKABLE_MODES = \['classic', 'item', 'quad', 'twelve', \.\.\.\(MINI_ON \? \['mini'\] : \[\]\)\]/.test(srv));
 // 하나 빠져 다섯 칸이다 — 여섯일 때보다 글씨를 키울 수 있다
 ok('빠른 입장이 다섯 칸이다', /<div class="mm-tiles c5">/.test(htm)
    && /\.mm-tiles\.c5 \{ grid-template-columns:repeat\(5, 1fr\); gap:6px; \}/.test(htm));

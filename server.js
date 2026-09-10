@@ -1455,6 +1455,13 @@ const MAX_CONN_PER_IP = 8;           // IP당 소켓 연결 상한
 const connByIp = new Map();
 // 랭크게임에서 나올 수 있는 판. 무엇이 걸릴지 모르니 세 가지를 다 익혀야 한다 —
 // 한 모드만 파고들어 점수를 쌓는 길을 막는 것이 이 무작위의 뜻이다.
+// 고를 수 있는 모드. 화면의 단추만 지우면 소켓으로 직접 부르는 길이 남는다 —
+// 미니게임(섯다식 배팅)은 사행성 모사로 분류될 수 있어 입구를 막아 둔 것이라,
+// 그 길까지 막아야 "이 앱에 도박 요소가 없다" 가 사실이 된다.
+// 되살릴 때는 MINI_ON=1 하나면 된다(화면 쪽 주석도 같이 풀어야 한다).
+const MINI_ON = process.env.MINI_ON === '1';
+const PICKABLE_MODES = ['classic', 'item', 'quad', 'twelve', ...(MINI_ON ? ['mini'] : [])];
+if (!MINI_ON) console.log('ℹ 미니게임 잠김 — 되살리려면 MINI_ON=1');
 const RANKED_MODES = ['classic', 'item', 'twelve'];
 // 화면에서 모드 룰렛이 도는 시간. 이만큼은 판을 안 연다 — 클라이언트의
 // rankRoulette(1.5초 회전 + 0.7초 멈춤)과 맞춰 둔다.
@@ -1824,7 +1831,7 @@ io.on('connection', (socket) => {
     const roomId = socket.roomId;
     const room = rooms[roomId];
     if (!room || room.game || socket.playerIndex !== 0) return;
-    if (['item', 'classic', 'quad', 'twelve', 'mini', 'random'].includes(mode)) {
+    if ([...PICKABLE_MODES, 'random'].includes(mode)) {
       room.mode = mode; room.itemMode = mode === 'item';
     }
     // 랜덤이면 지금 뽑는다 — 자리에 앉은 사람들이 무엇을 할지는 이 순간 정해진다.
@@ -2224,7 +2231,7 @@ io.on('connection', (socket) => {
   socket.on('quick_join', ({ mode, pid, nick } = {}) => {
     if (socket.roomId && rooms[socket.roomId]) return;
     dequeue(socket.id);
-    if (!['classic', 'item', 'quad', 'twelve', 'mini'].includes(mode)) return socket.emit('error', '알 수 없는 모드예요.');
+    if (!PICKABLE_MODES.includes(mode)) return socket.emit('error', '알 수 없는 모드예요.');
     const item = mode === 'item';
 
     // 들어갈 만한 방: 같은 모드 · 비밀방 아님 · AI전 아님 · 아직 안 시작 · 자리 남음

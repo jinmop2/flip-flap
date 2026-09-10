@@ -124,7 +124,8 @@ ok('클라이언트에 빠른 입장 버튼 셋', (htm.match(/quickJoin\('(class
 ok('랭크게임 버튼', /onclick="quickMatch\(\)"[\s\S]{0,200}랭크게임/.test(htm));
 ok('랭크게임 칸에 내 등급이 보인다', /id="mmRank"/.test(htm) && /mmRank/.test(cli));
 ok('다인전 빠른 입장도 같은 대기실을 쓴다',
-   !/q4Quick/.test(cli) && /\['classic', 'item', 'quad', 'twelve', 'mini'\]\.includes\(mode\)/.test(srv));
+   !/q4Quick/.test(cli) && /PICKABLE_MODES\.includes\(mode\)/.test(srv)
+   && /PICKABLE_MODES = \['classic', 'item', 'quad', 'twelve'/.test(srv));
 ok('빠른 입장이 자리 남은 방을 찾는다', /n > 0 && n < capOf\(r\)/.test(srv));
 ok('다인전 빠른 입장 방 이름이 있다', /다인전 빠른 입장/.test(srv));
 ok('코드 로그인은 화면에서 사라졌다', !/코드로 시작/.test(htm) && !/codeLogin/.test(htm) && !/submitCode/.test(cli));
@@ -373,7 +374,8 @@ ok('안 쓰는 배경음 원본은 뺐다', !fs.existsSync(path.join(__dirname, 
 // 방 만들기에도 TWELVE 가 있어야 한다 — 모드가 넷이 됐다
 ok('대기실에 TWELVE 칸', /data-m="twelve" onclick="roomMode\('twelve'\)"/.test(htm));
 ok('넷이라 두 줄로 편다', /\.wc-modes \{ display:grid; grid-template-columns:1fr 1fr/.test(htm));
-ok('서버가 twelve 를 받는다', /\['item', 'classic', 'quad', 'twelve', 'mini', 'random'\]\.includes\(mode\)/.test(srv)
+ok('서버가 twelve 를 받는다', /\[\.\.\.PICKABLE_MODES, 'random'\]\.includes\(mode\)/.test(srv)
+   && /PICKABLE_MODES = \['classic', 'item', 'quad', 'twelve'/.test(srv)
    && /room\.mode === 'twelve'\) \{ tvStart/.test(srv));
 // 랜덤이 붙어 여섯이 됐다 — 모드가 아니라 '고르지 않기' 지만 이름표는 필요하다
 ok('모드 이름표가 여섯 다 있다', /MODE_NAME = \{ classic: '클래식', item: '아이템전', twelve: 'TWELVE', quad: '다인전', mini: '미니게임', random: '랜덤' \}/.test(cli));
