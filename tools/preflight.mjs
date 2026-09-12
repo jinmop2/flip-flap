@@ -27,7 +27,13 @@ const head = t => console.log(`\n${B}${t}${X}`);
 head('1. 서명');
 {
   const g = read('android/app/build.gradle') || '';
-  if (has('android/keystore.properties')) {
+  // 환경변수로 주는 길도 있다 — 그쪽을 쓰면 파일이 없는 게 정상이다
+  if (process.env.FF_KEYSTORE) {
+    const f = path.resolve(p('android/app'), process.env.FF_KEYSTORE);
+    !fs.existsSync(f) ? bad('FF_KEYSTORE 가 가리키는 곳에 열쇠가 없다', f)
+      : !process.env.FF_KEYSTORE_PASSWORD ? bad('FF_KEYSTORE_PASSWORD 가 비었다', 'read -s 로 받아 넣는다')
+      : good('환경변수로 준 열쇠를 찾았다 (파일에 비밀번호를 안 남긴다)');
+  } else if (has('android/keystore.properties')) {
     const ks = read('android/keystore.properties');
     const m = /storeFile\s*=\s*(.+)/.exec(ks);
     const f = m && path.resolve(p('android/app'), m[1].trim());
@@ -36,8 +42,10 @@ head('1. 서명');
     else if (!/storePassword\s*=\s*\S/.test(ks) || /여기에/.test(ks)) bad('비밀번호가 아직 예시 그대로다', 'android/keystore.properties');
     else good('열쇠와 비밀번호가 제자리에 있다');
   } else {
-    bad('android/keystore.properties 가 없다',
+    bad('서명 열쇠를 못 찾겠다',
         'cp android/keystore.properties.example android/keystore.properties  → 값을 채운다.\n' +
+        '      비밀번호를 디스크에 안 남기려면 환경변수로 줘도 된다 —\n' +
+        '      FF_KEYSTORE · FF_KEYSTORE_PASSWORD · FF_KEY_ALIAS · FF_KEY_PASSWORD (APP.md 참고).\n' +
         '      열쇠는 TWA 때 쓰던 그것이어야 한다. 새로 만들면 스토어가 거절한다.');
   }
   // cap sync 가 build.gradle 을 덮어쓴다 — 서명 얼개가 살아 있는지 매번 본다

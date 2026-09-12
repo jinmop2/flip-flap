@@ -118,6 +118,25 @@ cd android && ./gradlew assembleDebug      # → app/build/outputs/apk/debug/app
 웹은 이미 새것이라 눈치채기 어렵다 — 낼 때마다 첫 줄부터 다시 돈다.
 `preflight` 가 이것도 본다 (app-www 가 public/ 보다 낡았는지).
 
+### 비밀번호를 파일에 안 적고 만드는 길
+
+`android/keystore.properties` 에 적어 두면 편하지만, 그건 비밀번호가 디스크에
+평문으로 남는다는 뜻이다. 한 번만 낼 거면 환경변수로 주는 편이 낫다 —
+`read -s` 로 받으면 셸 기록에도 안 남는다.
+
+```bash
+read -s -p "키스토어 비밀번호: " P; echo
+cd android
+FF_KEYSTORE=../../android-build/android.keystore \
+FF_KEYSTORE_PASSWORD="$P" FF_KEY_ALIAS=flipflap FF_KEY_PASSWORD="$P" \
+./gradlew bundleRelease
+unset P
+```
+
+이 길로 실제로 만들어 봤다(버리는 열쇠로). AAB 에 서명이 붙고
+`base/assets/public/` 에 화면 33개가, `mipmap-*` 에 진짜 아이콘이 들어간다.
+남은 것은 **진짜 열쇠뿐**이다.
+
 `android/keystore.properties` 가 없으면 `bundleRelease` 는 **거기서 멈춘다.**
 예전엔 안 멈추고 서명 없는 13MB AAB 를 뱉었다 — 스토어는 그걸
 알아듣기 힘든 말로 되돌려 보낸다. 열쇠는 **TWA 때 쓰던 그것**이어야 한다.
