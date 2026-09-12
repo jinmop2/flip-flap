@@ -98,11 +98,16 @@ npx cap sync android
 # 2. 판 번호를 올린다 (android/app/build.gradle 의 versionCode)
 #    스토어는 늘 더 큰 번호만 받는다. TWA 가 4 까지 썼으므로 5 부터다.
 
-# 3. 빠뜨린 게 없는지 훑는다 (막는 게 있으면 1 로 끝난다)
-node tools/preflight.mjs
+# 3. 시금석 한 바퀴 (하나라도 빨가면 1 로 끝난다)
+npm test
+npm test -- q4 rejoin      # 이름에 그 글자가 든 것만
+npm test -- --slow         # 오래 걸린 순서도 같이
+
+# 4. 빠뜨린 게 없는지 훑는다 (막는 게 있으면 1 로 끝난다)
+npm run preflight
 node tools/preflight.mjs --net     # 스토어에 적어 둔 주소까지 두드려 본다
 
-# 4. 스토어에 올릴 묶음
+# 5. 스토어에 올릴 묶음
 cd android && ./gradlew bundleRelease      # → app/build/outputs/bundle/release/*.aab
 
 # 기기에 바로 넣어 보려면

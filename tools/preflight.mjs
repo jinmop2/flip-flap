@@ -146,6 +146,18 @@ head('4-2. 심사답안 ↔ 빌드된 매니페스트');
     else if (/BILLING[^\n]*있음/.test(ans)) bad('답안이 결제 권한이 있다고 말한다', '지금 빌드에는 없다');
     else good('결제 권한 없음 — 답안도 그렇게 적혀 있다');
   }
+  // 데이터 안전에 "전송 중 암호화 예" 로 답한다. 평문 허용이 하나라도
+  // 끼면 그 답이 거짓이 되고, 앱이 붙는 곳도 조용히 http 로 내려갈 수 있다.
+  const man = read('android/app/src/main/AndroidManifest.xml') || '';
+  const cfg = read('capacitor.config.json') || '';
+  const xmlDir = p('android/app/src/main/res/xml');
+  const xmls = fs.existsSync(xmlDir)
+    ? fs.readdirSync(xmlDir).map((f) => fs.readFileSync(path.join(xmlDir, f), 'utf8')).join('\n') : '';
+  const cleartext = /usesCleartextTraffic="true"/.test(man) || /cleartextTrafficPermitted="true"/.test(xmls)
+    || /"allowMixedContent":\s*true/.test(cfg) || /"androidScheme":\s*"http"/.test(cfg);
+  cleartext ? bad('평문 통신이 열려 있다', '데이터 안전의 "전송 중 암호화" 답과 어긋난다')
+            : good('평문 통신이 막혀 있다 (전송 중 암호화 답과 맞다)');
+
   /계정 삭제 URL \| \S*delete-account/.test(ans)
     ? good('답안의 계정 삭제 URL 이 삭제 안내다')
     : bad('답안의 계정 삭제 URL 이 삭제 안내가 아니다', 'store-assets/제출용/심사답안.md 3항');

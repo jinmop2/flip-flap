@@ -3657,4 +3657,5 @@ module.exports = {
   fcmSave, fcmDrop, fcmTokensOf, fcmForget,
   markRetention, retentionStats, retentionRough,
   bonusVerify, adConfig,
+  ipTag,        // 같은 곳에서 왔는지만 견주면 되는 자리에 원본 대신 쓴다
 };

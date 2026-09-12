@@ -11,6 +11,9 @@ const G = require('./game4');
 const V4 = require('./view4');   // 자리마다 보여줄 것을 고르는 곳 — 화면과 같이 쓴다
 const AI = require('./ai4');
 const accounts = require('./accounts');
+// 좌석에는 IP 원본을 안 담는다 — 같은 곳에서 왔는지만 견주면 되므로
+// 소금 섞은 지문으로 충분하다. 원본을 들고 있으면 그건 그냥 개인정보 보관이다.
+const ipTag = (ip) => accounts.ipTag(ip);
 
 const MAX_ROOMS4 = 300;
 const BOT_NICKS = ['경매왕 덕배', '큰손 미스박', '눈치백단 재훈', '허세왕 태식', '침착한 소연',
@@ -261,8 +264,10 @@ function attach4(io, hooks = {}) {
     for (let i = 0; i < r.seats.length; i++) if (r.seats[i].token) humans.push(i);   // 로그인한 사람 자리만
     if (humans.length < 2) { dbg('RP 미반영 — 사람 ' + humans.length + '명'); return; }   // AI 대전으로는 RP 없음
 
+    // 같은 곳에서 온 사람들끼리 RP 를 주고받는 걸 막는다. 견주기만 하면 되므로
+    // 좌석에는 원본이 아니라 지문(소금 섞은 해시)을 담아 둔다.
     const ips = humans.map((i) => r.seats[i].ip).filter(Boolean);
-    if (new Set(ips).size !== ips.length) { dbg('RP 미반영 — 같은 IP'); return; }   // 파밍 방지
+    if (new Set(ips).size !== ips.length) { dbg('RP 미반영 — 같은 곳'); return; }   // 파밍 방지
 
     const secs = Math.floor((Date.now() - r.startedAt) / 1000);
     if (g.turn < RP_MIN_TURNS || secs < RP_MIN_SEC) {                  // 너무 짧은 판은 무효
@@ -327,7 +332,7 @@ function attach4(io, hooks = {}) {
     if (!p) p = Object.values(pendings).find((x) => x.seats.some((s) => !s));
     if (!p) { p = { id: 'W' + Math.random().toString(36).slice(2, 7).toUpperCase(), seats: [null, null, null, null] }; pendings[p.id] = p; }
     const i = p.seats.findIndex((s) => !s);
-    p.seats[i] = { sid: socket.id, nick, token: socket.token || null, ip: socket.clientIp || null };
+    p.seats[i] = { sid: socket.id, nick, token: socket.token || null, ip: ipTag(socket.clientIp) };
     socket.g4pending = p.id;
     pushPending(p);
     if (p.seats.filter(Boolean).length >= 4) beginPending(p);   // 다 차면 바로 시작
@@ -359,7 +364,7 @@ function attach4(io, hooks = {}) {
       if (hi < humans.length) {
         const sk = io.sockets.sockets.get(humans[hi].sid);
         seats[idx] = { sid: humans[hi].sid, nick: humans[hi].nick, isBot: false, orphanAt: null,
-                       token: (sk && sk.token) || null, ip: (sk && sk.clientIp) || null, left: false };
+                       token: (sk && sk.token) || null, ip: ipTag(sk && sk.clientIp), left: false };
         hi++;
       }
       else { seats[idx] = { sid: null, nick: bots[bi++], isBot: true, orphanAt: null, token: null, ip: null, left: false }; }

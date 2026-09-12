@@ -792,9 +792,6 @@
     '이미 끝난 방이에요.': 'That room has already closed.',
     '서버가 혼잡해요. 잠시 후 다시 시도해주세요.': 'The server is busy. Please try again shortly.',
     'RP 정산': 'RP',
-    'RP 미반영 — 같은 IP': 'No RP — same IP',
-    'RP 미반영 — 사람': 'No RP — needs more humans',
-    'RP 미반영 — 짧은 판': 'No RP — game too short',
 
     // ── 화면 라벨 ──
     'FLIP FLAP — 경매·블러핑 심리전 카드 보드게임': 'FLIP FLAP — an auction & bluffing card game',

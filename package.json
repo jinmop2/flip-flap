@@ -4,7 +4,9 @@
   "description": "FLIP FLAP — 2인 경매·블러핑 보드게임 (실시간 멀티플레이)",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node tools/test.mjs",
+    "preflight": "node tools/preflight.mjs"
   },
   "engines": {
     "node": "22.x"
