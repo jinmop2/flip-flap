@@ -1234,30 +1234,31 @@
        적어 둔다. transform 은 통째로 덮이는 값이라, 빼먹으면 뒤집기가
        도는 순간 글자가 바로 서 버린다. */
     .fv-logo i { transform:rotate(180deg); opacity:.92; }
-    /* 한 바퀴(1.7초) 안에서 앞뒤로 나눠 넘어간다 — 겹치면 둘이 동시에 돌아
-       무슨 글자인지 안 읽힌다. 넘어간 뒤에는 제자리에서 기다린다(-360 ≡ 0). */
-    /* 한 판이 도는 데 1.8초. 그 안에서 넘어가는 데 쓰는 시간은 앞쪽 잠깐뿐이고
-       나머지는 쉰다 — 넘어갈 때는 시원하게, 사이는 여유롭게.
-       한 바퀴를 0.25초에 맞춘 까닭: 화면 전환 막이 0.32초만 떠 있다.
-       그보다 느리면 FLIP 이 반쯤 돌다 막이 걷혀, 매번 도는 중간만 보인다.
-       0.29초로 뒀더니 막이 걷히는 그 순간에 겨우 마쳐서, 여유를 더 뒀다. */
+    /* 한 판이 1.8초. 넘어가는 건 앞쪽 잠깐뿐이고 나머지는 쉰다(-360 ≡ 0).
+
+       둘 다 막 안에서 끝나야 한다. 탭을 옮길 때 막은 0.32초만 떠 있다(VEIL_MIN).
+       예전엔 FLIP 이 0.25초에 끝난 뒤 FLAP 이 0.31초에야 출발해서, 막이 걷히는
+       순간 FLAP 은 막 움직이기 시작한 참이었다 — FLIP 만 돌고 FLAP 은 안 도는
+       것으로 보였다.
+
+       그래서 FLAP 을 FLIP 이 반쯤 넘어갔을 때 따라 출발시킨다. 역참 안내판이
+       위줄부터 차르륵 넘어가는 결은 그대로고, 둘 다 0.3초 안에 내려앉는다.
+
+       도는 쪽: FLIP 은 아래로, FLAP 은 위로 — 거울처럼 엇갈린다.
+       FLAP 은 rotate(180deg) 로 뒤집혀 있어서 같은 rotateX 부호가 화면에서는
+       반대로 돈다. 그래서 둘 다 -360 이다(브라우저에서 각 글자의 앞면이
+       처음 몇 도 동안 어느 쪽으로 쓸리는지 재서 확인했다). */
     #fadeVeil.on .fv-logo b { animation:fvFlipUp 1.8s cubic-bezier(.5,.03,.25,1) infinite; }
     #fadeVeil.on .fv-logo i { animation:fvFlapUp 1.8s cubic-bezier(.5,.03,.25,1) infinite; }
     @keyframes fvFlipUp {
       0%   { transform:rotateX(0deg); }
-      14%  { transform:rotateX(-360deg); }
+      11%  { transform:rotateX(-360deg); }
       100% { transform:rotateX(-360deg); }
     }
-    /* FLAP 은 FLIP 이 다 넘어간 바로 뒤에 따라 붙는다 —
-       역참 안내판이 위줄부터 차르륵 넘어가는 그 결이다.
-
-       도는 쪽은 FLIP 과 같아야 한다. FLAP 은 rotate(180deg) 로 뒤집혀 있어서
-       같은 부호를 주면 화면에서는 반대로 돈다 — 위·아래로 엇갈려 도니까
-       한 덩어리가 아니라 따로 노는 것으로 보였다. 부호를 뒤집어 맞춘다. */
     @keyframes fvFlapUp {
-      0%, 17% { transform:rotate(180deg) rotateX(0deg); }
-      31%     { transform:rotate(180deg) rotateX(-360deg); }
-      100%    { transform:rotate(180deg) rotateX(-360deg); }
+      0%, 5.5% { transform:rotate(180deg) rotateX(0deg); }
+      16.5%    { transform:rotate(180deg) rotateX(-360deg); }
+      100%     { transform:rotate(180deg) rotateX(-360deg); }
     }
     @media (prefers-reduced-motion:reduce) {
       #fadeVeil.on .fv-logo b, #fadeVeil.on .fv-logo i { animation:none; }

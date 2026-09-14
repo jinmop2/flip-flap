@@ -101,20 +101,36 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   ok('막에 로고가 있다', /<div id="fadeVeil">[\s\S]{0,200}fv-logo/.test(htm)
      && /<b>FLIP<\/b><i>FLAP<\/i>/.test(htm)
      && !/fv-ring/.test(htm));
-  // FLIP 이 넘어간 뒤 FLAP 이 따라 넘어간다 — 겹치면 둘이 동시에 돌아
-  // 무슨 글자인지 안 읽힌다
-  ok('FLIP 다음에 FLAP 이 넘어간다',
-     /@keyframes fvFlipUp \{[\s\S]{0,140}14%\s*\{ transform:rotateX\(-360deg\)/.test(htm)
-     && /@keyframes fvFlapUp \{\s*0%, 17% \{ transform:rotate\(180deg\) rotateX\(0deg\)/.test(htm));
-  // 반 바퀴를 기다리게 두었더니, 짧게 스치는 화면 전환(0.32초)에서는 FLIP 만
-  // 돌다 끝나 FLAP 이 한 번도 안 넘어갔다 — 한 박자만 늦게 따라 붙는다
-  ok('FLAP 은 FLIP 바로 뒤에 따라 넘어간다', /0%, 17% \{ transform:rotate\(180deg\)/.test(htm)
-     && /31%\s*\{ transform:rotate\(180deg\) rotateX\(-360deg\)/.test(htm));
-  // FLAP 은 뒤집혀 있어서 같은 부호를 주면 화면에서는 반대로 돈다.
-  // 부호가 갈리면 둘이 위·아래로 엇갈려 돌아 한 덩어리로 안 보인다.
-  ok('둘이 같은 쪽으로 돈다',
-     /fvFlipUp[\s\S]{0,140}rotateX\(-360deg\)/.test(htm)
-     && /fvFlapUp[\s\S]{0,180}rotateX\(-360deg\)/.test(htm)
+  // 넘어가는 구간을 키프레임에서 읽어 실제 시각(ms)으로 바꿔 본다.
+  // 퍼센트를 그대로 못 박아 두면, 막 시간이 바뀌어도 시금석은 계속 초록이다.
+  const kf = (name) => {
+    const i = htm.indexOf('@keyframes ' + name + ' {');
+    const body = htm.slice(i, htm.indexOf('\n    }', i));
+    const stops = [...body.matchAll(/([\d.]+%(?:,\s*[\d.]+%)*)\s*\{([^}]*)\}/g)]
+      .flatMap((m) => m[1].split(',').map((q) => ({ at: parseFloat(q), turn: /rotateX\((-?\d+)deg\)/.exec(m[2]) })));
+    const moving = stops.filter((x) => x.turn);
+    const startAt = Math.max(...moving.filter((x) => +x.turn[1] === 0).map((x) => x.at));
+    const endAt = Math.min(...moving.filter((x) => Math.abs(+x.turn[1]) === 360).map((x) => x.at));
+    const sign = Math.sign(+moving.find((x) => Math.abs(+x.turn[1]) === 360).turn[1]);
+    return { from: startAt / 100 * 1800, to: endAt / 100 * 1800, sign };
+  };
+  const flip = kf('fvFlipUp'), flap = kf('fvFlapUp');
+  const veilMs = +(/const VEIL_MIN = (\d+);/.exec(cli) || [, 0])[1];
+  // 탭을 옮길 때 막은 VEIL_MIN 만큼만 떠 있다. 예전엔 FLAP 이 306ms 에야
+  // 출발해 막이 걷히는 순간 막 움직이기 시작한 참이었다 — FLIP 만 돌고
+  // FLAP 은 안 도는 것으로 보였다.
+  ok('FLAP 까지 막이 걷히기 전에 다 넘어간다', flip.to <= veilMs && flap.to <= veilMs,
+     `FLIP ${flip.to}ms · FLAP ${Math.round(flap.to)}ms · 막 ${veilMs}ms`);
+  // 역참 안내판처럼 위줄이 먼저 — FLAP 은 FLIP 이 넘어가는 도중에 따라 출발한다
+  ok('FLIP 이 먼저, FLAP 이 뒤따른다', flip.from < flap.from && flap.from < flip.to,
+     `FLIP ${flip.from}→${flip.to} · FLAP ${Math.round(flap.from)}→${Math.round(flap.to)}`);
+  // 한 바퀴가 너무 짧으면 도는 방향이 눈에 안 잡힌다
+  ok('한 바퀴에 0.18초는 쓴다', flip.to - flip.from >= 180 && flap.to - flap.from >= 180);
+  // FLIP 은 아래로, FLAP 은 위로. FLAP 은 rotate(180deg) 로 뒤집혀 있어
+  // 같은 rotateX 부호가 화면에서는 반대로 돈다 — 그래서 둘 다 음수여야 한다.
+  // (예전 시금석은 이걸 "같은 쪽으로 돈다" 고 적어 두었는데, 브라우저에서 재 보니
+  //  실제로는 엇갈려 돌고 있었고 그게 원하던 모양이었다.)
+  ok('FLIP 은 아래로, FLAP 은 위로 돈다', flip.sign === -1 && flap.sign === -1
      && !/rotate\(180deg\) rotateX\(360deg\)/.test(htm));
   // 늘 돌려 두면 안 보이는 채로 판이 도는 내내 폰을 깨워 둔다
   ok('막이 켜졌을 때만 넘어간다', /#fadeVeil\.on \.fv-logo b \{ animation:fvFlipUp/.test(htm)
@@ -122,9 +138,7 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   // transform 은 통째로 덮이는 값이라, FLAP 의 180도를 키프레임에도 적어야 한다
   ok('FLAP 은 뒤집힌 채로 넘어간다', (htm.match(/rotate\(180deg\) rotateX\(/g) || []).length >= 2);
   // 빨리 홱 도니 급해 보였다 — 한 바퀴를 늘리고 도는 구간도 넓혔다
-  // 화면 전환 막은 0.32초만 떠 있다. 한 바퀴가 그보다 느리면 FLIP 이 반쯤
-  // 돌다 막이 걷혀 매번 도는 중간만 보인다 — 한 바퀴를 0.25초(1.8s 의 14%)에
-  // 맞춰 막 안에서 확실히 마치게 한다. 넘어간 뒤에는 다음 판까지 쉰다.
+  // 화면 전환 막은 0.32초만 떠 있다. 넘어간 뒤에는 다음 판까지 쉰다.
   ok('막 안에서 한 바퀴를 마친다', /animation:fvFlipUp 1\.8s/.test(htm)
      && /animation:fvFlapUp 1\.8s/.test(htm)
      && /const VEIL_MIN = 320;/.test(cli));
