@@ -398,7 +398,7 @@ ok('덮은 동안은 손가락도 막는다', /#fadeVeil\.on \{ opacity:1; point
 ok('덮개는 곧바로 덮고, 보일 만큼만 머문다',
    /#fadeVeil\.on \{[^}]*transition:none;/.test(htm)
    && /transition:opacity \.16s linear/.test(htm)
-   && /\}, 85\);/.test(cli) && /const VEIL_MIN = 320;/.test(cli));
+   && /\}, 85\);/.test(cli) && /const VEIL_MIN = \d+;/.test(cli));   // 얼마나 머무는지는 t_ui ⑨ 가 로고 타이밍과 견준다
 ok('탭 이동이 덮개를 거친다', /function navGo\(key\)[\s\S]{0,200}veil\(\(\) => \{/.test(cli));
 ok('새 화면을 그린 뒤에 걷는다', /requestAnimationFrame\(\(\) => requestAnimationFrame\(/.test(cli));
 ok('넘어가는 중에 또 눌러도 안 엉킨다', /if \(veilBusy\) \{ fn\(\); return; \}/.test(cli));

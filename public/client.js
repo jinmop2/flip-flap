@@ -3542,9 +3542,11 @@ function closeAllNavModals() {
 // 툭 끊기지 않고 이어진 동작으로 읽힌다. 덮은 동안은 손가락도 막아
 // 두 번 눌려 엉키는 일이 없다.
 let veilBusy = false;
-// 막이 떠 있는 최소 시간. 고리가 반 바퀴는 돌아야 '넘어가는 중' 으로 읽힌다 —
-// 눈에 안 잡힐 만큼 짧으면 화면이 한 번 깜빡인 것으로만 보인다.
-const VEIL_MIN = 320;
+// 막이 떠 있는 최소 시간. 로고가 FLIP(아래로) → 한 박자 쉼 → FLAP(위로)
+// 차례로 넘어가는데, FLAP 이 0.603초에 내려앉는다(index.html 의 fvFlapUp).
+// 그보다 짧으면 FLAP 이 돌다 말고 막이 걷힌다 — 예전 0.32초일 때 FLAP 은
+// 출발하자마자 가려져 안 도는 것으로 보였다. 내려앉은 모습을 잠깐 보여 준다.
+const VEIL_MIN = 650;
 function veil(fn) {
   const v = document.getElementById('fadeVeil');
   if (!v) { fn(); return; }

@@ -121,9 +121,13 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   // FLAP 은 안 도는 것으로 보였다.
   ok('FLAP 까지 막이 걷히기 전에 다 넘어간다', flip.to <= veilMs && flap.to <= veilMs,
      `FLIP ${flip.to}ms · FLAP ${Math.round(flap.to)}ms · 막 ${veilMs}ms`);
-  // 역참 안내판처럼 위줄이 먼저 — FLAP 은 FLIP 이 넘어가는 도중에 따라 출발한다
-  ok('FLIP 이 먼저, FLAP 이 뒤따른다', flip.from < flap.from && flap.from < flip.to,
+  // FLIP 이 다 넘어간 뒤 한 박자 쉬고 FLAP 이 넘어간다. 겹치면 둘이 한꺼번에
+  // 돌아 무엇이 먼저인지 안 읽힌다.
+  ok('FLIP 이 다 돈 뒤 조금 있다 FLAP 이 돈다', flip.to < flap.from && flap.from - flip.to >= 100,
      `FLIP ${flip.from}→${flip.to} · FLAP ${Math.round(flap.from)}→${Math.round(flap.to)}`);
+  // 막이 필요 이상 길면 탭을 옮길 때마다 괜히 기다린다
+  ok('막은 FLAP 이 내려앉는 데까지만 더 머문다', veilMs - flap.to >= 0 && veilMs - flap.to <= 120,
+     `막 ${veilMs}ms · FLAP 끝 ${Math.round(flap.to)}ms`);
   // 한 바퀴가 너무 짧으면 도는 방향이 눈에 안 잡힌다
   ok('한 바퀴에 0.18초는 쓴다', flip.to - flip.from >= 180 && flap.to - flap.from >= 180);
   // FLIP 은 아래로, FLAP 은 위로. FLAP 은 rotate(180deg) 로 뒤집혀 있어
@@ -138,10 +142,10 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   // transform 은 통째로 덮이는 값이라, FLAP 의 180도를 키프레임에도 적어야 한다
   ok('FLAP 은 뒤집힌 채로 넘어간다', (htm.match(/rotate\(180deg\) rotateX\(/g) || []).length >= 2);
   // 빨리 홱 도니 급해 보였다 — 한 바퀴를 늘리고 도는 구간도 넓혔다
-  // 화면 전환 막은 0.32초만 떠 있다. 넘어간 뒤에는 다음 판까지 쉰다.
+  // 넘어간 뒤에는 다음 판까지 쉰다.
   ok('막 안에서 한 바퀴를 마친다', /animation:fvFlipUp 1\.8s/.test(htm)
      && /animation:fvFlapUp 1\.8s/.test(htm)
-     && /const VEIL_MIN = 320;/.test(cli));
+     && /const VEIL_MIN = \d+;/.test(cli));
   // 글자를 오려 내는 칠이라, 칠할 바탕은 요소 상자만큼이다. line-height 가
   // 글자보다 작아 상자를 벗어난 부분은 칠이 안 들어가 잘려 보였다(FLAP 의 P).
   ok('로고 글자가 안 잘린다',
@@ -180,7 +184,7 @@ console.log('\n⑪ 랭킹은 올라온다');
   ok('열 때만 올라온다', /box\.classList\.add\('lb-in'\)/.test(cli)
      && /box\.classList\.remove\('lb-in'\), 2200\)/.test(cli));
   // 눈에 안 잡힐 만큼 짧으면 화면이 한 번 깜빡인 것으로만 보인다
-  ok('고리가 보일 만큼은 머문다', /const VEIL_MIN = 320;/.test(cli)
+  ok('고리가 보일 만큼은 머문다', /const VEIL_MIN = \d+;/.test(cli)
      && /Math\.max\(0, VEIL_MIN - \(Date\.now\(\) - t0\)\)/.test(cli));
   ok('로고는 로비 로고와 같은 백금색', /\.fv-logo b, \.fv-logo i \{[\s\S]{0,400}-webkit-text-fill-color:transparent/.test(htm));
   // 서서히 짙어지게 두면 그 사이 옛 화면이 비치고, 화면을 갈아 끼우는 순간(85ms)이

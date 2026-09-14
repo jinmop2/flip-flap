@@ -1236,29 +1236,29 @@
     .fv-logo i { transform:rotate(180deg); opacity:.92; }
     /* 한 판이 1.8초. 넘어가는 건 앞쪽 잠깐뿐이고 나머지는 쉰다(-360 ≡ 0).
 
-       둘 다 막 안에서 끝나야 한다. 탭을 옮길 때 막은 0.32초만 떠 있다(VEIL_MIN).
-       예전엔 FLIP 이 0.25초에 끝난 뒤 FLAP 이 0.31초에야 출발해서, 막이 걷히는
-       순간 FLAP 은 막 움직이기 시작한 참이었다 — FLIP 만 돌고 FLAP 은 안 도는
-       것으로 보였다.
+       차례: FLIP 이 아래로 한 바퀴(0~0.225초) → 한 박자 쉼(0.15초) →
+       FLAP 이 위로 한 바퀴(0.378~0.603초). 겹치면 둘이 한꺼번에 돌아 무엇이
+       먼저인지 안 읽힌다 — 역참 안내판이 한 줄씩 넘어가는 그 결로 둔다.
 
-       그래서 FLAP 을 FLIP 이 반쯤 넘어갔을 때 따라 출발시킨다. 역참 안내판이
-       위줄부터 차르륵 넘어가는 결은 그대로고, 둘 다 0.3초 안에 내려앉는다.
+       둘 다 막 안에서 끝나야 한다. 막은 VEIL_MIN(client.js) 만큼 떠 있다.
+       예전엔 막이 0.32초라 FLAP 이 출발하자마자 막이 걷혀, FLIP 만 돌고
+       FLAP 은 안 도는 것으로 보였다. 막을 FLAP 이 내려앉는 데까지 늘렸다.
 
        도는 쪽: FLIP 은 아래로, FLAP 은 위로 — 거울처럼 엇갈린다.
        FLAP 은 rotate(180deg) 로 뒤집혀 있어서 같은 rotateX 부호가 화면에서는
        반대로 돈다. 그래서 둘 다 -360 이다(브라우저에서 각 글자의 앞면이
-       처음 몇 도 동안 어느 쪽으로 쓸리는지 재서 확인했다). */
+       돌기 시작한 처음 몇 도 동안 어느 쪽으로 쓸리는지 재서 확인했다). */
     #fadeVeil.on .fv-logo b { animation:fvFlipUp 1.8s cubic-bezier(.5,.03,.25,1) infinite; }
     #fadeVeil.on .fv-logo i { animation:fvFlapUp 1.8s cubic-bezier(.5,.03,.25,1) infinite; }
     @keyframes fvFlipUp {
-      0%   { transform:rotateX(0deg); }
-      11%  { transform:rotateX(-360deg); }
-      100% { transform:rotateX(-360deg); }
+      0%    { transform:rotateX(0deg); }
+      12.5% { transform:rotateX(-360deg); }
+      100%  { transform:rotateX(-360deg); }
     }
     @keyframes fvFlapUp {
-      0%, 5.5% { transform:rotate(180deg) rotateX(0deg); }
-      16.5%    { transform:rotate(180deg) rotateX(-360deg); }
-      100%     { transform:rotate(180deg) rotateX(-360deg); }
+      0%, 21% { transform:rotate(180deg) rotateX(0deg); }
+      33.5%   { transform:rotate(180deg) rotateX(-360deg); }
+      100%    { transform:rotate(180deg) rotateX(-360deg); }
     }
     @media (prefers-reduced-motion:reduce) {
       #fadeVeil.on .fv-logo b, #fadeVeil.on .fv-logo i { animation:none; }
