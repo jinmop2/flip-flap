@@ -3393,7 +3393,13 @@
     body:not(.ingame):not(.quad4) { --tabgap: calc(76px + var(--safe-b)); }
     #missionModal, #friendsModal, #clanModal, #gachaModal,
     #soloModal, #multiModal {
-      padding:0 0 var(--tabgap, 0px); align-items:stretch; justify-content:stretch;
+      padding:0 0 var(--tabgap, 0px);
+      /* 위아래로는 늘린다 — 탭 화면은 높이를 다 쓰는 게 맞다.
+         좌우는 가운데다. stretch 로 두면 flex 에서는 왼쪽 붙이기로 동작해서,
+         max-width 가 걸린 창(미션·친구·클랜·뽑기)이 넓은 화면에서 왼쪽에
+         붙어 버렸다. 폰에서는 상자가 화면 너비라 티가 안 났다.
+         솔로·멀티는 max-width 가 없어 이 값과 무관하다. */
+      align-items:stretch; justify-content:center;
     }
     /* 모드 고르는 창 — 좁은 상자에 넣으면 아래로 길어져 무엇이 있는지가
        한눈에 안 들어온다. 화면을 통째로 쓰고, 넓으면 두 줄로 편다. */
@@ -4800,10 +4806,12 @@
     }
     /* 넓은 화면에서는 가운데로 모은다 — 한 줄이 과하게 늘어지지 않게 */
     @media (min-width:700px) {
-      /* 창 제목과 목록만 가운데로 모은다. 예전엔 자손 선택자라 줄 안의 칭호 칸
-         (.lb-row .lb-title)까지 620px 로 늘어나, 넓은 화면에서 닉네임·전적·RP 가
-         화면 밖으로 밀려났다 — 순위와 칭호만 보이던 그 화면. */
-      .lb-box.rank-box > .lb-title, .lb-box.rank-box > #lbList { max-width:620px; width:100%; margin-left:auto; margin-right:auto; }
+      /* 직계 자식만 모은다. 자손 선택자로 하면 줄 안의 칭호 칸(.lb-row .lb-title)
+         까지 620px 로 늘어나, 넓은 화면에서 닉네임·전적·RP 가 화면 밖으로
+         밀려난다 — 순위와 칭호만 보이던 그 화면이 그것이었다.
+         제목과 목록만 적어 뒀더니 이번엔 시즌 줄과 시상대(1·2·3위)가 빠져,
+         목록은 가운데인데 시상대만 화면 끝까지 늘어나 양옆이 잘렸다. */
+      .lb-box.rank-box > * { max-width:620px; width:100%; margin-left:auto; margin-right:auto; }
     }
 
     /* 손패 위에 떠 있는 칸들이 탭을 삼키던 문제.

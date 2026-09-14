@@ -17,7 +17,11 @@ console.log('① 그리는 쪽');
   const ctx = vm.createContext({ esc: (s) => String(s), ncClass: () => '', nickHTML: (x) => String(x), console });
   vm.runInContext(src + '\nthis.gcPaint = gcPaint; this.gcAppend = gcAppend;', ctx);
   const box = { innerHTML: '', scrollTop: 0, scrollHeight: 100 };
-  const 어제 = Date.now() - 26 * 3600 * 1000, 지금 = Date.now();
+  // 묶음은 "같은 분" 일 때만 생긴다(gcRun). Date.now() 를 그대로 쓰면,
+  // 분이 막 바뀐 5초 안에 돌 때 지금-5000 이 앞 분으로 떨어져 묶음이 풀린다 —
+  // 60번에 5번쯤 빨개지는 시금석이었다. 분 한가운데로 못 박는다.
+  const 기준 = new Date(); 기준.setSeconds(30, 0);
+  const 지금 = 기준.getTime(), 어제 = 지금 - 26 * 3600 * 1000;
   ctx.gcPaint(box, [
     { mine: false, idl: 'a', nick: '판세읽기', text: '하나', at: 어제 },
     { mine: false, idl: 'a', nick: '판세읽기', text: '둘', at: 어제 + 3000 },
