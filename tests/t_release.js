@@ -124,6 +124,18 @@ console.log('\n⑦ 공개한 확률이 서버가 쓰는 값과 같다');
      tier && Object.entries(tier).map(([k, v]) => k + ':' + v.length).join(' '));
 }
 
+console.log('\n⑦-2 app-ads.txt');
+{
+  // 애드몹은 스토어 등록정보의 웹사이트 뿌리에서 /app-ads.txt 를 찾는다. 없으면
+  // "승인되지 않은 판매자" 로 보고 광고 물량을 줄인다. 발행자 번호가 매니페스트의
+  // 앱 ID 와 같아야 한다 — 다르면 있어도 없는 것과 같다.
+  const man = R('android/app/src/main/AndroidManifest.xml');
+  const pub = (/ca-app-pub-(\d+)~/.exec(man) || [, ''])[1];
+  const txt = R('public/app-ads.txt');
+  ok('파일이 있다', !!txt.trim());
+  ok('발행자 번호가 앱 ID 와 같다', !!pub && txt.includes('google.com, pub-' + pub + ', DIRECT, f08c47fec0942fa0'), pub);
+}
+
 console.log('\n⑧ TWA 에서 갈아탄 사람');
 {
   // TWA 는 크롬의 저장 공간을, 앱은 웹뷰의 저장 공간을 쓴다. 업데이트하면

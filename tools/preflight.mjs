@@ -261,7 +261,8 @@ if (process.argv.includes('--net')) {
   head('9. 바깥 주소');
   const urls = ['https://flip-flap.onrender.com/privacy', 'https://flip-flap.onrender.com/terms',
                 'https://flip-flap.onrender.com/rates', 'https://flip-flap.onrender.com/delete-account.html',
-                'https://flip-flap.onrender.com/privacy.html'];
+                'https://flip-flap.onrender.com/privacy.html',
+                'https://flip-flap.onrender.com/app-ads.txt'];   // 없으면 애드몹이 광고 물량을 줄인다
   for (const u of urls) {
     try {
       const r = await fetch(u, { redirect: 'manual' });
