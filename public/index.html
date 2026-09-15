@@ -59,7 +59,7 @@
   <meta name="apple-mobile-web-app-title" content="FLIP FLAP">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka:wght@500;600;700&family=Luckiest+Guy&display=swap" rel="stylesheet">
   <style>
     :root {
       --safe-b: env(safe-area-inset-bottom, 0px);   /* 갤럭시·아이폰 하단 네비/제스처 바 회피 */
@@ -776,6 +776,70 @@
     #splash.hide { opacity:0; pointer-events:none; }
     .sp-mid { display:flex; flex-direction:column; align-items:center; gap:16px; }
     .sp-logo { width:min(320px, 78vw); height:auto; mix-blend-mode:screen; }   /* 검정 배경 투명화(흰 로고만) */
+    /* ── 몽둥게임즈 인트로 ──────────────────────────────────────────
+       멀쩡한 글씨로 서 있다가 망치를 맞고 지금 로고 모양이 된다.
+       로고 그림을 망치·윗줄·아랫줄 세 쪽으로 갈라 두었다(md-*.webp).
+       글씨는 투명 그림이라 겹쳐 태울 필요가 없다 — 블렌드를 끈다. */
+    .sp-stage { position:relative; aspect-ratio:768/390; mix-blend-mode:normal; }
+    .sp-stage .md-art, .sp-stage .md-plain { position:absolute; inset:0; width:100%; height:100%; }
+    .md-plain text { fill:#fff; font-family:'Luckiest Guy','Arial Black',sans-serif; }
+    .md-p1, .md-l1 { transform-origin:50% 69.5%; }   /* 윗줄은 제 밑줄을 딛는다 */
+    .md-p2, .md-l2 { transform-origin:50% 95.9%; }   /* 아랫줄도 마찬가지 */
+    .md-hm { transform-origin:6% 72%; }              /* 망치는 손잡이 끝을 축으로 */
+    .md-l1, .md-l2 { opacity:0; }
+    .md-spark { position:absolute; left:34%; top:66%; width:10px; height:10px; margin:-5px 0 0 -5px;
+      border-radius:50%; background:#cfe3ff; opacity:0; }
+    /* 글꼴이 와서 글자 자리를 맞춘 뒤에만 튼다(md-run). 못 맞추면 로고를 바로 보여 준다(md-done). */
+    #mdStage.md-run { animation:mdShake .5s cubic-bezier(.36,.07,.19,.97) .62s both; }
+    #mdStage.md-run .md-hm { animation:mdSwing 1.5s cubic-bezier(.4,0,.25,1) both; }
+    #mdStage.md-run .md-plain { animation:mdWasNormal 1.5s cubic-bezier(.3,0,.2,1) both; }
+    #mdStage.md-run .md-p2 { animation-delay:.05s; }
+    #mdStage.md-run .md-l1 { animation:mdBecame 1.5s cubic-bezier(.3,0,.2,1) both; }
+    #mdStage.md-run .md-l2 { animation:mdBecame 1.5s cubic-bezier(.3,0,.2,1) .05s both; }
+    #mdStage.md-run .md-spark { animation:mdSpark .5s ease-out .62s both; }
+    #mdStage.md-done .md-plain { opacity:0; }
+    #mdStage.md-done .md-l1, #mdStage.md-done .md-l2 { opacity:1; }
+    @keyframes mdSwing {
+      0%   { transform:translate(-18%,-38%) rotate(-62deg); }
+      34%  { transform:translate(-6%,-12%) rotate(-38deg); }
+      41%  { transform:translate(0,1%) rotate(5deg); }
+      54%  { transform:translate(0,-3%) rotate(-5deg); }
+      100% { transform:translate(0,0) rotate(0); }
+    }
+    /* 멀쩡한 글씨: 맞는 순간 납작해지며 로고에 자리를 넘긴다 */
+    @keyframes mdWasNormal {
+      0%,38% { transform:scale(1,1.04); opacity:1; }
+      42%    { transform:scale(1.04,.82); opacity:1; }
+      45%    { transform:scale(1.12,.62); opacity:.55; }
+      48%    { transform:scale(1.14,.58); opacity:0; }
+      100%   { transform:scale(1.14,.58); opacity:0; }
+    }
+    /* 로고 그림: 가장 납작한 그 프레임에서 건네받아 제 모양으로 굳는다 */
+    @keyframes mdBecame {
+      0%,44% { transform:scale(1.14,.58); opacity:0; }
+      46%    { transform:scale(1.14,.58); opacity:1; }
+      58%    { transform:scale(.97,1.06); opacity:1; }
+      72%    { transform:scale(1.02,.98); opacity:1; }
+      100%   { transform:scale(1,1); opacity:1; }
+    }
+    @keyframes mdShake {
+      0%,100% { transform:translate(0,0); }
+      15%  { transform:translate(-1.4%,1.8%); }
+      30%  { transform:translate(1.2%,-1.2%); }
+      45%  { transform:translate(-.8%,.9%); }
+      62%  { transform:translate(.6%,-.5%); }
+      80%  { transform:translate(-.3%,.3%); }
+    }
+    @keyframes mdSpark {
+      0%   { opacity:0; transform:scale(.3); }
+      12%  { opacity:.95; transform:scale(1); }
+      100% { opacity:0; transform:scale(3.6); }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      #mdStage, #mdStage * { animation:none !important; }
+      #mdStage .md-plain { opacity:0; }
+      #mdStage .md-l1, #mdStage .md-l2 { opacity:1; }
+    }
     .sp-mid .sp-credit {
       position:static; text-align:center; font-size:.82rem; color:#bbc0ca; line-height:1.9; margin-top:-4px;
     }
@@ -6256,9 +6320,21 @@
 <!-- 로딩 스플래시 (접속되면 사라짐) -->
 <div id="splash">
   <div class="sp-mid">
-    <!-- 몽둥게임즈 로고: public/mongdung-logo.png 가 있으면 그걸로, 없으면 아래 SVG 재현 -->
-    <img id="mdLogoImg" class="sp-logo" src="/mongdung-logo.png" alt="Mongdung Games"
-         onerror="this.style.display='none';document.getElementById('mdLogoSvg').style.display='block';">
+    <!-- 몽둥게임즈 로고. 망치가 내려쳐 글자를 지금 모양으로 만든다.
+         그림이 안 오면 아래 SVG 재현으로 물러난다. -->
+    <div class="sp-logo sp-stage" id="mdStage" role="img" aria-label="Mongdung Games">
+      <svg class="md-plain md-p1" viewBox="0 0 768 390" aria-hidden="true">
+        <text id="mdT1" x="96" textLength="655" lengthAdjust="spacingAndGlyphs">MONGDUNG</text>
+      </svg>
+      <svg class="md-plain md-p2" viewBox="0 0 768 390" aria-hidden="true">
+        <text id="mdT2" x="228" textLength="496" lengthAdjust="spacingAndGlyphs">GAMES</text>
+      </svg>
+      <img class="md-art md-l1" src="/md-line1.webp" alt="" draggable="false">
+      <img class="md-art md-l2" src="/md-line2.webp" alt="" draggable="false">
+      <img class="md-art md-hm" src="/md-hammer.webp" alt="" draggable="false"
+           onerror="document.getElementById('mdStage').style.display='none';document.getElementById('mdLogoSvg').style.display='block';">
+      <span class="md-spark"></span>
+    </div>
     <svg id="mdLogoSvg" class="sp-logo" viewBox="0 0 380 190" style="display:none" xmlns="http://www.w3.org/2000/svg">
       <g fill="#fff" transform="rotate(-22 78 58)">
         <!-- 망치 머리 -->

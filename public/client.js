@@ -246,13 +246,52 @@ function setConn(text, cls) {
 // 로딩 스플래시 — 로고를 잠깐만 보여주고 곧바로 사라진다(실패해도 8초 후 숨김).
 // 예전엔 최소 1.8초 + 0.7초 페이드라, 이미 다 준비된 화면을 2.5초나 가리고 있었다.
 // 단, 게임 나가기 등 내부 이동으로 돌아온 경우엔 즉시 스킵
-const SPLASH_START = Date.now(), SPLASH_MIN = 450;
+const SPLASH_START = Date.now();
+let SPLASH_MIN = 450;   // 인트로가 돌면 그게 끝날 때까지로 늘린다(아래)
 let splashHidden = false;
 if (sessionStorage.getItem('ff_skipsplash')) {
   sessionStorage.removeItem('ff_skipsplash');
   splashHidden = true;
   const s = document.getElementById('splash'); if (s) s.style.display = 'none';
   document.documentElement.classList.remove('booting');   // 건너뛴 경우엔 곧바로 보여 준다
+}
+// 몽둥게임즈 인트로 — 멀쩡한 글씨가 망치를 맞고 지금 로고가 된다.
+// 글꼴마다 글자 높이가 달라서 크기를 손으로 못 적는다. 로고 글자가 실제로
+// 차지하는 자리에 맞춰 브라우저가 재서 정한다 — 안 그러면 바뀌는 순간 튄다.
+const MD_LINES = [{ id: 'mdT1', top: 152, bottom: 271 }, { id: 'mdT2', top: 276, bottom: 374 }];
+function mdFit() {
+  const cv = document.createElement('canvas').getContext('2d');
+  for (const L of MD_LINES) {
+    const el = document.getElementById(L.id);
+    if (!el) return false;
+    cv.font = '100px "Luckiest Guy", "Arial Black", sans-serif';
+    const m = cv.measureText(el.textContent);
+    const ratio = (m.actualBoundingBoxAscent + m.actualBoundingBoxDescent) / 100;
+    if (!ratio) return false;
+    const size = (L.bottom - L.top) / ratio;
+    el.setAttribute('font-size', size.toFixed(1));
+    el.setAttribute('y', (L.bottom - m.actualBoundingBoxDescent / 100 * size).toFixed(1));
+  }
+  return true;
+}
+{
+  const st = document.getElementById('mdStage');
+  if (st && splashHidden) st.classList.add('md-done');          // 내부 이동 — 인트로 없이
+  else if (st) {
+    let began = false;
+    const begin = () => {
+      if (began) return;
+      began = true;
+      // 글꼴이 안 왔으면(그물 없음 등) 글자를 못 맞춘다 — 로고를 바로 보여 준다
+      if (!mdFit()) { st.classList.add('md-done'); return; }
+      st.classList.add('md-run');
+      SPLASH_MIN = (Date.now() - SPLASH_START) + 1560;          // 다 돌고 나서 걷는다
+    };
+    const ready = (document.fonts && document.fonts.load)
+      ? document.fonts.load('100px "Luckiest Guy"') : Promise.resolve();
+    ready.then(begin).catch(begin);
+    setTimeout(begin, 700);                                     // 글꼴이 늦으면 기다리지 않는다
+  }
 }
 // 무슨 일이 있어도 8초 뒤에는 화면이 보여야 한다 (로고가 안 걷히는 사고 대비)
 setTimeout(() => document.documentElement.classList.remove('booting'), 8000);
