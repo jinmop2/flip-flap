@@ -92,8 +92,15 @@ const sign = (q) => b64url(crypto.sign('sha256', Buffer.from(q, 'utf8'), private
     // 구글 시험용 ID(3940256099942544)로 되돌아가면 테스트 광고만 나가고 수익은 0 원이다.
     // 화면으로는 구별이 안 되므로 여기서 지킨다. (iOS 는 아직 앱을 안 만들어 예외)
     ok('안드로이드 앱 ID 가 우리 것이다',
-       /ca-app-pub-2889493659015752~/.test(m) && !/3940256099942544~/.test(m));
-    ok('안드로이드 보상형 단위가 우리 것이다', /android: \{ reward: 'ca-app-pub-2889493659015752\//.test(n));
+       /ca-app-pub-\d{16}~\d{10}/.test(m) && !/3940256099942544~/.test(m));
+    // 계정을 새로 만들면 번호가 통째로 바뀐다. 번호를 못 박지 않고, 매니페스트·
+    // 광고 단위·app-ads.txt 가 같은 발행자인지를 본다 — 하나만 옛 번호로 남으면
+    // 광고가 안 뜨거나 "승인되지 않은 판매자" 가 된다.
+    const pubM = (/ca-app-pub-(\d+)~/.exec(m) || [, 'm'])[1];
+    const pubN = (/android: \{ reward: 'ca-app-pub-(\d+)\//.exec(n) || [, 'n'])[1];
+    const pubT = (/google\.com, pub-(\d+), DIRECT/.exec(require('fs').readFileSync(src + '/public/app-ads.txt', 'utf8')) || [, 't'])[1];
+    ok('안드로이드 보상형 단위가 우리 것이다', pubN !== '3940256099942544' && pubN === pubM, pubN + ' / ' + pubM);
+    ok('app-ads.txt 도 같은 계정이다', pubT === pubM, pubT + ' / ' + pubM);
     // TESTING 은 켜 둘 수도 내릴 수도 있다 — 다만 무엇을 뜻하는지가 코드에 적혀 있어야 한다
     ok('테스트 여부가 한 곳에서 정해진다', /var TESTING = (true|false);/.test(n));
     ok('내 폰으로 실제 광고를 보면 안 된다고 적혀 있다', /자기 노출·자기 클릭/.test(n));

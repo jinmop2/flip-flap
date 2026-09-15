@@ -51,8 +51,8 @@ echo "sdk.dir=$HOME/android-sdk" > android/local.properties
 
 | | |
 |---|---|
-| 앱 ID | `ca-app-pub-2889493659015752~3465946132` — `AndroidManifest.xml` |
-| 보상형 단위 | `ca-app-pub-2889493659015752/1319611593` — `public/native.js` |
+| 앱 ID | `ca-app-pub-4284068423670382~2621715862` — `AndroidManifest.xml` |
+| 보상형 단위 | `ca-app-pub-4284068423670382/5056307518` — `public/native.js` |
 | iOS | 아직 없음. 구글 시험용 그대로 |
 
 **남은 것은 셋이다.**

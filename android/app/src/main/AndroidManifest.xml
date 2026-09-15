@@ -41,7 +41,7 @@
              TESTING 이 정한다. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-2889493659015752~3465946132" />
+            android:value="ca-app-pub-4284068423670382~2621715862" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
