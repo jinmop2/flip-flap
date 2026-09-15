@@ -799,11 +799,17 @@
     #mdStage.md-run .md-spark { animation:mdSpark .5s ease-out .62s both; }
     #mdStage.md-done .md-plain { opacity:0; }
     #mdStage.md-done .md-l1, #mdStage.md-done .md-l2 { opacity:1; }
+    /* 망치는 날아오지 않는다 — 제 자리에 있다가 치켜들고 내려친다.
+       축이 손잡이 끝(6% 72%)이라 각도만 줘도 머리가 위로 들린다.
+       맞는 시각(41% = 0.62초)은 건드리지 않는다 — 글자가 바뀌는 순간과
+       흔들림·불꽃이 그 시각에 맞춰져 있다. */
     @keyframes mdSwing {
-      0%   { transform:translate(-18%,-38%) rotate(-62deg); }
-      34%  { transform:translate(-6%,-12%) rotate(-38deg); }
-      41%  { transform:translate(0,1%) rotate(5deg); }
-      54%  { transform:translate(0,-3%) rotate(-5deg); }
+      0%   { transform:rotate(0); }
+      10%  { transform:rotate(-3deg); }                      /* 숨 고르기 */
+      30%  { transform:translate(-1%,-4%) rotate(-34deg); }  /* 치켜든다 */
+      34%  { transform:translate(-1%,-5%) rotate(-36deg); }  /* 꼭대기에서 한 박자 */
+      41%  { transform:translate(0,1%) rotate(5deg); }       /* 내려친다 */
+      54%  { transform:translate(0,-3%) rotate(-5deg); }     /* 반동 */
       100% { transform:translate(0,0) rotate(0); }
     }
     /* 멀쩡한 글씨: 맞는 순간 납작해지며 로고에 자리를 넘긴다 */
