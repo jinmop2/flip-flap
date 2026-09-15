@@ -99,7 +99,7 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
   // 기다리는 표시는 로고가 한다 — 이름이 곧 그 동작이다.
   // (돌아가는 고리를 따로 두었더니 로고와 따로 놀아 둘 다 눈에 안 들어왔다.)
   ok('막에 로고가 있다', /<div id="fadeVeil">[\s\S]{0,200}fv-logo/.test(htm)
-     && /<b>FLIP<\/b><i>FLAP<\/i>/.test(htm)
+     && /<b><img src="\/logo-flip\.webp"[^>]*><\/b><i><img src="\/logo-flap\.webp"/.test(htm)
      && !/fv-ring/.test(htm));
   // 넘어가는 구간을 키프레임에서 읽어 실제 시각(ms)으로 바꿔 본다.
   // 퍼센트를 그대로 못 박아 두면, 막 시간이 바뀌어도 시금석은 계속 초록이다.
@@ -130,46 +130,48 @@ console.log('\n⑨ 탭을 넘길 때 넘어가는 중이라고 보여 준다');
      `막 ${veilMs}ms · FLAP 끝 ${Math.round(flap.to)}ms`);
   // 한 바퀴가 너무 짧으면 도는 방향이 눈에 안 잡힌다
   ok('한 바퀴에 0.18초는 쓴다', flip.to - flip.from >= 180 && flap.to - flap.from >= 180);
-  // FLIP 은 아래로, FLAP 은 위로. FLAP 은 rotate(180deg) 로 뒤집혀 있어
-  // 같은 rotateX 부호가 화면에서는 반대로 돈다 — 그래서 둘 다 음수여야 한다.
-  // (예전 시금석은 이걸 "같은 쪽으로 돈다" 고 적어 두었는데, 브라우저에서 재 보니
-  //  실제로는 엇갈려 돌고 있었고 그게 원하던 모양이었다.)
-  ok('FLIP 은 아래로, FLAP 은 위로 돈다', flip.sign === -1 && flap.sign === -1
-     && !/rotate\(180deg\) rotateX\(360deg\)/.test(htm));
+  // FLIP 은 아래로, FLAP 은 위로. 로고가 그림이 된 뒤로 FLAP 은 그림에 이미
+  // 뒤집혀 그려져 있어 CSS 로 따로 뒤집지 않는다 — 그래서 부호가 서로 반대다.
+  // (글꼴 시절엔 rotate(180deg) 를 씌워 둘 다 -360 이었다.)
+  ok('FLIP 은 아래로, FLAP 은 위로 돈다', flip.sign === -1 && flap.sign === 1);
   // 늘 돌려 두면 안 보이는 채로 판이 도는 내내 폰을 깨워 둔다
   ok('막이 켜졌을 때만 넘어간다', /#fadeVeil\.on \.fv-logo b \{ animation:fvFlipUp/.test(htm)
      && !/^\s*\.fv-logo b, \.fv-logo i \{[^}]*animation:/m.test(htm));
-  // transform 은 통째로 덮이는 값이라, FLAP 의 180도를 키프레임에도 적어야 한다
-  ok('FLAP 은 뒤집힌 채로 넘어간다', (htm.match(/rotate\(180deg\) rotateX\(/g) || []).length >= 2);
+  // 그림 안에서 이미 뒤집혀 있다 — 또 뒤집으면 FLAP 이 바로 서 버린다
+  ok('FLAP 그림을 CSS 로 또 뒤집지 않는다', !/rotate\(180deg\) rotateX\(/.test(htm)
+     && !/\.fv-logo i \{ transform:rotate\(180deg\)/.test(htm));
+  // 두 쪽이 같은 자리에 겹쳐야 멈췄을 때 그림 한 장이 된다
+  ok('두 쪽이 제자리에 겹친다', /\.fv-logo b, \.fv-logo i \{ position:absolute; inset:0;/.test(htm));
   // 빨리 홱 도니 급해 보였다 — 한 바퀴를 늘리고 도는 구간도 넓혔다
   // 넘어간 뒤에는 다음 판까지 쉰다.
   ok('막 안에서 한 바퀴를 마친다', /animation:fvFlipUp 1\.8s/.test(htm)
      && /animation:fvFlapUp 1\.8s/.test(htm)
      && /const VEIL_MIN = \d+;/.test(cli));
-  // 글자를 오려 내는 칠이라, 칠할 바탕은 요소 상자만큼이다. line-height 가
-  // 글자보다 작아 상자를 벗어난 부분은 칠이 안 들어가 잘려 보였다(FLAP 의 P).
-  ok('로고 글자가 안 잘린다',
-     /\.logo h1, \.logo \.flap \{\n\s*padding:9px 6px; margin:-9px -6px;/.test(htm)
-     && /\.fv-logo b, \.fv-logo i \{\n\s*display:block; padding:6px 5px; margin:-6px -5px;/.test(htm));
+  // 로고는 그림 한 장이다 — 타이틀·로비가 같은 그림을 쓰고, 옛 글꼴 로고가 남지 않는다
+  const fs2 = require('fs'), path2 = require('path');
+  ok('로고는 그림 한 장이다', (htm.match(/<h1 class="logo-img"><img src="\/logo\.webp"/g) || []).length === 2
+     && !/<h1>FLIP<\/h1>/.test(htm) && !/class="tl flap"/.test(htm));
+  ok('그림 파일이 다 있다', ['logo.webp', 'logo-flip.webp', 'logo-flap.webp']
+     .every((f) => fs2.existsSync(path2.join(__dirname, '..', 'public', f))));
+  // 그물 없이 켜도 제목 자리가 비지 않게
+  ok('서비스워커가 로고를 미리 담는다', /'\/logo\.webp', '\/logo-flip\.webp', '\/logo-flap\.webp'/.test(fs2.readFileSync(path2.join(__dirname, '..', 'public', 'sw.js'), 'utf8')));
   // 깜빡이는 것은 로고를 감싼 불빛이지 글자가 아니다 — 글자를 깜빡이게
   // 했더니 이름이 안 읽히는 순간이 생겼다. 주기는 길게(16초).
   // 빛을 따로 한 층 깔았다가 데였다. 글자에는 이미 drop-shadow 가 넷
   // 걸려 있어, 그 안쪽에 빛을 넣으면 넷이 그 빛을 각각 한 번씩 더 번지게
   // 한다 — 겹겹이 부풀어 로고 둘레가 허옇게 떴다(실기기에서 확인).
   // 층을 새로 깔지 않고 원래 걸려 있던 그 빛의 세기만 바꾼다.
-  ok('빛 층을 따로 깔지 않는다', !/logo h1::before/.test(htm) && !/logo \.flap::before/.test(htm));
+  ok('빛 층을 따로 깔지 않는다', !/logo-img::before/.test(htm) && !/logo-img img::before/.test(htm));
   ok('원래 걸린 빛의 세기만 바꾼다',
-     /#lobby \.logo h1, #lobby \.logo \.flap \{ animation:logoGlow 20s steps\(1, end\) infinite; \}/.test(htm)
-     && /@keyframes logoGlow \{[\s\S]{0,300}drop-shadow\(0 0 16px rgba\(170,205,255,\.34\)\)/.test(htm)
-     && /drop-shadow\(0 0 5px rgba\(170,205,255,\.05\)\)/.test(htm));
-  // 앞의 셋(입체 그림자)은 손대지 않는다 — 건드리면 로고가 납작해진다
-  ok('입체 그림자는 그대로', (htm.match(/drop-shadow\(0 1px 0 #2a3450\) drop-shadow\(0 2px 0 #1a2438\)/g) || []).length >= 8);
+     /#lobby \.logo \.logo-img img \{ animation:logoGlow 20s steps\(1, end\) infinite; \}/.test(htm)
+     && /@keyframes logoGlow \{[\s\S]{0,300}drop-shadow\(0 0 18px rgba\(120,170,255,\.30\)\)/.test(htm)
+     && /drop-shadow\(0 0 5px rgba\(120,170,255,\.05\)\)/.test(htm));
+  // 입체는 그림에 들어 있다. 깜빡이는 동안에도 바닥 그림자는 그대로 둔다 — 빼면 로고가 뜬다
+  ok('바닥 그림자는 깜빡이는 내내 그대로', (htm.match(/drop-shadow\(0 6px 10px rgba\(0,0,0,\.45\)\) drop-shadow\(0 0 /g) || []).length >= 8);
   // 어긋나게 뒀더니 등이 하나 나가는 게 아니라 두 개가 따로 노는 것으로 보였다
   ok('두 줄이 같은 순간에 깜빡인다', !/#lobby \.logo \.flap::before \{ animation-delay:/.test(htm));
-  // FLAP 만 살짝 죽여 뒀더니 FLIP 이 더 밝아 보여 한 덩어리로 안 읽혔다
-  ok('두 줄은 같은 밝기', /\.logo \.flap \{ transform:rotate\(180deg\); margin-top:-17px; display:inline-block; \}/.test(htm));
-  // 잘림을 고치니 글자 본래의 여백이 드러나 두 줄 사이가 5px 벌어졌다 — 그만큼 더 당긴다
-  ok('두 줄이 붙어 있다', /margin-top:-17px/.test(htm));
+  // 크기는 폭 하나로만 정한다 — 높이까지 적으면 좁은 화면에서 그림이 찌그러진다
+  ok('로고 크기는 폭으로만', /width:var\(--logo-w, 172px\); height:auto;/.test(htm));
 }
 
 console.log('\n⑪ 랭킹은 올라온다');
@@ -186,7 +188,8 @@ console.log('\n⑪ 랭킹은 올라온다');
   // 눈에 안 잡힐 만큼 짧으면 화면이 한 번 깜빡인 것으로만 보인다
   ok('고리가 보일 만큼은 머문다', /const VEIL_MIN = \d+;/.test(cli)
      && /Math\.max\(0, VEIL_MIN - \(Date\.now\(\) - t0\)\)/.test(cli));
-  ok('로고는 로비 로고와 같은 백금색', /\.fv-logo b, \.fv-logo i \{[\s\S]{0,400}-webkit-text-fill-color:transparent/.test(htm));
+  ok('막의 로고도 로비와 같은 그림에서 잘랐다', /logo-flip\.webp/.test(htm) && /logo-flap\.webp/.test(htm)
+     && /\.fv-logo \{ position:relative; width:118px; aspect-ratio:931\/803;/.test(htm));
   // 서서히 짙어지게 두면 그 사이 옛 화면이 비치고, 화면을 갈아 끼우는 순간(85ms)이
   // 아직 반투명한 막 너머로 드러난다 — "탭을 넘기면 로비가 잠깐씩 보인다".
   ok('막은 즉시 덮고 걷을 때만 서서히',

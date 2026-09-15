@@ -114,58 +114,34 @@
       #waitCard .wc-modes { margin:0; }
       #waitCard .wc-mode { padding:6px 4px; }
     }
-    .logo { text-align:center; line-height:.9; }
-    /* 글자를 그 자체로 오려 내는 칠(background-clip:text)이라, 칠할 바탕은
-       요소 상자만큼이다. line-height 가 글자보다 작아(51px vs 57px) 상자를
-       벗어난 부분은 칠이 안 들어가 잘려 보였다 — FLAP 의 P 가 그랬다.
-       안쪽 여백으로 바탕을 넓히고, 넓힌 만큼 바깥 여백으로 도로 줄인다. */
-    .logo h1, .logo .flap {
-      padding:9px 6px; margin:-9px -6px;
-      font-family:'Bangers',cursive; font-size:4.4rem; letter-spacing:5px;
-      background:linear-gradient(180deg,#ffffff 0%,#d8e4f8 38%,#93a8cc 62%,#4e5e7e 100%);
-      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-      /* 백금 3D 입체 (아래 그림자 + 하이라이트) */
-      filter:
-        drop-shadow(0 1px 0 #2a3450) drop-shadow(0 2px 0 #1a2438)
-        drop-shadow(0 4px 6px rgba(0,0,0,.5)) drop-shadow(0 0 16px rgba(170,205,255,.34));
+    .logo { text-align:center; line-height:0; }
+    /* 로고는 그림 한 장이다 — public/logo.webp (원본: store-assets/logo-flipflap.png).
+       글꼴로 짜던 때는 FLIP·FLAP 두 줄을 따로 칠하고 FLAP 을 뒤집어 붙였는데,
+       이제 뒤집힌 FLAP·빗금·별까지 그림에 다 들어 있다. 크기는 폭(--logo-w)으로만
+       정한다 — 높이는 그림 비율(931:803)이 알아서 따라온다. */
+    .logo .logo-img { margin:0; }
+    .logo .logo-img img {
+      display:block; width:var(--logo-w, 172px); height:auto; margin:0 auto;
+      -webkit-user-drag:none; user-select:none;
+      filter:drop-shadow(0 6px 10px rgba(0,0,0,.45)) drop-shadow(0 0 18px rgba(120,170,255,.30));
     }
-    /* FLAP 을 끌어올려 붙여 놨더니 FLIP 의 아랫부분과 겹쳤다.
-       글자 크기와 뒤집힌 모양은 그대로 두고 간격만 벌린다. */
-    /* 두 줄은 같은 밝기다. FLAP 만 살짝 죽여 뒀더니 FLIP 이 더 밝아 보여
-       한 덩어리로 안 읽혔다 — 이름은 두 낱말이 아니라 하나다. */
-    /* -11 은 안쪽 여백(9px)을 되돌린 값이라 자리는 예전과 같다. 그런데
-       예전엔 글자 아랫부분이 상자에 잘려 두 줄이 붙어 보였고, 잘림을 고치니
-       글자 본래의 여백이 드러나 사이가 5px 벌어졌다 — 그만큼 더 당긴다. */
-    .logo .flap { transform:rotate(180deg); margin-top:-17px; display:inline-block; }
     /* 로고를 감싼 불빛이 이따금 한 번 나갔다 들어온다 — 간판 뒤 등처럼.
-       깜빡이는 것은 이 불빛이지 글자가 아니다(글자를 깜빡이게 했더니
-       이름이 안 읽히는 순간이 생겼다).
-       빛을 따로 한 층 깔았다가 크게 데였다. 글자에는 이미 drop-shadow 가
-       넷 걸려 있는데, 그 안쪽에 빛을 넣으면 그 넷이 내 빛을 각각 한 번씩
-       더 번지게 한다 — 겹겹이 부풀어 로고 둘레가 허옇게 떴다.
-       그래서 층을 새로 깔지 않고, 원래 걸려 있던 그 빛(마지막 drop-shadow)
-       의 세기만 바꾼다. 앞의 셋(입체 그림자)은 손대지 않는다.
-       steps 로 끊어 20초에 예닐곱 번만 값이 바뀌니, 매 프레임 다시 그리는
-       무거운 애니가 아니다. */
-    #lobby .logo h1, #lobby .logo .flap { animation:logoGlow 20s steps(1, end) infinite; }
+       깜빡이는 것은 이 불빛이지 그림이 아니다(그림을 깜빡이게 하면 이름이 안
+       읽히는 순간이 생긴다). 빛을 따로 한 층 깔지 않고, 걸려 있는 빛의 세기만
+       바꾼다 — 층을 겹치면 그림자가 서로를 한 번씩 더 번지게 해 둘레가 허옇게 뜬다.
+       steps 로 끊어 20초에 예닐곱 번만 값이 바뀌니 무거운 애니가 아니다. */
+    #lobby .logo .logo-img img { animation:logoGlow 20s steps(1, end) infinite; }
     @keyframes logoGlow {
-      0%, 92%  { filter:drop-shadow(0 1px 0 #2a3450) drop-shadow(0 2px 0 #1a2438)
-                        drop-shadow(0 4px 6px rgba(0,0,0,.5)) drop-shadow(0 0 16px rgba(170,205,255,.34)); }
-      92.5%    { filter:drop-shadow(0 1px 0 #2a3450) drop-shadow(0 2px 0 #1a2438)
-                        drop-shadow(0 4px 6px rgba(0,0,0,.5)) drop-shadow(0 0 5px rgba(170,205,255,.05)); }
-      93%      { filter:drop-shadow(0 1px 0 #2a3450) drop-shadow(0 2px 0 #1a2438)
-                        drop-shadow(0 4px 6px rgba(0,0,0,.5)) drop-shadow(0 0 16px rgba(170,205,255,.32)); }
-      93.8%    { filter:drop-shadow(0 1px 0 #2a3450) drop-shadow(0 2px 0 #1a2438)
-                        drop-shadow(0 4px 6px rgba(0,0,0,.5)) drop-shadow(0 0 7px rgba(170,205,255,.08)); }
-      94.4%    { filter:drop-shadow(0 1px 0 #2a3450) drop-shadow(0 2px 0 #1a2438)
-                        drop-shadow(0 4px 6px rgba(0,0,0,.5)) drop-shadow(0 0 16px rgba(170,205,255,.34)); }
-      95.4%    { filter:drop-shadow(0 1px 0 #2a3450) drop-shadow(0 2px 0 #1a2438)
-                        drop-shadow(0 4px 6px rgba(0,0,0,.5)) drop-shadow(0 0 9px rgba(170,205,255,.13)); }
-      95.9%, 100% { filter:drop-shadow(0 1px 0 #2a3450) drop-shadow(0 2px 0 #1a2438)
-                        drop-shadow(0 4px 6px rgba(0,0,0,.5)) drop-shadow(0 0 16px rgba(170,205,255,.34)); }
+      0%, 92%     { filter:drop-shadow(0 6px 10px rgba(0,0,0,.45)) drop-shadow(0 0 18px rgba(120,170,255,.30)); }
+      92.5%       { filter:drop-shadow(0 6px 10px rgba(0,0,0,.45)) drop-shadow(0 0 5px rgba(120,170,255,.05)); }
+      93%         { filter:drop-shadow(0 6px 10px rgba(0,0,0,.45)) drop-shadow(0 0 18px rgba(120,170,255,.28)); }
+      93.8%       { filter:drop-shadow(0 6px 10px rgba(0,0,0,.45)) drop-shadow(0 0 7px rgba(120,170,255,.08)); }
+      94.4%       { filter:drop-shadow(0 6px 10px rgba(0,0,0,.45)) drop-shadow(0 0 18px rgba(120,170,255,.30)); }
+      95.4%       { filter:drop-shadow(0 6px 10px rgba(0,0,0,.45)) drop-shadow(0 0 9px rgba(120,170,255,.12)); }
+      95.9%, 100% { filter:drop-shadow(0 6px 10px rgba(0,0,0,.45)) drop-shadow(0 0 18px rgba(120,170,255,.30)); }
     }
     @media (prefers-reduced-motion:reduce) {
-      #lobby .logo h1, #lobby .logo .flap { animation:none; }
+      #lobby .logo .logo-img img { animation:none; }
     }
     }
     /* 로고 아래 마감 줄 — 가운데 마름모가 로고와 아래 내용을 갈라 준다.
@@ -767,7 +743,7 @@
     }
     #title.hide { opacity:0; pointer-events:none; }
     .title-mid { display:flex; flex-direction:column; align-items:center; gap:26px; width:100%; max-width:340px; }
-    .logo.big h1, .logo.big .flap { font-size:4.6rem; }
+    .logo.big { --logo-w:210px; }   /* 타이틀 화면은 자리가 넉넉하다 */
     .title-btns { display:flex; flex-direction:column; gap:11px; width:100%; }
     .social-btn {
       display:flex; align-items:center; justify-content:center; gap:10px;
@@ -1217,37 +1193,29 @@
       opacity:0; transition:opacity .16s linear; }
     #fadeVeil.on .fv-box { opacity:1; transition:none; }
     /* 기다리는 표시는 로고가 한다 — 이름이 곧 그 동작이다.
-       FLIP 이 위로 한 바퀴 넘어가고, 뒤이어 FLAP 이 아래로 한 바퀴 넘어간다.
        (돌아가는 고리를 두었더니 로고와 따로 놀아 둘 다 눈에 안 들어왔다.)
-       로비 로고와 같은 백금색·같은 글꼴을 작게 줄여 쓴다. */
-    .fv-logo { text-align:center; line-height:.92; perspective:420px; }
-    .fv-logo b, .fv-logo i {
-      display:block; padding:6px 5px; margin:-6px -5px;
-      font-family:'Bangers',cursive; font-style:normal;
-      font-size:2rem; letter-spacing:3px;
-      background:linear-gradient(180deg,#ffffff 0%,#d8e4f8 38%,#93a8cc 62%,#4e5e7e 100%);
-      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-      filter:drop-shadow(0 1px 0 #2a3450) drop-shadow(0 0 10px rgba(170,205,255,.3));
-      will-change:transform;
-    }
-    /* FLAP 은 로비 로고처럼 뒤집혀 있다 — 그 180도를 키프레임 안에도 그대로
-       적어 둔다. transform 은 통째로 덮이는 값이라, 빼먹으면 뒤집기가
-       도는 순간 글자가 바로 서 버린다. */
-    .fv-logo i { transform:rotate(180deg); opacity:.92; }
-    /* 한 판이 1.8초. 넘어가는 건 앞쪽 잠깐뿐이고 나머지는 쉰다(-360 ≡ 0).
+       로비와 같은 그림을 빗금 가운데 줄로 위(FLIP)·아래(FLAP) 두 쪽으로 잘라,
+       같은 자리에 겹쳐 둔다 — 멈춰 있을 때는 그림 한 장과 똑같다. */
+    .fv-logo { position:relative; width:118px; aspect-ratio:931/803; perspective:420px; }
+    .fv-logo b, .fv-logo i { position:absolute; inset:0; display:block; will-change:transform; }
+    .fv-logo img { display:block; width:100%; height:100%; filter:drop-shadow(0 0 10px rgba(120,170,255,.3)); }
+    /* 도는 축은 반쪽마다 글자가 있는 높이의 가운데다(FLIP 29.5%, FLAP 72.7%).
+       그림 전체 가운데로 두면 두 쪽이 제자리에서 안 돌고 위아래로 휘둘린다. */
+    .fv-logo b { transform-origin:50% 29.5%; }
+    .fv-logo i { transform-origin:50% 72.7%; }
+    /* 한 판이 1.8초. 넘어가는 건 앞쪽 잠깐뿐이고 나머지는 쉰다(±360 ≡ 0).
 
        차례: FLIP 이 아래로 한 바퀴(0~0.225초) → 한 박자 쉼(0.15초) →
        FLAP 이 위로 한 바퀴(0.378~0.603초). 겹치면 둘이 한꺼번에 돌아 무엇이
        먼저인지 안 읽힌다 — 역참 안내판이 한 줄씩 넘어가는 그 결로 둔다.
 
        둘 다 막 안에서 끝나야 한다. 막은 VEIL_MIN(client.js) 만큼 떠 있다.
-       예전엔 막이 0.32초라 FLAP 이 출발하자마자 막이 걷혀, FLIP 만 돌고
-       FLAP 은 안 도는 것으로 보였다. 막을 FLAP 이 내려앉는 데까지 늘렸다.
 
        도는 쪽: FLIP 은 아래로, FLAP 은 위로 — 거울처럼 엇갈린다.
-       FLAP 은 rotate(180deg) 로 뒤집혀 있어서 같은 rotateX 부호가 화면에서는
-       반대로 돈다. 그래서 둘 다 -360 이다(브라우저에서 각 글자의 앞면이
-       돌기 시작한 처음 몇 도 동안 어느 쪽으로 쓸리는지 재서 확인했다). */
+       글꼴로 짜던 때는 FLAP 을 rotate(180deg) 로 뒤집어 두어서 부호가 둘 다
+       -360 이었다. 이제 FLAP 은 그림에 뒤집혀 그려져 있어 따로 뒤집지 않으므로,
+       위로 돌리려면 부호가 반대(+360)다(브라우저에서 앞면이 처음 몇 도 동안
+       어느 쪽으로 쓸리는지 재서 확인했다). */
     #fadeVeil.on .fv-logo b { animation:fvFlipUp 1.8s cubic-bezier(.5,.03,.25,1) infinite; }
     #fadeVeil.on .fv-logo i { animation:fvFlapUp 1.8s cubic-bezier(.5,.03,.25,1) infinite; }
     @keyframes fvFlipUp {
@@ -1256,9 +1224,9 @@
       100%  { transform:rotateX(-360deg); }
     }
     @keyframes fvFlapUp {
-      0%, 21% { transform:rotate(180deg) rotateX(0deg); }
-      33.5%   { transform:rotate(180deg) rotateX(-360deg); }
-      100%    { transform:rotate(180deg) rotateX(-360deg); }
+      0%, 21% { transform:rotateX(0deg); }
+      33.5%   { transform:rotateX(360deg); }
+      100%    { transform:rotateX(360deg); }
     }
     @media (prefers-reduced-motion:reduce) {
       #fadeVeil.on .fv-logo b, #fadeVeil.on .fv-logo i { animation:none; }
@@ -3163,8 +3131,7 @@
 
     /* 세로가 짧은 폰 — 로고를 줄여 모드 카드가 접히지 않게 한다 */
     @media (max-height:720px) {
-      .logo h1, .logo .flap { font-size:3.2rem; letter-spacing:3px; }
-      .logo .flap { margin-top:0; }
+      .logo { --logo-w:138px; }
       .rank-btn { padding:6px 15px; font-size:.76rem; }
       #lobby { gap:15px; }
       .lobby-btns > .mode-grid:not(.sub), .lobby-btns > .lobby-misc { margin-top:14px; }
@@ -3181,7 +3148,7 @@
       .mc-emblem { width:50px; height:50px; }
     }
     @media (max-height:620px) {
-      .logo h1, .logo .flap { font-size:2.5rem; }
+      .logo { --logo-w:108px; }
       /* 칸을 낮추면 안에 든 것도 같이 낮춰야 한다. 예전엔 높이만 눌러 놔서
          펠트(107px)보다 내용(110px)이 커져 "AI와 대전" 이 잘렸다. */
       .mode-card { aspect-ratio:auto; height:132px; }
@@ -3791,8 +3758,7 @@
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
       text-align:center; line-height:.78; pointer-events:none; z-index:1; opacity:.06;
     }
-    #tableLogo .tl { font-family:'Bangers',cursive; font-size:5.5rem; letter-spacing:8px; color:#fff; display:block; }
-    #tableLogo .tl.flap { transform:rotate(180deg); margin-top:-10px; }
+    #tableLogo img { display:block; width:300px; height:auto; }
 
     /* 인게임 컨트롤 (나가기 / 소리 / 설명) — 좌측 상단 */
     #controls { position:absolute; top:calc(14px + var(--safe-t)); left:16px; z-index:8; display:flex; gap:8px; }
@@ -5611,10 +5577,10 @@
       #oppZone { padding-top:56px; margin-top:0; }   /* 상대 손패가 프로필·컨트롤 아래로 */
 
       /* 워터마크 로고 축소 */
-      #tableLogo .tl { font-size:3.2rem; letter-spacing:5px; }
+      #tableLogo img { width:180px; }
 
       /* 로비 */
-      .logo h1, .logo .flap { font-size:3.55rem; }
+      .logo { --logo-w:150px; }
       /* 화면 폭을 더 쓴다. 290px 로는 카드가 139px 밖에 안 되고, 비율을 지키면
          세로도 같이 낮아져 내용 위아래로 110px 넘게 남았다. */
       .lobby-btns { width:min(344px, calc(100vw - 46px)); }
@@ -5865,8 +5831,8 @@
       text-align:center; line-height:.78; pointer-events:none; z-index:0; opacity:.05;
       width:max-content;
     }
-    #tableLogoTv .tl, #tableLogo .tl, #tableLogoQ .tl { font-family:'Bangers',cursive; font-size:5.5rem; letter-spacing:8px; color:#fff; display:block; }
-    #tableLogoTv .tl.flap, #tableLogo .tl.flap, #tableLogoQ .tl.flap { transform:rotate(180deg); margin-top:-10px; }
+    /* 로비와 같은 로고 그림을 아주 옅게(opacity) 깐다 */
+    #tableLogoTv img, #tableLogo img, #tableLogoQ img, [id^="tableLogo"] img { display:block; width:300px; height:auto; }
 
     /* 오른쪽 위 메뉴 — 아이콘 하나, 누르면 아래로 펼쳐진다 */
     .tv-menuWrap { position:absolute; top:calc(10px + var(--safe-t)); right:14px; z-index:9; }
@@ -6195,7 +6161,7 @@
       #tv-deckStack { width:46px; height:65px; }
       #tv-deckStack .card { width:46px; height:65px; }
       #tv-turn { font-size:.62rem; }
-      #tableLogoTv .tl, #tableLogo .tl { font-size:3.2rem; letter-spacing:5px; }
+      #tableLogoTv img, #tableLogo img { width:180px; }
       #tv-actions { min-height:46px; }
       #tv-centerZone::before { height:90px; }
     }
@@ -6314,7 +6280,7 @@
 <div id="title">
   <div class="title-mid">
     <div class="logo big">
-      <h1>FLIP</h1><div class="flap">FLAP</div>
+      <h1 class="logo-img"><img src="/logo.webp" alt="FLIP FLAP" width="931" height="803" draggable="false"></h1>
       </div>
     <div class="title-btns">
       <button class="social-btn google" id="titleGoogle" style="display:none" onclick="socialLogin('google')">
@@ -6346,7 +6312,7 @@
 
 <div id="lobby">
   <div class="logo">
-    <h1>FLIP</h1><div class="flap">FLAP</div>
+    <h1 class="logo-img"><img src="/logo.webp" alt="FLIP FLAP" width="931" height="803" draggable="false"></h1>
     <div class="logo-rule"><span></span><i></i><span></span></div>
   </div>
   <div class="logo-actions">
@@ -6893,13 +6859,13 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
      보였다 — 돌아가는 고리와 작은 로고를 얹어 '넘어가는 중' 으로 읽히게 한다. -->
 <div id="fadeVeil">
   <div class="fv-box">
-    <div class="fv-logo"><b>FLIP</b><i>FLAP</i></div>
+    <div class="fv-logo" aria-hidden="true"><b><img src="/logo-flip.webp" alt="" draggable="false"></b><i><img src="/logo-flap.webp" alt="" draggable="false"></i></div>
   </div>
 </div>
 
 <div id="game">
   <!-- 판 — 트웰브와 같은 테이블. 자리는 자바스크립트가 잡는다(layTable). -->
-  <div id="game-table"><div id="tableLogo"><span class="tl">FLIP</span><span class="tl flap">FLAP</span></div></div>
+  <div id="game-table"><div id="tableLogo"><img src="/logo.webp" alt="" draggable="false"></div></div>
 
   <!-- 오른쪽 위 메뉴 — 판 위에 버튼 넉 장이 늘어서 있으면 카드보다 버튼이
        먼저 눈에 든다. 평소엔 줄 세 개짜리 아이콘 하나만 두고, 누르면 펼친다. -->
@@ -7083,7 +7049,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 <!-- 미니게임 경기장 — 2인 경기장과 같은 펠트·테두리를 쓴다 -->
 <div id="mini">
   <div id="tableLogoMini" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;line-height:.78;pointer-events:none;z-index:1;opacity:.06">
-    <span class="tl">FLIP</span><span class="tl flap">FLAP</span>
+    <img src="/logo.webp" alt="" draggable="false">
   </div>
   <div class="tv-menuWrap" id="mn-menuWrap">
     <button class="tv-menuBtn" id="mn-menuBtn" onclick="mnMenu()" title="메뉴" aria-label="메뉴" aria-expanded="false">
@@ -8141,7 +8107,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 <!-- ══ TWELVE — 칩으로 사는 경매. 뼈대·색·소리는 2인전과 같게 ══ -->
 <div id="tv">
   <!-- 테이블 — 덱·경매품·전리품만 이 위에 놓인다. 손패와 사람은 밖에. -->
-  <div id="tv-table"><div id="tableLogoTv"><span class="tl">FLIP</span><span class="tl flap">FLAP</span></div></div>
+  <div id="tv-table"><div id="tableLogoTv"><img src="/logo.webp" alt="" draggable="false"></div></div>
 
   <!-- 오른쪽 위 메뉴 — 판 위에 버튼 넉 장이 늘어서 있으면 카드보다 버튼이
        먼저 눈에 든다. 평소엔 줄 세 개짜리 아이콘 하나만 두고, 누르면 펼친다. -->
@@ -8222,7 +8188,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
 <!-- 결과 -->
 <div id="game4">
   <!-- 판 — 2인전·트웰브와 같은 조각. 자리는 이 판을 둘러 앉는다. -->
-  <div id="quad-table"><div id="tableLogoQ"><span class="tl">FLIP</span><span class="tl flap">FLAP</span></div></div>
+  <div id="quad-table"><div id="tableLogoQ"><img src="/logo.webp" alt="" draggable="false"></div></div>
   <!-- 좌측 상단 조작 — 2인전과 같은 자리, 같은 모양 -->
   <!-- 오른쪽 위 메뉴 — 트웰브·2인전과 같은 줄 세 개 아이콘 -->
   <div class="tv-menuWrap" id="q-menuWrap">
