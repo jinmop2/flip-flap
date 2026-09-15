@@ -804,13 +804,14 @@
        맞는 시각(41% = 0.62초)은 건드리지 않는다 — 글자가 바뀌는 순간과
        흔들림·불꽃이 그 시각에 맞춰져 있다. */
     @keyframes mdSwing {
-      0%   { transform:rotate(0); }
-      10%  { transform:rotate(-3deg); }                      /* 숨 고르기 */
-      30%  { transform:translate(-1%,-4%) rotate(-34deg); }  /* 치켜든다 */
-      34%  { transform:translate(-1%,-5%) rotate(-36deg); }  /* 꼭대기에서 한 박자 */
-      41%  { transform:translate(0,1%) rotate(5deg); }       /* 내려친다 */
-      54%  { transform:translate(0,-3%) rotate(-5deg); }     /* 반동 */
-      100% { transform:translate(0,0) rotate(0); }
+      /* 처음부터 들고 선 자세다. 로고 자리에 그대로 두면 망치가 글자 위에
+         걸쳐 있어, 맞기도 전에 무슨 글씨인지가 안 읽힌다. 글자에 걸치는
+         그 모양은 맞은 뒤에 얻는 것이다. */
+      0%,20% { transform:translate(-1%,-5%) rotate(-40deg); }
+      34%    { transform:translate(-1%,-6%) rotate(-44deg); }  /* 한 번 더 치켜든다 */
+      41%    { transform:translate(0,1%) rotate(5deg); }       /* 내려친다 */
+      54%    { transform:translate(0,-3%) rotate(-5deg); }     /* 반동 */
+      100%   { transform:translate(0,0) rotate(0); }           /* 로고 자리 */
     }
     /* 멀쩡한 글씨: 맞는 순간 납작해지며 로고에 자리를 넘긴다 */
     @keyframes mdWasNormal {
