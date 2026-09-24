@@ -2361,7 +2361,7 @@
       /* 세로가 짧다고 경매대를 옆으로 넓히면 안 된다 — 양옆 자리가 들어갈
          가로 여유는 화면 높이와 상관없이 똑같이 빠듯하다. 예전 가로줄 시절의
          값이 남아 있어, 짧은 기기에서 옆 사람이 경매품 위로 올라앉았다. */
-      body.quad4 #q-mat { padding:8px 12px; gap:8px; }
+      body.quad4 #q-mat { padding:8px 8px; gap:7px; }
       body.quad4 #q-mat .card { width:44px; height:62px; padding:3px 3px 2px; }
       body.quad4 #q-mat .card .c-num { font-size:1.6rem; }
       body.quad4 #q-mat .card .c-rank { font-size:.74rem; min-width:16px; }
@@ -2399,7 +2399,8 @@
       background:rgba(0,0,0,.34); box-shadow:inset 0 0 0 1px rgba(159,180,216,.18); }
     /* 경매대 — 판 위에 또 판을 깔면 상자 안의 상자가 된다. 자리를 잡는 일만
        하고 스스로는 안 보인다. 카드가 주인공이다. */
-    #q-mat { display:flex; align-items:center; gap:20px; padding:14px 22px; }
+    /* 칸이 넷(덱·공개·출품·지금 값)이라 옆자리 사이에 들어가도록 촘촘히 둔다 */
+    #q-mat { display:flex; align-items:center; gap:12px; padding:14px 12px; }
     .q-slot { display:flex; flex-direction:column; align-items:center; gap:3px; }
     /* 경매대 이름표 — 회색이라 안 읽혔다. 대문자 간격을 주고 금색 기운을 얹는다. */
     .q-slabel { font-size:.54rem; color:#c8a86a; font-weight:800; letter-spacing:.6px; }
@@ -2501,6 +2502,73 @@
       .q-winstamp { animation:none; transform:translate(-50%,-50%) rotate(-13deg) scale(1); }
       .q-bslot.win .card, #q-mybid.win .card { transition:none; }
     }
+    /* ── 칩 경매 ── */
+    /* 지금 값 — 경매대 오른쪽. 카드와 같은 높이의 칸에 금색 숫자. */
+    #q-price { min-width:62px; height:64px; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:3px; border-radius:10px; background:rgba(0,0,0,.3);
+      box-shadow:inset 0 0 0 1px rgba(224,180,92,.35); padding:0 6px; }
+    #q-price b { font-family:'Fredoka',inherit; font-size:1.25rem; color:#ffe7a6; display:inline-flex; align-items:center; gap:3px; line-height:1; }
+    #q-price span { font-size:.5rem; color:#c3cedf; max-width:78px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #q-price .ic, .q-bid .ic, .q-rinfo .ic, .q-pval .ic { width:.9em; height:.9em; color:#e0b45c; }
+    #q-price.bump { animation:qBump .35s ease-out; }
+    @keyframes qBump { 40% { transform:scale(1.14); } }
+    /* 자리마다 이번 경매에서의 모습 — 부른 값·포기·답함·낙찰 */
+    .q-bid { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+      min-width:42px; padding:4px 7px; border-radius:9px; background:rgba(0,0,0,.42);
+      box-shadow:inset 0 0 0 1px rgba(159,180,216,.3); }
+    .q-bid b { font-family:'Fredoka',inherit; font-size:.9rem; color:#e6eefb; display:inline-flex; align-items:center; gap:2px; line-height:1.1; }
+    .q-bid span { font-size:.46rem; color:#9fb0c6; white-space:nowrap; }
+    .q-bid.high { box-shadow:inset 0 0 0 1.5px #e0b45c, 0 0 10px rgba(224,180,92,.35); }
+    .q-bid.high b { color:#ffe7a6; }
+    .q-bid.old b { color:#8d99ab; }
+    .q-bid.out, .q-bid.no { opacity:.55; }
+    .q-bid.out b, .q-bid.no b { font-family:inherit; font-size:.66rem; color:#a8b1be; }
+    .q-bid.yes b { font-family:inherit; font-size:.7rem; color:#8fe0a0; }
+    .q-bid.done b { color:#8fe0a0; }
+    .q-bid.think b { color:#7fd8ff; animation:qpulse 1s infinite; }
+    .q-bid.auc b { color:#ffe7a6; }
+    .q-bid.win { background:rgba(60,46,14,.75); box-shadow:inset 0 0 0 2px #e0b45c, 0 0 14px rgba(224,180,92,.5); }
+    .q-bid.win b { color:#ffe7a6; font-size:1rem; }
+    .q-bid.win span { color:#ffd94a; font-weight:900; }
+    #q-mybid .q-bid { min-width:58px; padding:6px 10px; }
+    #q-mybid .q-bid b { font-size:1.2rem; }
+    #q-mybid .q-bid span { font-size:.55rem; }
+    /* 칩 — 명패 옆, 내 더미 옆 */
+    .q-chips { position:relative; flex-shrink:0; }
+    .q-chips .chip { position:relative; width:14px; height:14px; flex-shrink:0; }
+    .q-seat .q-chips { font-size:.66rem; padding:2px 6px; }
+    .q-chips .q-inc { font-size:.5rem; color:#8fe0a0; font-family:inherit; font-weight:900; margin-left:1px; }
+    .q-incfly { position:absolute; right:-4px; top:-6px; font-family:'Fredoka',inherit; font-size:.8rem;
+      color:#8fe0a0; font-weight:900; pointer-events:none; text-shadow:0 1px 3px rgba(0,0,0,.8);
+      animation:qIncFly 1.4s ease-out forwards; z-index:9; }
+    @keyframes qIncFly { 0% { transform:translateY(6px); opacity:0; } 20% { opacity:1; } 100% { transform:translateY(-18px); opacity:0; } }
+    /* 특수 카드 — 금고(동전), 더블6(×2 표시), 쌍둥이 4/6(두 숫자) */
+    .card[data-kind="V"] { background:linear-gradient(160deg,#4a3a12,#2a2008) !important; border-color:#e0b45c !important; }
+    .card[data-kind="V"] .c-num { color:#ffd76a; display:flex; align-items:center; justify-content:center; }
+    .card[data-kind="V"] .q-vico { width:1em; height:1em; }
+    .card .c-sub { position:absolute; bottom:3px; left:0; right:0; text-align:center; font-size:.42rem; font-weight:900; color:#ffe7a6; letter-spacing:.3px; }
+    .card[data-kind="W6"] .c-x2 { position:absolute; top:2px; right:3px; font-size:.5rem; font-weight:900; color:#fff;
+      background:rgba(0,0,0,.35); border-radius:4px; padding:0 3px; }
+    .card[data-kind="W6"] { box-shadow:inset 0 0 0 2px rgba(255,255,255,.35); }
+    .card[data-kind="W6"] { background:linear-gradient(160deg,var(--ink-d),var(--ink)); border-color:#e8dccb; }
+    .card[data-kind="D46"] { background:linear-gradient(135deg,var(--yel-d) 0,var(--yel) 49%,var(--ink) 51%,var(--ink-d)); border-color:#c9a860; }
+    /* 쌍둥이 — 대각선으로 갈린 카드에 4 는 왼쪽 위(노랑), 6 은 오른쪽 아래(먹색) */
+    .card .c-num.c-twin { position:absolute; inset:0; display:block; }
+    .card .c-twin i { position:absolute; font-style:normal; font-size:.7em; line-height:1; }
+    .card .c-twin i:first-child { left:14%; top:12%; }
+    .card .c-twin i:last-child { right:14%; bottom:12%; }
+    .q-pg .card .c-sub, .q-oacq .card .c-x2 { display:none; }
+    .q-pg .card .c-x2 { font-size:.4rem; top:1px; right:1px; padding:0 1px; }
+    .q-pg .card.q-ghost { opacity:.45; }
+    .q-pn.vault { color:#ffd76a; }
+    .q-vg .card { box-shadow:0 0 0 1px rgba(224,180,92,.5); }
+    /* 남은 카드 표 — 등급이 없어 종류마다 장수만 센다 */
+    .q-lleft { font-size:.5rem; color:#aab4c3; margin-left:4px; }
+    .q-shead { color:#ffd76a; margin-right:6px; }
+    .q-shead::after { content:' —'; }
+    .q-stail, .q-ssecs { margin-left:6px; color:#aab4c3; font-weight:700; }
+    .q-ohow { font-size:.66rem; color:#c3cedf; font-weight:700; margin-top:4px; }
+    .q-rinfo { display:inline-flex; align-items:center; gap:2px; font-size:.7rem; }
     .q-blabel { font-size:.48rem; color:#aab1bc; }
     /* 상대 자리에서는 '낙찰' 을 카드에 얹는다. 아래에 쌓으면 낸 카드 칸이
        50 → 68px 로 불어나는데, 옆자리는 그만큼의 깊이가 없어 경매품 위로
@@ -2529,9 +2597,22 @@
        위아래로 튄다(측정 25px). 보이든 안 보이든 자리를 늘 잡아 둔다. */
     /* 확정 버튼과 같은 자리에 겹쳐 둔다 — 방식을 고를 때와 카드를 확정할 때는
        서로 다른 단계라 둘이 같이 뜰 일이 없다. 자리를 나눠 두면 그만큼 손패가 밀린다. */
-    #q-typeBtns { display:none; gap:8px; align-items:center; flex-shrink:0; }
-    #q-typeBtns.show { display:flex; }
-    #q-actions:has(#q-typeBtns.show) .q-confirm-slot { display:none; }
+    .q-abox { display:none; gap:8px; align-items:center; flex-shrink:0; }
+    .q-abox.show { display:flex; }
+    #q-actions:has(.q-abox.show) .q-confirm-slot { display:none; }
+    .q-tbtn:disabled { opacity:.35; cursor:default; filter:none; }
+    .q-tbtn .ic { width:1.05em; height:1.05em; }
+    .q-tbtn.q-go { background:linear-gradient(180deg,#c3d8f8,#8da4c5); color:#1a1f27; }
+    .q-tbtn.q-pass { border-color:rgba(159,180,216,.45); color:#b9c3d2; }
+    .q-tbtn.q-back { padding:9px 11px; border-color:rgba(159,180,216,.45); }
+    .q-tbtn.q-raise { padding:9px 13px; font-family:'Fredoka',inherit; font-size:.9rem; }
+    #q-raiseBtns { gap:6px; }
+    .q-step { width:34px; height:34px; border-radius:50%; border:1.5px solid var(--gold);
+      background:#1b2029; color:#deecff; font-size:1.1rem; font-weight:900; cursor:pointer; font-family:inherit; }
+    .q-step:disabled { opacity:.3; cursor:default; }
+    .q-pval-wrap { display:flex; flex-direction:column; align-items:center; min-width:74px; }
+    .q-pval { font-family:'Fredoka',inherit; font-size:1.2rem; color:#ffe7a6; display:inline-flex; align-items:center; gap:3px; }
+    #q-closeHint { font-size:.5rem; color:#aab4c3; white-space:nowrap; }
     /* 방식 버튼 — 이름만 남긴다. 밑에 붙여 둔 설명 두 줄은 고를 때마다 읽을
        것이 아니라 한 번 배우면 되는 규칙이라(규칙·튜토리얼에 있다), 매번
        버튼을 빽빽하게 만들기만 했다. */
@@ -2594,10 +2675,15 @@
     .q-lrow .q-ck[data-k="2"]{background:#566a97} .q-lrow .q-ck[data-k="3"]{background:#2e6f9e}
     .q-lrow .q-ck[data-k="4"]{background:#7b90ae} .q-lrow .q-ck[data-k="6"]{background:#585e66}
     .q-lgs { display:flex; gap:2px; flex-wrap:wrap; }
-    .q-lg { font-size:.55rem; font-weight:800; color:#dcebff; background:rgba(224,237,255,.14);
-      border-radius:3px; min-width:15px; text-align:center; padding:1px 2px; }
-    .q-lg.gone { color:#53575e; background:rgba(255,255,255,.04); text-decoration:line-through; }
-    .q-lg.mine { color:#9fd8ff; background:rgba(90,160,220,.22); box-shadow:inset 0 0 0 1px rgba(140,200,255,.5); }
+    .q-lgs { align-items:center; }
+    /* 한 칸이 한 장 — 흰 칸이 아직 안 나온 것 */
+    .q-lg { width:9px; height:13px; border-radius:2px; background:#dfe6f0; display:inline-block; }
+    .q-lg.gone { background:rgba(255,255,255,.1); }
+    .q-lg.mine { background:#7fb2ff; box-shadow:inset 0 0 0 1px rgba(200,230,255,.6); }
+    .q-lrow .q-ck { min-width:30px; text-align:center; }
+    .q-lrow .q-ck[data-k="W6"]{background:#585e66; box-shadow:inset 0 0 0 1px #fff}
+    .q-lrow .q-ck[data-k="D46"]{background:linear-gradient(90deg,#7b90ae 50%,#585e66 50%)}
+    .q-lrow .q-ck[data-k="V"]{background:#6b5520; color:#ffe7a6}
 
     /* 시작 전 대기 — 게임 화면 안에 뜬다. 아직 경매가 없으니 경매대는 감춘다 */
     body.q-waiting #q-mat { display:none; }
@@ -2645,6 +2731,8 @@
        카드 자체가 아니라 칸을 돌린다 — 카드에는 뒤집기(flipReveal)가 걸려 있어
        transform 을 덮어쓰면 공개 연출이 죽는다. */
     .q-seat .q-bslot, .q-seat .q-oacq { transform:rotate(180deg); }
+    /* 칩 경매의 딱지는 카드가 아니라 글자다 — 명패와 같은 쪽으로 읽히게 되돌린다 */
+    .q-seat .q-bslot .q-bid, .q-seat .q-bslot .q-winstamp { rotate:180deg; }
 
     /* ── 치수 — 옆자리가 들어갈 만큼만 경매대를 좁힌다 ────────────────────
        양옆에 사람이 앉으므로 가운데가 그만큼 줄어든다. 옆자리 한 사람이
@@ -4960,6 +5048,10 @@
     .rc[data-kind="3"]{ background:linear-gradient(160deg,var(--blue-d),var(--blue)); border-color:#4a90c0; }
     .rc[data-kind="4"]{ background:linear-gradient(160deg,var(--yel-d),var(--yel)); border-color:#e5c060; }
     .rc[data-kind="6"]{ background:linear-gradient(160deg,var(--ink-d),var(--ink)); border-color:#7a6250; }
+    .rc[data-kind="W6"]{ background:linear-gradient(160deg,var(--ink-d),var(--ink)); border-color:#e8dccb; }
+    .rc[data-kind="D46"]{ background:linear-gradient(135deg,var(--yel-d),var(--yel) 49%,var(--ink) 51%,var(--ink-d)); border-color:#c9a860; }
+    .rc[data-kind="V"]{ background:linear-gradient(160deg,#4a3a12,#2a2008); border-color:#e0b45c; }
+    .rc[data-kind="V"] .rc-num{ color:#ffd76a; }
     .rc.gold{ border-color:var(--gold); box-shadow:inset 0 0 9px rgba(144,167,200,.45); }
     .rc .rc-rank{ font-family:'Fredoka'; font-weight:700; font-size:.62rem; color:#fff; background:rgba(0,0,0,.4); border-radius:4px; padding:0 4px; align-self:flex-start; }
     .rc.gold .rc-rank{ background:var(--gold); color:#0f1318; }
@@ -6615,7 +6707,7 @@
       <div class="sm-item t-quad" data-m="quad">
         <button class="sm-head" onclick="soloPick('quad')">
           <svg class="ic sm-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-quad"/></svg>
-          <span class="sm-txt"><b>다인전</b><small>셋·넷이서 · 지는 것도 수가 되는 판</small></span>
+          <span class="sm-txt"><b>다인전</b><small>셋·넷이서 · 칩으로 사는 경매</small></span>
         </button>
         <div class="sm-body">
           <div class="sd-top"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-quad"/></svg><b>다인전</b><button class="sd-x" onclick="soloPick(null)" aria-label="닫기">×</button></div>
@@ -6754,8 +6846,8 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
   <div class="lb-box">
     <div class="lb-title"><span data-ico="👥"></span> 다인전 <span class="ev-badge beta" style="position:static">BETA</span></div>
     <div class="q-rulehint">
-      진행자도 함께 입찰합니다 (첫 경매만 제외)<br>
-      배팅 카드는 <b>약하게 부른 사람부터</b> 강한 경매품을 가져갑니다<br>
+      카드를 칩으로 사는 경매 — 산 사람만 칩을 냅니다<br>
+      금고를 모으면 매 턴 칩이 불어납니다<br>
       <span style="color:#8490a3">※ 베타 — 전적·코인에 반영되지 않습니다</span>
     </div>
     <button class="btn btn-gold" onclick="q4Quick()"><span data-ico="⚡"></span> 빠른대전 (온라인)</button>
@@ -6844,7 +6936,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
       </button>
       <button class="tut-pk t-quad" onclick="tutStart('quad')">
         <span class="tp-ico">👥</span>
-        <span class="tp-txt"><b>다인전</b><small>셋·넷이서 · 지는 것도 수가 되는 판</small></span>
+        <span class="tp-txt"><b>다인전</b><small>셋·넷이서 · 칩으로 사는 경매</small></span>
       </button>
       <!-- 미니게임 — 위 주석 참고.
       <button class="tut-pk t-mini" onclick="tutStart('mini')">
@@ -7353,110 +7445,106 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
   <div id="rulesBox4" class="rules-box" data-i18n-block="rules4">
     <span class="close-x" onclick="toggleRules4(false)">×</span>
     <h2>FLIP FLAP <span class="r4-tag">3·4인전</span></h2>
-    <p class="r-lead">고르는 법도, 이기는 법도 2인전과 같습니다 — <b style="color:#dcebff">세트</b>를 먼저 완성하면 승리입니다.<br>
-    여기서는 <b style="color:#dcebff">사람이 늘면서 달라지는 것</b>만 정리했습니다.</p>
+    <p class="r-lead">셋·넷이 <b style="color:#dcebff">칩</b>으로 카드를 사고파는 경매입니다.<br>
+    <b style="color:#dcebff">세트</b>를 먼저 완성하면 승리 — 카드를 내서 겨루는 2인전과 달리, 여기서는 <b style="color:#dcebff">값을 불러</b> 삽니다.</p>
 
     <h3><span data-ico="🎯"></span> 이기는 법</h3>
     <p>같은 종류를 <b>그 숫자만큼</b> 모으면 그 자리에서 바로 승리입니다.<br>
     <span style="font-size:.78rem">필요한 장수: <b>2</b>짜리 2장 · <b>3</b>짜리 3장 · <b>4</b>짜리 4장 · <b>6</b>짜리 6장<br>
-    <span data-ico="⚠"></span> 경매로 따서 <b>내 앞에 깔린 카드</b>만 셉니다. 손에 든 카드는 세지 않습니다.<br>
+    <span data-ico="⚠"></span> 경매로 사서 <b>내 앞에 깔린 카드</b>만 셉니다. 손에 든 카드는 세지 않습니다.<br>
     <span data-ico="🏁"></span> 덱이 떨어지면 <b>세트에 가장 가까운 사람</b>이 승리합니다.</span></p>
 
     <h3><span data-ico="📦"></span> 준비</h3>
     <ul>
-      <li>인원에 맞는 덱을 섞어 <b>각자 손패 6장</b>, 나머지가 <b>중앙 덱</b>이 됩니다</li>
-      <li>첫 <b>진행자</b>는 무작위로 정하고, 이후 진행자는 <b>시계방향</b>으로 넘어갑니다</li>
-      <li>손패가 다 떨어진 사람은 진행자 차례를 건너뜁니다 — 출품할 카드가 없기 때문입니다</li>
+      <li>덱을 섞어 <b>각자 손패 4장</b>, 나머지가 <b>중앙 덱</b>이 됩니다</li>
+      <li>칩을 <b>4인 30개 · 3인 25개</b>씩 나눠 갖습니다. 칩은 <b>모두에게 공개</b>입니다</li>
+      <li>첫 <b>진행자</b>는 무작위, 이후 <b>시계방향</b>으로 넘어갑니다</li>
     </ul>
 
-    <h3><span data-ico="🗂"></span> 카드 구성 <span class="r-sub">— 4인 38장 · 3인 30장</span></h3>
-    <p style="font-size:.78rem;margin-top:-2px">2인전(24장)보다 두툼합니다. 3인 덱은 <b>4인 덱에서 8장을 덜어낸</b> 것이라 카드 한 벌로 두 인원을 모두 볼 수 있습니다.</p>
+    <h3><span data-ico="🗂"></span> 카드 구성 <span class="r-sub">— 4인 32장 · 3인 24장</span></h3>
+    <p style="font-size:.78rem;margin-top:-2px">카드에 <b>등급이 없습니다</b>. 종류만 봅니다. 대신 특별한 카드가 세 가지 섞여 있습니다.</p>
 <div class="r-comp">
       <div class="r-comp-row">
-        <div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
-        <span><b>2짜리</b> · 4장 <span class="r-comp-g">(3인 3장)</span></span>
+        <div class="rc" data-kind="2"><span class="rc-num">2</span></div>
+        <span><b>2짜리</b> · 3장 <span class="r-comp-g">(3인 2장)</span></span>
       </div>
       <div class="r-comp-row">
-        <div class="rc" data-kind="3"><span class="rc-rank">1</span><span class="rc-num">3</span></div>
-        <span><b>3짜리</b> · 6장 <span class="r-comp-g">(3인 5장)</span></span>
+        <div class="rc" data-kind="3"><span class="rc-num">3</span></div>
+        <span><b>3짜리</b> · 6장 <span class="r-comp-g">(3인 4장)</span></span>
       </div>
       <div class="r-comp-row">
-        <div class="rc" data-kind="4"><span class="rc-rank">1</span><span class="rc-num">4</span></div>
-        <span><b>4짜리</b> · 10장 <span class="r-comp-g">(3인 8장)</span></span>
+        <div class="rc" data-kind="4"><span class="rc-num">4</span></div>
+        <span><b>4짜리</b> · 8장 <span class="r-comp-g">(3인 6장)</span></span>
       </div>
       <div class="r-comp-row">
-        <div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
-        <span><b>6짜리</b> · 18장 <span class="r-comp-g">(3인 14장)</span></span>
+        <div class="rc" data-kind="6"><span class="rc-num">6</span></div>
+        <span><b>6짜리</b> · 9장 <span class="r-comp-g">(3인 8장)</span></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="W6"><span class="rc-rank">×2</span><span class="rc-num">6</span></div>
+        <span><b>더블6</b> · 2장 <span class="r-comp-g">(3인 1장)</span> — 6짜리 <b>두 장</b>으로 칩니다</span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="D46"><span class="rc-num" style="font-size:1rem">4/6</span></div>
+        <span><b>쌍둥이 4/6</b> · 1장 <span class="r-comp-g">(3인 없음)</span> — 4짜리에도 6짜리에도 <b>둘 다</b> 칩니다</span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="V"><span class="rc-num" style="font-size:1rem">금고</span></div>
+        <span><b>금고</b> · 3장 — 세트에는 안 들지만 <b>매 턴 칩</b>을 벌어 줍니다</span>
       </div>
     </div>
     <div class="r4-tbl">
-      <div class="r4-row r4-head"><span>인원</span><span>덱</span><span>손패</span><span>중앙 덱</span></div>
-      <div class="r4-row"><span>3인</span><span>30장</span><span>6장</span><span>12장</span></div>
-      <div class="r4-row"><span>4인</span><span>38장</span><span>6장</span><span>14장</span></div>
+      <div class="r4-row r4-head"><span>인원</span><span>덱</span><span>손패</span><span>중앙 덱</span><span>칩</span></div>
+      <div class="r4-row"><span>3인</span><span>24장</span><span>4장</span><span>12장</span><span>25개</span></div>
+      <div class="r4-row"><span>4인</span><span>32장</span><span>4장</span><span>16장</span><span>30개</span></div>
     </div>
+
+    <h3><span data-ico="🪙"></span> 금고 — 모을수록 불어납니다</h3>
+    <p>턴이 시작될 때마다 <b>모두가</b> 금고에서 칩을 받습니다. 한 개보다 두 개, 두 개보다 세 개가 훨씬 많이 법니다.</p>
+    <div class="r4-tbl">
+      <div class="r4-row r4-head"><span>금고</span><span>1개</span><span>2개</span><span>3개</span></div>
+      <div class="r4-row"><span>매 턴</span><span>+1칩</span><span>+3칩</span><span>+6칩</span></div>
+    </div>
+    <p style="font-size:.78rem">일찍 사 둘수록 오래 법니다. 하지만 금고에 칩을 쓰는 동안 남이 세트에 다가간다는 걸 잊지 마세요.</p>
 
     <h3><span data-ico="🔄"></span> 한 번의 경매</h3>
     <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>중앙 덱에서 <b>공개 카드</b> 한 장을 뒤집습니다</span></div>
-      <div class="r4-step"><b>2</b><span>진행자가 손패에서 <b>출품 카드</b> 한 장을 보탭니다 — 이 두 장이 경매품</span></div>
-      <div class="r4-step"><b>3</b><span>진행자가 <b>오픈</b>과 <b>클로즈</b> 중 하나를 고릅니다</span></div>
-      <div class="r4-step"><b>4</b><span><b>전원</b>이 손패에서 배팅 카드를 한 장씩 냅니다 — 진행자도 함께 냅니다</span></div>
-      <div class="r4-step"><b>5</b><span>가장 <b>강한</b> 배팅이 경매품 두 장을 가져갑니다</span></div>
-      <div class="r4-step"><b>6</b><span>낸 배팅 카드를 <b>역순으로 나눠 갖고</b>, 진행자를 시계방향으로 넘깁니다</span></div>
+      <div class="r4-step"><b>1</b><span>모두 금고 수입을 받고, 중앙 덱에서 <b>공개 카드</b> 한 장을 뒤집습니다</span></div>
+      <div class="r4-step"><b>2</b><span>진행자가 손패에서 <b>출품 카드</b> 한 장을 보탭니다 — 이 두 장이 한 묶음의 경매품</span></div>
+      <div class="r4-step"><b>3</b><span>진행자가 <b>오픈</b>과 <b>클로즈</b> 중 하나를 고릅니다 (첫 경매는 오픈만)</span></div>
+      <div class="r4-step"><b>4</b><span>산 사람만 칩을 냅니다. 낸 칩은 <b>은행</b>으로 사라집니다</span></div>
+      <div class="r4-step"><b>5</b><span>경매품 두 장은 산 사람 앞에 깔리고, 진행자가 시계방향으로 넘어갑니다</span></div>
     </div>
-    <p style="font-size:.78rem"><span data-ico="⚠"></span> 손패가 빈 사람은 입찰을 건너뜁니다. 아무도 못 내면 <b>유찰</b>되어 경매품은 진행자가 회수합니다.</p>
 
-    <h3><span data-ico="👁"></span> 오픈과 클로즈 — 여기가 2인전과 다릅니다</h3>
+    <h3><span data-ico="👁"></span> 오픈과 클로즈</h3>
     <div class="r4-two">
       <div class="r4-card">
         <div class="r4-ct">오픈 경매</div>
-        <p>경매품을 <b>보여 줍니다</b>.<br>
-        배팅은 모두 <b>덮어 낸 뒤 한꺼번에</b> 공개합니다.<br>
-        물건은 알지만, 남의 속은 못 읽습니다.</p>
+        <p>진행자 <b>왼쪽부터 한 명씩</b> 값을 올리거나 포기합니다. 진행자는 맨 끝입니다.<br>
+        마지막까지 남은 사람이 부른 값에 삽니다.<br>
+        <b>아무도 안 부르면</b> 진행자가 공짜로 가져갑니다.</p>
       </div>
       <div class="r4-card">
         <div class="r4-ct">클로즈 경매</div>
-        <p>경매품을 <b>감춥니다</b>.<br>
-        대신 진행자부터 <b>시계방향으로 한 명씩</b> 공개하며 냅니다.<br>
-        뒤에 내는 사람일수록 앞사람 카드를 많이 보고 정합니다.</p>
+        <p>진행자가 <b>짝수 값 P</b>를 부릅니다 (2칩 이상).<br>
+        나머지는 "<b>P+1칩에 산다 / 안 산다</b>" 를 <b>몰래</b> 답합니다.<br>
+        한 명만 사면 그 사람이 P+1칩에. 아무도 안 사면 <b>진행자가 P칩</b>에 가져갑니다.</p>
       </div>
     </div>
-    <p style="font-size:.78rem">클로즈가 순서제인 이유는 이렇습니다. 여럿이 동시에 내면 한 사람을 읽어내도 나머지에게 뺏기니 심리전이 성립하지 않습니다.
-    한 명씩 공개하면 <b>먼저 낸 사람이 세게 질러 뒤를 물러나게</b> 만드는 허세가 살아납니다. 대신 뒤 순서일수록 정보가 많으니, 진행자는 그 손해를 감수하고 고르는 셈입니다.</p>
-
-    <h3><span data-ico="🎁"></span> 배팅 카드는 역순으로 돌아옵니다</h3>
-    <p>낸 카드는 버리지 않고 <b>서로 바꾸어 갖습니다</b>. 세게 부른 사람일수록 약한 카드를 받고,
-    <b>약하게 부른 사람이 가장 강한 카드</b>를 가져갑니다.</p>
-    <div class="r4-flow">
-      <div class="r4-fr"><span class="r4-fl">가장 세게 부름</span><span class="r-arrow">→</span><span>경매품 2장 획득 · 대신 <b>가장 약한</b> 배팅 카드를 받음</span></div>
-      <div class="r4-fr"><span class="r4-fl">가장 약하게 부름</span><span class="r-arrow">→</span><span>경매품은 못 받지만 <b>가장 강한</b> 배팅 카드를 받음</span></div>
-    </div>
-    <p style="font-size:.78rem">그래서 <b>지는 것도 하나의 수</b>가 됩니다 — 이번 경매품이 내 세트와 상관없다면, 일부러 약하게 내서 다음을 위한 강한 손패를 챙기는 편이 낫습니다.</p>
-
-    <div class="r-special">
-      <div class="r-st"><span data-ico="⚔"></span> 반전! 졸개의 배신</div>
-      <div class="r-match" style="margin:4px 0 0">
-        <div class="rc gold" data-kind="6"><span class="rc-rank">18</span><span class="rc-num">6</span></div>
-        <span class="r-arrow" data-ico="⚔"></span>
-        <div class="rc gold" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
-        <span class="r-arrow">→</span>
-        <span class="r-win">6-18 승리!</span>
-      </div>
-      <p style="font-size:.76rem;margin-top:6px">가장 약한 <b style="color:var(--gold)">6짜리 마지막 등급</b>은 가장 강한 <b style="color:var(--gold)">2-1</b>만큼은 잡습니다.
-      덱이 다르면 최약 카드도 달라집니다 — <b style="color:var(--gold)">4인 6-18</b> · <b style="color:var(--gold)">3인 6-14</b> · 2인전은 6-10입니다.<br>
-      배신이 터지면 그 두 장은 바꾸지 않고 <b>각자에게 되돌아갑니다</b>. 경매품까지 먹으면서 최강 카드까지 받으면 한 판이 너무 크게 기울기 때문입니다.</p>
-    </div>
+    <p style="font-size:.78rem"><span data-ico="⚔"></span> <b>동점 경쟁</b> — 클로즈에서 둘 이상이 "산다" 고 하면, 그 사람들끼리 <b>P+1칩부터 오픈 경매</b>를 다시 합니다.
+    진행자 왼쪽에 가장 가까운 사람이 P+1칩을 쥔 채로 시작하므로, 아무도 더 안 올리면 그 사람이 삽니다.</p>
+    <p style="font-size:.78rem">클로즈는 진행자의 수입니다. 내가 원하는 물건이면 남이 못 따라올 값을 부르고, 남이 원하는 물건이면 <b>비싸게 사 가게</b> 만들 수 있습니다. 대신 값을 너무 낮게 부르면 남이 싸게 가져갑니다.</p>
 
     <h3><span data-ico="🏁"></span> 게임이 끝날 때</h3>
     <ul>
-      <li>누군가 <b>세트를 완성</b>하면 즉시 종료입니다. 같은 경매에서 둘 이상이 동시에 완성하면 <b>그 경매를 낙찰받은 사람</b>이 이깁니다</li>
-      <li><b>중앙 덱이 떨어지거나</b> 모두의 손패가 비면 그 자리에서 순위를 매깁니다</li>
+      <li>누군가 <b>세트를 완성</b>하면 즉시 그 사람의 승리입니다</li>
+      <li><b>중앙 덱이 떨어지거나</b> 진행자가 낼 손패가 없으면 그 자리에서 순위를 매깁니다</li>
     </ul>
     <p style="font-size:.78rem">덱 소진 순위는 이 차례로 가립니다 — ① <b>세트까지 남은 장수</b>가 적은 사람 → ② 한 종류를 <b>더 많이 채운</b> 사람 →
-    ③ 모은 카드가 <b>더 많은</b> 사람 → ④ 모은 카드가 <b>더 강한</b> 사람.</p>
+    ③ 세트 카드를 <b>더 많이</b> 모은 사람 → ④ 칩이 <b>더 많은</b> 사람.</p>
 
     <h3><span data-ico="⏱"></span> 제한 시간</h3>
-    <p>한 사람당 <b>3분</b>이고, 내가 낼 차례일 때만 줄어듭니다.
+    <p>한 사람당 <b>3분</b>이고, 내가 둘 차례일 때만 줄어듭니다.
     다 쓰면 그 자리는 <b>AI 가 이어서 둡니다</b> — 한 사람 때문에 남은 사람들의 판까지 끝나지는 않습니다.</p>
   </div>
   </div>
@@ -8321,6 +8409,7 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
       <div class="q-slot q-deckslot"><div class="q-slabel" id="q-turn"></div><div id="q-deckstack"></div></div>
       <div class="q-slot"><div class="q-slabel">공개 카드</div><div class="q-scard" id="q-center"></div></div>
       <div class="q-slot"><div class="q-slabel">출품 카드</div><div class="q-scard" id="q-offer"></div></div>
+      <div class="q-slot"><div class="q-slabel">지금 값</div><div id="q-price"></div></div>
     </div>
     <!-- 시작 전 대기 — 인게임 화면에서 자리가 차는 걸 보며 시작한다 -->
     <div id="q-startPanel">
@@ -8346,9 +8435,24 @@ window.addEventListener('ff:panelclose', () => soloPick(null));
          출품 확정과 달라 매번 눈이 옮겨 다녀야 했다. 둘 다 여기서 나온다. -->
     <div id="q-actions">
       <div class="q-confirm-slot"><button id="q-confirm" onclick="q4Confirm()"></button></div>
-      <div id="q-typeBtns">
+      <div id="q-typeBtns" class="q-abox">
         <button class="q-tbtn" onclick="q4Type('open')"><span data-ico="👁"></span> 오픈 경매</button>
-        <button class="q-tbtn" onclick="q4Type('close')"><span data-ico="🙈"></span> 클로즈 경매</button>
+        <button class="q-tbtn" id="q-closeBtn" onclick="q4Type('close')"><span data-ico="🙈"></span> 클로즈 경매</button>
+      </div>
+      <!-- 클로즈 — 짝수 값을 고른다. 상대는 그보다 1칩 더 내고 살지 몰래 답한다. -->
+      <div id="q-closePick" class="q-abox">
+        <button class="q-tbtn q-back" onclick="q4CloseBack()" aria-label="뒤로">←</button>
+        <button class="q-step" id="q-closeDn" onclick="q4CloseStep(-2)" aria-label="2칩 내리기">−</button>
+        <div class="q-pval-wrap"><b id="q-closeP" class="q-pval"></b><span id="q-closeHint"></span></div>
+        <button class="q-step" id="q-closeUp" onclick="q4CloseStep(2)" aria-label="2칩 올리기">+</button>
+        <button class="q-tbtn q-go" onclick="q4CloseGo()">부르기</button>
+      </div>
+      <!-- 오픈 — 내 차례에 얼마까지 올릴지, 아니면 포기 -->
+      <div id="q-raiseBtns" class="q-abox"></div>
+      <!-- 클로즈 답 — 남의 답은 안 보인다 -->
+      <div id="q-ansBtns" class="q-abox">
+        <button class="q-tbtn q-go" id="q-buyBtn" onclick="q4Answer(true)"></button>
+        <button class="q-tbtn q-pass" onclick="q4Answer(false)">안 산다</button>
       </div>
     </div>
   </div>

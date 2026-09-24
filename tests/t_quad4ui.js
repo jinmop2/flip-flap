@@ -37,7 +37,7 @@ console.log('\n① 고르기와 내기가 분리됐는가');
   const conf = c4.slice(c4.indexOf('window.q4Confirm'), c4.indexOf('window.q4Confirm') + 420);
   ok('연타 방어 — 보내기 전에 비운다', conf.indexOf('sel4 = null') < conf.indexOf('sendAct('),
      '비우기가 보내기 뒤에 있다');
-  ok('고른 게 없으면 아무 일도 없다', /if \(!curPick \|\| !sel4\) return/.test(c4));
+  ok('고른 게 없으면 아무 일도 없다', /if \(curPick !== 'offer' \|\| !sel4\) return/.test(c4));
 }
 
 console.log('\n② 손패를 필요할 때만 다시 만드는가');
@@ -60,10 +60,9 @@ console.log('\n③ 덱에서 뽑는가');
   ok('2인전과 같은 맥박 애니메이션을 쓴다', /animation:deckPulse/.test(html));
   ok('덱을 그리는 함수', /function renderDeck4/.test(c4));
   ok('남은 장수를 보여준다', /덱 \$\{n\}장/.test(c4));
-  ok('덱을 눌러야 뽑힌다', /el\.onclick = drawable && n > 0/.test(c4));
-
-  // 예전엔 "공개 카드" 칸을 눌렀다 — 그 자리는 이제 클릭이 없어야 한다
-  ok('공개 카드 칸은 더 이상 안 눌린다', /\$\('q-center'\)\.onclick = null/.test(c4));
+  // 칩 경매는 턴마다 저절로 한 장 공개된다 — 덱도 공개 카드 칸도 누를 것이 아니다
+  ok('덱은 안 눌린다', !/el\.onclick/.test(c4.slice(c4.indexOf('function renderDeck4'), c4.indexOf('function paintSel'))));
+  ok('공개 카드 칸도 안 눌린다', !/\$\('q-center'\)\.onclick = /.test(c4) || /\$\('q-center'\)\.onclick = null/.test(c4));
   ok('공개 카드 칸에 뽑기가 안 걸려 있다',
      !/\$\('q-center'\)\.onclick = \(s\.phase === 'draw'/.test(c4));
 
@@ -120,8 +119,7 @@ console.log('\n⑥ 2인전과 결이 맞는가');
   ok('고른 카드가 위로 들린다', /#q-myhand \.fan-slot\.sel\s*\{[^}]*translateY/.test(html));
   ok('부채꼴과 안 부딪히게 칸을 든다', /el\.parentElement\.classList\.toggle\('sel'/.test(c4));
   ok('고른 카드를 배팅 자리에 미리 올린다', /q-pick-prev/.test(c4));
-  ok('무엇을 고르는 중인지 적는다', /출품 선택 중.*배팅 선택 중|배팅 선택 중/.test(c4));
-  ok('이미 낸 카드는 안 건드린다', /const already = mb\.querySelector\('\.card'\)/.test(c4));
+  ok('무엇을 고르는 중인지 적는다', /출품 선택 중/.test(c4));
   ok('미리보기는 매번 지우고 다시 만든다', /if \(prev\) prev\.remove\(\)/.test(c4));
 
   // 고르는 즉시 반영돼야 한다 — render 는 서버 상태가 올 때만 돈다
@@ -137,7 +135,7 @@ console.log('\n⑥ 2인전과 결이 맞는가');
   ok('덱 장수를 두 번 적지 않는다', !/id="q-deck"/.test(html)
      && /q-dcount/.test(html));
   // 판 위에 또 판을 깔면 상자 안의 상자가 된다
-  ok('가운데에 박스를 깔지 않는다', /#q-mat \{ display:flex; align-items:center; gap:20px; padding:14px 22px; \}/.test(html));
+  ok('가운데에 박스를 깔지 않는다', /#q-mat \{ display:flex; align-items:center; gap:12px; padding:14px 12px; \}/.test(html));
   // 낸 카드는 그 사람이 보는 쪽을 향한다. 판을 내려다보는 사람에게 '위' 는
   // 자기에게서 먼 쪽(판 한가운데)이다 — 어느 자리든 칸을 180도 돌리면 맞는다.
   // 옆자리는 자리가 이미 ∓90 도라, 거기에 180 을 더한 값이 그 사람의 '위' 다.
@@ -151,10 +149,8 @@ console.log('\n⑥ 2인전과 결이 맞는가');
   // 두 줄짜리 문구가 오면 경매대가 밀려 내려가고, 옆자리 눈높이까지 따라 움직인다
   ok('안내 문구가 경매대를 안 민다', /#q-status \{[\s\S]{0,140}min-height:34px;/.test(html));
   // 아직 등을 보이는 카드에 이미 도장·금테가 찍혀 있으면 뒤집기가 헛돌아 보인다
-  ok('결과는 뒤집기가 끝난 뒤에 붙는다',
-     /fx\.shown = false;/.test(c4) && /fx\.shown = true; render\(\);/.test(c4)
-     && /i === winner && fx\.shown/.test(c4)
-     && /winner >= 0 && fx\.shown && fx\.settledTurn !== s\.turn/.test(c4));
+  // 칩 경매에는 뒤집을 배팅 카드가 없다 — 낙찰 도장은 턴마다 한 번만 찍는다
+  ok('도장은 턴마다 한 번', /winner >= 0 && fx\.settledTurn !== s\.turn/.test(c4));
   // 자리가 카드 크기로 좁아지면서 도장이 카드 밖으로 절반쯤 튀어나갔다
   ok('WIN 도장은 카드 한복판', /\.q-winstamp \{[\s\S]{0,80}left:50%; top:50%;/.test(html)
      && /@keyframes qWinStamp \{ to \{ transform:translate\(-50%,-50%\)/.test(html));
@@ -168,7 +164,7 @@ console.log('\n⑥ 2인전과 결이 맞는가');
   ok('비어 있으면 자리도 안 차지', /#q-typeTag:empty \{ display:none/.test(html));
 
   // 덱과 카드가 붙어 있던 문제
-  ok('매트 간격이 넉넉하다', /#q-mat \{[^}]*gap:20px/.test(html));
+  ok('매트 간격 — 칸 넷이 옆자리 사이에 든다', /#q-mat \{[^}]*gap:12px/.test(html));
   ok('덱 층이 삐져나오는 만큼 자리를 잡는다', /#q-deckstack \{[^}]*width:54px/.test(html));
   // 칸 안(bottom:2px)에 두었더니 장수가 카드 밑동을 5px 파고들어 무늬에 묻혔다
   ok('덱 장수는 카드 아래에 앉는다', /#q-deckstack \.q-dcount \{[^}]*bottom:-7px/.test(html));
@@ -220,9 +216,10 @@ console.log('\n⑥ 2인전과 결이 맞는가');
 
 console.log('\n⑦ 안내 문구가 새 흐름과 맞는가');
 {
-  ok('덱을 뽑으라고 한다', /덱을 눌러 카드를 뽑으세요/.test(c4));
-  ok('출품도 확정을 누르라고 한다', /내놓을 카드를 고른 뒤 확정을 누르세요/.test(c4));
-  ok('배팅도 확정을 누르라고 한다', /배팅 카드를 고른 뒤 확정을 누르세요/.test(c4));
+  ok('출품할 카드를 고르라고 한다', /내놓을 카드를 고르세요/.test(c4));
+  ok('출품은 확정을 눌러야 나간다', /출품 확정/.test(c4));
+  ok('내 차례면 값을 부르라고 한다', /먼저 값을 불러 보세요/.test(c4) && /더 부를까요\?/.test(c4));
+  ok('클로즈는 몰래 답한다고 알려 준다', /다른 사람 답은 안 보여요/.test(c4));
   ok('예전 문구가 안 남아 있다', !/배팅 카드를 고르세요/.test(c4));
 }
 
@@ -240,7 +237,8 @@ console.log('\n⑧ 화면이 흔들지 않는가');
      /<div id="q-actions">[\s\S]{0,400}id="q-typeBtns"/.test(html));
   ok('그 줄이 손패 다음이다', html.indexOf('id="q-myhand"') < html.indexOf('id="q-actions"'));
   ok('줄이 늘 자리를 잡는다', /#q-actions \{[^}]*min-height:44px/.test(html));
-  ok('둘이 같은 자리를 나눠 쓴다', /#q-actions:has\(#q-typeBtns\.show\) \.q-confirm-slot \{ display:none; \}/.test(html));
+  ok('누를 것들이 한 자리를 나눠 쓴다', /#q-actions:has\(\.q-abox\.show\) \.q-confirm-slot \{ display:none; \}/.test(html)
+     && ['q-typeBtns', 'q-closePick', 'q-raiseBtns', 'q-ansBtns'].every((id) => new RegExp(`id="${id}" class="q-abox"`).test(html)));
   ok('확정 버튼도 자리를 잡는다', /\.q-confirm-slot \{[^}]*height:44px/.test(html));
   // 판 한가운데는 카드 몫이다 — 버튼이 경매품을 가리면 안 된다
   ok('방식 버튼이 판 안에 없다', !/<div id="q-table">[\s\S]*?id="q-typeBtns"[\s\S]*?<div id="q-me">/.test(html));
@@ -265,9 +263,9 @@ console.log('\n⑨ 빈 자리와 뒷면을 구분하는가');
   // 아직 아무것도 없는데 뒷면이 깔려 있으면 "이미 카드가 놓였다" 로 잘못 읽힌다.
   // 다만 클로즈에서 가려진 출품은 뒷면이 맞다 — 이 둘을 갈라야 한다.
   // 자리마다 보여줄 것을 고르는 일은 view4.js 로 옮겼다 — 화면도 같은 파일을 읽는다
-  ok('서버가 존재 여부를 따로 준다', /hasOffer: !!a\.offered/.test(fs.readFileSync(src + '/view4.js', 'utf8')));
   ok('빈 자리 요소', /function slotHole/.test(c4));
-  ok('셋을 갈라 그린다', /a\.hasOffer \? card4\(null\)/.test(c4));
+  // 출품 카드는 늘 공개다 — 있으면 앞면, 없으면 빈 자리 둘뿐
+  ok('둘을 갈라 그린다', /a\.offered \? card4\(a\.offered\) : slotHole\(\)/.test(c4));
   ok('뽑기 전에도 빈 자리', /\$\('q-center'\)\.appendChild\(slotHole\(\)\)/.test(c4));
   ok('예전처럼 무조건 뒷면을 깔지 않는다', !/\$\('q-offer'\)\.appendChild\(card4\(a\.offered\)\)/.test(c4));
 }
@@ -334,7 +332,7 @@ console.log('\n⑫ 시계 (3분)');
 {
   const s4 = fs.readFileSync(src + '/server4.js', 'utf8');
   const g4 = fs.readFileSync(src + '/game4.js', 'utf8');
-  ok('자리마다 3분', /clock\[i\] = 180/.test(g4));
+  ok('자리마다 3분', /const CLOCK = 180;/.test(g4) && /clock\[i\] = CLOCK/.test(g4));
   ok('서버가 1초마다 센다', /}, 1000\);/.test(s4) && /const clk = setInterval/.test(s4));
   ok('입력을 기다리는 사람만 깎인다', /const seat = humanToAct\(g, r\);[\s\S]{0,120}g\.clock\[seat\] = Math\.max/.test(s4));
   ok('타이머를 unref 한다', /clk\.unref\(\)/.test(s4));
@@ -500,20 +498,21 @@ console.log('\n⑨ 다인전 설명서');
   const box = html.slice(html.indexOf('id="rulesBox4"'), html.indexOf('id="rulesMiniModal"'));
   // 3인은 같은 한 벌에서 8장을 덜어낸다 — 38장은 3인에게 과했다
   // (17장 덱에서 실제로 뽑히는 건 7.9장뿐이었다)
-  ok('덱 4인 38장 · 3인 30장',
-     /DECK38 = \[\[2, 4\], \[3, 6\], \[4, 10\], \[6, 18\]\]/.test(g4src)
-     && /DECK30 = \[\[2, 3\], \[3, 5\], \[4, 8\], \[6, 14\]\]/.test(g4src)
-     && /SPECS = \{ 3: DECK30, 4: DECK38 \}/.test(g4src)
-     && /4인 38장 · 3인 30장/.test(box));
-  ok('4종 10장·6종 18장', /4짜리<\/b> · 10장/.test(box) && /6짜리<\/b> · 18장/.test(box));
-  ok('손패 둘 다 6장', /HAND = \{ 3: 6, 4: 6 \}/.test(g4src)
-     && /<span>3인<\/span><span>30장<\/span><span>6장<\/span><span>12장<\/span>/.test(box)
-     && /<span>4인<\/span><span>38장<\/span><span>6장<\/span><span>14장<\/span>/.test(box));
-  ok('진행자도 같이 낸다', /전원<\/b>이 손패에서 배팅 카드를 한 장씩 냅니다 — 진행자도 함께 냅니다/.test(box));
-  ok('클로즈는 순차 공개', /<b>시계방향으로 한 명씩<\/b>/.test(box));
-  ok('역순 분배', /약하게 부른 사람이 가장 강한 카드<\/b>/.test(box));
-  // 최약 카드는 덤마다 다르다 — 2인전 6-10 을 그대로 베끼면 틀린 설명이 된다
-  ok('배신은 6-18', /6-18/.test(box) && !/6-10<\/b>이 가장/.test(box));
+  ok('덱 4인 32장 · 3인 24장', (() => {
+    const G = require(src + '/game4.js');
+    const n = (k) => G.SPECS[k].cards.reduce((x, [, c]) => x + c, 0);
+    return n(4) === 32 && n(3) === 24;
+  })());
+  ok('설명서에도 32·24', /4인 32장 · 3인 24장/.test(box));
+  ok('4종 8장·6종 9장', /4짜리<\/b> · 8장/.test(box) && /6짜리<\/b> · 9장/.test(box));
+  ok('특수 카드 셋이 다 적혀 있다', /더블6<\/b> · 2장/.test(box) && /쌍둥이 4\/6<\/b> · 1장/.test(box) && /금고<\/b> · 3장/.test(box));
+  ok('손패 4장 · 칩 30/25', /const HAND = 4;/.test(g4src)
+     && /<span>3인<\/span><span>24장<\/span><span>4장<\/span><span>12장<\/span><span>25개<\/span>/.test(box)
+     && /<span>4인<\/span><span>32장<\/span><span>4장<\/span><span>16장<\/span><span>30개<\/span>/.test(box));
+  ok('산 사람만 낸다', /산 사람만 칩을 냅니다/.test(box));
+  ok('클로즈는 P+1 에 몰래 답한다', /P\+1칩에 산다 \/ 안 산다/.test(box) && /몰래<\/b>/.test(box));
+  ok('동점 경쟁을 적는다', /동점 경쟁/.test(box));
+  ok('옛 규칙(배팅 카드·역순·배신)이 안 남아 있다', !/배팅 카드|역순|배신/.test(box));
   ok('제한 시간 3분', /<b>3분<\/b>/.test(box));
 }
 
@@ -540,9 +539,11 @@ console.log('\n⑩ 카드가 안 내지는 버그');
   // 모든 행동이 같은 길로 나가야 한다 — 하나라도 빠지면 그것만 무성의상이 된다
   const raw = (c4.match(/socket\.emit\('g4_act'/g) || []).length;
   ok('직접 보내는 곳은 보내기·재시도 둘뿐', raw === 2, `${raw}곳`);
-  for (const t of ['draw', 'auctionType'])
-    ok(`${t} 도 sendAct 로`, new RegExp(`sendAct\\(\\{ type: '${t}'`).test(c4));
-  ok('내기·출품도 sendAct 로', /sendAct\(\{ type: type === 'offer'/.test(c4));
+  // 누르는 것들은 sendOnce(한 번만) → sendAct 로 간다
+  ok('sendOnce 도 sendAct 로 간다', /function sendOnce\(payload\) \{[\s\S]{0,120}sendAct\(payload\);/.test(c4));
+  for (const t of ['auctionType', 'raise', 'pass', 'answer'])
+    ok(`${t} 도 같은 길로`, new RegExp(`send(Once|Act)\\(\\{ type: '${t}'`).test(c4));
+  ok('출품도 sendAct 로', /sendAct\(\{ type: 'offer', cardId: id \}\)/.test(c4));
 
   // ③ 자가복구가 "내 차례면" 꺼져 있었다 — 정확히 막히는 순간이다
   ok('내 차례여도 오래 조용하면 잉는다', !/if \(waiting\) return;/.test(c4));

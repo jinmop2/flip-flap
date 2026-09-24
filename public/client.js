@@ -5686,7 +5686,7 @@ socket.on('clan_chat', ({ msg }) => {
 // 탭을 둘로 나눌 값어치가 없었다. 판 안에서 부르는 옛 이름('3','4')도 받는다.
 const RULES_MODALS = { '2': 'rulesModal', '3': 'rules4Modal', '4': 'rules4Modal', quad: 'rules4Modal',
   item: 'rulesItemModal', twelve: 'rulesTwelveModal', etc: 'rulesEtcModal' };
-const RULES_N = { '3': { hand: 7, deck: 17 }, '4': { hand: 6, deck: 14 } };
+const RULES_N = { '3': { hand: 4, deck: 12, chips: 25 }, '4': { hand: 4, deck: 16, chips: 30 } };
 let rulesCur = '2';
 
 window.rulesTab = function (name) {
@@ -5706,9 +5706,9 @@ window.rulesTab = function (name) {
     const n = RULES_N[name];
     note.style.display = (lit === 'quad') ? '' : 'none';
     // 판 안에서 열면 지금 인원의 수치를, 로비에서 열면 둘 다 보여 준다
-    note.innerHTML = n
-      ? `지금은 <b>${name}인전</b> — 손패 <b>${n.hand}장</b> · 중앙 덱 <b>${n.deck}장</b>`
-      : '3인전 — 손패 <b>7장</b> · 덱 <b>17장</b>　·　4인전 — 손패 <b>6장</b> · 덱 <b>14장</b>';
+    // 한 줄 글로 둔다 — <b> 로 쪼개면 조각마다 번역 짝이 따로 있어야 한다
+    const line = (k) => `${k}인전 — 손패 ${RULES_N[k].hand}장 · 중앙 덱 ${RULES_N[k].deck}장 · 칩 ${RULES_N[k].chips}개`;
+    note.textContent = n ? '지금은 ' + line(name) : line('3') + '　·　' + line('4');
   }
 };
 function rulesClose() {
@@ -6226,43 +6226,45 @@ const TUT_TV = [
     act: '값이 아깝다 싶으면 <b>물러서기</b>' },
 ];
 
-// 👥 다인전 — 사람이 늘면서 달라지는 것만. 역순 회수가 이 판의 심장이다.
+// 👥 다인전 — 칩으로 사는 경매. 2인전과 가장 다른 곳(칩·금고·오픈/클로즈)만 짚는다.
 const TUT_Q4 = [
-  { id: 'q_intro', when: s => s.turn === 1 && s.phase === 'draw', big: true,
+  { id: 'q_intro', when: s => s.turn === 1 && (s.phase === 'round' || s.phase === 'offer'), big: true,
     text: `<div class="tut-h">다인전에 온 걸 환영해요! ${ico('👥', 'tut-ico')}</div>
-      기본은 2인전과 같아요 — <b>세트를 먼저 완성</b>하면 승리.<br>사람이 늘면서 달라지는 것만 짚어 볼게요.` },
-  { id: 'q_all', when: s => s.turn === 1 && s.phase === 'draw', big: true,
-    text: `<div class="tut-h">진행자도 같이 배팅해요</div>
-      2인전과 다른 첫 번째. 진행자는 출품만 하고 빠지는 게 아니라<br><b>자기도 배팅 카드를 냅니다</b>.` },
-  { id: 'q_rev', when: s => s.turn === 1 && s.phase === 'draw', big: true,
-    text: `<div class="tut-h">배팅 카드는 역순으로 돌아와요 ♻️</div>
-      여기가 이 판의 심장입니다. 낸 카드는 버려지지 않고 <b>서로 바꿔 갖습니다</b>.`,
-    cards: `<div class="tut-two">
-        <div class="tt-p"><b>1위로 부름</b><br>경매품 2장 획득<small>대신 가장 약한 배팅 카드를 받아요</small></div>
-        <div class="tt-p"><b>꼴등</b><br>경매품은 못 받음<small>대신 가장 강한 배팅 카드를 받아요</small></div>
-      </div>
-      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">그래서 <b>지는 것도 수가 됩니다</b></div>` },
+      여기서는 카드를 <b>칩으로 삽니다</b>. 세트를 먼저 완성하면 승리.<br>
+      칩은 <b>산 사람만</b> 내고, 낸 칩은 은행으로 사라져요.` },
   // 덱이 커지니 "모아야 하는 장수도 늘겠지" 하고 넘겨짚기 쉽다. 안 는다.
-  { id: 'q_deck', when: s => s.turn === 1 && s.phase === 'draw', big: true,
-    text: s => `<div class="tut-h">덱은 커지고, 목표는 그대로 🗂</div>
-      ${s && s.n === 3 ? '셋이면 30장' : '넷이면 38장'} — 사람이 늘어난 만큼 카드도 늘어요.
-      하지만 <b>모아야 하는 장수는 2인전과 같습니다</b>.`,
+  { id: 'q_deck', when: s => s.turn === 1 && (s.phase === 'round' || s.phase === 'offer'), big: true,
+    text: s => `<div class="tut-h">카드는 종류만 봐요 🗂</div>
+      ${s && s.n === 3 ? '셋이면 24장' : '넷이면 32장'} — 등급이 없어요.
+      <b>모아야 하는 장수는 2인전과 같습니다</b>.`,
     cards: `<div class="tut-cards" style="margin-top:12px">
-        <span class="tcard k2"><i>1</i>2</span><span class="tcard k3"><i>1</i>3</span><span class="tcard k4"><i>1</i>4</span><span class="tcard k6"><i>1</i>6</span></div>
+        <span class="tcard k2">2</span><span class="tcard k3">3</span><span class="tcard k4">4</span><span class="tcard k6">6</span></div>
       <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2장</span><span style="margin-left:18px">3장</span><span style="margin-left:18px">4장</span><span style="margin-left:18px">6장</span></div>
-      <div class="tut-note">숫자가 곧 모아야 할 장수예요 — 사람이 몇이든 똑같습니다.</div>` },
-  { id: 'q_bid', when: s => s.phase === 'bidding' && !s.seats[s.me].bidded && s.bidders.includes(s.me),
+      <div class="tut-note"><b>더블6</b>은 6짜리 두 장, <b>쌍둥이 4/6</b>은 4에도 6에도 칩니다.</div>` },
+  { id: 'q_vault', when: s => s.turn === 1 && (s.phase === 'round' || s.phase === 'offer'), big: true,
+    text: `<div class="tut-h">금고는 모을수록 불어나요 🪙</div>
+      금고는 세트에 안 들지만, 턴마다 <b>칩을 벌어 줍니다</b>.<br>
+      한 개 <b>+1</b> · 두 개 <b>+3</b> · 세 개 <b>+6</b> — 일찍 살수록 오래 법니다.` },
+  { id: 'q_offer', when: s => s.phase === 'offer' && s.me !== null && s.auctioneer === s.me,
     pos: 'top', target: '#q-myhand',
-    text: '배팅할 차례예요. 이길지, 일부러 져서 <b>강한 카드를 챙길지</b> 고르세요.',
-    act: '카드 탭 → <b>배팅 확정</b>' },
-  { id: 'q_seq', when: s => s.phase === 'bidding' && s.auction && s.auction.closed,
-    pos: 'bot',
-    text: '🙈 클로즈는 <b>순서대로 한 명씩</b> 공개하며 냅니다.<br>뒤에 내는 사람은 앞사람 카드를 다 보고 정해요.' },
-  { id: 'q_got', when: s => (s.seats[s.me].acq || []).length > 0,
+    text: '내가 <b>진행자</b>예요. 공개 카드와 <b>한 묶음</b>으로 팔 카드를 손패에서 고르세요.',
+    act: '카드 탭 → <b>출품 확정</b>' },
+  { id: 'q_open', when: s => s.phase === 'open' && s.auction && s.auction.turnSeat === s.me,
+    pos: 'top', target: '#q-actions',
+    text: '👁 오픈 경매 — 진행자 왼쪽부터 <b>한 명씩</b> 값을 올리거나 포기해요.<br>마지막까지 남은 사람이 삽니다. 아무도 안 부르면 진행자가 <b>공짜로</b> 가져가요.',
+    act: '올릴 값을 누르거나 <b>포기</b>' },
+  { id: 'q_type', when: s => s.phase === 'choose_type' && s.me !== null && s.auctioneer === s.me,
+    pos: 'top', target: '#q-actions',
+    text: '🙈 <b>클로즈</b>는 진행자가 짝수 값 P 를 부르면, 나머지가 <b>P+1에 살지</b> 몰래 답해요.<br>아무도 안 사면 진행자가 P 에 가져갑니다 — 남이 원하는 물건이면 비싸게 사 가게 만들 수 있어요.' },
+  { id: 'q_answer', when: s => s.phase === 'answer' && s.me !== null && s.auctioneer !== s.me && s.auction && s.auction.myAnswer === null,
+    pos: 'top', target: '#q-actions',
+    text: '남의 답은 안 보여요. <b>둘 이상이 산다</b>고 하면 그 사람들끼리 P+1부터 다시 올립니다.',
+    act: '<b>산다</b> 또는 <b>안 산다</b>' },
+  { id: 'q_got', when: s => s.me !== null && (s.seats[s.me].acq || []).length > 0,
     pos: 'top', target: '#q-myacq',
-    text: '🎯 딴 카드는 <b>내 앞에</b> 깔립니다. <b>이렇게 깔린 카드로만</b> 세트를 만들어요.' },
+    text: '🎯 산 카드는 <b>내 앞에</b> 깔립니다. <b>이렇게 깔린 카드로만</b> 세트를 만들어요.' },
   // 진행자가 돌아간다는 걸 모르면 "왜 나만 계속 뽑지" 로 읽힌다
-  { id: 'q_turn', when: s => s.turn >= 2 && s.phase === 'draw',
+  { id: 'q_turn', when: s => s.turn >= 2 && s.phase === 'offer',
     pos: 'bot',
     text: '🔄 진행자는 <b>턴마다 한 자리씩</b> 옮겨 가요. 곧 다시 내 차례가 옵니다.' },
 ];
@@ -6475,27 +6477,26 @@ const TUT_JA = {
 
   // ── 다인전 ──
   q_intro: { text: `<div class="tut-h">多人数戦へようこそ！ ${ico('👥', 'tut-ico')}</div>
-      基本は1対1と同じ — <b>先にセットを揃えれば</b>勝ちです。<br>人が増えて変わるところだけ見ていきましょう。` },
-  q_all: { text: `<div class="tut-h">親も一緒に入札します</div>
-      1対1との最初の違い。親は札を出して引っ込むのではなく、<br><b>自分も入札の札を出します</b>。` },
-  q_rev: { text: `<div class="tut-h">入札した札は逆順で戻ります ♻️</div>
-      ここがこの対局の心臓です。出した札は捨てられず、<b>お互いに取り合います</b>。`,
-    cards: `<div class="tut-two">
-        <div class="tt-p"><b>いちばん強く入札</b><br>競り札2枚を獲得<small>代わりにいちばん弱い入札札を受け取ります</small></div>
-        <div class="tt-p"><b>いちばん弱く入札</b><br>競り札はもらえない<small>代わりにいちばん強い入札札を受け取ります</small></div>
-      </div>
-      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">だから<b>負けることも手になります</b></div>` },
-  q_deck: { text: (s) => `<div class="tut-h">山札は大きく、目標はそのまま 🗂</div>
-      ${s && s.n === 3 ? '3人なら30枚' : '4人なら38枚'} — 人が増えた分だけ札も増えます。
-      でも<b>そろえる枚数は1対1と同じ</b>です。`,
+      ここでは札を<b>チップで買います</b>。先にセットを揃えたら勝ち。<br>
+      払うのは<b>買った人だけ</b>で、払ったチップは銀行に消えます。` },
+  q_deck: { text: (s) => `<div class="tut-h">札は種類だけを見ます 🗂</div>
+      ${s && s.n === 3 ? '3人なら24枚' : '4人なら32枚'} — ランクはありません。
+      <b>集める枚数は2人戦と同じです</b>。`,
     cards: `<div class="tut-cards" style="margin-top:12px">
-        <span class="tcard k2"><i>1</i>2</span><span class="tcard k3"><i>1</i>3</span><span class="tcard k4"><i>1</i>4</span><span class="tcard k6"><i>1</i>6</span></div>
-      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2</span><span style="margin-left:18px">3</span><span style="margin-left:18px">4</span><span style="margin-left:18px">6</span></div>
-      <div class="tut-note">札の数字がそのまま必要な枚数です — 何人でも変わりません。</div>` },
-  q_bid: { text: '入札の番です。勝ちにいくか、わざと負けて<b>強い札をもらう</b>か選んでください。',
-    act: '手札をタップ →<b>入札を確定</b>' },
-  q_seq: { text: '🙈 クローズでは<b>順番にひとりずつ</b>公開しながら出します。<br>あとに出す人は前の人の札をすべて見てから決められます。' },
-  q_got: { text: '🎯 取った札は<b>自分の前</b>に並びます。<b>そこに並んだ札だけ</b>がセットになります。' },
+        <span class="tcard k2">2</span><span class="tcard k3">3</span><span class="tcard k4">4</span><span class="tcard k6">6</span></div>
+      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2枚</span><span style="margin-left:18px">3枚</span><span style="margin-left:18px">4枚</span><span style="margin-left:18px">6枚</span></div>
+      <div class="tut-note"><b>ダブル6</b>は6を2枚、<b>双子の4/6</b>は4にも6にも数えます。</div>` },
+  q_vault: { text: `<div class="tut-h">金庫は集めるほど増えます 🪙</div>
+      金庫はセットに入りませんが、毎ターン<b>チップを稼ぎます</b>。<br>
+      1つ<b>+1</b> · 2つ<b>+3</b> · 3つ<b>+6</b> — 早く買うほど長く稼げます。` },
+  q_offer: { text: 'あなたが<b>親</b>です。表向きの札と<b>ひとまとめ</b>で売る札を手札から選んでください。',
+    act: '札をタップ → <b>出品確定</b>' },
+  q_open: { text: '👁 オープンの競り — 親の左隣から<b>1人ずつ</b>値を上げるか降ります。<br>最後まで残った人が買います。誰も入札しなければ親が<b>無料で</b>引き取ります。',
+    act: '上げる値をタップするか<b>降りる</b>' },
+  q_type: { text: '🙈 <b>クローズ</b>では親が偶数の値Pを宣言し、他の人が<b>P+1で買うか</b>こっそり答えます。<br>誰も買わなければ親がPで引き取ります — 相手が欲しい品なら高く買わせられます。' },
+  q_answer: { text: '他の人の答えは見えません。<b>2人以上が買う</b>と答えたら、その人たちでP+1から競り直します。',
+    act: '<b>買う</b>か<b>買わない</b>' },
+  q_got: { text: '🎯 買った札は<b>自分の前</b>に並びます。<b>そこに並んだ札だけ</b>がセットになります。' },
   q_turn: { text: '🔄 親は<b>ターンごとに一席ずつ</b>移ります。すぐにまた自分の番が来ます。' },
 
   // ── 미니게임 ──
@@ -6698,27 +6699,26 @@ const TUT_ZH = {
 
   // ── 다인전 ──
   q_intro: { text: `<div class="tut-h">欢迎来到多人对局！ ${ico('👥', 'tut-ico')}</div>
-      基本和一对一一样 — <b>先凑齐一套</b>就赢。<br>这里只讲人多了以后有什么不同。` },
-  q_all: { text: `<div class="tut-h">庄家也一起出价</div>
-      和一对一的第一个不同。庄家不是出完牌就退开 —<br><b>他自己也要出一张出价牌</b>。` },
-  q_rev: { text: `<div class="tut-h">出价的牌会倒着回来 ♻️</div>
-      这是这局的心脏。出价的牌不会被丢掉 — <b>大家互相拿走</b>。`,
-    cards: `<div class="tut-two">
-        <div class="tt-p"><b>出价最高</b><br>拿走两张拍品<small>但收到最弱的那张出价牌</small></div>
-        <div class="tt-p"><b>出价最低</b><br>拿不到拍品<small>但收到最强的那张出价牌</small></div>
-      </div>
-      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">所以<b>输也是一步棋</b></div>` },
-  q_deck: { text: (s) => `<div class="tut-h">牌堆变大，目标不变 🗂</div>
-      ${s && s.n === 3 ? '三个人是 30 张' : '四个人是 38 张'} — 人多了，牌也多了。
-      但<b>要凑的张数和一对一时一样</b>。`,
+      这里用<b>筹码买牌</b>。先凑齐一套就赢。<br>
+      <b>只有买下的人</b>付筹码，付出的筹码进银行消失。` },
+  q_deck: { text: (s) => `<div class="tut-h">牌只看种类 🗂</div>
+      ${s && s.n === 3 ? '三人24张' : '四人32张'} — 没有等级。
+      <b>要凑的张数和双人局一样</b>。`,
     cards: `<div class="tut-cards" style="margin-top:12px">
-        <span class="tcard k2"><i>1</i>2</span><span class="tcard k3"><i>1</i>3</span><span class="tcard k4"><i>1</i>4</span><span class="tcard k6"><i>1</i>6</span></div>
-      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2</span><span style="margin-left:18px">3</span><span style="margin-left:18px">4</span><span style="margin-left:18px">6</span></div>
-      <div class="tut-note">牌上的数字就是要凑的张数 — 几个人玩都一样。</div>` },
-  q_bid: { text: '轮到你出价了。是拿下它，还是故意输掉去<b>换那张强牌</b>？',
-    act: '点手牌 →<b>确定出价</b>' },
-  q_seq: { text: '🙈 暗拍时大家<b>按顺序一个一个</b>公开着出。<br>最后出的人，前面所有人的牌都看过了。' },
-  q_got: { text: '🎯 拍到的牌摆在<b>你面前</b>。只有<b>摆在这里的</b>才能凑成套。' },
+        <span class="tcard k2">2</span><span class="tcard k3">3</span><span class="tcard k4">4</span><span class="tcard k6">6</span></div>
+      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2张</span><span style="margin-left:18px">3张</span><span style="margin-left:18px">4张</span><span style="margin-left:18px">6张</span></div>
+      <div class="tut-note"><b>双6</b>算两张6，<b>双子4/6</b>在4和6里都算。</div>` },
+  q_vault: { text: `<div class="tut-h">金库越多越赚 🪙</div>
+      金库不算进套牌，但每回合<b>产出筹码</b>。<br>
+      一个<b>+1</b> · 两个<b>+3</b> · 三个<b>+6</b> — 越早买赚得越久。` },
+  q_offer: { text: '你是<b>庄家</b>。从手牌选一张，和明牌<b>组成一组</b>拍卖。',
+    act: '点牌 → <b>确认出品</b>' },
+  q_open: { text: '👁 明拍 — 从庄家左边开始，<b>一个一个</b>加价或放弃。<br>坚持到最后的人买下。没人出价时庄家<b>免费</b>拿走。',
+    act: '点要加的价或<b>放弃</b>' },
+  q_type: { text: '🙈 <b>暗拍</b>时庄家叫一个偶数价P，其他人秘密回答<b>要不要以P+1买</b>。<br>没人买就由庄家以P拿走 — 别人想要的东西可以让他付高价。' },
+  q_answer: { text: '看不到别人的回答。<b>两人以上说买</b>时，这些人从P+1重新竞价。',
+    act: '<b>买</b>或<b>不买</b>' },
+  q_got: { text: '🎯 买下的牌摆在<b>你面前</b>。只有<b>摆在这里的</b>才能凑成套。' },
   q_turn: { text: '🔄 庄家<b>每回合往下挪一个座位</b>。很快又轮到你。' },
 
   // ── 미니게임 ──
@@ -6925,27 +6925,26 @@ const TUT_EN = {
 
   // ── 다인전 ──
   q_intro: { text: `<div class="tut-h">Welcome to the multiplayer match! ${ico('👥', 'tut-ico')}</div>
-      The basics are the 1v1 game — <b>complete a set first</b> to win.<br>Here is only what changes with more players.` },
-  q_all: { text: `<div class="tut-h">The auctioneer bids too</div>
-      The first difference. The auctioneer does not just offer a card and step back —<br><b>they put in a bid card as well</b>.` },
-  q_rev: { text: `<div class="tut-h">Bid cards come back in reverse ♻️</div>
-      This is the heart of the game. Bid cards are not discarded — <b>you take each other’s</b>.`,
-    cards: `<div class="tut-two">
-        <div class="tt-p"><b>Highest bid</b><br>takes the two-card lot<small>but receives the weakest bid card</small></div>
-        <div class="tt-p"><b>Lowest bid</b><br>takes no lot<small>but receives the strongest bid card</small></div>
-      </div>
-      <div style="margin-top:8px;font-size:.78rem;color:#c8a86a">Which makes <b>losing a move of its own</b></div>` },
-  q_deck: { text: (s) => `<div class="tut-h">A bigger deck, the same goal 🗂</div>
-      ${s && s.n === 3 ? '30 cards for three players' : '38 cards for four'} — more players, more cards.
-      But <b>you still collect the same number</b> as in the 1v1 game.`,
+      Here you <b>buy cards with chips</b>. Complete a set first to win.<br>
+      <b>Only the buyer</b> pays, and paid chips vanish into the bank.` },
+  q_deck: { text: (s) => `<div class="tut-h">Only the kind matters 🗂</div>
+      ${s && s.n === 3 ? '24 cards for three' : '32 cards for four'} — no ranks.
+      <b>The number you need is the same as in the 2-player game</b>.`,
     cards: `<div class="tut-cards" style="margin-top:12px">
-        <span class="tcard k2"><i>1</i>2</span><span class="tcard k3"><i>1</i>3</span><span class="tcard k4"><i>1</i>4</span><span class="tcard k6"><i>1</i>6</span></div>
-      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>2</span><span style="margin-left:18px">3</span><span style="margin-left:18px">4</span><span style="margin-left:18px">6</span></div>
-      <div class="tut-note">The number on the card is how many you need — whatever the player count.</div>` },
-  q_bid: { text: 'Your bid. Win it — or lose on purpose and <b>collect the strong card</b>.',
-    act: 'Tap a card, then <b>Confirm bid</b>' },
-  q_seq: { text: '🙈 In a closed auction players reveal and commit <b>one at a time, in order</b>.<br>Whoever goes last has seen every card before theirs.' },
-  q_got: { text: '🎯 Cards you win are laid <b>in front of you</b>. <b>Only those</b> can make a set.' },
+        <span class="tcard k2">2</span><span class="tcard k3">3</span><span class="tcard k4">4</span><span class="tcard k6">6</span></div>
+      <div class="tut-cards" style="margin-top:4px;font-size:.72rem;color:#c8a86a"><span>×2</span><span style="margin-left:18px">×3</span><span style="margin-left:18px">×4</span><span style="margin-left:18px">×6</span></div>
+      <div class="tut-note"><b>Double 6</b> counts as two 6s; <b>Twin 4/6</b> counts toward both 4s and 6s.</div>` },
+  q_vault: { text: `<div class="tut-h">Vaults compound 🪙</div>
+      A vault is never part of a set, but it <b>pays chips every turn</b>.<br>
+      One <b>+1</b> · two <b>+3</b> · three <b>+6</b> — buy early, earn longer.` },
+  q_offer: { text: "You're the <b>auctioneer</b>. Pick a card from your hand to sell <b>as one lot</b> with the face-up card.",
+    act: 'Tap a card → <b>Offer</b>' },
+  q_open: { text: '👁 Open auction — starting left of the auctioneer, players <b>raise or pass one at a time</b>.<br>The last one standing buys. If nobody bids, the auctioneer takes it <b>for free</b>.',
+    act: 'Tap a price or <b>Pass</b>' },
+  q_type: { text: "🙈 In a <b>closed</b> auction you name an even price P, and the others secretly answer whether to <b>buy for P+1</b>.<br>If nobody buys, you take it for P — make a rival pay dearly for what they need." },
+  q_answer: { text: "Others' answers are hidden. If <b>two or more buy</b>, they bid it up again from P+1.",
+    act: '<b>Buy</b> or <b>Pass</b>' },
+  q_got: { text: '🎯 Cards you buy are laid <b>in front of you</b>. <b>Only those</b> can make a set.' },
   q_turn: { text: '🔄 The auctioneer moves <b>one seat every turn</b>. Your turn comes back around soon.' },
 
   // ── 미니게임 ──

@@ -80,15 +80,16 @@ console.log('\n②-2 영문 설명서가 지금 규칙과 같은가');
   const items = require(src + '/items.js');
   const SUT = require(src + '/sutda.js');
 
-  // 3·4인전 덱 — DECK30/DECK38 과 손패 수
+  // 3·4인전 덱 — 장수·손패·칩이 영문 설명서 표와 같아야 한다
   const r4 = txt('rules4');
-  // specOf 는 게임 객체를 받는다(g.n). 숫자를 주면 조용히 4인 덱으로 떨어지므로
-  // 여기서는 SPECS 를 직접 본다 — 설명서가 맞는지 재는 자리에서 값이 틀리면 뜻이 없다.
-  const n3 = G.SPECS[3].reduce((a, [, n]) => a + n, 0);
-  const n4 = G.SPECS[4].reduce((a, [, n]) => a + n, 0);
+  const sum = (n) => G.SPECS[n].cards.reduce((a, [, c]) => a + c, 0);
+  const n3 = sum(3), n4 = sum(4);
   ok(`3인 ${n3}장 · 4인 ${n4}장이 영문에도 적혀 있다`,
-     r4.includes(String(n3)) && r4.includes(String(n4)) && !/Three and four players share/.test(r4));
-  ok(`손패 ${G.HAND[3]}·${G.HAND[4]}장이 맞다`, / 3 30 6 12 /.test(r4) && / 4 38 6 14 /.test(r4), r4.slice(r4.indexOf('Players'), r4.indexOf('Players') + 60));
+     r4.includes(`${n4} cards (4P) · ${n3} cards (3P)`), r4.slice(r4.indexOf('The deck'), r4.indexOf('The deck') + 60));
+  const row = (n) => new RegExp(` ${n} ${sum(n)} ${G.HAND} ${sum(n) - n * G.HAND} ${G.SPECS[n].chips} `);
+  ok(`표(덱·손패 ${G.HAND}·중앙·칩)가 맞다`, row(3).test(r4) && row(4).test(r4), r4.slice(r4.indexOf('Players Deck'), r4.indexOf('Players Deck') + 70));
+  ok('금고 수입 1·3·6 이 코드와 같다', /Per turn \+1 \+3 \+6/.test(r4) && G.income(1) === 1 && G.income(2) === 3 && G.income(3) === 6);
+  ok('옛 규칙(배팅 카드·역순)이 안 남아 있다', !/reverse|Minion|bid card/i.test(r4));
 
   // 미니게임 족보 — 옛 족보(앞자리 합) 용어가 남아 있으면 안 된다
   const mini = txt('rulesMini');

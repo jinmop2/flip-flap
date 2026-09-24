@@ -44,9 +44,11 @@ console.log('\n③ 브라우저 쪽 엔진이 실제로 굴러간다');
 {
   // 다인전 — 엔진과 AI 가 서로 맞물린다
   const G = win.GAME4, A = win.AI4;
-  const g = G.createGame4(4, ['나', 'A', 'B', 'C']);
-  ok('다인전 판이 선다', !!g && g.seats.length === 4);
-  ok('AI4 가 게임4 를 붙잡았다', typeof A.chooseBid === 'function');
+  const g = G.createGame4(['나', 'A', 'B', 'C'], { n: 4 });
+  ok('다인전 판이 선다', !!g && g.seats.length === 4 && g.seats[0].chips === G.SPECS[4].chips);
+  ok('AI4 가 게임4 를 붙잡았다', typeof A.openMove === 'function' && typeof A.chooseAnswer === 'function');
+  G.beginRound(g);
+  ok('브라우저에서도 AI 가 출품을 고른다', !!A.chooseConsign(g, g.auctioneer));
 }
 {
   const I = win.ITEMS_M;

@@ -165,7 +165,8 @@ console.log('\n⑥ 어디쯤 왔는지 · 빠져 있던 규칙');
   for (const id of ['q_deck', 'q_turn'])
     ok(`다인전에 ${id} 가 있다`, new RegExp(`id: '${id}'`).test(cli));
   ok('목표 장수는 그대로라고 못 박는다', /모아야 하는 장수는 2인전과 같습니다/.test(cli));
-  ok('인원에 따라 덱 크기를 말해 준다', /셋이면 30장/.test(cli) && /넷이면 38장/.test(cli));
+  ok('인원에 따라 덱 크기를 말해 준다', /셋이면 24장/.test(cli) && /넷이면 32장/.test(cli));
+  ok('칩으로 산다고 알려 준다', /칩으로 삽니다/.test(cli) && /id: 'q_vault'/.test(cli) && /id: 'q_answer'/.test(cli));
   ok('진행자가 돌아간다고 알려 준다', /턴마다 한 자리씩/.test(cli));
 }
 

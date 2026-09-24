@@ -229,7 +229,7 @@ ok('가로로도 할 수 있다', !/id="rotateNote"/.test(htm));
 ok('판이 도는 중이면 결과창을 내린다',
    /if \(s\.phase !== 'game_over'\) \{[\s\S]{0,220}gameOver[\s\S]{0,80}display = 'none'/.test(cli));
 ok('두 자리 등급에 표시를 붙인다', /card\.grade >= 10 \? ' two' : ''/.test(cli));
-ok('다인전도 같이', /card\.grade >= 10 \? ' two' : ''/.test(read('public/client4.js')));
+ok('다인전 카드는 등급을 안 그린다', !/c-rank/.test(read('public/client4.js')));
 ok('두 자리는 여백을 줄인다', /\.c-rank\.two \{[^}]*padding:2px 4px/.test(htm));
 
 // 프로필은 위, 메뉴는 아래. 둘 다 금테 없음.
@@ -346,11 +346,11 @@ ok('옛 배지 요소는 걷어냈다', !/id="friendBadge"/.test(htm) && !/id="c
   ok('다인전에 관전 통로가 있다', /safe\(socket, 'g4_spectate'/.test(s4));
   ok('관전자에게도 상태를 보낸다', /for \(const sid of r\.specs \|\| \[\]\)/.test(s4));
   ok('관전자에게 손패는 안 보낸다',
-     /function stateForSpec[\s\S]{0,200}st\.myHand = \[\];/.test(read('view4.js')));
+     /myHand: watching \? \[\] :/.test(read('view4.js')) && /function stateForSpec\(g, rp, room\) \{ return stateFor\(g, null,/.test(read('view4.js')));
   ok('앉아 있는 사람은 관전이 아니다', /r\.seats\.some\(\(s\) => s\.sid === socket\.id\)\) return;/.test(s4));
   ok('친구 목록이 다인전도 알려준다', /watchQuad: watchable \? false : !!w4/.test(srv));
   ok('어느 문을 두드릴지 가른다', /if \(quad\) socket\.emit\('g4_spectate'/.test(cli));
-  ok('관전 중에는 못 고른다', /if \(iAmSpec\) pickMode = null;/.test(c4));
+  ok('관전 중에는 못 고른다', /if \(iAmSpec\) \{ pickMode = null; act = null; \}/.test(c4));
   ok('관전 중에는 버튼을 감춘다', /body\.q-spec #q-confirm/.test(htm));
   ok('나갈 때 관전 명단에서 뺀다', /if \(q4Spec\) socket\.emit\('g4_spec_leave'\)/.test(c4)
      && /safe\(socket, 'g4_spec_leave'/.test(s4));

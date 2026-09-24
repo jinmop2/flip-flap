@@ -41,16 +41,14 @@ const nap = (ms) => new Promise((r) => setTimeout(r, ms));
     const me = p.begins.length ? p.begins[p.begins.length - 1].me : null;
     if (me === null) return;
     const a = s.auction;
-    if (s.phase === 'draw' && s.auctioneer === me) return p.s.emit('g4_act', { type: 'draw' });
     if (s.phase === 'offer' && s.auctioneer === me && s.myHand.length)
       return p.s.emit('g4_act', { type: 'offer', cardId: s.myHand[0].id });
     if (s.phase === 'choose_type' && s.auctioneer === me)
       return p.s.emit('g4_act', { type: 'auctionType', val: 'open' });
-    if (s.phase === 'bidding' && a && s.myHand.length) {
-      if (s.seats[me].bidded || !s.bidders.includes(me)) return;
-      if (a.closed && a.turnToBid !== me) return;
-      return p.s.emit('g4_act', { type: 'bid', cardId: s.myHand[0].id });
-    }
+    if (s.phase === 'open' && a && a.turnSeat === me)
+      return p.s.emit('g4_act', a.price < 3 && s.seats[me].chips > a.price ? { type: 'raise', to: a.price + 1 } : { type: 'pass' });
+    if (s.phase === 'answer' && a && s.auctioneer !== me && a.myAnswer === null)
+      return p.s.emit('g4_act', { type: 'answer', buy: false });
   };
 
   try {

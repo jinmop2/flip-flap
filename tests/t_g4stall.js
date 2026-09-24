@@ -1,6 +1,6 @@
-// 다인전 클로즈 경매에서 "낼 차례인 사람" 이 끊기면 판이 서는가.
+// 다인전 오픈 경매에서 "부를 차례인 사람" 이 끊기면 판이 서는가.
 //
-// 클로즈는 순서제라 그 사람이 내기 전에는 아무도 못 낸다. 그런데 소켓이
+// 오픈은 돌아가며 부르므로 그 사람이 두기 전에는 아무도 못 둔다. 그런데 소켓이
 // 끊긴 자리는 잠깐 동안 사람도 아니고 AI 도 아니다 — 되찾을 시간을 주려고
 // 일부러 그렇게 뒀다(SEAT_GRACE). 그 사이에 서버의 진행 장치가 할 일을 못
 // 찾으면, 남은 사람들은 아무 설명 없이 멈춘 판을 본다.
@@ -25,22 +25,18 @@ function join(i) {
   return p;
 }
 
-// 클로즈 경매까지만 몬다 — 낼 차례가 된 사람은 내지 않고 둔다
+// 경매를 몬다 — holdSeat 자리는 제 차례가 와도 두지 않는다
 function drive(p, holdSeat) {
   const s = p.st;
-  if (!s || p.seat === null) return;
-  if (s.phase === 'draw' && s.auctioneer === p.seat) return void p.s.emit('g4_act', { type: 'draw' });
+  if (!s || p.seat === null || s.over) return;
+  const a = s.auction;
+  if (p.seat === holdSeat) return;
   if (s.phase === 'offer' && s.auctioneer === p.seat && s.myHand.length)
     return void p.s.emit('g4_act', { type: 'offer', cardId: s.myHand[0].id });
   if (s.phase === 'choose_type' && s.auctioneer === p.seat)
-    return void p.s.emit('g4_act', { type: 'auctionType', val: 'close' });
-  if (s.phase === 'bidding' && s.auction && s.myHand.length) {
-    if (p.seat === holdSeat) return;                       // 이 사람은 일부러 안 낸다
-    if (s.seats[p.seat].bidded) return;
-    if (!s.bidders.includes(p.seat)) return;
-    if (s.auction.closed && s.auction.turnToBid !== p.seat) return;
-    p.s.emit('g4_act', { type: 'bid', cardId: s.myHand[0].id });
-  }
+    return void p.s.emit('g4_act', { type: 'auctionType', val: 'open' });
+  if (s.phase === 'open' && a && a.turnSeat === p.seat)
+    return void p.s.emit('g4_act', a.price < 3 && s.seats[p.seat].chips > a.price ? { type: 'raise', to: a.price + 1 } : { type: 'pass' });
 }
 
 (async () => {
@@ -51,26 +47,25 @@ function drive(p, holdSeat) {
   await wait(2500);
   ok('셋이 판을 시작한다', P.every((p) => p.begun) && P[0].st && P[0].st.n === 3);
 
-  // ① 클로즈 경매에서 낼 차례가 돌아올 때까지 민다
+  // ① 오픈 경매에서 사람이 부를 차례가 올 때까지 민다
   let victim = null;
   for (let k = 0; k < 300 && victim === null; k++) {
     const s = P[0].st;
-    if (s && s.phase === 'bidding' && s.auction && s.auction.closed) {
-      const t = s.auction.turnToBid;
-      // 아직 아무도 안 낸 첫 차례 말고, 한 명은 내고 난 뒤를 고른다 —
-      // 판이 중간에 서는 쪽이 실제로 겪는 모양이다
-      if (t !== null && t !== undefined && Object.keys(s.auction.bids || {}).length >= 1) victim = t;
+    if (s && s.phase === 'open' && s.auction) {
+      const t = s.auction.turnSeat;
+      // 누가 한 번은 부른 뒤를 고른다 — 판이 중간에 서는 쪽이 실제로 겪는 모양이다
+      if (t !== null && t !== undefined && s.auction.high !== null && !s.seats[t].isBot) victim = t;
     }
-    for (const p of P) drive(p, null);
+    if (victim === null) for (const p of P) drive(p, null);
     await wait(150);
   }
-  ok('클로즈 경매에서 낼 차례를 잡았다', victim !== null, String(victim));
+  ok('오픈 경매에서 부를 차례를 잡았다', victim !== null, String(victim));
   if (victim === null) { console.log(`\n결과: ${pass} 통과, ${fail} 실패`); process.exit(fail ? 1 : 0); }
 
   // ② 그 사람을 끊는다
   const who = P.find((p) => p.seat === victim);
   const others = P.filter((p) => p !== who);
-  const sigOf = () => { const s = others[0].st; return s ? s.turn + '|' + s.phase + '|' + Object.keys((s.auction && s.auction.bids) || {}).join(',') : ''; };
+  const sigOf = () => { const s = others[0].st; const a = (s && s.auction) || {}; return s ? [s.turn, s.phase, a.price, a.turnSeat, (a.out || []).length].join('|') : ''; };
   const before = sigOf();
   const pushesBefore = others.map((p) => p.pushes);
   who.s.close();
@@ -97,11 +92,11 @@ function drive(p, holdSeat) {
   {
     const fs = require('fs');
     const src = fs.readFileSync(require('path').join(__dirname, '..', 'server4.js'), 'utf8');
-    const bid = src.slice(src.indexOf("case 'bidding': {"), src.indexOf("case 'showdown':"));
-    // 낼 사람이 자리에 없는 갈래에서 그냥 돌아가면 그 방의 시계가 아예 선다
-    ok('낼 사람이 없어도 다음 박자를 남긴다',
-       /낼 사람이 남았는데[\s\S]*?return schedule\(roomId, T\.bid\);/.test(bid));
-    ok('그때 서버가 그 사실을 적는다', /낼 사람이 자리에 없어 기다립니다/.test(bid));
+    const wf = src.slice(src.indexOf('function waitFor('), src.indexOf('function step('));
+    // 둘 사람이 자리에 없는 갈래에서 그냥 돌아가면 그 방의 시계가 아예 선다
+    ok('둘 사람이 없어도 다음 박자를 남긴다', /return schedule\(roomId, T\.raise\);/.test(wf));
+    ok('그때 서버가 그 사실을 적는다', /둘 사람이 자리에 없어 기다립니다/.test(wf));
+    ok('오픈·출품·방식 고르기가 다 이 길로 간다', (src.match(/return waitFor\(roomId, /g) || []).length >= 3);
   }
 
   P.forEach((p) => { try { p.s.close(); } catch (_) {} });

@@ -1,6 +1,6 @@
-// 멀티 3인전 — 클로즈 순차 공개가 사람 여럿일 때도 제대로 도는가.
-// 순서제는 "내 차례가 와야 낼 수 있다" 라서, 서버가 순서를 잘못 잡으면
-// 아무도 못 내고 판이 멈춘다. 그 지점을 집중해서 본다.
+// 멀티 3인전 — 사람 여럿일 때 칩 경매가 제대로 도는가.
+// 오픈은 "내 차례가 와야 부를 수 있다" 라서, 서버가 차례를 잘못 잡으면
+// 아무도 못 두고 판이 멈춘다. 클로즈는 몰래 답하므로 남의 답이 새면 안 된다.
 const io = require('/Users/jinmo9/참치/my-game/node_modules/socket.io-client');
 const { liveServer } = require('./live');
 let URL;                       // 아래에서 자기 서버를 띄우고 채운다
@@ -19,28 +19,20 @@ function join(i, base) {
   return p;
 }
 
-// 사람 셋이 자동으로 플레이 — 낼 수 있으면 낸다
+// 사람 셋이 자동으로 플레이 — 제 차례면 둔다. 클로즈를 자주 열고,
+// 둘이 같이 사겠다고 해 동점 경쟁도 나오게 한다.
 function autoplay(p) {
   const s = p.st;
-  if (!s || p.seat === null) return false;
-  const a = s.auction;
-  if (s.phase === 'draw' && s.auctioneer === p.seat) { p.s.emit('g4_act', { type: 'draw' }); return true; }
-  if (s.phase === 'offer' && s.auctioneer === p.seat && s.myHand.length) {
-    p.s.emit('g4_act', { type: 'offer', cardId: s.myHand[0].id }); return true;
-  }
-  if (s.phase === 'choose_type' && s.auctioneer === p.seat) {
-    p.s.emit('g4_act', { type: 'auctionType', val: 'close' });   // 순서제를 보려고 항상 클로즈
-    return true;
-  }
-  if (s.phase === 'bidding' && a && s.myHand.length) {
-    const mine = s.seats[p.seat];
-    if (mine.bidded) return false;
-    if (!s.bidders.includes(p.seat)) return false;
-    // 클로즈면 내 차례일 때만
-    if (a.closed && a.turnToBid !== p.seat) return false;
-    p.s.emit('g4_act', { type: 'bid', cardId: s.myHand[0].id });
-    return true;
-  }
+  if (!s || p.seat === null || s.over) return false;
+  const a = s.auction, me = s.seats[p.seat];
+  const send = (d) => { p.s.emit('g4_act', d); return true; };
+  if (s.phase === 'offer' && s.auctioneer === p.seat && s.myHand.length) return send({ type: 'offer', cardId: s.myHand[0].id });
+  if (s.phase === 'choose_type' && s.auctioneer === p.seat)
+    return send(s.canClose ? { type: 'auctionType', val: 'close', price: 2 } : { type: 'auctionType', val: 'open' });
+  if (s.phase === 'answer' && a && s.auctioneer !== p.seat && a.myAnswer === null)
+    return send({ type: 'answer', buy: me.chips >= a.closeP + 1 });
+  if (s.phase === 'open' && a && a.turnSeat === p.seat)
+    return send(a.price < 4 && me.chips > a.price ? { type: 'raise', to: a.price + 1 } : { type: 'pass' });
   return false;
 }
 
@@ -56,46 +48,44 @@ function autoplay(p) {
   ok('시작됨', P.every((p) => p.begun));
   ok('3인전 · 전원 사람', P[0].st && P[0].st.n === 3 && P[0].st.seats.every((x) => !x.isBot));
 
-  console.log('\n② 클로즈 순차 공개 — 순서·공개 범위가 맞는가');
+  console.log('\n② 오픈 차례 · 클로즈 몰래 답하기가 맞는가');
   // 서버는 한 사람이 안 두면 TURN_MS(25초) 뒤에 AI 가 대신 둔다. 그보다 먼저
   // "멈췄다" 고 단정하면, 소켓 하나가 잠깐 늦은 것도 실패로 잡힌다 —
   // 기계가 바쁠 때만 빨개지는 시금석이 되어 아무도 안 믿게 된다.
   // 서버가 손쓸 시간을 준 뒤에도 그대로면, 그때가 진짜 멈춘 것이다.
   const STALL = Math.ceil(30000 / 150);            // 30초 (서버 25초 + 여유)
-  let sawClosed = false, seqOk = true, leakOk = true, stalls = 0;
+  let sawClose = false, sawTie = false, turnOk = true, leakOk = true, stalls = 0;
   let lastSig = '', same = 0;
-  for (let step = 0; step < 600; step++) {
+  for (let step = 0; step < 900; step++) {
     const s = P[0].st;
     if (s && s.over) break;
-    const sig = s ? (s.turn + '|' + s.phase + '|' + JSON.stringify(s.auction && s.auction.bids ? Object.keys(s.auction.bids) : [])) : '';
+    const a = (s && s.auction) || {};
+    const sig = s ? [s.turn, s.phase, a.price, a.turnSeat, (a.out || []).length, (a.answered || []).length].join('|') : '';
     if (sig === lastSig) same++; else { same = 0; lastSig = sig; }
     if (same > STALL) { stalls++; break; }
 
-    if (s && s.phase === 'bidding' && s.auction && s.auction.closed) {
-      sawClosed = true;
-      const a = s.auction;
-      // 순서: seq 에서 아직 안 낸 첫 사람이 turnToBid 여야 한다
-      if (a.seq) {
-        const expect = a.seq.find((x) => !s.seats[x].bidded);
-        if ((expect === undefined ? null : expect) !== a.turnToBid) {
-          seqOk = false;
-          console.log('    순서 어긋남: 기대 ' + expect + ' / 실제 ' + a.turnToBid);
-        }
+    if (s && s.phase === 'open' && s.auction) {
+      if (a.tiebreak) sawTie = true;
+      // 차례는 늘 아직 안 빠졌고 값을 쥐지 않은 사람에게 간다
+      if (a.turnSeat === a.high || a.out.includes(a.turnSeat)) {
+        turnOk = false; console.log('    차례 어긋남: turn ' + a.turnSeat + ' high ' + a.high + ' out ' + a.out);
       }
-      // 정보 누출: 아직 안 낸 사람의 카드가 보이면 안 된다
+    }
+    if (s && s.phase === 'answer' && s.auction) {
+      sawClose = true;
+      // 다 답하기 전엔 누가 샀는지 아무에게도 안 보인다 — 내 답만 나에게
       for (const p of P) {
-        const st = p.st; if (!st || !st.auction) continue;
-        for (const k of Object.keys(st.auction.bids || {})) {
-          if (!st.seats[+k].bidded) { leakOk = false; console.log('    안 낸 사람 카드가 보임: seat' + k); }
-        }
+        const st = p.st; if (!st || st.phase !== 'answer' || !st.auction) continue;
+        if (st.auction.buyers || /"answers"/.test(JSON.stringify(st))) { leakOk = false; console.log('    남의 답이 보임: seat' + p.seat); }
       }
     }
     for (const p of P) autoplay(p);
     await wait(150);
   }
-  ok('클로즈 경매가 실제로 나왔다', sawClosed);
-  ok('순서가 항상 맞다', seqOk);
-  ok('안 낸 사람 카드는 안 보인다', leakOk);
+  ok('클로즈 경매가 실제로 나왔다', sawClose);
+  if (sawTie) console.log('    (동점 경쟁도 나왔다)');
+  ok('오픈 차례가 항상 맞다', turnOk);
+  ok('남의 클로즈 답은 안 보인다', leakOk);
   ok('멈추지 않았다', stalls === 0);
   ok('g4_error 없음', P.every((p) => !p.errors.length), P.map((p) => p.errors.join(',')).join(' | '));
 

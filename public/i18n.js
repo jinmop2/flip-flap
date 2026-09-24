@@ -272,7 +272,6 @@
     '처음이라면 여기부터': 'Start here if it is your first time',
     '추천': 'Pick me',
     '카드가 아니라 칩으로 값을 부르는 경매': 'An auction where you bid chips, not cards',
-    '셋·넷이서 · 지는 것도 수가 되는 판': 'Three or four players \u2014 losing can be a move',
     'AI 1명': '1 AI', 'AI 2명': '2 AI', 'AI 3명': '3 AI',
     '게임 시작 (빈자리는 AI)': 'Start (AI fills empty seats)',
     '칩 경매': 'Chip auction',
@@ -475,17 +474,11 @@
     '제한 시간을 다 써서 이 판은 졌어요.': 'You ran out of time, so this game is lost.',
     '남은 판은 다른 자리끼리 계속됩니다.': 'The others keep playing.',
     '경매 방식을 고르세요': 'Choose the auction type',
-    '배팅 카드를 고른 뒤 확정을 누르세요': 'Pick a bid card, then confirm',
-    '내놓을 카드를 고른 뒤 확정을 누르세요': 'Pick a card to offer, then confirm',
-    '두구두구… 공개!': 'And the winner is...',
     '내 차례!': 'Your turn!',
     '\ud83d\udd14 내 차례! — FLIP FLAP': '\ud83d\udd14 Your turn! — FLIP FLAP',
     '서버가 응답하지 않아요 — 잠시 후 다시 눌러주세요': 'No response from the server — please try again',
     '다시 연결하는 중…': 'Reconnecting...',
     '연결이 끊겨 판을 이어갈 수 없어요.': 'Disconnected — this game cannot continue.',
-    '손패가 없어 이번엔 입찰할 수 없어요': 'No cards left — you sit this one out',
-    '다음 사람이 내는 중…': 'Waiting for the next player...',
-    '나머지가 배팅하는 중…': 'Others are bidding...',
     '곧 시작합니다…': 'Starting soon...',
     '대기 중': 'Waiting',
     '준비 완료': 'Ready',
@@ -867,10 +860,7 @@
     'AI 3명': '3 AI',
     '손패 6장': '6 cards each',
     '※ 베타 — 전적·코인에 반영되지 않습니다': '※ Beta — does not affect your record or coins',
-    '진행자도 함께 입찰합니다 (첫 경매만 제외)': 'The auctioneer bids too',
     '배팅 카드는': 'Bid cards go',
-    '약하게 부른 사람부터': 'to the weakest bidder first',
-    '강한 경매품을 가져갑니다': '— they take the strongest card',
     '접속 중인 친구만 부를 수 있어요.': 'Only friends who are online can be invited.',
     '상대 정보': 'Player Info',
     '명패 고르기': 'Choose a Name Plate',
@@ -1114,9 +1104,6 @@
     '게스트 (기록 없음)': 'Guest (no saved record)',
 
     // ── 다인전 화면 ──
-    '내가 진행자! 덱을 눌러 카드를 뽑으세요': 'You are the auctioneer — tap the deck to draw',
-    '내 차례! 마지막이라 앞사람 카드를 다 보고 정할 수 있어요':
-      'Your turn — you bid last, so you can see every card before you',
     '출품 선택 중': 'Choosing offer',
     '배팅 선택 중': 'Choosing bid',
 
@@ -1283,11 +1270,75 @@
     '코인이 부족해요.': 'Not enough coins.',
     '바꾸지 못했어요': 'Could not change that',
     '문제가 생겼어요. 잠시 후 다시 시도해주세요.': 'Something went wrong. Please try again.',
+    // 다인전 — 칩 경매
+    '셋·넷이서 · 칩으로 사는 경매': '3–4 players · buy cards with chips',
+    '카드를 칩으로 사는 경매 — 산 사람만 칩을 냅니다': 'Buy cards with chips — only the buyer pays',
+    '금고를 모으면 매 턴 칩이 불어납니다': 'Vaults pay you more chips every turn',
+    '지금 값': 'Price',
+    '부르기': 'Call',
+    '안 산다': 'Pass',
+    '산다': 'Buy',
+    '안 삼': 'No',
+    '몰래 답함': 'answered',
+    '답함': 'answered',
+    '고민 중': 'thinking',
+    '최고가': 'top bid',
+    '포기': 'Pass',
+    '차례': 'turn',
+    '무료': 'Free',
+    '클로즈': 'Closed',
+    '금고': 'Vault',
+    '더블6': 'Double 6',
+    '쌍둥이 4/6': 'Twin 4/6',
+    '2짜리': '2',
+    '3짜리': '3',
+    '4짜리': '4',
+    '6짜리': '6',
+    '부른 사람 없음': 'No bids yet',
+    '진행자가 부른 값': 'Auctioneer\'s price',
+    '동점 경쟁': 'Tiebreak',
+    '(나는 포기)': '(you passed)',
+    '내가 진행자! 첫 경매는 오픈이에요. 내놓을 카드를 고르세요': 'You\'re the auctioneer! The first auction is open. Pick a card to offer',
+    '내가 진행자! 공개 카드와 함께 내놓을 카드를 고르세요': 'You\'re the auctioneer! Pick a card to offer with the face-up card',
+    '칩이 2개 안 돼 오픈 경매만 열 수 있어요': 'Under 2 chips — you can only run an open auction',
+    '내 차례 — 먼저 값을 불러 보세요': 'Your turn — make the first bid',
+    '칩이 모자라 이번엔 못 사요 — 기다리는 중…': 'Not enough chips to buy this time — waiting...',
+    '게임 끝!': 'Game over!',
+    '덱이 떨어졌어요 — 세트에 가장 가까운 사람이 이겨요': 'The deck ran out — closest to a set wins',
+    '뒤로': 'Back',
+    '2칩 내리기': '2 chips less',
+    '2칩 올리기': '2 chips more',
+    '금고 — 매 턴 받는 칩': 'Vault — chips paid every turn',
   };
 
   // 값이 섞이는 문구는 통째로 짝지을 수 없다. 한국어 쪽 모양을 정규식으로 잡고
   // 영어 자리에 그대로 끼워 넣는다. ($1, $2 … 가 잡힌 값)
   const PATTERNS = [
+    // 다인전 — 칩 경매 (앞에 둬야 넓은 틀에 먼저 안 걸린다)
+    [/^지금은 (\d)인전 — 손패 (\d+)장 · 중앙 덱 (\d+)장 · 칩 (\d+)개$/u, 'Now: $1 players — $2 in hand · $3 in the center deck · $4 chips'],
+    [/^(\d)인전 — 손패 (\d+)장 · 중앙 덱 (\d+)장 · 칩 (\d+)개　·　(\d)인전 — 손패 (\d+)장 · 중앙 덱 (\d+)장 · 칩 (\d+)개$/u, '$1 players — $2 in hand · $3 in the center deck · $4 chips　·　$5 players — $6 in hand · $7 in the center deck · $8 chips'],
+    [/^아무도 안 불러서 내가 공짜로 가져가요!$/u, 'No one bid — you take it for free!'],
+    [/^(\d+)턴 — 덱에서 카드를 공개합니다$/u, 'Turn $1 — revealing a card from the deck'],
+    [/^내 차례 — (.+) (\d+)칩\. 더 부를까요\?$/u, 'Your turn — $1 at $2. Raise?'],
+    [/^(.+) 차례 · 아직 아무도 안 불렀어요$/u, '$1\'s turn · no bids yet'],
+    [/^(.+) 차례 · 지금 (\d+)칩 \((.+)\)$/u, '$1\'s turn · now $2 ($3)'],
+    [/^(\d+)칩 클로즈 — 상대들이 몰래 답하는 중… \((\d+)\/(\d+)\)$/u, 'Closed at $1 — others are answering in secret... ($2/$3)'],
+    [/^(.+) 님이 (\d+)칩을 불렀어요\. (\d+)칩에 살까요\? \(다른 사람 답은 안 보여요\)$/u, '$1 named $2. Buy for $3? (Others\' answers stay hidden)'],
+    [/^답했어요 — 다른 사람을 기다리는 중… \((\d+)\/(\d+)\)$/u, 'Answered — waiting for the others... ($1/$2)'],
+    [/^아무도 안 불러서 (.+) 님이 공짜로 가져가요!$/u, 'No one bid — $1 takes it for free!'],
+    [/^아무도 안 사서 내가 (\d+)칩에 가져가요$/u, 'No one bought — you take it for $1'],
+    [/^아무도 안 사서 (.+) 님이 (\d+)칩에 가져가요$/u, 'No one bought — $1 takes it for $2'],
+    [/^내가 (\d+)칩에 낙찰!$/u, 'You win the lot for $1!'],
+    [/^(.+) 님이 (\d+)칩에 낙찰!$/u, '$1 wins the lot for $2!'],
+    [/^\((\d+)초\)$/u, '($1s)'],
+    [/^(.+) 출품 확정$/u, 'Offer $1'],
+    [/^\+(\d+)\/턴$/u, '+$1/turn'],
+    [/^(\d+)장$/u, '×$1'],
+    [/^상대는 (\d+)칩에 살 수 있어요$/u, 'Others can buy for $1'],
+    [/^(\d+) 에 산다$/u, 'Buy for $1'],
+    [/^클로즈 경매 · (\d+)칩$/u, 'Closed Auction · $1'],
+    [/^(.+) 낙찰$/u, '$1 won'],
+    [/^(.+) 세트 완성!$/u, '$1 completed a set!'],
     // 숫자가 섞인 문구는 표로 못 잡는다 — 화면에 한글이 그대로 남던 것들
     [/^\uad6c\ub9e4 \ud83e\ude99 ([\d,]+)$/, 'Buy \ud83e\ude99 $1'],
     [/^\uad6c\ub9e4 \ud83d\udd37 ([\d,]+)$/, 'Buy \ud83d\udd37 $1'],
@@ -1969,113 +2020,110 @@
 
     // 다인전 설명서 \u2014 영어판
     rules4: `
-    <span class="close-x" onclick="toggleRules4(false)">\u00d7</span>
-    <h2>FLIP FLAP <span class="r4-tag">3\u20134 Players</span></h2>
-    <p class="r-lead">Cards, bidding and winning all work as in the 2-player game \u2014 complete a <b style="color:#ffe9a8">set</b> first.<br>
-    Listed here is only <b style="color:#ffe9a8">what changes with more players</b>.</p>
+    <span class="close-x" onclick="toggleRules4(false)">×</span>
+    <h2>FLIP FLAP <span class="r4-tag">3–4 Players</span></h2>
+    <p class="r-lead">Three or four players buy cards with <b style="color:#ffe9a8">chips</b> at auction.<br>
+    Complete a <b style="color:#ffe9a8">set</b> first to win — unlike the 2-player game, here you <b style="color:#ffe9a8">name a price</b> instead of playing cards.</p>
 
-    <h3><span data-ico="\ud83c\udfaf"></span> How to win</h3>
-    <p>Collect one kind <b>as many times as its number</b> and you win on the spot.<br>
-    <span style="font-size:.78rem">Cards needed: <b>2</b>\u21922 \u00b7 <b>3</b>\u21923 \u00b7 <b>4</b>\u21924 \u00b7 <b>6</b>\u21926<br>
-    <span data-ico="\u26a0"></span> Only cards <b>laid in front of you</b> count. Cards in hand never form a set.<br>
-    <span data-ico="\ud83c\udfc1"></span> If the deck runs out, <b>whoever is closest to a set</b> wins.</span></p>
+    <h3><span data-ico="🎯"></span> How to win</h3>
+    <p>Collect <b>as many cards of one kind as its number</b> and you win on the spot.<br>
+    <span style="font-size:.78rem">Needed: two <b>2</b>s · three <b>3</b>s · four <b>4</b>s · six <b>6</b>s<br>
+    <span data-ico="⚠"></span> Only cards you bought and <b>laid in front of you</b> count. Cards in your hand do not.<br>
+    <span data-ico="🏁"></span> If the deck runs out, whoever is <b>closest to a set</b> wins.</span></p>
 
-    <h3><span data-ico="\ud83d\udce6"></span> Setup</h3>
+    <h3><span data-ico="📦"></span> Setup</h3>
     <ul>
-      <li>Shuffle the deck for your player count, deal <b>6 cards each</b>; the rest is the <b>centre deck</b></li>
-      <li>The <b>first auctioneer is random</b>, and the seat then passes <b>clockwise</b></li>
-      <li>A player with an empty hand is skipped as auctioneer \u2014 there is nothing left to offer</li>
+      <li>Shuffle and deal <b>4 cards to each hand</b>; the rest is the <b>center deck</b></li>
+      <li>Everyone gets <b>30 chips (4 players) · 25 chips (3 players)</b>. Chips are <b>public</b></li>
+      <li>The first <b>auctioneer</b> is random, then it passes <b>clockwise</b></li>
     </ul>
 
-    <h3><span data-ico="\ud83d\uddc2"></span> The deck <span class="r-sub">\u2014 38 cards for 4 \u00b7 30 for 3</span></h3>
-    <p style="font-size:.78rem;margin-top:-2px">Thicker than the 24-card 2-player deck. The 3-player deck is the 4-player deck <b>with 8 cards taken out</b>, so one set of cards covers both.</p>
-    <div class="r-comp">
+    <h3><span data-ico="🗂"></span> The deck <span class="r-sub">— 32 cards (4P) · 24 cards (3P)</span></h3>
+    <p style="font-size:.78rem;margin-top:-2px">Cards have <b>no ranks</b> — only the kind matters. Three special cards are mixed in.</p>
+<div class="r-comp">
       <div class="r-comp-row">
-        <div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
-        <span><b>Kind 2</b> \u00b7 4 cards <span class="r-comp-g">(3P: 3)</span></span>
+        <div class="rc" data-kind="2"><span class="rc-num">2</span></div>
+        <span><b>2</b> · 3 cards <span class="r-comp-g">(3P: 2)</span></span>
       </div>
       <div class="r-comp-row">
-        <div class="rc" data-kind="3"><span class="rc-rank">1</span><span class="rc-num">3</span></div>
-        <span><b>Kind 3</b> \u00b7 6 cards <span class="r-comp-g">(3P: 5)</span></span>
+        <div class="rc" data-kind="3"><span class="rc-num">3</span></div>
+        <span><b>3</b> · 6 cards <span class="r-comp-g">(3P: 4)</span></span>
       </div>
       <div class="r-comp-row">
-        <div class="rc" data-kind="4"><span class="rc-rank">1</span><span class="rc-num">4</span></div>
-        <span><b>Kind 4</b> \u00b7 10 cards <span class="r-comp-g">(3P: 8)</span></span>
+        <div class="rc" data-kind="4"><span class="rc-num">4</span></div>
+        <span><b>4</b> · 8 cards <span class="r-comp-g">(3P: 6)</span></span>
       </div>
       <div class="r-comp-row">
-        <div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
-        <span><b>Kind 6</b> \u00b7 18 cards <span class="r-comp-g">(3P: 14)</span></span>
+        <div class="rc" data-kind="6"><span class="rc-num">6</span></div>
+        <span><b>6</b> · 9 cards <span class="r-comp-g">(3P: 8)</span></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="W6"><span class="rc-rank">×2</span><span class="rc-num">6</span></div>
+        <span><b>Double 6</b> · 2 cards <span class="r-comp-g">(3P: 1)</span> — counts as <b>two</b> 6s</span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="D46"><span class="rc-num" style="font-size:1rem">4/6</span></div>
+        <span><b>Twin 4/6</b> · 1 card <span class="r-comp-g">(3P: none)</span> — counts toward <b>both</b> 4s and 6s</span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="V"><span class="rc-num" style="font-size:.8rem">VAULT</span></div>
+        <span><b>Vault</b> · 3 cards — never part of a set, but <b>pays chips every turn</b></span>
       </div>
     </div>
     <div class="r4-tbl">
-      <div class="r4-row r4-head"><span>Players</span><span>Deck</span><span>Hand</span><span>Centre</span></div>
-      <div class="r4-row"><span>3</span><span>30</span><span>6</span><span>12</span></div>
-      <div class="r4-row"><span>4</span><span>38</span><span>6</span><span>14</span></div>
+      <div class="r4-row r4-head"><span>Players</span><span>Deck</span><span>Hand</span><span>Center</span><span>Chips</span></div>
+      <div class="r4-row"><span>3</span><span>24</span><span>4</span><span>12</span><span>25</span></div>
+      <div class="r4-row"><span>4</span><span>32</span><span>4</span><span>16</span><span>30</span></div>
     </div>
 
-    <h3><span data-ico="\ud83d\udd04"></span> One auction</h3>
+    <h3><span data-ico="🪙"></span> Vaults — they compound</h3>
+    <p>At the start of every turn <b>everyone</b> collects chips from their vaults. Two pay far more than one, three far more than two.</p>
+    <div class="r4-tbl">
+      <div class="r4-row r4-head"><span>Vaults</span><span>1</span><span>2</span><span>3</span></div>
+      <div class="r4-row"><span>Per turn</span><span>+1</span><span>+3</span><span>+6</span></div>
+    </div>
+    <p style="font-size:.78rem">The earlier you buy, the longer it pays. But while you spend on vaults, others move toward a set.</p>
+
+    <h3><span data-ico="🔄"></span> One auction</h3>
     <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>Flip one <b>face-up card</b> off the centre deck</span></div>
-      <div class="r4-step"><b>2</b><span>The auctioneer adds one <b>offered card</b> from hand \u2014 those two are the lot</span></div>
-      <div class="r4-step"><b>3</b><span>The auctioneer picks <b>Open</b> or <b>Closed</b></span></div>
-      <div class="r4-step"><b>4</b><span><b>Everyone</b> plays one bid card \u2014 the auctioneer bids too</span></div>
-      <div class="r4-step"><b>5</b><span>The <b>strongest</b> bid takes both cards of the lot</span></div>
-      <div class="r4-step"><b>6</b><span>The bid cards are <b>dealt back in reverse</b>, then the seat passes clockwise</span></div>
+      <div class="r4-step"><b>1</b><span>Everyone collects vault income; flip one <b>face-up card</b> from the center deck</span></div>
+      <div class="r4-step"><b>2</b><span>The auctioneer adds an <b>offered card</b> from hand — the two cards are one lot</span></div>
+      <div class="r4-step"><b>3</b><span>The auctioneer picks <b>open</b> or <b>closed</b> (the first auction is always open)</span></div>
+      <div class="r4-step"><b>4</b><span>Only the buyer pays. Paid chips go to the <b>bank</b> and are gone</span></div>
+      <div class="r4-step"><b>5</b><span>The lot is laid in front of the buyer; the auctioneer passes clockwise</span></div>
     </div>
-    <p style="font-size:.78rem"><span data-ico="\u26a0"></span> A player with an empty hand skips the bidding. If nobody can bid, the lot is <b>unsold</b> and the auctioneer keeps it.</p>
 
-    <h3><span data-ico="\ud83d\udc41"></span> Open and Closed \u2014 the real difference</h3>
+    <h3><span data-ico="👁"></span> Open and closed</h3>
     <div class="r4-two">
       <div class="r4-card">
         <div class="r4-ct">Open auction</div>
-        <p>The lot is <b>shown</b>.<br>
-        All bids go down face-down and are <b>revealed at once</b>.<br>
-        You know the prize, not the players.</p>
+        <p>Starting <b>left of the auctioneer</b>, each player raises or passes in turn; the auctioneer goes last.<br>
+        The last one standing buys at their bid.<br>
+        If <b>nobody bids</b>, the auctioneer takes the lot for free.</p>
       </div>
       <div class="r4-card">
         <div class="r4-ct">Closed auction</div>
-        <p>The lot is <b>hidden</b>.<br>
-        Instead, bids are played <b>one at a time, clockwise</b> from the auctioneer.<br>
-        The later you bid, the more you have seen.</p>
+        <p>The auctioneer names an <b>even price P</b> (2 or more).<br>
+        Everyone else answers <b>in secret</b>: “<b>buy for P+1</b>” or “pass”.<br>
+        One buyer pays P+1. No buyers — <b>the auctioneer pays P</b> and takes it.</p>
       </div>
     </div>
-    <p style="font-size:.78rem">Closed runs in order for a reason. With everyone bidding at once, reading one player still leaves two others to take the lot, so there is no mind game.
-    One at a time, <b>an early player can bid high to scare the rest off</b>. The price is information: whoever bids last knows the most, and the auctioneer accepts that when choosing Closed.</p>
+    <p style="font-size:.78rem"><span data-ico="⚔"></span> <b>Tiebreak</b> — if two or more say “buy”, those players run an <b>open auction starting at P+1</b>.
+    The buyer closest to the auctioneer's left starts holding P+1, so if nobody raises, they buy.</p>
+    <p style="font-size:.78rem">Closed is the auctioneer's weapon: name a price no one will match for a lot you want, or make a rival <b>pay dearly</b> for one they need. Name it too low and someone gets a bargain.</p>
 
-    <h3><span data-ico="\ud83c\udf81"></span> Bid cards come back in reverse</h3>
-    <p>Bid cards are not discarded \u2014 the table <b>swaps them around</b>. The higher you bid, the weaker the card you get back, and
-    <b>the lowest bidder takes the strongest card</b>.</p>
-    <div class="r4-flow">
-      <div class="r4-fr"><span class="r4-fl">Highest bid</span><span class="r-arrow">\u2192</span><span>takes the 2-card lot \u00b7 but receives the <b>weakest</b> bid card</span></div>
-      <div class="r4-fr"><span class="r4-fl">Lowest bid</span><span class="r-arrow">\u2192</span><span>no lot \u00b7 but receives the <b>strongest</b> bid card</span></div>
-    </div>
-    <p style="font-size:.78rem">So <b>losing on purpose is a real move</b> \u2014 if the lot does nothing for your set, bid low and stock your hand for the next one.</p>
-
-    <div class="r-special">
-      <div class="r-st"><span data-ico="\u2694"></span> Upset! The Servant's Betrayal</div>
-      <div class="r-match" style="margin:4px 0 0">
-        <div class="rc gold" data-kind="6"><span class="rc-rank">18</span><span class="rc-num">6</span></div>
-        <span class="r-arrow" data-ico="\u2694"></span>
-        <div class="rc gold" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
-        <span class="r-arrow">\u2192</span>
-        <span class="r-win">6-18 wins!</span>
-      </div>
-      <p style="font-size:.76rem;margin-top:6px">The weakest card \u2014 the <b style="color:var(--gold)">last rank of kind 6</b> \u2014 beats the strongest, <b style="color:var(--gold)">2-1</b>.
-      A different deck means a different weakest card: <b style="color:var(--gold)">6-18</b> with four players, <b style="color:var(--gold)">6-14</b> with three, 6-10 in the 2-player game.<br>
-      When a betrayal lands, those two cards <b>go back to their owners</b> instead of being swapped \u2014 taking the lot and the strongest card at once would tilt the game too far.</p>
-    </div>
-
-    <h3><span data-ico="\ud83c\udfc1"></span> Ending the game</h3>
+    <h3><span data-ico="🏁"></span> End of the game</h3>
     <ul>
-      <li><b>A completed set</b> ends it immediately. If two players complete one in the same auction, <b>the player who won that lot</b> takes it</li>
-      <li>When the <b>centre deck runs out</b> \u2014 or every hand is empty \u2014 the table is ranked as it stands</li>
+      <li>Whoever <b>completes a set</b> wins immediately</li>
+      <li>If the <b>center deck runs out</b> or the auctioneer has no card to offer, players are ranked on the spot</li>
     </ul>
-    <p style="font-size:.78rem">That ranking compares, in order: \u2460 <b>fewest cards still needed</b> for a set \u2192 \u2461 the <b>larger share</b> of one kind collected \u2192
-    \u2462 <b>more cards</b> collected \u2192 \u2463 <b>stronger</b> cards collected.</p>
+    <p style="font-size:.78rem">Deck-out ranking: ① fewest <b>cards left to a set</b> → ② <b>most filled</b> single kind →
+    ③ <b>most set cards</b> collected → ④ <b>most chips</b>.</p>
 
-    <h3><span data-ico="\u23f1"></span> The clock</h3>
-    <p><b>Three minutes each</b>, running only while it is your move.
-    Run out and <b>the AI plays on from your seat</b> \u2014 one slow player does not end everybody else's game.</p>`,
+    <h3><span data-ico="⏱"></span> Time limit</h3>
+    <p>Each player has <b>3 minutes</b>, ticking only on their own turn.
+    Run out and <b>an AI takes over</b> your seat — the others' game goes on.</p>
+`,
   };
   PACKS.en.blocks = BLOCKS;   // 위에서 비워 두었던 자리를 이제 채운다
 

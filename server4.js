@@ -19,12 +19,10 @@ const MAX_ROOMS4 = 300;
 const BOT_NICKS = ['경매왕 덕배', '큰손 미스박', '눈치백단 재훈', '허세왕 태식', '침착한 소연',
                    '도박사 병철', '노림수 은지', '구두쇠 만수', '한방 규현', '카운팅 지민'];
 
-// reveal 은 "배팅 카드가 뒤집히는 시간". 뒤집기(0.85s) + 카드별 지연(최대 0.17s) 이
-// 끝나는 즉시 결과가 오도록 맞춘다. 예전엔 2300ms 라 뒤집기가 끝나고도 1.3초 넘게
-// 아무 일이 없다가 뜬금없이 WIN 이 떴다.
-// showdown 은 "다 냈지만 아직 안 뒤집은" 시간. 2인전의 긴장 브레이크와 같은 것으로,
-// 마지막 사람이 내자마자 까 버리면 뒤집히는 게 눈에 안 들어온다.
-const T = { draw: 650, offer: 750, type: 650, bid: 480, showdown: 900, reveal: 1150, settle: 1750, next: 260 };
+// 박자. raise 는 AI 가 한 번 올리거나 빠지는 간격 — 값은 1씩 오르므로 한 경매에
+// 열 번 넘게 돈다. 사람처럼 뜸을 들이면 경매 하나가 10초를 넘겨 지루하다.
+// settle 은 낙찰 결과를 보여 주는 시간, round 는 금고 수입·중앙 카드가 뜨는 시간.
+const T = { round: 700, offer: 750, type: 650, raise: 380, answer: 600, settle: 1600, next: 260 };
 const STUCK_MS = 12000;     // 사람을 기다리는 게 아닌데 이만큼 멈춰 있으면 복구한다
 // 사람 차례에도 제한이 필요하다. 예전엔 없어서, 멀티에서 한 명이 가만히 있으면
 // 나머지가 무한정 기다렸다("카드가 안 내진다"의 정체). 2인전은 60초 시계가 있는데
@@ -127,29 +125,30 @@ function attach4(io, hooks = {}) {
   }
 
   function humanToAct(g, r) {
-    const isHuman = (i) => !r.seats[i].isBot && r.seats[i].sid;
-    if (g.phase === 'draw' || g.phase === 'offer' || g.phase === 'choose_type')
+    const isHuman = (i) => i !== null && i !== undefined && !r.seats[i].isBot && r.seats[i].sid;
+    if (g.phase === 'offer' || g.phase === 'choose_type')
       return isHuman(g.auctioneer) ? g.auctioneer : null;
-    if (g.phase === 'bidding') {
-      for (let i = 0; i < r.seats.length; i++) if (isHuman(i) && G.canBid(g, i)) return i;
-    }
+    if (g.phase === 'open') return isHuman(g.auction.turnSeat) ? g.auction.turnSeat : null;
+    // 클로즈 답은 다 같이 몰래 한다 — 아직 안 답한 사람 중 왼쪽부터
+    if (g.phase === 'answer') for (const i of G.rivals(g)) if (isHuman(i) && G.canAnswer(g, i)) return i;
     return null;
   }
 
   // 시간이 다 된 사람 대신 한 수 둔다. AI 와 같은 판단을 쓰므로 엉뚱한 수가 나오진 않는다.
   function autoPlayFor(g, seat) {
-    if (g.phase === 'draw' && g.auctioneer === seat) return G.draw(g);
     if (g.phase === 'offer' && g.auctioneer === seat) {
       const c = AI.chooseConsign(g, seat);
       return c ? G.offer(g, seat, c.id) : false;
     }
     if (g.phase === 'choose_type' && g.auctioneer === seat) {
-      return G.chooseType(g, seat, AI.chooseType(g, seat));
+      const t = AI.chooseType(g, seat);
+      return G.chooseType(g, seat, t.type, t.price) || G.chooseType(g, seat, 'open');
     }
-    if (g.phase === 'bidding' && G.canBid(g, seat)) {
-      const c = AI.chooseBid(g, seat);
-      return c ? G.bid(g, seat, c.id) : false;
+    if (G.canAct(g, seat)) {
+      const m = AI.openMove(g, seat);
+      return m.type === 'raise' ? G.raise(g, seat, m.to) : G.pass(g, seat);
     }
+    if (G.canAnswer(g, seat)) return G.answer(g, seat, AI.chooseAnswer(g, seat));
     return false;
   }
 
@@ -164,14 +163,26 @@ function attach4(io, hooks = {}) {
     }, ms);
   }
 
-  // 전원이 냈을 때 — 곧바로 까지 않고 뒷면인 채로 한 박자 둔다.
-  // 클로즈는 이미 한 명씩 공개하며 왔으므로 뜸을 짧게 준다.
-  function toShowdown(roomId) {
+  // 한 수 둔 뒤 — 낙찰이 났으면 결과를 보여 줄 만큼 쉬고, 아니면 다음 박자
+  function after(roomId, ms) {
     const r = rooms4[roomId]; if (!r) return;
-    const g = r.game;
-    g.phase = 'showdown';
     push(roomId);
-    return schedule(roomId, g.auction && g.auction.closed ? Math.round(T.showdown / 2) : T.showdown);
+    return schedule(roomId, r.game.phase === 'settled' ? T.settle : ms);
+  }
+  // 사람 차례. 붙어 있으면 기다린다(시간은 감시가 잰다).
+  // 사람도 AI 도 아닌 자리 — 끊긴 자리가 되찾을 시간(SEAT_GRACE)을 쓰는 중이면
+  // 여기서 그냥 돌아가면 다음 박자가 없어 이 방의 시계가 아예 선다.
+  // 이 모듈의 불변식은 "step 은 늘 다음 박자를 남기거나 끝을 낸다" 이다.
+  function waitFor(roomId, seat) {
+    const r = rooms4[roomId], g = r.game, s = r.seats[seat];
+    if (s && s.sid && !s.isBot) return push(roomId);
+    const key = g.turn + ':' + g.phase + ':' + seat;               // 같은 자리를 두고는 한 번만 적는다
+    if (r.waitingNobody !== key) {
+      r.waitingNobody = key;
+      console.warn('[g4] 둘 사람이 자리에 없어 기다립니다 room=' + roomId + ' seat=' + seat + ' phase=' + g.phase);
+    }
+    push(roomId);
+    return schedule(roomId, T.raise);
   }
 
   function step(roomId) {
@@ -188,62 +199,37 @@ function attach4(io, hooks = {}) {
         for (let i = 0; i < r.seats.length; i++) if (r.seats[i].sid) io.to(r.seats[i].sid).emit('g4_over', stateFor(g, i, r.rp, r));
         return;
 
-      case 'draw':
-        if (humanToAct(g, r) === g.auctioneer) return push(roomId);
-        G.draw(g); push(roomId);
-        return schedule(roomId, T.offer);
+      case 'round':                         // 금고 수입 → 중앙 카드 공개 (덱이 비었으면 여기서 끝난다)
+        G.beginRound(g); push(roomId);
+        return schedule(roomId, g.phase === 'game_over' ? T.next : T.round);
 
       case 'offer': {
-        if (humanToAct(g, r) === g.auctioneer) return push(roomId);
+        if (!r.seats[g.auctioneer].isBot) return waitFor(roomId, g.auctioneer);
         const c = AI.chooseConsign(g, g.auctioneer);
-        G.offer(g, g.auctioneer, c.id); push(roomId);
-        return schedule(roomId, T.type);
+        G.offer(g, g.auctioneer, c.id);
+        return after(roomId, T.type);
       }
 
-      case 'choose_type':
-        if (humanToAct(g, r) === g.auctioneer) return push(roomId);
-        G.chooseType(g, g.auctioneer, AI.chooseType(g, g.auctioneer));
-        push(roomId);
-        return schedule(roomId, T.bid);
-
-      case 'bidding': {
-        // 클로즈는 순서제 — 진행자부터 한 명씩. 순서는 canBid 가 강제한다.
-        // 사람이 낼 수 있는 상태면 기다리고, 아니면 봇을 하나씩 굴린다.
-        if (humanToAct(g, r) !== null) return push(roomId);
-        const pending = [];
-        for (let i = 0; i < r.seats.length; i++) if (r.seats[i].isBot && G.canBid(g, i)) pending.push(i);
-        if (pending.length) {
-          const s = pending[0];
-          const c = AI.chooseBid(g, s);
-          if (c) G.bid(g, s, c.id);
-          push(roomId);
-          if (G.allBidsIn(g)) return toShowdown(roomId);
-          return schedule(roomId, T.bid);
-        }
-        if (G.allBidsIn(g) || !G.bidderSeats(g).length) return toShowdown(roomId);
-        // 낼 사람이 남았는데 사람도 AI 도 아니다 — 끊긴 자리가 되찾을 시간을
-        // 쓰는 중이다(SEAT_GRACE). 여기서 그냥 돌아가면 다음 박자가 없어
-        // 이 방의 시계가 아예 선다. 남은 사람은 아무 설명 없이 멈춘 판을 본다.
-        // 이 모듈의 불변식은 "step 은 늘 다음 박자를 남기거나 끝을 낸다" 이다.
-        // 480ms 마다 다시 들르므로, 같은 자리를 두고는 한 번만 적는다
-        const key = g.turn + ':' + g.phase + ':' + G.turnToBid(g);
-        if (r.waitingNobody !== key) {
-          r.waitingNobody = key;
-          console.warn('[g4] 낼 사람이 자리에 없어 기다립니다 room=' + roomId
-                       + ' seat=' + G.turnToBid(g) + ' phase=' + g.phase);
-        }
-        push(roomId);
-        return schedule(roomId, T.bid);
+      case 'choose_type': {
+        if (!r.seats[g.auctioneer].isBot) return waitFor(roomId, g.auctioneer);
+        const t = AI.chooseType(g, g.auctioneer);
+        if (!G.chooseType(g, g.auctioneer, t.type, t.price)) G.chooseType(g, g.auctioneer, 'open');
+        return after(roomId, T.raise);
       }
 
-      // 다 냈지만 아직 안 뒤집은 상태. 화면에는 뒷면이 그대로 깔려 있다.
-      case 'showdown':
-        g.phase = 'reveal'; push(roomId);
-        return schedule(roomId, T.reveal);
+      case 'open': {                         // 돌아가며 올리거나 빠진다 — 지금 차례 한 사람
+        const s = g.auction.turnSeat;
+        if (!r.seats[s].isBot) return waitFor(roomId, s);
+        const m = AI.openMove(g, s);
+        if (!(m.type === 'raise' ? G.raise(g, s, m.to) : G.pass(g, s))) G.pass(g, s);
+        return after(roomId, T.raise);
+      }
 
-      case 'reveal':
-        G.settle(g); push(roomId);
-        return schedule(roomId, T.settle);
+      case 'answer': {                       // 클로즈 — AI 는 한꺼번에 몰래 답한다
+        for (const i of G.rivals(g)) if (r.seats[i].isBot && G.canAnswer(g, i)) G.answer(g, i, AI.chooseAnswer(g, i));
+        if (g.phase !== 'answer') return after(roomId, T.raise);          // 다 모였다
+        return waitFor(roomId, G.rivals(g).find((i) => G.canAnswer(g, i)));
+      }
 
       case 'settled':
         G.advance(g); push(roomId);
@@ -370,7 +356,7 @@ function attach4(io, hooks = {}) {
       else { seats[idx] = { sid: null, nick: bots[bi++], isBot: true, orphanAt: null, token: null, ip: null, left: false }; }
     }
     const g = G.createGame4(seats.map((s) => s.nick), { n });
-    const styles = AI.pickStyles();
+    const styles = AI.pickStyles(n);
     g.seats.forEach((s, i) => { s.style = styles[i]; s.isBot = seats[i].isBot; });
 
     const roomId = 'G4' + Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -623,16 +609,18 @@ function attach4(io, hooks = {}) {
       }
       const g = r.game;
       let ok = false;
-      if (data.type === 'draw' && g.phase === 'draw' && g.auctioneer === me) ok = G.draw(g);
-      else if (data.type === 'offer' && g.phase === 'offer' && g.auctioneer === me) ok = G.offer(g, me, data.cardId);
-      else if (data.type === 'auctionType' && g.phase === 'choose_type' && g.auctioneer === me) ok = G.chooseType(g, me, data.val);
-      else if (data.type === 'bid' && g.phase === 'bidding') ok = G.bid(g, me, data.cardId);
+      // 값은 엔진이 다시 따진다(차례·칩·짝수). 여기서는 모양만 거른다.
+      if (data.type === 'offer' && g.phase === 'offer' && g.auctioneer === me) ok = G.offer(g, me, data.cardId);
+      else if (data.type === 'auctionType' && g.phase === 'choose_type' && g.auctioneer === me)
+        ok = G.chooseType(g, me, String(data.val || ''), Number(data.price));
+      else if (data.type === 'raise') ok = G.raise(g, me, Number(data.to));
+      else if (data.type === 'pass') ok = G.pass(g, me);
+      else if (data.type === 'answer') ok = G.answer(g, me, data.buy === true);
       if (!ok) return push(roomId);
       r.lastStep = Date.now();
-      markWait(r, null);          // 냈으니 이 사람 기다림은 끝
+      markWait(r, null);          // 뒀으니 이 사람 기다림은 끝
       if (r.afk) r.afk[me] = 0;   // 돌아왔으니 자리비움 해제
-      push(roomId);
-      schedule(roomId, T.next);
+      after(roomId, T.next);
     });
 
     // 친구가 하는 다인전을 보러 간다. 자리에 앉지 않고 상태만 받는다.

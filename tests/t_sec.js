@@ -38,13 +38,31 @@ ok('섯다는 공개 조건일 때만 카드를 보낸다',
    /cards: open \? st\.hands\[i\]\.slice\(\) : null/.test(sut)
    && /eval: open && st\.hands\[i\]\.length === 2/.test(sut));
 
-console.log('\n③ 다인전 관전자에게 클로즈 출품이 새지 않는다');
-// stateForSpec 은 자리 0 시점을 빌린다. 진행자가 마침 0번이면 stateFor 가
-// "내가 진행자니까" 하고 가려야 할 출품 카드를 열어 준다 — 다시 덮어야 한다.
-ok('관전자 상태에서 출품 카드를 다시 덮는다',
-   /function stateForSpec[\s\S]{0,700}if \(!open\) st\.auction\.offered = null;/.test(srv4));
-ok('관전자는 손패도 자리 번호도 없다',
-   /st\.myHand = \[\];[\s\S]{0,40}st\.me = null;/.test(srv4));
+console.log('\n③ 다인전 관전자·상대에게 새지 않는다');
+// 칩 경매에서는 출품 카드가 원래 공개다. 가려야 하는 것은 손패, 클로즈의
+// 몰래 한 답, AI 가 속으로 정한 한도다. 관전자는 어느 자리의 시점도 빌리지 않는다.
+{
+  const G = require(R + '/game4.js');
+  const V = require(R + '/view4.js').make();
+  const g = G.createGame4(['a', 'b', 'c', 'd'], { n: 4, rnd: () => 0 });
+  // 섞지 않은 덱은 첫 경매에서 2 두 장이 붙어 판이 끝난다 — 카드를 직접 깐다
+  let id = 500;
+  for (const x of g.seats) x.hand = [3, 4, 6, 6].map((k) => ({ id: id++, kind: k }));
+  g.deck = [2, 3, 4, 6, 3, 4].map((k) => ({ id: id++, kind: k }));
+  G.beginRound(g); G.offer(g, 0, g.seats[0].hand[0].id);
+  for (const s of [1, 2, 3, 0]) G.pass(g, s);
+  G.advance(g); G.beginRound(g); G.offer(g, 1, g.seats[1].hand[0].id);
+  G.chooseType(g, 1, 'close', 2);
+  G.answer(g, 2, true);
+  Object.defineProperty(g.auction, 'aiW', { value: { 3: 9 }, enumerable: false });
+  const spec = V.stateForSpec(g, null, null), me3 = V.stateFor(g, 3, null, null), me2 = V.stateFor(g, 2, null, null);
+  ok('관전자는 손패도 자리 번호도 없다', spec.me === null && spec.myHand.length === 0 && spec.watching === true);
+  ok('남의 손패는 누구에게도 안 나간다', ![spec, me3].some((st) => st.seats.some((x) => x.hand)));
+  ok('클로즈 답은 다 모이기 전엔 "답했다" 만', me3.auction.answered.includes(2) && me3.auction.myAnswer === null && me3.auction.buyers === null
+     && !/"answers"/.test(JSON.stringify(me3)));
+  ok('내 답은 나에게만 보인다', me2.auction.myAnswer === true && spec.auction.myAnswer === null);
+  ok('AI 한도는 안 나간다', !/aiW/.test(JSON.stringify(spec)));
+}
 
 console.log('\n④ 클라이언트 입력으로 객체를 뒤지지 않는다');
 // SLOT[kind] 를 그냥 찾으면 kind='constructor' 가 Object 생성자에 걸려

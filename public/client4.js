@@ -17,9 +17,15 @@
   // 소리는 부가 요소다. 아직 초기화 전이거나 재생이 막혀도 게임 진행을 막으면 안 된다.
   const sfx = (n) => { try { if (typeof playSound === 'function') playSound(n); } catch (_) {} };
 
-  // 4인전 전용 특수 카드 — 최강 2-1, 최약 6-13 (2인전은 6-10이라 여기서 따로 판정한다)
-  const top4 = (c) => c && c.kind === 2 && c.grade === 1;
-  const bot4 = (c) => c && c.kind === 6 && c.grade === 13;
+  // 카드는 종류만 있다(등급 없음). 특수 카드 셋은 문자열 종류다.
+  const G4 = window.GAME4;
+  const SP_NAME = { V: '금고', W6: '더블6', D46: '쌍둥이 4/6' };
+  const isSp = (k) => typeof k === 'string';
+  const cardName = (c) => (isSp(c.kind) ? SP_NAME[c.kind] : `${c.kind}짜리`);
+  const coin = (cls) => `<svg class="ic${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-coin"/></svg>`;
+  // 손패·더미를 늘 같은 차례로 — 세트 카드 먼저, 특수 카드는 뒤에
+  const KORDER = { 2: 0, 3: 1, 4: 2, 6: 3, D46: 4, W6: 5, V: 6 };
+  const byKind = (x, y) => (KORDER[x.kind] - KORDER[y.kind]) || (x.id - y.id);
 
   // 내 카드백 클래스 (상점에서 산 것). 2인전과 같은 표를 쓴다.
   function myBackClass() {
@@ -92,9 +98,9 @@
   }
 
   // 덱 더미 — 남은 장수만큼 겹쳐 쌓고, 뽑을 수 있을 때만 빛난다
-  function renderDeck4(n, drawable) {
+  function renderDeck4(n) {
     const el = $('q-deckstack'); if (!el) return;
-    const sig = n + '|' + drawable + '|' + (myBackClass() || '');
+    const sig = n + '|' + (myBackClass() || '');
     if (fx.deckSig !== sig) {
       fx.deckSig = sig;
       el.innerHTML = '';
@@ -112,14 +118,10 @@
       }
     }
     el.style.display = n > 0 ? '' : 'none';
-    el.classList.toggle('drawable', !!drawable && n > 0);
-    el.onclick = drawable && n > 0
-      ? () => { sfx('place'); sendAct({ type: 'draw' }); }
-      : null;
   }
 
   // 고른 카드에 테두리를 주고, 확정 버튼 문구를 맞춘다
-  let curPick = null;      // 지금 무엇을 고르는 중인가 ('offer' | 'bid' | null)
+  let curPick = null;      // 지금 무엇을 고르는 중인가 ('offer' | null)
   let q4Spec = false;      // 관전 중인가 — 남의 판을 보기만 한다
   function paintSel() {
     const hand = $('q-myhand'); if (!hand) return;
@@ -129,38 +131,28 @@
       // 부채꼴 회전은 카드 자체 transform 에 걸려 있다. 들어 올리는 건 칸에 준다.
       if (el.parentElement) el.parentElement.classList.toggle('sel', on);
     });
-    // 고른 카드를 배팅 자리에 미리 올린다 — 2인전과 같은 결.
-    // 예전엔 확정을 눌러야 그제야 나타나서, 무엇을 내려는지 판에서 안 보였다.
-    // render 가 아니라 여기서 하는 이유: 고르는 즉시 반영돼야 하는데
-    // render 는 서버 상태가 올 때만 돈다.
+    // 고른 카드를 내 앞에 미리 올린다 — 무엇을 내놓으려는지 판에서 보이게
     const mb = $('q-mybid');
     if (mb) {
       mb.classList.remove('picking');
-      const already = mb.querySelector('.card');      // 이미 낸 카드가 있으면 손대지 않는다
       const prev = mb.querySelector('.q-pick-prev');
       if (prev) prev.remove();
-      if (!already && sel4 && curPick) {
+      if (sel4 && curPick) {
         const wrap = document.createElement('div');
         wrap.className = 'q-pick-prev';
         wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center';
         wrap.appendChild(card4(sel4));
         const l = document.createElement('div');
-        l.className = 'q-mylabel';
-        l.textContent = curPick === 'offer' ? '출품 선택 중' : '배팅 선택 중';
+        l.className = 'q-mylabel'; l.textContent = '출품 선택 중';
         wrap.appendChild(l);
         mb.appendChild(wrap);
         mb.classList.add('picking');
       }
     }
-
     const btn = $('q-confirm'); if (!btn) return;
     const on = !!(curPick && sel4);
     btn.classList.toggle('show', on);
-    if (on) {
-      btn.textContent = curPick === 'offer'
-        ? `${sel4.kind}번 (${sel4.grade}등급) 출품 확정`
-        : `${sel4.kind}번 (${sel4.grade}등급) 배팅 확정`;
-    }
+    if (on) btn.textContent = `${cardName(sel4)} 출품 확정`;
   }
   // ── 보낸 행동이 먹혔는지 확인하고, 안 먹혔으면 되살린다 ────────────────────
   //
@@ -171,7 +163,13 @@
   //
   // 그래서 보낸 걸 기억해 두고, 판이 안 움직이면 자리를 다시 잇고 한 번 더 보낸다.
   let pendAct = null;                        // { payload, at, sig, tries }
-  const stateSig = () => (q4 ? `${q4.turn}|${q4.phase}|${(q4.myHand || []).map((c) => c.id).join(',')}` : '');
+  // 올리기·빠지기·답하기는 단계도 손패도 그대로다 — 경매가 어디까지 왔는지도 같이 본다
+  const stateSig = () => {
+    if (!q4) return '';
+    const a = q4.auction || {};
+    return [q4.turn, q4.phase, (q4.myHand || []).map((c) => c.id).join(','),
+            a.price, a.high, (a.out || []).length, a.turnSeat, (a.answered || []).length, a.closeP].join('|');
+  };
   function sendAct(payload) {
     pendAct = { payload, at: Date.now(), sig: stateSig(), tries: 0 };
     socket.emit('g4_act', payload);
@@ -199,14 +197,14 @@
     setTimeout(() => { if (pendAct) socket.emit('g4_act', pendAct.payload); }, 300);
   }
 
-  // 확정 — 여기서만 서버로 나간다
+  // 출품 확정 — 여기서만 서버로 나간다
   window.q4Confirm = function () {
-    if (!curPick || !sel4) return;
-    const id = sel4.id, type = curPick;
+    if (curPick !== 'offer' || !sel4) return;
+    const id = sel4.id;
     sel4 = null; curPick = null;              // 연타로 두 번 나가지 않게 먼저 비운다
     paintSel();
     sfx('place');
-    sendAct({ type: type === 'offer' ? 'offer' : 'bid', cardId: id });
+    sendAct({ type: 'offer', cardId: id });
   };
 
   // 빈 자리. 카드와 똑같은 크기를 차지해야 카드가 놓일 때 화면이 안 밀린다.
@@ -221,7 +219,7 @@
     el.className = 'card';
     if (!card) {
       el.classList.add('back');
-      // 산 카드백을 판에서도 쓴다. 예전엔 안 붙여서 다인전만 기본 뒷면이었다.
+      // 산 카드백을 판에서도 쓴다
       if (opts.backOf !== undefined) { if (opts.backOf) el.classList.add(opts.backOf); }
       else { const c = myBackClass(); if (c) el.classList.add(c); }
       el.innerHTML = '<span class="bf flip">FLIP</span><span class="bf flap">FLAP</span>';
@@ -229,27 +227,26 @@
     }
     el.dataset.kind = card.kind;
     el.dataset.id = card.id;
-    const special = top4(card) || bot4(card);
-    if (special) el.classList.add('special');
-    const top = document.createElement('div');
-    top.className = 'c-top';
-    const rank = document.createElement('span');
-    // 10 이상은 두 칸이라 여백을 줄인다 (2인전과 같은 처리)
-    rank.className = 'c-rank' + (card.grade >= 10 ? ' two' : ''); rank.textContent = card.grade;
-    top.appendChild(rank);
-    if (special) {
-      const mk = document.createElement('span');
-      mk.className = 'c-mark';
-      // 2인전과 같은 자체 그림. 그림을 못 찾으면 원래 이모지로 떨어진다.
-      const mkArt = top4(card) ? (typeof rankIco === 'function' && rankIco('👑'))
-                               : (typeof ico === 'function' && ico('⚔️'));
-      if (mkArt && mkArt.indexOf('<') === 0) mk.innerHTML = mkArt;
-      else mk.textContent = top4(card) ? '👑' : '⚔';
-      top.appendChild(mk);
-    }
-    const num = document.createElement('div');
-    num.className = 'c-num'; num.textContent = card.kind;
+    const top = document.createElement('div'); top.className = 'c-top';
+    const num = document.createElement('div'); num.className = 'c-num';
     el.appendChild(top); el.appendChild(num);
+    if (card.kind === 'V') {                 // 금고 — 동전 그림. 세트에는 안 든다
+      el.classList.add('q-sp');
+      num.innerHTML = coin('q-vico');
+      const t = document.createElement('span'); t.className = 'c-sub'; t.textContent = '금고';
+      el.appendChild(t);
+    } else if (card.kind === 'W6') {         // 더블6 — 6종 두 장으로 친다
+      el.classList.add('q-sp');
+      num.textContent = '6';
+      const m = document.createElement('span'); m.className = 'c-x2'; m.textContent = '×2';
+      top.appendChild(m);
+    } else if (card.kind === 'D46') {        // 쌍둥이 — 4종에도 6종에도 친다
+      el.classList.add('q-sp');
+      num.classList.add('c-twin'); num.innerHTML = '<i>4</i><i>6</i>';
+    } else {
+      num.textContent = card.kind;
+    }
+    if (opts.ghost) el.classList.add('q-ghost');
     if (opts.pick) {
       el.classList.add('pick');
       // 2인전과 같은 탭 처리 — click 만 쓰면 손가락이 조금 움직였을 때 먹지 않는다
@@ -278,25 +275,35 @@
     inner.style.transform = k < 0.985 ? `scale(${k.toFixed(3)})` : '';
   }
 
-  // 획득 더미 — 2인전과 같이 실제 카드 모양 그대로 보여준다.
-  // 종류별로 묶어 겹쳐 쌓되, 등급 배지가 드러날 만큼만 노출해서
-  // 몇 종의 몇 번을 가져갔는지 그대로 읽힌다. (상대는 CSS 로 더 작게)
+  // 획득 더미 — 세트마다 묶는다. 몇 장째인지는 특수 카드까지 쳐서 센다
+  // (더블6 은 6종 두 장, 쌍둥이는 4종·6종 둘 다). 쌍둥이는 두 묶음에 다 놓되
+  // 두 번째는 흐리게 — "한 장이 두 군데 친다" 가 눈에 보여야 한다.
+  // 금고는 따로 묶고 매 턴 버는 칩을 적는다.
   function acqPile(acq) {
-    const groups = {};
-    for (const c of acq) (groups[c.kind] = groups[c.kind] || []).push(c);
-    const out = [];
+    const out = [], cnt = G4.counts(acq);
     for (const kind of [2, 3, 4, 6]) {
-      const g = groups[kind]; if (!g) continue;
-      g.sort((a, b) => a.grade - b.grade);
-      const done = g.length >= kind, reach = g.length === kind - 1;
+      const cards = acq.filter((c) => G4.addOf(c.kind)[kind]).sort(byKind);
+      if (!cards.length) continue;
+      const need = G4.NEED[kind], have = cnt[kind];
+      const done = have >= need, reach = have === need - 1;
       const wrap = document.createElement('div');
       wrap.className = 'q-pg' + (done ? ' done' : reach ? ' reach' : '');
       wrap.dataset.k = kind;
-      for (const c of g) wrap.appendChild(card4(c));
-      const cnt = document.createElement('span');
-      cnt.className = 'q-pn' + (done ? ' done' : reach ? ' reach' : '');
-      cnt.textContent = done ? '완성!' : `${g.length}/${kind}`;
-      wrap.appendChild(cnt);
+      for (const c of cards) wrap.appendChild(card4(c, { ghost: c.kind === 'D46' && kind === 6 }));
+      const n = document.createElement('span');
+      n.className = 'q-pn' + (done ? ' done' : reach ? ' reach' : '');
+      n.textContent = done ? '완성!' : `${have}/${need}`;
+      wrap.appendChild(n);
+      out.push(wrap);
+    }
+    const vs = acq.filter((c) => c.kind === 'V');
+    if (vs.length) {
+      const wrap = document.createElement('div');
+      wrap.className = 'q-pg q-vg';
+      for (const c of vs) wrap.appendChild(card4(c));
+      const n = document.createElement('span');
+      n.className = 'q-pn vault'; n.textContent = `+${G4.income(vs.length)}/턴`;
+      wrap.appendChild(n);
       out.push(wrap);
     }
     return out;
@@ -369,6 +376,7 @@
   function resetFx() {
     fx.dealt = false; fx.centerId = null; fx.offerId = null;
     fx.revealed = false; fx.settledTurn = null; fx.acqSeen = new Set();
+    fx.incomeTurn = null; fx.bidSig = null;
   }
   // 이번에 새로 들어온 카드만 날아들게 한다 (매 렌더마다 전부 튀면 정신없다).
   // acqPile 은 종류별 묶음을 주므로 그 안의 카드를 훑어야 한다.
@@ -417,20 +425,64 @@
     // 낸 카드가 놓인다. 예전엔 겹이 셋(자리 상자·딴 카드·낸 카드) 이라 저마다
     // top 을 재서 맞춰야 했고, 경매대가 조금만 움직여도 남의 자리로 넘어갔다.
     // 옆자리는 이 덩어리째 90도 돌린다 — 그래야 정말 그 변에 앉아 보인다.
-    const winner = s.result ? s.result.winner : -1;
-    const bidView = (seat) => {
+    const winner = (s.result && fx.shown) ? s.result.winner : -1;
+    const nm = (i) => (i === mySeat && !s.watching ? '나' : s.seats[i].name);
+
+    // 자리마다 이번 경매에서의 모습 — 부른 값 / 포기 / 답함 / 낙찰.
+    // 칩 경매라 낸 카드가 없다. 대신 그 칸에 "이 사람이 지금 어디까지 왔나" 를 적는다.
+    const bidBadge = (seat) => {
       if (!a) return null;
-      if (a.bids && a.bids[seat]) return card4(a.bids[seat]);   // 열린 카드
-      if (s.seats[seat].bidded) return card4(null);             // 냈지만 아직 뒷면
+      const el = document.createElement('div'); el.className = 'q-bid';
+      const put = (cls, main, sub) => {
+        if (cls) el.classList.add(cls);
+        const b = document.createElement('b'); b.innerHTML = main; el.appendChild(b);
+        if (sub) { const t = document.createElement('span'); t.textContent = sub; el.appendChild(t); }
+        return el;
+      };
+      const isAuc = seat === s.auctioneer;
+      if (a.winner === seat && fx.shown) return put('win', a.paid ? coin() + a.paid : '무료', '낙찰');
+      if (a.type === 'close' && !a.tiebreak) {
+        if (isAuc) return a.closeP ? put('auc', coin() + a.closeP, '클로즈') : null;
+        if (a.buyers) return a.buyers.includes(seat) ? put('yes', '산다') : put('no', '안 삼');
+        if (seat === mySeat && a.myAnswer !== null && a.myAnswer !== undefined)
+          return a.myAnswer ? put('yes', '산다', '몰래 답함') : put('no', '안 삼', '몰래 답함');
+        if (a.answered.includes(seat)) return put('done', '✓', '답함');
+        return s.phase === 'answer' ? put('think', '…', '고민 중') : null;
+      }
+      if (a.tiebreak && isAuc) return put('auc', coin() + a.closeP, '클로즈');
+      if (a.tiebreak && a.buyers && !a.buyers.includes(seat)) return put('no', '안 삼');
+      if (a.high === seat) return put('high', coin() + a.price, '최고가');
+      if (a.out.includes(seat)) return put('out', '포기');
+      if (a.bids[seat] !== undefined) return put('old', coin() + a.bids[seat]);
+      if (a.turnSeat === seat) return put('think', '…', '차례');
       return null;
     };
+    // 칩 — 트웰브의 칩 딱지와 같은 모양. 자리가 좁아 쌓기는 빼고 칩 한 개와 수만.
+    const chipTag = (n, mine) => {
+      const t = document.createElement('div'); t.className = 'tv-chips mini q-chips' + (mine ? ' mine' : '');
+      const c = document.createElement('i'); c.className = 'chip ' + (mine ? 'light' : 'dark'); t.appendChild(c);
+      const b = document.createElement('b'); b.textContent = n; t.appendChild(b);
+      return t;
+    };
+    // 금고 수입 — 매 턴 처음에 "+N" 이 떠오른다. 턴마다 한 번만.
+    const incomeNow = s.phase === 'offer' && s.income && fx.incomeTurn !== s.turn;
+    if (incomeNow) fx.incomeTurn = s.turn;
+    const floatIncome = (box, seat) => {
+      const v = s.income && s.income[seat];
+      if (!incomeNow || !v || !box) return;
+      const f = document.createElement('span'); f.className = 'q-incfly'; f.textContent = '+' + v;
+      box.appendChild(f);
+      setTimeout(() => f.remove(), 1500);
+    };
+
     const opps = $('q-opps'); opps.innerHTML = '';
     for (const i of oppSeats) {
       const p = s.seats[i];
       const where = seatAt(oppSeats.length, oppSeats.indexOf(i));
       const d = document.createElement('div');
+      const acting = (a && a.turnSeat === i) || (s.phase === 'answer' && a && i !== s.auctioneer && !a.answered.includes(i));
       d.className = 'q-seat ' + where + (s.auctioneer === i ? ' auc' : '')
-        + (p.bidded ? ' bidded' : '') + (i === winner && fx.shown ? ' win' : '');
+        + (acting ? ' turn' : '') + (i === winner ? ' win' : '');
 
       // ① 가장자리 — 시계와 명패. 내 자리(#q-mebar)와 같은 차림이라야
       //    "저 사람도 나처럼 앉아 있다" 로 읽힌다.
@@ -483,13 +535,14 @@
         t.innerHTML = titleTag(p.profile.titleInfo);
         body.appendChild(t);
       }
-      // 손에 몇 장 남았는지 — 판을 읽는 데 쓰는 수다
-      const hd = document.createElement('span'); hd.className = 'q-shand'; hd.textContent = `🂠${p.handLen}`;
-      body.appendChild(hd);
       plate.appendChild(body);
-      bar.appendChild(tm); bar.appendChild(plate);
+      // 가진 칩 — 값을 부르려면 남이 얼마나 쥐었는지가 제일 먼저 보여야 한다
+      const ch = chipTag(p.chips, false);
+      if (p.income) { const inc = document.createElement('span'); inc.className = 'q-inc'; inc.textContent = `+${p.income}`; inc.title = '금고 — 매 턴 받는 칩'; ch.appendChild(inc); }
+      floatIncome(ch, i);
+      bar.appendChild(tm); bar.appendChild(plate); bar.appendChild(ch);
 
-      // ② 그 사람 앞 — 딴 카드와 이번에 낸 카드
+      // ② 그 사람 앞 — 딴 카드와 이번 경매에서의 모습
       const front = document.createElement('div'); front.className = 'q-sfront';
       const acq = document.createElement('div'); acq.className = 'q-oacq';
       if (p.acq.length >= 7) acq.classList.add('tight');
@@ -497,14 +550,9 @@
       for (const g of acqPile(p.acq)) { markNewCards(g, i); oin.appendChild(g); }
       acq.appendChild(oin);
       fitBoxes.push(acq);
-      const bid = document.createElement('div'); bid.className = 'q-bslot';
-      const card = bidView(i);
-      if (card) {
-        bid.appendChild(card);
-        // 결과는 카드가 다 돌아간 뒤에 붙인다 — 아직 뒤집히는 중인 카드에
-        // '낙찰' 이 먼저 찍혀 있으면 뒤집기가 헛돌아 보인다.
-        if (i === winner && fx.shown) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; bid.appendChild(l); }
-      }
+      const bid = document.createElement('div'); bid.className = 'q-bslot' + (i === winner ? ' win' : '');
+      const badge = bidBadge(i);
+      if (badge) bid.appendChild(badge);
       front.appendChild(acq); front.appendChild(bid);
 
       d.appendChild(bar); d.appendChild(front);
@@ -516,13 +564,10 @@
     const iAmAuc = s.auctioneer === mySeat;
     $('q-center').innerHTML = ''; $('q-offer').innerHTML = '';
     if (a) {
-      // 빈 자리와 뒷면을 구분한다. 예전엔 아직 아무것도 없는데도 뒷면이 깔려 있어
-      // "이미 카드가 놓였다" 로 잘못 읽혔다.
+      // 빈 자리와 뒷면을 구분한다 — 아직 아무것도 없는데 뒷면이 깔려 있으면
+      // "이미 카드가 놓였다" 로 잘못 읽힌다.
       $('q-center').appendChild(a.center ? card4(a.center) : slotHole());
-      $('q-offer').appendChild(
-        a.offered ? card4(a.offered)          // 보인다
-        : a.hasOffer ? card4(null)            // 냈는데 가려져 있다 (클로즈)
-        : slotHole());                        // 아직 안 냈다
+      $('q-offer').appendChild(a.offered ? card4(a.offered) : slotHole());
       // 덱 카드·출품 카드가 "방금" 공개된 순간에만 뒤집기 연출을 준다
       const cid = a.center ? a.center.id : null;
       const oid = a.offered ? a.offered.id : null;
@@ -530,10 +575,10 @@
       if (oid && oid !== fx.offerId) play($('q-offer').firstElementChild, 'anim-reveal');
       fx.centerId = cid; fx.offerId = oid;
 
-      // 경매 방식은 턴바에 (매트 한가운데를 비워 카드가 주인공이 되게)
-      // 이름은 2인전·트웰브와 같게 쓴다 ('오픈 경매'·'클로즈 경매')
-      const tag = a.type === 'open' ? ['👁', '오픈 경매']
-                : (a.type === 'closed' || a.type === 'close') ? ['🙈', '클로즈 경매'] : null;
+      // 경매 방식은 턴바에. 이름은 2인전·트웰브와 같게 쓴다 ('오픈 경매'·'클로즈 경매')
+      const tag = a.tiebreak ? ['⚔️', '동점 경쟁']
+                : a.type === 'open' ? ['👁', '오픈 경매']
+                : a.type === 'close' ? ['🙈', `클로즈 경매 · ${a.closeP}칩`] : null;
       if (tag) $('q-typeTag').innerHTML = (typeof ico === 'function' ? ico(tag[0]) : tag[0]) + ' ' + tag[1];
       else $('q-typeTag').textContent = '';
     } else {
@@ -541,57 +586,41 @@
       $('q-offer').appendChild(slotHole());
       $('q-typeTag').textContent = '';
     }
-
-    // 내 배팅 카드는 내 자리 앞에. 상대 것은 각자 자리 안에 이미 들어 있다.
-    const mb = $('q-mybid'); mb.innerHTML = '';
-    mb.className = (winner === mySeat && fx.shown ? 'win' : '');
-    const myCard = bidView(mySeat);
-    if (myCard) {
-      mb.appendChild(myCard);
-      if (winner === mySeat && fx.shown) { const l = document.createElement('div'); l.className = 'q-blabel'; l.textContent = '낙찰'; mb.appendChild(l); }
-    }
-    // 배팅 카드가 한꺼번에 공개되는 순간 — 전부 뒤집고, 낙찰자에게 도장을 찍는다
-    const bidsOpen = !!(a && a.bids && Object.keys(a.bids).length);
-    if (bidsOpen && !fx.revealed) {
-      fx.revealed = true;
-      const cards = [...opps.querySelectorAll('.q-bslot .card'), ...mb.querySelectorAll('.card')];
-      cards.forEach((c, i) => { c.style.animationDelay = (i * 55) + 'ms'; play(c, 'anim-reveal'); });
-      setTimeout(() => sfx('reveal'), 60);
-      // 카드가 다 돌아갈 때까지 결과를 미룬다. 여태 도장·금테·'낙찰' 이
-      // 뒤집기와 같은 순간에 붙어서, 아직 등을 보이는 카드에 이미 결과가
-      // 찍혀 있었다 — 그게 "뒤집는 타이밍이 안 맞는다" 로 보였다.
-      const FLIP = 850;                                   // .card.anim-reveal 의 길이
-      const until = (cards.length - 1) * 55 + FLIP;
-      fx.shown = false;
-      if (fx.showTimer) clearTimeout(fx.showTimer);
-      fx.showTimer = setTimeout(() => { fx.showTimer = null; fx.shown = true; render(); }, until);
-    } else if (bidsOpen) {
-      // 이미 공개된 뒤의 재렌더 — 다시 뒤집지 않는다
-      [...opps.querySelectorAll('.q-bslot .card'), ...mb.querySelectorAll('.card')].forEach((c) => { c.style.animationDelay = ''; });
-    }
-    if (!bidsOpen) {
-      fx.revealed = false;
-      // 다음 경매로 넘어갔다 — 미뤄 둔 것이 있으면 풀어 준다
-      if (fx.showTimer) { clearTimeout(fx.showTimer); fx.showTimer = null; }
-      fx.shown = true;
-    }
-
-    if (winner >= 0 && fx.shown && fx.settledTurn !== s.turn) {
-      fx.settledTurn = s.turn;
-      const box = winner === mySeat ? mb
-        : (opps.children[oppSeats.indexOf(winner)] || {}).querySelector
-          ? opps.children[oppSeats.indexOf(winner)].querySelector('.q-bslot') : null;
-      if (box) {
-        const st = document.createElement('div');
-        st.className = 'q-winstamp'; st.textContent = 'WIN';
-        box.appendChild(st);
+    // 지금 값 — 경매대 오른쪽. 누가 쥐고 있는지도 같이.
+    const pr = $('q-price');
+    if (pr) {
+      let big = '–', sub = '';
+      if (a && (s.phase === 'open' || (s.phase === 'settled' && a.type === 'open') || a.tiebreak)) {
+        big = a.price ? coin() + a.price : coin() + '0';
+        sub = a.high !== null && a.high !== undefined ? nm(a.high) : '부른 사람 없음';
+      } else if (a && a.type === 'close') { big = coin() + a.closeP; sub = '진행자가 부른 값'; }
+      if ((s.phase === 'settled' || s.phase === 'game_over') && s.result && a) { big = s.result.price ? coin() + s.result.price : '무료'; sub = nm(s.result.winner) + ' 낙찰'; }
+      const sig = big + '|' + sub;
+      if (pr.dataset.sig !== sig) {
+        const bumped = pr.dataset.sig && a && a.price && pr.dataset.price !== String(a.price);
+        pr.dataset.sig = sig; pr.dataset.price = String(a ? a.price : '');
+        pr.innerHTML = `<b>${big}</b><span>${typeof esc === 'function' ? esc(sub) : sub}</span>`;
+        if (bumped) play(pr, 'bump');
       }
     }
 
-    // 클로즈는 순서제 — 지금 낼 차례인 사람을 짚어준다
-    if (a && a.closed && a.turnToBid !== null && a.turnToBid !== undefined && a.turnToBid !== mySeat) {
-      const el = opps.children[oppSeats.indexOf(a.turnToBid)];
-      if (el) el.classList.add('turn');
+    // 내 자리 앞 — 고르는 중인 출품 카드, 또는 이번 경매에서의 내 모습
+    const mb = $('q-mybid'); mb.innerHTML = '';
+    mb.className = (winner === mySeat ? 'win' : '');
+    const myBadge = s.watching ? null : bidBadge(mySeat);
+    if (myBadge) mb.appendChild(myBadge);
+
+    if (winner >= 0 && fx.settledTurn !== s.turn) {
+      fx.settledTurn = s.turn;
+      const box = winner === mySeat ? mb
+        : (opps.children[oppSeats.indexOf(winner)] || null);
+      const slot = box && (box === mb ? mb : box.querySelector('.q-bslot'));
+      if (slot) {
+        const st = document.createElement('div');
+        st.className = 'q-winstamp'; st.textContent = 'WIN';
+        slot.appendChild(st);
+      }
+      sfx('chips');   // 칩이 은행으로 쓸려 간다
     }
 
     // 내 획득 더미 — 상대들과 같은 형식으로 보여준다
@@ -601,54 +630,83 @@
     if (iAmAuc) meLabel.innerHTML = (typeof rankIco === 'function' ? rankIco('👑') : '👑') + ' 나 (진행자)';
     else meLabel.textContent = '나';
     my.appendChild(meLabel);
+    const myChips = chipTag(me.chips, true);
+    if (me.income) { const inc = document.createElement('span'); inc.className = 'q-inc'; inc.textContent = `+${me.income}`; inc.title = '금고 — 매 턴 받는 칩'; myChips.appendChild(inc); }
+    floatIncome(myChips, mySeat);
+    my.appendChild(myChips);
     const myin = document.createElement('div'); myin.className = 'q-acqin';
     for (const g of acqPile(me.acq)) { markNewCards(g, 'me'); myin.appendChild(g); }
     my.appendChild(myin);
-    // 이름표가 먹는 폭은 카드 자리가 아니다 — 빼고 재야 제대로 줄어든다
-    my.dataset.pad = String(Math.ceil(meLabel.getBoundingClientRect().width) + 8);
+    // 이름표·칩이 먹는 폭은 카드 자리가 아니다 — 빼고 재야 제대로 줄어든다
+    my.dataset.pad = String(Math.ceil(meLabel.getBoundingClientRect().width + myChips.getBoundingClientRect().width) + 14);
     fitBoxes.push(my);
+    if (incomeNow && s.income && s.income.some((v) => v > 0)) sfx('chip');
 
-    // 상태 문구 + 손패 선택 가능 여부
-    let msg = '', pickMode = null;
+    // 상태 문구 + 누를 수 있는 것
+    let msg = '', pickMode = null, act = null, head = '', tail = '';
     const iAmSpec = q4Spec || s.watching;
-    if (s.phase === 'draw') msg = iAmAuc ? '내가 진행자! 덱을 눌러 카드를 뽑으세요' : `${s.seats[s.auctioneer].name} 님이 카드를 공개하는 중…`;
-    else if (s.phase === 'offer') { if (iAmAuc) { msg = '내놓을 카드를 고른 뒤 확정을 누르세요'; pickMode = 'offer'; } else msg = `${s.seats[s.auctioneer].name} 님이 출품하는 중…`; }
-    else if (s.phase === 'choose_type') msg = iAmAuc ? '경매 방식을 고르세요' : `${s.seats[s.auctioneer].name} 님이 방식을 고르는 중…`;
-    else if (s.phase === 'bidding') {
-      const closed = a && a.closed;
-      if (!s.bidders.includes(mySeat)) msg = '손패가 없어 이번엔 입찰할 수 없어요';
-      else if (me.bidded) msg = closed ? '다음 사람이 내는 중…' : '나머지가 배팅하는 중…';
-      else if (closed) {
-        // 순서제 — 내 차례가 와야 낼 수 있다. 뒤에 낼수록 앞사람 카드를 다 보고 정한다.
-        if (a.turnToBid !== mySeat) msg = `${s.seats[a.turnToBid].name} 님이 내는 중… (순서대로 공개)`;
-        else {
-          const left = (a.seq || []).filter((x) => !s.seats[x].bidded && x !== mySeat).length;
-          msg = left > 0
-            ? `내 차례! 뒤에 ${left}명이 내 카드를 보고 냅니다`
-            : '내 차례! 마지막이라 앞사람 카드를 다 보고 정할 수 있어요';
-          pickMode = 'bid';
-        }
-      }
-      else { msg = '배팅 카드를 고른 뒤 확정을 누르세요'; pickMode = 'bid'; }
+    const aucName = s.seats[s.auctioneer].name;
+    if (s.phase === 'round') msg = `${s.turn}턴 — 덱에서 카드를 공개합니다`;
+    else if (s.phase === 'offer') {
+      if (iAmAuc) {
+        msg = s.turn === 1 ? '내가 진행자! 첫 경매는 오픈이에요. 내놓을 카드를 고르세요'
+                           : '내가 진행자! 공개 카드와 함께 내놓을 카드를 고르세요';
+        pickMode = 'offer';
+      } else msg = `${aucName} 님이 출품하는 중…`;
     }
-    else if (s.phase === 'reveal') msg = '두구두구… 공개!';
+    else if (s.phase === 'choose_type') {
+      if (iAmAuc) { msg = s.canClose ? '경매 방식을 고르세요' : '칩이 2개 안 돼 오픈 경매만 열 수 있어요'; act = 'type'; }
+      else msg = `${aucName} 님이 방식을 고르는 중…`;
+    }
+    else if (s.phase === 'open' && a) {
+      if (a.tiebreak) head = '동점 경쟁';
+      if (a.turnSeat === mySeat) {
+        msg = a.high === null ? '내 차례 — 먼저 값을 불러 보세요'
+                              : `내 차례 — ${nm(a.high)} ${a.price}칩. 더 부를까요?`;
+        act = 'raise';
+      } else {
+        msg = `${nm(a.turnSeat)} 차례` + (a.high === null ? ' · 아직 아무도 안 불렀어요' : ` · 지금 ${a.price}칩 (${nm(a.high)})`);
+        if (a.out.includes(mySeat) && (!a.tiebreak || (a.buyers || []).includes(mySeat))) tail = '(나는 포기)';
+      }
+    }
+    else if (s.phase === 'answer' && a) {
+      const P = a.closeP;
+      if (iAmAuc) msg = `${P}칩 클로즈 — 상대들이 몰래 답하는 중… (${a.answered.length}/${s.n - 1})`;
+      else if (a.myAnswer === null || a.myAnswer === undefined) {
+        msg = `${aucName} 님이 ${P}칩을 불렀어요. ${P + 1}칩에 살까요? (다른 사람 답은 안 보여요)`;
+        act = 'answer';
+      }
+      else if (!a.myAnswer && me.chips < P + 1) msg = `칩이 모자라 이번엔 못 사요 — 기다리는 중…`;
+      else msg = `답했어요 — 다른 사람을 기다리는 중… (${a.answered.length}/${s.n - 1})`;
+    }
     else if (s.phase === 'settled' && s.result) {
       const r = s.result;
-      const who = r.winner === mySeat ? '내가' : s.seats[r.winner].name + ' 님이';
-      msg = r.betrayed ? `졸개의 배신! ${who} 낙찰!` : `${who} 낙찰!`;
-      if (r.payouts && r.payouts.length) {
-        const mine = r.payouts.find((p) => p.seat === mySeat);
-        if (mine) msg += `  (내 손패로 ${mine.card.kind}-${mine.card.grade} 들어옴)`;
-      }
+      const who = r.winner === mySeat && !s.watching ? '내가' : s.seats[r.winner].name + ' 님이';
+      // 번역 짝을 맞추려고 문장 틀은 셋뿐이다 — '내가 …' / '○○ 님이 …'
+      if (r.free) msg = `아무도 안 불러서 ${who} 공짜로 가져가요!`;
+      else if (r.type === 'close' && !r.tiebreak && r.winner === s.auctioneer)
+        msg = `아무도 안 사서 ${who} ${r.price}칩에 가져가요`;
+      else msg = `${who} ${r.price}칩에 낙찰!`;
     }
+    else if (s.phase === 'game_over') msg = '게임 끝!';
     // 남의 차례를 기다리는 중이면 남은 시간을 같이 보여준다.
     // 예전엔 이게 없어서 "왜 안 넘어가지" 하고 멈춘 줄 알았다.
+    // 문구는 조각으로 나눠 붙인다(머리 · 본문 · 꼬리 · 남은 초). 한 줄로 이으면
+    // 조합마다 번역 틀이 따로 있어야 해서, 하나라도 빠지면 한국어로 남는다.
+    let secs = '';
     if (s.waitSeat !== null && s.waitSeat !== undefined && s.waitSeat !== mySeat
-        && typeof s.waitLeft === 'number' && s.waitLeft <= 20 && !s.over) {
-      msg += `  (${s.waitLeft}초)`;
-    }
-    $('q-status').textContent = msg;
-    $('q-typeBtns').classList.toggle('show', s.phase === 'choose_type' && iAmAuc);
+        && typeof s.waitLeft === 'number' && s.waitLeft <= 20 && !s.over) secs = `(${s.waitLeft}초)`;
+    // 칸이 flex 라 조각을 바로 넣으면 저마다 기둥이 된다 — 한 줄 안에 담는다
+    const box = $('q-status'); box.textContent = '';
+    const stEl = document.createElement('span'); box.appendChild(stEl);
+    const bit = (cls, t) => { const e = document.createElement('span'); e.className = cls; e.textContent = t; stEl.appendChild(e); };
+    if (head) bit('q-shead', head);
+    stEl.appendChild(document.createTextNode(msg));
+    if (tail) bit('q-stail', tail);
+    if (secs) bit('q-ssecs', secs);
+    if (iAmSpec) { pickMode = null; act = null; }
+    paintActs(act);
+
 
     // ── 내 손패 ──
     // 고르기와 내기를 나눴다. 예전엔 카드를 누르는 순간 바로 나가서,
@@ -657,10 +715,9 @@
     //
     // 손패를 매번 다시 만들지도 않는다. 상태는 자주 오는데 그때마다 DOM 을
     // 갈아엎으면 누르는 도중에 대상이 사라진다. 내용이 바뀔 때만 다시 만든다.
-    if (iAmSpec) pickMode = null;  // 관전은 고르지 않는다
     curPick = pickMode;            // 확정 버튼이 무엇을 낼지 알아야 한다
     const hand = $('q-myhand');
-    const sorted = [...s.myHand].sort((x, y) => (x.kind * 100 + x.grade) - (y.kind * 100 + y.grade));
+    const sorted = [...s.myHand].sort(byKind);
     const handSig = sorted.map((c) => c.id).join(',') + '|' + (pickMode || '');
     if (fx.handSig !== handSig) {
       fx.handSig = handSig;
@@ -690,13 +747,13 @@
     // 첫 손패는 덱에서 한 장씩 날아오게 — 2인전과 같은 연출.
     // 예전엔 가운데 '공개 카드' 칸에서 나오고 내 몫만 날아왔다. 카드는 덱에서
     // 나오는 것이고, 나눠준다면 다 같이 받아야 "나눠준다" 로 읽힌다.
-    if (!fx.dealt && sorted.length >= 6 && s.turn <= 1) {
+    if (!fx.dealt && sorted.length >= G4.HAND && s.turn <= 1) {
       fx.dealt = true;
       const STAGGER = 55;
       const deck = $('q-deckstack');
       const seats = [...document.querySelectorAll('#q-opps .q-seat')];
       const players = seats.length + 1;
-      // 화투·포커처럼 한 바퀴씩 돈다 — 한 사람에게 여섯 장을 몰아주지 않는다.
+      // 화투·포커처럼 한 바퀴씩 돈다 — 한 사람에게 몰아주지 않는다.
       // 나는 맨 끝에 받는다(진행자가 자기 것을 마지막에 놓는 그 순서).
       if (typeof dealFromDeck === 'function')
         dealFromDeck(deck, hand.querySelectorAll('.card'),
@@ -707,12 +764,8 @@
         setTimeout(() => sfx('deal'), 30 + i * STAGGER);
     }
 
-    // ── 덱 ──
-    // 2인전처럼 덱 더미를 눌러 뽑는다. 예전엔 "공개 카드" 칸을 그대로 눌렀는데,
-    // 뽑기 전에도 그 자리에 카드가 놓여 있어 무엇을 누르는 건지 안 읽혔다.
-    renderDeck4(s.deckLeft, s.phase === 'draw' && iAmAuc);
-    $('q-center').style.cursor = 'default';
-    $('q-center').onclick = null;
+    // ── 덱 ── 턴마다 저절로 한 장 공개된다 (누를 것 없음)
+    renderDeck4(s.deckLeft);
 
     // 남은 카드 패널이 열려 있으면 같이 갱신
     if ($('q-leftPanel').classList.contains('show')) renderLeft();
@@ -721,13 +774,19 @@
     // (그리는 도중에 재면 아직 붙지 않은 형제 때문에 값이 틀어진다)
     for (const box of fitBoxes) fitAcq(box);
 
-    // 효과음 — 단계가 바뀔 때만 울린다
+    // 효과음 — 값이 오르면 칩 소리, 누가 빠지면 똑딱, 몰래 답하면 카드 놓는 소리
+    if (a) {
+      const bs = { turn: s.turn, price: a.price, high: a.high, out: a.out.length, ans: a.answered.length };
+      const o = fx.bidSig;
+      if (o && o.turn === bs.turn) {
+        if (bs.price > o.price || (bs.high !== o.high && bs.high !== null)) sfx('chip');
+        else if (bs.out > o.out) sfx('tick');
+        else if (bs.ans > o.ans) sfx('place');
+      }
+      fx.bidSig = bs;
+    }
     if (s.phase !== prevPhase || s.turn !== prevTurn) {
-      if (s.phase === 'offer' && s.turn === prevTurn) sfx('flip');       // 덱에서 공개
-      else if (s.phase === 'bidding') sfx('place');
-      else if (s.phase === 'reveal') sfx('reveal');
-      else if (s.phase === 'settled') sfx(s.result && s.result.betrayed ? 'special' : 'card');
-      else if (s.phase === 'draw' && s.turn !== prevTurn) sfx('tick');
+      if (s.phase === 'choose_type' && iAmAuc) sfx('select');
       prevPhase = s.phase; prevTurn = s.turn;
     }
     // 자리·경매대를 다 그린 뒤라야 판이 그것들을 품는 크기로 잡힌다
@@ -739,25 +798,31 @@
   // 전부 내가 화면에서 볼 수 있는 정보라 따로 세어주는 것뿐이고, 남의 손패를 보여주는 게 아니다.
   function renderLeft() {
     const box = $('q-left'); if (!box || !q4) return;
-    // 내가 쥔 카드와 남이 가져간 카드는 뜻이 달라서 따로 표시한다
-    const mine = new Set(q4.myHand.map((c) => c.id));
-    const gone = new Set();
-    for (const st of q4.seats) for (const c of st.acq) gone.add(c.id);
+    // 카드에 등급이 없어 한 장 한 장을 가릴 수 없다 — 종류마다 몇 장이 어디 있는지 센다.
+    // 내가 쥔 카드와 이미 나온 카드는 뜻이 달라서 따로 표시한다.
+    const tally = (list) => { const m = {}; for (const c of list) m[c.kind] = (m[c.kind] || 0) + 1; return m; };
+    const shown = [];
+    for (const st of q4.seats) shown.push(...st.acq);
     const a = q4.auction;
-    if (a) { if (a.center) gone.add(a.center.id); if (a.offered) gone.add(a.offered.id); }
+    if (a && a.winner === null) { if (a.center) shown.push(a.center); if (a.offered) shown.push(a.offered); }
+    const gone = tally(shown), mine = tally(q4.myHand);
+    const spec = (G4.SPECS[q4.n] || G4.SPECS[4]).cards;
     box.innerHTML = '';
-    for (const [kind, max] of (q4.spec || [[2, 4], [3, 6], [4, 10], [6, 18]])) {
+    for (const [kind, max] of spec) {
       const row = document.createElement('div'); row.className = 'q-lrow';
       const kk = document.createElement('b'); kk.className = 'q-ck'; kk.dataset.k = kind;
-      kk.textContent = kind; row.appendChild(kk);
+      kk.textContent = isSp(kind) ? { V: '금고', W6: '6×2', D46: '4/6' }[kind] : kind;
+      row.appendChild(kk);
       const gs = document.createElement('div'); gs.className = 'q-lgs';
-      for (let g = 1; g <= max; g++) {
-        const id = kind * 100 + g;
+      const g = gone[kind] || 0, m = mine[kind] || 0;
+      for (let k = 0; k < max; k++) {
         const el = document.createElement('span');
-        el.className = 'q-lg' + (gone.has(id) ? ' gone' : mine.has(id) ? ' mine' : '');
-        el.textContent = g;
+        el.className = 'q-lg' + (k < g ? ' gone' : k < g + m ? ' mine' : '');
         gs.appendChild(el);
       }
+      const left = document.createElement('span'); left.className = 'q-lleft';
+      left.textContent = `${max - g - m}장`;
+      gs.appendChild(left);
       row.appendChild(gs);
       box.appendChild(row);
     }
@@ -791,10 +856,16 @@
     // 남은 카드 표가 열려 있으면 결과창을 덮는다 — 판이 끝나면 걷는다
     { const lp = $('q-leftPanel'); if (lp) lp.classList.remove('show'); }
     const order = (s.over.order && s.over.order.length) ? s.over.order : null;
-    const rank = order || [s.over.winner, ...[0, 1, 2, 3].filter((i) => i !== s.over.winner)];
+    const rank = order || [s.over.winner, ...s.seats.map((_, i) => i).filter((i) => i !== s.over.winner)];
+    // 세트로 끝났나, 덱이 떨어져 끝났나 — 어떻게 끝났는지가 한 줄 있어야 결과가 읽힌다
+    const how = s.over.reason === 'set'
+      ? `${s.seats[s.over.winner].name} 세트 완성!`
+      : '덱이 떨어졌어요 — 세트에 가장 가까운 사람이 이겨요';
     if (s.over.winner === mySeat)
       $('q-otitle').innerHTML = (typeof ico === 'function' ? ico('🏆') : '🏆') + ' 승리!';
     else $('q-otitle').textContent = '아쉽네요…';
+    const hw = document.createElement('div'); hw.className = 'q-ohow'; hw.textContent = how;
+    $('q-otitle').appendChild(hw);
     const rk = $('q-orank'); rk.innerHTML = '';
     rank.forEach((seat, idx) => {
       const p = s.seats[seat];
@@ -809,7 +880,8 @@
       const nm = document.createElement('span'); nm.style.flex = '1'; nm.style.textAlign = 'left';
       nm.textContent = p.name;
       const info = document.createElement('span');
-      info.textContent = p.need <= 0 ? '세트 완성' : `완성까지 ${p.need}장`;
+      info.className = 'q-rinfo';
+      info.innerHTML = `<span>${p.need <= 0 ? '세트 완성' : `완성까지 ${p.need}장`}</span> · ${coin()}${p.chips}`;
       row.appendChild(pos); row.appendChild(nm); row.appendChild(info);
       // 온라인 멀티에서만 RP가 움직인다 (AI 자리는 애초에 계산에서 빠진다)
       const rp = s.rp && s.rp[seat];
@@ -974,12 +1046,89 @@
     $('q-over').classList.remove('show');
   }
 
+  // ── 누를 것들 ─────────────────────────────────────────────────────────
+  // 손패 아래 한 줄(#q-actions)에 지금 누를 것만 띄운다. 한 번 누르면 상태가
+  // 바뀔 때까지 단추를 걷는다 — 연타로 두 번 올리는 일이 없게.
+  let closePick = null;    // 클로즈 값을 고르는 중이면 그 값
+  let sentSig = null;      // 이 상태에서 이미 하나 보냈다
+  function sendOnce(payload) {
+    sentSig = stateSig();
+    paintActs(null);
+    sendAct(payload);
+  }
+  function paintActs(act) {
+    if (act && sentSig && sentSig === stateSig()) act = null;
+    const s = q4, a = s && s.auction, me = s && s.seats[mySeat];
+    const show = (id, on) => { const el = $(id); if (el) el.classList.toggle('show', !!on); };
+    if (act !== 'type') closePick = null;
+    show('q-typeBtns', act === 'type' && closePick === null);
+    show('q-closePick', act === 'type' && closePick !== null);
+    show('q-raiseBtns', act === 'raise');
+    show('q-ansBtns', act === 'answer');
+    if (act === 'type') {
+      const cb = $('q-closeBtn'); if (cb) cb.disabled = !s.canClose;
+      if (closePick !== null) {
+        $('q-closeP').innerHTML = coin() + closePick;
+        $('q-closeDn').disabled = closePick <= 2;
+        $('q-closeUp').disabled = closePick + 2 > me.chips;
+        $('q-closeHint').textContent = `상대는 ${closePick + 1}칩에 살 수 있어요`;
+      }
+    }
+    if (act === 'raise') {
+      const box = $('q-raiseBtns'); box.innerHTML = '';
+      for (const k of [1, 2, 5]) {
+        const to = a.price + k;
+        const b = document.createElement('button');
+        b.className = 'q-tbtn q-raise';
+        b.innerHTML = coin() + to;
+        b.disabled = to > me.chips;
+        b.onclick = () => { if (!b.disabled) { sfx('chip'); sendOnce({ type: 'raise', to }); } };
+        box.appendChild(b);
+      }
+      const ps = document.createElement('button');
+      ps.className = 'q-tbtn q-pass'; ps.textContent = '포기';
+      ps.onclick = () => { sfx('tick'); sendOnce({ type: 'pass' }); };
+      box.appendChild(ps);
+    }
+    if (act === 'answer') {
+      const P = a.closeP, bb = $('q-buyBtn');
+      bb.innerHTML = `${coin()}${P + 1} 에 산다`;
+      bb.disabled = me.chips < P + 1;
+    }
+  }
   window.q4Type = function (t) {
-    // 내 자리는 0번이 아닐 수 있다(멀티). 0 으로 박아 뒀더니 1·2·3번 자리 사람은
-    // 진행자가 돼도 방식을 고를 수 없어, "경매 방식을 고르세요" 에서 3분을 다
-    // 쓰고 AI 에게 자리를 넘겼다 — "카드가 안 내진다" 로 보이던 것의 정체.
+    // 내 자리는 0번이 아닐 수 있다(멀티). 0 으로 박아 두면 1·2·3번 자리 사람은
+    // 진행자가 돼도 방식을 고를 수 없다.
     if (!q4 || q4.phase !== 'choose_type' || q4.auctioneer !== mySeat) return;
-    sendAct({ type: 'auctionType', val: t });
+    if (t === 'close') {
+      if (!q4.canClose) return;
+      // 처음 값은 2 — 싸게 부를수록 남이 사 가기 쉽다. 고르고 확정해야 나간다.
+      const chips = q4.seats[mySeat].chips;
+      closePick = Math.min(Math.max(2, closePick || 2), chips - (chips % 2));
+      sfx('select');
+      return paintActs('type');
+    }
+    sfx('select');
+    sendOnce({ type: 'auctionType', val: 'open' });
+  };
+  window.q4CloseStep = function (d) {
+    if (closePick === null || !q4) return;
+    const chips = q4.seats[mySeat].chips;
+    const v = closePick + d;
+    if (v < 2 || v > chips) return;
+    closePick = v; sfx('tick'); paintActs('type');
+  };
+  window.q4CloseBack = function () { closePick = null; paintActs('type'); };
+  window.q4CloseGo = function () {
+    if (closePick === null || !q4 || q4.phase !== 'choose_type') return;
+    const price = closePick;
+    sfx('place');
+    sendOnce({ type: 'auctionType', val: 'close', price });
+  };
+  window.q4Answer = function (buy) {
+    if (!q4 || q4.phase !== 'answer') return;
+    sfx(buy ? 'chip' : 'tick');
+    sendOnce({ type: 'answer', buy: !!buy });
   };
 
   // ── 소켓 ────────────────────────────────────────────────────────────────

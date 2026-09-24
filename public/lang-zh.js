@@ -236,7 +236,6 @@ Object.assign(D, {
   '처음이라면 여기부터': '第一次就从这里开始',
   '추천': '推荐',
   '카드가 아니라 칩으로 값을 부르는 경매': '不用牌、用筹码出价的竞拍',
-  '셋·넷이서 · 지는 것도 수가 되는 판': '三人或四人 · 输也是一步棋',
   'AI 1명': '1 个 AI', 'AI 2명': '2 个 AI', 'AI 3명': '3 个 AI',
   '게임 시작 (빈자리는 AI)': '开始（空位由 AI 补上）',
   '칩 경매': '筹码竞拍',
@@ -423,17 +422,11 @@ Object.assign(D, {
   'AI 2명': '2 名 AI',
   'AI 3명': '3 名 AI',
   '경매 방식을 고르세요': '请选择竞拍方式',
-  '배팅 카드를 고른 뒤 확정을 누르세요': '选好出价的牌后按确定',
-  '내놓을 카드를 고른 뒤 확정을 누르세요': '选好要出的牌后按确定',
-  '두구두구… 공개!': '咚咚咚…揭晓！',
   '내 차례!': '轮到我了！',
   '🔔 내 차례! — FLIP FLAP': '🔔 轮到你了！ — FLIP FLAP',
   '서버가 응답하지 않아요 — 잠시 후 다시 눌러주세요': '服务器没有响应 — 请稍后再按一次',
   '다시 연결하는 중…': '正在重新连接…',
   '연결이 끊겨 판을 이어갈 수 없어요.': '连接断开，无法继续这一局。',
-  '손패가 없어 이번엔 입찰할 수 없어요': '没有手牌，这一轮无法出价',
-  '다음 사람이 내는 중…': '下一位正在出牌…',
-  '나머지가 배팅하는 중…': '其他人正在出价…',
   '곧 시작합니다…': '马上开始…',
   '대기 중': '等待中',
   '준비 완료': '准备就绪',
@@ -795,10 +788,7 @@ Object.assign(D, {
   '4인전': '四人局',
   '손패 6장': '手牌 6 张',
   '※ 베타 — 전적·코인에 반영되지 않습니다': '※ 测试中 — 不计入战绩和金币',
-  '진행자도 함께 입찰합니다 (첫 경매만 제외)': '庄家也一起出价（只有第一次竞拍例外）',
   '배팅 카드는': '出价用的牌',
-  '약하게 부른 사람부터': '从出价最弱的人开始',
-  '강한 경매품을 가져갑니다': '拿走更强的那张',
   '접속 중인 친구만 부를 수 있어요.': '只能叫在线的好友。',
   '상대 정보': '玩家资料',
   '명패 고르기': '选择名牌',
@@ -1017,8 +1007,6 @@ Object.assign(D, {
   '🃏 카드를 골라 선공을 정하세요!': '🃏 选一张牌来决定先手！',
   '🂠 중앙덱을 탭해 카드를 뽑으세요': '🂠 点牌堆翻开一张牌',
   '게스트 (기록 없음)': '访客（不记录）',
-  '내가 진행자! 덱을 눌러 카드를 뽑으세요': '你是庄家。点牌堆翻牌',
-  '내 차례! 마지막이라 앞사람 카드를 다 보고 정할 수 있어요': '轮到你了！ 你是最后一个，可以看完前面所有人的牌再决定',
   '출품 선택 중': '正在选出品牌',
   '배팅 선택 중': '正在选出价牌',
   '경매왕 덕배': '竞拍王德培',
@@ -1163,7 +1151,74 @@ Object.assign(D, {
 
 // ── 숫자가 끼는 문장 ──
 // 사전은 문장을 통째로 찾으므로 숫자가 바뀌면 못 찾는다. 그런 것만 여기서 본다.
+// 다인전 — 칩 경매
+Object.assign(D, {
+  '셋·넷이서 · 칩으로 사는 경매': '三四人 · 用筹码买牌的竞拍',
+  '카드를 칩으로 사는 경매 — 산 사람만 칩을 냅니다': '用筹码买牌 — 只有买下的人付筹码',
+  '금고를 모으면 매 턴 칩이 불어납니다': '金库越多，每回合拿到的筹码越多',
+  '지금 값': '当前价',
+  '부르기': '叫价',
+  '안 산다': '不买',
+  '산다': '买',
+  '안 삼': '不买',
+  '몰래 답함': '已作答',
+  '답함': '已作答',
+  '고민 중': '思考中',
+  '최고가': '最高价',
+  '포기': '放弃',
+  '차례': '轮到',
+  '무료': '免费',
+  '클로즈': '暗拍',
+  '금고': '金库',
+  '더블6': '双6',
+  '쌍둥이 4/6': '双子4/6',
+  '2짜리': '2',
+  '3짜리': '3',
+  '4짜리': '4',
+  '6짜리': '6',
+  '부른 사람 없음': '无人出价',
+  '진행자가 부른 값': '庄家叫价',
+  '동점 경쟁': '同分竞价',
+  '(나는 포기)': '（我已放弃）',
+  '내가 진행자! 첫 경매는 오픈이에요. 내놓을 카드를 고르세요': '你是庄家！第一次竞拍是明拍。请选一张牌出品',
+  '내가 진행자! 공개 카드와 함께 내놓을 카드를 고르세요': '你是庄家！请选一张牌和明牌一起出品',
+  '칩이 2개 안 돼 오픈 경매만 열 수 있어요': '筹码不足2个，只能明拍',
+  '내 차례 — 먼저 값을 불러 보세요': '轮到你 — 先出个价吧',
+  '칩이 모자라 이번엔 못 사요 — 기다리는 중…': '筹码不够，这次买不了 — 等待中…',
+  '게임 끝!': '游戏结束！',
+  '덱이 떨어졌어요 — 세트에 가장 가까운 사람이 이겨요': '牌堆用完了 — 最接近凑齐一套的人获胜',
+  '뒤로': '返回',
+  '2칩 내리기': '减2筹码',
+  '2칩 올리기': '加2筹码',
+  '금고 — 매 턴 받는 칩': '金库 — 每回合获得的筹码',
+});
+
 const P = [
+  // 다인전 — 칩 경매
+  [/^지금은 (\d)인전 — 손패 (\d+)장 · 중앙 덱 (\d+)장 · 칩 (\d+)개$/u, '当前 $1人局 — 手牌$2张 · 牌堆$3张 · 筹码$4个'],
+  [/^(\d)인전 — 손패 (\d+)장 · 중앙 덱 (\d+)장 · 칩 (\d+)개　·　(\d)인전 — 손패 (\d+)장 · 중앙 덱 (\d+)장 · 칩 (\d+)개$/u, '$1人局 — 手牌$2张 · 牌堆$3张 · 筹码$4个　·　$5人局 — 手牌$6张 · 牌堆$7张 · 筹码$8个'],
+  [/^아무도 안 불러서 내가 공짜로 가져가요!$/u, '没人出价 — 你免费拿走！'],
+  [/^(\d+)턴 — 덱에서 카드를 공개합니다$/u, '第$1回合 — 从牌堆翻开一张牌'],
+  [/^내 차례 — (.+) (\d+)칩\. 더 부를까요\?$/u, '轮到你 — $1 出价 $2。要加价吗？'],
+  [/^(.+) 차례 · 아직 아무도 안 불렀어요$/u, '轮到 $1 · 还没人出价'],
+  [/^(.+) 차례 · 지금 (\d+)칩 \((.+)\)$/u, '轮到 $1 · 当前 $2（$3）'],
+  [/^(\d+)칩 클로즈 — 상대들이 몰래 답하는 중… \((\d+)\/(\d+)\)$/u, '暗拍 $1 — 对手正在秘密作答…（$2/$3）'],
+  [/^(.+) 님이 (\d+)칩을 불렀어요\. (\d+)칩에 살까요\? \(다른 사람 답은 안 보여요\)$/u, '$1 叫价 $2。以 $3 买下吗？（看不到别人的回答）'],
+  [/^답했어요 — 다른 사람을 기다리는 중… \((\d+)\/(\d+)\)$/u, '已作答 — 等待其他人…（$1/$2）'],
+  [/^아무도 안 불러서 (.+) 님이 공짜로 가져가요!$/u, '没人出价 — $1 免费拿走！'],
+  [/^아무도 안 사서 내가 (\d+)칩에 가져가요$/u, '没人买 — 你以 $1 拿走'],
+  [/^아무도 안 사서 (.+) 님이 (\d+)칩에 가져가요$/u, '没人买 — $1 以 $2 拿走'],
+  [/^내가 (\d+)칩에 낙찰!$/u, '你以 $1 拍得！'],
+  [/^(.+) 님이 (\d+)칩에 낙찰!$/u, '$1 以 $2 拍得！'],
+  [/^\((\d+)초\)$/u, '（$1秒）'],
+  [/^(.+) 출품 확정$/u, '出品 $1'],
+  [/^\+(\d+)\/턴$/u, '+$1/回合'],
+  [/^(\d+)장$/u, '$1张'],
+  [/^상대는 (\d+)칩에 살 수 있어요$/u, '对手可以用 $1 买下'],
+  [/^(\d+) 에 산다$/u, '以 $1 买下'],
+  [/^클로즈 경매 · (\d+)칩$/u, '暗拍 · $1'],
+  [/^(.+) 낙찰$/u, '$1 拍得'],
+  [/^(.+) 세트 완성!$/u, '$1 凑齐了一套！'],
   [/^구매 🪙 ([\d,]+)$/, '购买 🪙 $1'],
   [/^구매 🔷 ([\d,]+)$/, '购买 🔷 $1'],
   [/^시즌 (\d+)$/, '第 $1 赛季'],
@@ -1478,96 +1533,109 @@ rulesTwelve: `
 Object.assign(B, {
 rules4: `
     <span class="close-x" onclick="toggleRules4(false)">×</span>
-    <h2>FLIP FLAP <span class="r4-tag">3〜4 人</span></h2>
-    <p class="r-lead">牌、竞拍和取胜方式都和两人局一样 — 先凑齐一<b style="color:#ffe9a8">套</b>就赢。<br>
-    这里只讲<b style="color:#ffe9a8">人多了以后有什么不同</b>。</p>
+    <h2>FLIP FLAP <span class="r4-tag">3–4人</span></h2>
+    <p class="r-lead">三四个人用<b style="color:#ffe9a8">筹码</b>竞拍买牌。<br>
+    先凑齐一<b style="color:#ffe9a8">套</b>就赢 — 和出牌比拼的双人局不同，这里是<b style="color:#ffe9a8">报价</b>买下。</p>
 
     <h3><span data-ico="🎯"></span> 怎么赢</h3>
-    <p>把一个种类收集到它数字那么多张，当场获胜。<br>
-    <span style="font-size:.78rem">各种类需要的张数： <b>2</b>→2 · <b>3</b>→3 · <b>4</b>→4 · <b>6</b>→6<br>
-    <span data-ico="⚠"></span> 只有<b>摆在自己面前的牌</b>才算，手上的牌再多也不成套<br>
-    <span data-ico="🏁"></span> 牌堆见底时，<b>离凑齐最近的人</b>获胜</span></p>
+    <p>同一种牌凑到<b>和数字一样多的张数</b>，当场获胜。<br>
+    <span style="font-size:.78rem">需要: <b>2</b>两张 · <b>3</b>三张 · <b>4</b>四张 · <b>6</b>六张<br>
+    <span data-ico="⚠"></span> 只算拍下后<b>摆在自己面前的牌</b>，手牌不算。<br>
+    <span data-ico="🏁"></span> 牌堆用完时，<b>最接近凑齐一套的人</b>获胜。</span></p>
 
     <h3><span data-ico="📦"></span> 准备</h3>
     <ul>
-      <li>按人数洗好牌，每人<b>发 6 张手牌</b>，其余作为<b>场上牌堆</b></li>
-      <li>第一位<b>庄家随机决定</b>，之后<b>顺时针</b>轮流</li>
-      <li>手牌用完的人跳过庄家轮次 — 因为已经没有牌可以出品了</li>
+      <li>洗牌后<b>每人4张手牌</b>，其余是<b>中央牌堆</b></li>
+      <li>每人拿<b>4人30个 · 3人25个</b>筹码。筹码<b>对所有人公开</b></li>
+      <li>第一位<b>庄家</b>随机，之后按<b>顺时针</b>轮换</li>
     </ul>
 
-    <h3><span data-ico="🗂"></span> 牌堆 <span class="r-sub">— 四人 38 张，三人 30 张</span></h3>
-    <p style="font-size:.78rem;margin-top:-2px">比两人局（24 张）更厚。三人牌堆是四人牌堆<b>抽掉 8 张</b>而来，一副牌就能兼顾两种人数。</p>
-    <div class="r-comp">
-      <div class="r-comp-row"><div class="rc" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
-        <span><b>种类 2</b> · 4 张 <span class="r-comp-g">（三人：3 张）</span></span></div>
-      <div class="r-comp-row"><div class="rc" data-kind="3"><span class="rc-rank">1</span><span class="rc-num">3</span></div>
-        <span><b>种类 3</b> · 6 张 <span class="r-comp-g">（三人：5 张）</span></span></div>
-      <div class="r-comp-row"><div class="rc" data-kind="4"><span class="rc-rank">1</span><span class="rc-num">4</span></div>
-        <span><b>种类 4</b> · 10 张 <span class="r-comp-g">（三人：8 张）</span></span></div>
-      <div class="r-comp-row"><div class="rc" data-kind="6"><span class="rc-rank">1</span><span class="rc-num">6</span></div>
-        <span><b>种类 6</b> · 18 张 <span class="r-comp-g">（三人：14 张）</span></span></div>
+    <h3><span data-ico="🗂"></span> 牌的构成 <span class="r-sub">— 4人32张 · 3人24张</span></h3>
+    <p style="font-size:.78rem;margin-top:-2px">牌<b>没有等级</b>，只看种类。另外混有三种特殊牌。</p>
+<div class="r-comp">
+      <div class="r-comp-row">
+        <div class="rc" data-kind="2"><span class="rc-num">2</span></div>
+        <span><b>2</b> · 3张 <span class="r-comp-g">（3人 2张）</span></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="3"><span class="rc-num">3</span></div>
+        <span><b>3</b> · 6张 <span class="r-comp-g">（3人 4张）</span></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="4"><span class="rc-num">4</span></div>
+        <span><b>4</b> · 8张 <span class="r-comp-g">（3人 6张）</span></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="6"><span class="rc-num">6</span></div>
+        <span><b>6</b> · 9张 <span class="r-comp-g">（3人 8张）</span></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="W6"><span class="rc-rank">×2</span><span class="rc-num">6</span></div>
+        <span><b>双6</b> · 2张 <span class="r-comp-g">（3人 1张）</span> — 算作<b>两张</b>6</span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="D46"><span class="rc-num" style="font-size:1rem">4/6</span></div>
+        <span><b>双子4/6</b> · 1张 <span class="r-comp-g">（3人 没有）</span> — 4和6<b>都算</b></span>
+      </div>
+      <div class="r-comp-row">
+        <div class="rc" data-kind="V"><span class="rc-num" style="font-size:1rem">金库</span></div>
+        <span><b>金库</b> · 3张 — 不算进套牌，但<b>每回合产出筹码</b></span>
+      </div>
     </div>
     <div class="r4-tbl">
-      <div class="r4-row r4-head"><span>人数</span><span>牌堆</span><span>手牌</span><span>场上牌堆</span></div>
-      <div class="r4-row"><span>3</span><span>30</span><span>6</span><span>12</span></div>
-      <div class="r4-row"><span>4</span><span>38</span><span>6</span><span>14</span></div>
+      <div class="r4-row r4-head"><span>人数</span><span>牌</span><span>手牌</span><span>牌堆</span><span>筹码</span></div>
+      <div class="r4-row"><span>3人</span><span>24张</span><span>4张</span><span>12张</span><span>25个</span></div>
+      <div class="r4-row"><span>4人</span><span>32张</span><span>4张</span><span>16张</span><span>30个</span></div>
     </div>
+
+    <h3><span data-ico="🪙"></span> 金库 — 越多越赚</h3>
+    <p>每回合开始时<b>所有人</b>从金库领取筹码。两个比一个、三个比两个赚得多得多。</p>
+    <div class="r4-tbl">
+      <div class="r4-row r4-head"><span>金库</span><span>1个</span><span>2个</span><span>3个</span></div>
+      <div class="r4-row"><span>每回合</span><span>+1</span><span>+3</span><span>+6</span></div>
+    </div>
+    <p style="font-size:.78rem">越早买赚得越久。不过你把筹码花在金库上时，别人正在接近凑齐一套。</p>
 
     <h3><span data-ico="🔄"></span> 一次竞拍</h3>
     <div class="r4-steps">
-      <div class="r4-step"><b>1</b><span>从场上牌堆翻开一张<b>明牌</b></span></div>
-      <div class="r4-step"><b>2</b><span>庄家从手牌加一张<b>出品牌</b> — 这两张就是拍品</span></div>
-      <div class="r4-step"><b>3</b><span>庄家选择<b>明拍</b>或<b>暗拍</b></span></div>
-      <div class="r4-step"><b>4</b><span><b>所有人</b>各出一张竞价牌 — 庄家也要出</span></div>
-      <div class="r4-step"><b>5</b><span>最<b>强</b>的竞价拿走拍品两张</span></div>
-      <div class="r4-step"><b>6</b><span>竞价牌<b>按相反顺序</b>分回各家，庄家顺时针轮到下一位</span></div>
+      <div class="r4-step"><b>1</b><span>所有人领取金库收入，从牌堆翻开一张<b>明牌</b></span></div>
+      <div class="r4-step"><b>2</b><span>庄家从手牌加一张<b>出品牌</b> — 这两张是一组拍品</span></div>
+      <div class="r4-step"><b>3</b><span>庄家选择<b>明拍</b>或<b>暗拍</b>（第一次竞拍只能明拍）</span></div>
+      <div class="r4-step"><b>4</b><span>只有买下的人付筹码。付出的筹码进<b>银行</b>消失</span></div>
+      <div class="r4-step"><b>5</b><span>拍品摆在买家面前，庄家顺时针轮换</span></div>
     </div>
-    <p style="font-size:.78rem"><span data-ico="⚠"></span> 手牌空了的人跳过竞价。若没有人能出牌，则<b>流拍</b>，拍品归庄家。</p>
 
-    <h3><span data-ico="👁"></span> 明拍与暗拍 — 这里和两人局不同</h3>
+    <h3><span data-ico="👁"></span> 明拍与暗拍</h3>
     <div class="r4-two">
-      <div class="r4-card"><div class="r4-ct">明拍</div>
-        <p>拍品<b>公开</b>。<br>竞价牌全部盖着出，最后<b>一起翻开</b>。<br>知道东西，读不到人。</p></div>
-      <div class="r4-card"><div class="r4-ct">暗拍</div>
-        <p>拍品<b>盖住</b>。<br>改由庄家起，<b>顺时针一个一个亮牌出</b>。<br>越后出的人，看到的信息越多。</p></div>
-    </div>
-    <p style="font-size:.78rem">暗拍之所以按顺序进行是有原因的：大家同时出牌时，就算读准了一个人，牌也可能被另外两人拿走，心理战根本无从谈起。
-    一个一个出，<b>先出的人就能靠高价把后面的人吓退</b>。代价是越靠后信息越多，庄家选暗拍时就是接受了这份亏。</p>
-
-    <h3><span data-ico="🎁"></span> 竞价牌按相反顺序回来</h3>
-    <p>竞价牌不会被弃掉，而是大家<b>互相交换</b>。出得越高，拿回的牌越弱；
-    <b>出得最低的人拿走最强的那张</b>。</p>
-    <div class="r4-flow">
-      <div class="r4-fr"><span class="r4-fl">出价最高</span><span class="r-arrow">→</span><span>拿到拍品两张 · 但收到<b>最弱</b>的竞价牌</span></div>
-      <div class="r4-fr"><span class="r4-fl">出价最低</span><span class="r-arrow">→</span><span>拿不到拍品，却收到<b>最强</b>的竞价牌</span></div>
-    </div>
-    <p style="font-size:.78rem">所以<b>故意输也是一步棋</b> — 这次的拍品对自己的套牌没用时，低价出牌、把手牌养厚更划算。</p>
-
-    <div class="r-special">
-      <div class="r-st"><span data-ico="⚔"></span> 反转！小兵的背叛</div>
-      <div class="r-match" style="margin:4px 0 0">
-        <div class="rc gold" data-kind="6"><span class="rc-rank">18</span><span class="rc-num">6</span></div>
-        <span class="r-arrow" data-ico="⚔"></span>
-        <div class="rc gold" data-kind="2"><span class="rc-rank">1</span><span class="rc-num">2</span></div>
-        <span class="r-arrow">→</span>
-        <span class="r-win">6-18 获胜！</span>
+      <div class="r4-card">
+        <div class="r4-ct">明拍</div>
+        <p>从<b>庄家左边开始</b>，每人轮流加价或放弃，庄家最后。<br>
+        坚持到最后的人按自己的出价买下。<br>
+        <b>没人出价</b>时，庄家免费拿走。</p>
       </div>
-      <p style="font-size:.76rem;margin-top:6px">最弱的<b style="color:var(--gold)">种类 6 的最后一级</b>，偏偏能压住最强的<b style="color:var(--gold)">2-1</b>。
-      牌堆不同，最弱的牌也不同 — <b style="color:var(--gold)">四人 6-18</b> · <b style="color:var(--gold)">三人 6-14</b> · 两人局是 6-10。<br>
-      背叛成立时，这两张不参与交换，<b>各自回到原主手上</b>。既拿走拍品又收下最强牌，一局就会失衡得太厉害。</p>
+      <div class="r4-card">
+        <div class="r4-ct">暗拍</div>
+        <p>庄家叫一个<b>偶数价P</b>（2以上）。<br>
+        其他人<b>秘密</b>回答「<b>以P+1买 / 不买</b>」。<br>
+        只有一人买就以P+1成交。没人买则<b>庄家以P</b>拿走。</p>
+      </div>
     </div>
+    <p style="font-size:.78rem"><span data-ico="⚔"></span> <b>同分竞价</b> — 暗拍中两人以上说「买」时，这些人<b>从P+1开始重新明拍</b>。
+    离庄家左边最近的人先握着P+1，如果没人再加价就由他买下。</p>
+    <p style="font-size:.78rem">暗拍是庄家的武器：想要的拍品就叫一个别人跟不上的价，别人想要的就让他<b>付高价</b>。叫得太低，别人就捡了便宜。</p>
 
-    <h3><span data-ico="🏁"></span> 什么时候结束</h3>
+    <h3><span data-ico="🏁"></span> 游戏结束</h3>
     <ul>
-      <li>有人<b>凑齐一套</b>就立刻结束。若同一次竞拍中有两人以上同时凑齐，<b>拿下这次拍品的人</b>获胜</li>
-      <li><b>场上牌堆见底</b>，或所有人手牌用尽时，就地排定名次</li>
+      <li>有人<b>凑齐一套</b>就立即获胜</li>
+      <li><b>牌堆用完</b>或庄家没有手牌可出时，当场排名</li>
     </ul>
-    <p style="font-size:.78rem">牌堆见底的名次依次比较：① <b>离凑齐还差几张</b>少者胜 → ② 某一种类<b>收得比例更高</b>者 →
-    ③ 收到的牌<b>更多</b>者 → ④ 收到的牌<b>更强</b>者。</p>
+    <p style="font-size:.78rem">牌堆用完时的排名 — ① <b>离凑齐还差的张数</b>最少 → ② 单一种类<b>填得最满</b> →
+    ③ 收集的套牌<b>最多</b> → ④ 筹码<b>最多</b>。</p>
 
-    <h3><span data-ico="⏱"></span> 时限</h3>
-    <p>每人<b>3 分钟</b>，只在轮到自己出牌时走。
-    用完之后<b>由 AI 接手那个座位</b> — 不会因为一个人慢，就把其他人的整局也结束掉。</p>`,
+    <h3><span data-ico="⏱"></span> 限时</h3>
+    <p>每人<b>3分钟</b>，只在自己行动时减少。
+    用完后<b>由AI接手</b> — 不会因为一个人让其他人的对局结束。</p>
+`,
 });
 
 // ── 설명서 · 클래식 ──

@@ -66,13 +66,16 @@ console.log('\n④ 다인전 — 3인·4인이 같은 글, 다른 숫자');
 {
   // 같은 글을 두 벌로 두면 한쪽만 고치게 된다 — 상자는 하나를 같이 쓴다
   ok('셋 다 같은 창을 본다', /'3': 'rules4Modal', '4': 'rules4Modal', quad: 'rules4Modal'/.test(cli));
-  ok('다른 숫자만 따로 띄운다', /RULES_N = \{ '3': \{ hand: 7, deck: 17 \}, '4': \{ hand: 6, deck: 14 \} \}/.test(cli));
+  // 인원마다 다른 숫자(손패·중앙 덱·칩)만 따로 띄운다 — 엔진 값과 같아야 한다
+  const G4 = require(src + '/game4.js');
+  const want = [3, 4].map((n) => `'${n}': { hand: ${G4.HAND}, deck: ${G4.SPECS[n].cards.reduce((a, [, c]) => a + c, 0) - n * G4.HAND}, chips: ${G4.SPECS[n].chips} }`).join(', ');
+  ok('다른 숫자만 따로 띄운다', cli.includes(`RULES_N = { ${want} }`), want);
   ok('안내 줄이 있다', /id="rules4Note"/.test(html));
   ok('안내 줄도 상자 밖', /rules-tabs[\s\S]{0,700}id="rules4Note"[\s\S]{0,400}class="rules-box"/.test(html));
   // 실제 규칙(game4.js)과 숫자가 같아야 한다
   const g4 = fs.readFileSync(src + '/game4.js', 'utf8');
-  ok('손패 장수가 규칙과 같다', /const HAND = \{ 3: 6, 4: 6 \}/.test(g4));
-  ok('덱 장수가 주석과 같다', /3인 덱 12장 \/ 4인 덱 14장/.test(g4));
+  ok('손패 장수가 규칙과 같다', /const HAND = 4;/.test(g4) && /<li>덱을 섞어 <b>각자 손패 4장<\/b>/.test(html));
+  ok('덱 장수가 설명서와 같다', /4인 32장 · 3인 24장/.test(html));
 }
 
 console.log('\n⑤ 아이템전 설명서');

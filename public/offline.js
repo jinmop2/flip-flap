@@ -423,56 +423,52 @@ function tvAct(data) {
 // 서버4의 step() 이 하던 일을 그대로 옮겨 적었다. 규칙은 한 줄도 안 적는다.
 const G4 = window.GAME4, A4 = window.AI4;
 const V4 = window.VIEW4 ? window.VIEW4.make(null) : null;
-const QT = { draw: 650, offer: 750, type: 650, bid: 480, showdown: 900, reveal: 1150, settle: 1750, next: 260 };
+const QT = { round: 700, offer: 750, type: 650, raise: 380, settle: 1600, next: 260 };
 let qg = null, qr = null, qTimer = null, qClockId = null;
 
 const qHuman = (g) => {
-  const isHuman = (i) => !qr.seats[i].isBot;
-  if (g.phase === 'draw' || g.phase === 'offer' || g.phase === 'choose_type')
-    return isHuman(g.auctioneer) ? g.auctioneer : null;
-  if (g.phase === 'bidding') for (let i = 0; i < qr.seats.length; i++) if (isHuman(i) && G4.canBid(g, i)) return i;
+  const isHuman = (i) => i !== null && i !== undefined && !qr.seats[i].isBot;
+  if (g.phase === 'offer' || g.phase === 'choose_type') return isHuman(g.auctioneer) ? g.auctioneer : null;
+  if (g.phase === 'open') return isHuman(g.auction.turnSeat) ? g.auction.turnSeat : null;
+  if (g.phase === 'answer') for (const i of G4.rivals(g)) if (isHuman(i) && G4.canAnswer(g, i)) return i;
   return null;
 };
 function qPush() { if (qg && V4) say('g4_state', V4.stateFor(qg, 0, null, qr)); }
 function qLater(ms) { clearTimeout(qTimer); qTimer = setTimeout(() => { try { qStep(); } catch (e) { console.error(e); } }, ms); }
-function qShowdown() { qg.phase = 'showdown'; qPush(); qLater(qg.auction && qg.auction.closed ? Math.round(QT.showdown / 2) : QT.showdown); }
+// 한 수 둔 뒤 — 낙찰이 났으면 결과를 보여 줄 만큼 쉰다
+function qAfter(ms) { qPush(); qLater(qg && qg.phase === 'settled' ? QT.settle : ms); }
 
 function qStep() {
   if (!qg) return;
-  const g = qg;
+  const g = qg, bot = (i) => qr.seats[i].isBot;
   switch (g.phase) {
     case 'game_over':
       clearInterval(qClockId); qClockId = null;
       qPush(); return say('g4_over', V4.stateFor(g, 0, null, qr));
-    case 'draw':
-      if (qHuman(g) === g.auctioneer) return qPush();
-      G4.draw(g); qPush(); return qLater(QT.offer);
-    case 'offer': {
-      if (qHuman(g) === g.auctioneer) return qPush();
-      const c = A4.chooseConsign(g, g.auctioneer);
-      G4.offer(g, g.auctioneer, c.id); qPush(); return qLater(QT.type);
+    case 'round':
+      G4.beginRound(g); qPush(); return qLater(g.phase === 'game_over' ? QT.next : QT.round);
+    case 'offer':
+      if (!bot(g.auctioneer)) return qPush();
+      G4.offer(g, g.auctioneer, A4.chooseConsign(g, g.auctioneer).id);
+      return qAfter(QT.type);
+    case 'choose_type': {
+      if (!bot(g.auctioneer)) return qPush();
+      const t = A4.chooseType(g, g.auctioneer);
+      if (!G4.chooseType(g, g.auctioneer, t.type, t.price)) G4.chooseType(g, g.auctioneer, 'open');
+      return qAfter(QT.raise);
     }
-    case 'choose_type':
-      if (qHuman(g) === g.auctioneer) return qPush();
-      G4.chooseType(g, g.auctioneer, A4.chooseType(g, g.auctioneer));
-      qPush(); return qLater(QT.bid);
-    case 'bidding': {
-      if (qHuman(g) !== null) return qPush();
-      const pending = [];
-      for (let i = 0; i < qr.seats.length; i++) if (qr.seats[i].isBot && G4.canBid(g, i)) pending.push(i);
-      if (pending.length) {
-        const c = A4.chooseBid(g, pending[0]);
-        if (c) G4.bid(g, pending[0], c.id);
-        qPush();
-        if (G4.allBidsIn(g)) return qShowdown();
-        return qLater(QT.bid);
-      }
-      if (G4.allBidsIn(g) || !G4.bidderSeats(g).length) return qShowdown();
+    case 'open': {
+      const s = g.auction.turnSeat;
+      if (!bot(s)) return qPush();
+      const m = A4.openMove(g, s);
+      if (!(m.type === 'raise' ? G4.raise(g, s, m.to) : G4.pass(g, s))) G4.pass(g, s);
+      return qAfter(QT.raise);
+    }
+    case 'answer':
+      for (const i of G4.rivals(g)) if (bot(i) && G4.canAnswer(g, i)) G4.answer(g, i, A4.chooseAnswer(g, i));
+      if (g.phase !== 'answer') return qAfter(QT.raise);
       return qPush();
-    }
-    case 'showdown': g.phase = 'reveal'; qPush(); return qLater(QT.reveal);
-    case 'reveal':   G4.settle(g); qPush(); return qLater(QT.settle);
-    case 'settled':  G4.advance(g); qPush(); return qLater(QT.next);
+    case 'settled': G4.advance(g); qPush(); return qLater(QT.next);
     default: return qPush();
   }
 }
@@ -483,6 +479,9 @@ function qStart(d) {
   const names = [me()];
   for (let i = 1; i < n; i++) names.push('AI ' + i);
   qg = G4.createGame4(names, { n });
+  // AI 마다 성격을 따로 준다 — 서버와 같게. 안 주면 모두 똑같이 둔다.
+  const st = A4.pickStyles(n);
+  qg.seats.forEach((s, i) => { s.style = st[i]; s.isBot = i !== 0; });
   // 서버의 방 자리표를 흉내 낸 것. 사람은 0번 하나, 나머지는 AI 다.
   qr = { seats: names.map((_, i) => ({ sid: i === 0 ? 'me' : null, isBot: i !== 0, token: null })),
          solo: true, rp: null, waitSeat: null, waitUntil: null };
@@ -503,12 +502,14 @@ function qAct(data) {
   if (!qg) return true;
   const g = qg, mySeat = 0;
   let ok = false;
-  if (data.type === 'draw' && g.phase === 'draw' && g.auctioneer === mySeat) ok = G4.draw(g);
-  else if (data.type === 'offer' && g.phase === 'offer' && g.auctioneer === mySeat) ok = G4.offer(g, mySeat, data.cardId);
-  else if (data.type === 'auctionType' && g.phase === 'choose_type' && g.auctioneer === mySeat) ok = G4.chooseType(g, mySeat, data.val);
-  else if (data.type === 'bid' && g.phase === 'bidding') ok = G4.bid(g, mySeat, data.cardId);
+  if (data.type === 'offer' && g.phase === 'offer' && g.auctioneer === mySeat) ok = G4.offer(g, mySeat, data.cardId);
+  else if (data.type === 'auctionType' && g.phase === 'choose_type' && g.auctioneer === mySeat)
+    ok = G4.chooseType(g, mySeat, String(data.val || ''), Number(data.price));
+  else if (data.type === 'raise') ok = G4.raise(g, mySeat, Number(data.to));
+  else if (data.type === 'pass') ok = G4.pass(g, mySeat);
+  else if (data.type === 'answer') ok = G4.answer(g, mySeat, data.buy === true);
   if (!ok) { qPush(); return true; }
-  qPush(); qLater(QT.next);
+  qAfter(QT.next);
   return true;
 }
 

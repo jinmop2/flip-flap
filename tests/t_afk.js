@@ -20,21 +20,22 @@ function join(i, base) {
   return p;
 }
 
-// 성실한 플레이어 — 낼 수 있으면 낸다
+// 성실한 플레이어 — 제 차례면 바로 둔다 (칩 경매)
 function play(p) {
   const s = p.st; if (!s || p.seat === null) return;
   const a = s.auction;
-  if (s.phase === 'draw' && s.auctioneer === p.seat) return p.s.emit('g4_act', { type: 'draw' });
   if (s.phase === 'offer' && s.auctioneer === p.seat && s.myHand.length)
     return p.s.emit('g4_act', { type: 'offer', cardId: s.myHand[0].id });
   if (s.phase === 'choose_type' && s.auctioneer === p.seat)
-    return p.s.emit('g4_act', { type: 'auctionType', val: 'close' });
-  if (s.phase === 'bidding' && a && s.myHand.length) {
-    if (s.seats[p.seat].bidded || !s.bidders.includes(p.seat)) return;
-    if (a.closed && a.turnToBid !== p.seat) return;
-    p.s.emit('g4_act', { type: 'bid', cardId: s.myHand[0].id });
-  }
+    return p.s.emit('g4_act', s.canClose ? { type: 'auctionType', val: 'close', price: 2 } : { type: 'auctionType', val: 'open' });
+  if (s.phase === 'open' && a && a.turnSeat === p.seat)
+    return p.s.emit('g4_act', a.price < 2 && s.seats[p.seat].chips > a.price ? { type: 'raise', to: a.price + 1 } : { type: 'pass' });
+  if (s.phase === 'answer' && a && s.auctioneer !== p.seat && a.myAnswer === null)
+    return p.s.emit('g4_act', { type: 'answer', buy: false });
 }
+// 판이 한 발짝이라도 움직였는가 — 값·빠진 사람·답한 사람까지 본다
+const sigOf = (s) => { const a = s.auction || {}; return [s.turn, s.phase, a.price, a.turnSeat, (a.out || []).length, (a.answered || []).length].join('|'); };
+const touched = (s, seat) => { const a = s.auction; return !!a && ((a.answered || []).includes(seat) || (a.out || []).includes(seat) || (a.bids && a.bids[seat] !== undefined)); };
 
 (async () => {
   URL = (await liveServer(39521)).url;
@@ -66,8 +67,9 @@ function play(p) {
       const s2 = P[0].st;
       if (!s2) continue;
       if (s2.over) break;
-      if (s2.seats[1] && s2.seats[1].bidded) sawTakeover = true;
-      const sig = s2.turn + '|' + s2.phase + '|' + s2.seats.map((x) => (x.bidded ? 1 : 0)).join('');
+      const idle = P[1].seat;                 // 손 놓은 사람의 자리
+      if (idle !== null && touched(s2, idle)) sawTakeover = true;
+      const sig = sigOf(s2);
       if (sig !== lastSig) {
         longestStall = Math.max(longestStall, Date.now() - since);
         lastSig = sig; since = Date.now();

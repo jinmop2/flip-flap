@@ -85,7 +85,7 @@ console.log('\n⑤ 옆자리와 경매대가 가로로 안 겹친다');
      && !/body\.quad4 \.q-oacq \{ height:/.test(html));
   // 세로가 짧다고 경매대를 옆으로 넓히면 옆자리가 들어갈 가로 여유가 사라진다
   ok('짧은 기기에서도 경매대를 안 넓힌다',
-     /body\.quad4 #q-mat \{ padding:8px 12px; gap:8px; \}/.test(html));
+     /body\.quad4 #q-mat \{ padding:8px 8px; gap:7px; \}/.test(html));
 }
 
 console.log('\n⑥ 아래는 2인전과 같은 배치');

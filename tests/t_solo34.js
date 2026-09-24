@@ -27,7 +27,7 @@ function solo(n, ip) {
     ok('자리 3개', beg && beg.n === 3 && beg.seats.length === 3);
     ok('사람 1 · AI 2', beg && beg.seats.filter((x) => !x.isBot).length === 1
                           && beg.seats.filter((x) => x.isBot).length === 2);
-    ok('손패 6장', st && st.myHand && st.myHand.length === 6);   // 3인 덱을 30장으로 줄이며 6장으로
+    ok('손패 4장 · 칩 25', st && st.myHand && st.myHand.length === 4 && st.seats[st.me].chips >= 25);   // 칩 경매 — 손패 4장
     ok('내 자리는 0번', beg && beg.me === 0);
   }
 
@@ -36,7 +36,7 @@ function solo(n, ip) {
     const { beg, st } = await solo(4, '10.9.2.1');
     ok('자리 4개', beg && beg.n === 4 && beg.seats.length === 4);
     ok('사람 1 · AI 3', beg && beg.seats.filter((x) => x.isBot).length === 3);
-    ok('손패 6장', st && st.myHand && st.myHand.length === 6);
+    ok('손패 4장 · 칩 30', st && st.myHand && st.myHand.length === 4 && st.seats[st.me].chips >= 30);
   }
 
   console.log('\n③ 안 보내면 예전처럼 4인전');
